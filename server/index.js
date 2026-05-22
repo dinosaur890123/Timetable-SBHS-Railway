@@ -271,14 +271,71 @@ addLog('STARTUP', 'SYSTEM', 'Server service started').catch((e) => {
     console.warn('[admin-db] Failed to write startup log:', e?.message || e);
 });
 
-// Authentication Middleware (Disabled password check)
-const requireAuth = (req, res, next) => {
+// Get authorized admin IDs from env or default
+const getAdminIds = () => {
+    if (process.env.ADMIN_IDS) {
+        return process.env.ADMIN_IDS.split(',').map(id => id.trim());
+    }
+    return ["449130511", "449596935"];
+};
+
+// Verify SBHS Access Token via SBHS API
+const verifySbhsToken = async (req) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) return null;
+        return await response.json();
+    } catch (e) {
+        console.error('[auth] SBHS Token validation failed:', e?.message || e);
+        return null;
+    }
+};
+
+// Require valid student authentication (Any logged-in student)
+const requireStudentAuth = async (req, res, next) => {
+    if (process.env.BYPASS_AUTH === 'true') {
+        req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
+        return next();
+    }
+    const userData = await verifySbhsToken(req);
+    if (!userData) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
+    }
+    req.user = userData;
     next();
 };
 
+// Require admin privilege (Only authorized student IDs)
+const requireAdminAuth = async (req, res, next) => {
+    if (process.env.BYPASS_AUTH === 'true') {
+        req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
+        return next();
+    }
+    const userData = await verifySbhsToken(req);
+    if (!userData) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
+    }
+    const studentId = String(userData.studentId);
+    const adminIds = getAdminIds();
+    if (!adminIds.includes(studentId)) {
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+    req.user = userData;
+    next();
+};
+
+// Enforce admin privileges for general requireAuth routes
+const requireAuth = requireAdminAuth;
+
 // Routes
 // POST /api/register - Auto-register users on login (DB-backed)
-app.post('/api/register', requireAuth, async (req, res) => {
+app.post('/api/register', requireStudentAuth, async (req, res) => {
     try {
         const newUser = req.body;
 
@@ -287,6 +344,10 @@ app.post('/api/register', requireAuth, async (req, res) => {
         }
 
         const userId = String(newUser.id);
+        if (userId !== String(req.user.studentId)) {
+            return res.status(403).json({ error: 'Forbidden: Cannot register details for another student' });
+        }
+
         const safeUser = { ...newUser, id: userId };
 
         await upsertUser(safeUser);

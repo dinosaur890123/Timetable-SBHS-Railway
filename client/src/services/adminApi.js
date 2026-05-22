@@ -1,10 +1,10 @@
 const ADMIN_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
 const getHeaders = () => {
-    const password = import.meta.env.VITE_ADMIN_PASSWORD;
+    const token = localStorage.getItem('sbhs_access_token');
     return {
         'Content-Type': 'application/json',
-        'X-Admin-Token': password // Sending the password as a simple auth token
+        'Authorization': token ? `Bearer ${token}` : ''
     };
 };
 
