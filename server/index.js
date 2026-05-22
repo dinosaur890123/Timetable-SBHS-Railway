@@ -271,14 +271,8 @@ addLog('STARTUP', 'SYSTEM', 'Server service started').catch((e) => {
     console.warn('[admin-db] Failed to write startup log:', e?.message || e);
 });
 
-// Authentication Middleware
+// Authentication Middleware (Disabled password check)
 const requireAuth = (req, res, next) => {
-    const token = req.headers['x-admin-token'];
-    
-    // In production, use timing-safe comparison
-    if (!token || token !== ADMIN_PASSWORD) {
-        return res.status(403).json({ error: 'Unauthorized access' });
-    }
     next();
 };
 
