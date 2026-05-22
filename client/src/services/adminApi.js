@@ -152,3 +152,22 @@ export const registerUser = async (user) => {
         console.error("Admin Registration Error (Silent):", error);
     }
 };
+
+export const promoteUserToAdmin = async (studentId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/users/promote`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ studentId })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to promote user');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+

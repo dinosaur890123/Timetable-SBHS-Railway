@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -42,6 +42,8 @@ const AdminPanel = ({ user }) => {
     const [viewingUserId, setViewingUserId] = useState(null); // ID only, derive user from list
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
+    const [promoteId, setPromoteId] = useState('');
+    const [promoting, setPromoting] = useState(false);
 
     useEffect(() => {
         if (user && (user.role === 'Admin' || ADMIN_IDS.includes(user.studentId))) {
@@ -179,6 +181,23 @@ const AdminPanel = ({ user }) => {
             setEditingUser(null);
         } catch (err) {
             alert("Failed to update user");
+        }
+    };
+
+    const handlePromoteUser = async (e) => {
+        e.preventDefault();
+        if (!promoteId.trim()) return;
+
+        setPromoting(true);
+        try {
+            await promoteUserToAdmin(promoteId.trim());
+            alert(`Successfully promoted student ${promoteId.trim()} to Admin!`);
+            setPromoteId('');
+            loadData(); // Reload users
+        } catch (err) {
+            alert(err.message || "Failed to promote user to Admin");
+        } finally {
+            setPromoting(false);
         }
     };
 
@@ -572,6 +591,31 @@ const AdminPanel = ({ user }) => {
 {
     activeTab === 'users' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
+            {/* Promote User Card */}
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="space-y-1">
+                    <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Promote User to Admin</h4>
+                    <p className="text-xs text-zinc-500">Assign admin privileges by entering their student ID</p>
+                </div>
+                <form onSubmit={handlePromoteUser} className="flex gap-2 w-full md:w-auto">
+                    <input
+                        type="text"
+                        placeholder="Student ID (e.g., 449130511)"
+                        value={promoteId}
+                        onChange={(e) => setPromoteId(e.target.value)}
+                        className="px-3 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-750 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white w-full md:w-64"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        disabled={promoting}
+                        className="px-4 py-2 text-sm bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg whitespace-nowrap disabled:opacity-50"
+                    >
+                        {promoting ? 'Promoting...' : 'Promote'}
+                    </button>
+                </form>
+            </div>
+
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between">
                     <h3 className="font-semibold text-zinc-900 dark:text-white">User Management</h3>

@@ -363,18 +363,24 @@ const requireAuth = requireAdminAuth;
 // POST /api/register - Auto-register users on login (DB-backed)
 app.post('/api/register', requireStudentAuth, async (req, res) => {
     try {
-        const newUser = req.body;
+        const { id, email, name, year, timetable } = req.body || {};
 
-        if (!newUser.id || !newUser.email) {
+        if (!id || !email) {
             return res.status(400).json({ error: 'Missing user ID or email' });
         }
 
-        const userId = String(newUser.id);
+        const userId = String(id);
         if (userId !== String(req.user.studentId)) {
             return res.status(403).json({ error: 'Forbidden: Cannot register details for another student' });
         }
 
-        const safeUser = { ...newUser, id: userId };
+        const safeUser = {
+            id: userId,
+            email: String(email),
+            name: name ? String(name) : null,
+            year: year ? String(year) : null,
+            timetable: timetable || null
+        };
 
         const dbUser = await upsertUser(safeUser);
         await addLog('REGISTER', `${safeUser.name} (${userId})`, 'User sync/login');
@@ -387,6 +393,57 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
+// POST /api/users/promote - Promote user to Admin by student ID
+app.post('/api/users/promote', requireAuth, async (req, res) => {
+    try {
+        const { studentId } = req.body || {};
+        if (!studentId) {
+            return res.status(400).json({ error: 'Missing student ID' });
+        }
+
+        const id = String(studentId).trim();
+        const defaultEmail = `${id}@student.sbhs.nsw.edu.au`;
+        const defaultName = `Admin (${id})`;
+
+        let promotedUser;
+        if (!isDbEnabled) {
+            const existingIndex = users.findIndex(u => String(u.id) === id);
+            if (existingIndex >= 0) {
+                users[existingIndex].role = 'Admin';
+                promotedUser = users[existingIndex];
+            } else {
+                promotedUser = {
+                    id,
+                    email: defaultEmail,
+                    name: defaultName,
+                    role: 'Admin',
+                    status: 'Active',
+                    joined: new Date(),
+                    lastSeen: new Date(),
+                    timetable: null
+                };
+                users.push(promotedUser);
+            }
+        } else {
+            const result = await db.query(
+                `INSERT INTO app_users (id, email, name, role, status, last_seen)
+                 VALUES ($1, $2, $3, 'Admin', 'Active', NOW())
+                 ON CONFLICT (id) DO UPDATE SET
+                   role = 'Admin',
+                   last_seen = NOW()
+                 RETURNING id, name, email, role, year, status, joined, last_seen, timetable`,
+                [id, defaultEmail, defaultName]
+            );
+            promotedUser = result.rows[0];
+        }
+
+        await addLog('PROMOTE', req.user?.studentId || 'ADMIN', `Promoted ${id} to Admin`);
+        res.json({ success: true, user: promotedUser });
+    } catch (e) {
+        console.error('Promote error:', e);
+        res.status(500).json({ error: 'Failed to promote user to Admin' });
+    }
+});
 
 // PUT /api/users/:id - Update user details (Role/Status)
 app.put('/api/users/:id', requireAuth, async (req, res) => {
