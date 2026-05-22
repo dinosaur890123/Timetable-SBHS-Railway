@@ -21,10 +21,11 @@ const AdminPanel = ({ user }) => {
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
-        const targetMode = !stats.maintenanceMode;
+        const currentMode = stats.systemStatus === 'Maintenance';
+        const targetMode = !currentMode;
         try {
             await setMaintenanceMode(targetMode);
-            setStats(prev => prev ? { ...prev, maintenanceMode: targetMode } : null);
+            setStats(prev => prev ? { ...prev, systemStatus: targetMode ? 'Maintenance' : 'Operational' } : null);
             loadData(); // Refresh logs
         } catch (err) {
             alert("Failed to toggle maintenance mode");
@@ -739,24 +740,24 @@ const AdminPanel = ({ user }) => {
                                 </td>
                             </tr>
                         ))}
-                        <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                            <div>
-                                <h4 className="text-sm font-medium text-zinc-900 dark:text-white">Maintenance Mode</h4>
-                                <p className="text-xs text-zinc-500 mt-1">Block all non-admin access to the application</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={stats?.systemStatus === 'Maintenance'}
-                                    onChange={handleToggleMaintenance}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-zinc-200 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-red-600"></div>
-                            </label>
-                        </div>
-
                     </tbody>
                 </table>
+            </div>
+
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                <div>
+                    <h4 className="text-sm font-medium text-zinc-900 dark:text-white">Maintenance Mode</h4>
+                    <p className="text-xs text-zinc-500 mt-1">Block all non-admin access to the application</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={stats?.systemStatus === 'Maintenance'}
+                        onChange={handleToggleMaintenance}
+                        className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-red-600"></div>
+                </label>
             </div>
         </div>
     )
