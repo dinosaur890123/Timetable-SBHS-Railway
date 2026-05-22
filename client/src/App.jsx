@@ -119,7 +119,11 @@ function App() {
                 name: `${userData.givenName} ${userData.surname}`,
                 email: userData.email, // SBHS API usually provides this in ID token, checking availability helps
                 year: userData.yearGroup
-            });
+            }).then(dbSync => {
+                if (dbSync && dbSync.user && dbSync.user.role) {
+                    setUser(prev => prev ? { ...prev, role: dbSync.user.role } : prev);
+                }
+            }).catch(e => console.log("Init sync failed silently", e));
         }
 
       } catch (error) {
@@ -154,6 +158,10 @@ function App() {
                     email: user.email,
                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
                     timetable: data
+                }).then(dbSync => {
+                    if (dbSync && dbSync.user && dbSync.user.role) {
+                        setUser(prev => prev ? { ...prev, role: dbSync.user.role } : prev);
+                    }
                 }).catch(e => console.log("Sync failed silently", e));
             }
 
@@ -207,7 +215,7 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-      <Navigation currentView={currentView} setView={setCurrentView} />
+      <Navigation currentView={currentView} setView={setCurrentView} user={user} />
 
       <main className="flex-1 overflow-x-hidden overflow-y-auto">
          {/* Top Header */}

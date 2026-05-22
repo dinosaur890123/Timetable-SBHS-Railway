@@ -44,7 +44,7 @@ const AdminPanel = ({ user }) => {
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
 
     useEffect(() => {
-        if (user && ADMIN_IDS.includes(user.studentId)) {
+        if (user && (user.role === 'Admin' || ADMIN_IDS.includes(user.studentId))) {
             setIsAuthenticated(true);
         } else {
             setIsAuthenticated(false);

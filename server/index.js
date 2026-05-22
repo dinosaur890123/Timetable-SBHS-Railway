@@ -311,7 +311,19 @@ const requireStudentAuth = async (req, res, next) => {
     next();
 };
 
-// Require admin privilege (Only authorized student IDs)
+// Get a user by ID
+async function getUserById(id) {
+    if (!isDbEnabled) {
+        return users.find(u => String(u.id) === String(id)) || null;
+    }
+    const result = await db.query(
+        'SELECT id, name, email, role, status FROM app_users WHERE id = $1',
+        [String(id)]
+    );
+    return result.rows[0] || null;
+}
+
+// Require admin privilege (Only authorized student IDs or users with Admin role in DB)
 const requireAdminAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
@@ -323,11 +335,25 @@ const requireAdminAuth = async (req, res, next) => {
     }
     const studentId = String(userData.studentId);
     const adminIds = getAdminIds();
-    if (!adminIds.includes(studentId)) {
-        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    
+    // Check bootstrap list
+    if (adminIds.includes(studentId)) {
+        req.user = userData;
+        return next();
     }
-    req.user = userData;
-    next();
+
+    // Check database-assigned admin role
+    try {
+        const dbUser = await getUserById(studentId);
+        if (dbUser && dbUser.role === 'Admin') {
+            req.user = userData;
+            return next();
+        }
+    } catch (e) {
+        console.error('[auth] Database admin check failed:', e?.message || e);
+    }
+
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
 };
 
 // Enforce admin privileges for general requireAuth routes
@@ -350,12 +376,11 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
 
         const safeUser = { ...newUser, id: userId };
 
-        await upsertUser(safeUser);
+        const dbUser = await upsertUser(safeUser);
         await addLog('REGISTER', `${safeUser.name} (${userId})`, 'User sync/login');
 
         console.log(`User registered/updated: ${safeUser.name} (${userId})`);
-        const allUsers = await listUsers();
-        res.json({ success: true, count: allUsers.length });
+        res.json({ success: true, user: dbUser });
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });

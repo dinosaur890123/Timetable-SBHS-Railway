@@ -15,7 +15,10 @@ const NavItem = ({ icon: Icon, label, isActive, onClick }) => (
   </button>
 );
 
-const Navigation = ({ currentView, setView }) => {
+const Navigation = ({ currentView, setView, user }) => {
+  const ADMIN_IDS = ["449130511", "449596935"];
+  const isAdmin = user && (user.role === 'Admin' || ADMIN_IDS.includes(user.studentId));
+
   const items = [
     { id: 'home', icon: Home, label: 'My Synchron'},
     { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
@@ -23,6 +26,10 @@ const Navigation = ({ currentView, setView }) => {
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'profile', icon: UserCircle, label: 'Profile' },
   ];
+
+  if (isAdmin) {
+    items.push({ id: 'admin', icon: Settings, label: 'Admin Panel' });
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 w-full md:relative md:w-64 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
