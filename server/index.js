@@ -8,7 +8,7 @@ const db = require('./db');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const VERSION = '1.0.2'; // Increment this to trigger update
 
