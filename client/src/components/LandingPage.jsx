@@ -33,9 +33,9 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
   const mockPeriods = [
     { name: 'English', time: '09:00 - 10:00', room: 'Room 201', teacher: 'Ms. Archer', status: 'Normal', color: 'border-zinc-800' },
-    { name: 'Software Design', time: '10:00 - 11:00', room: 'Lab 4', teacher: 'Mr. Vance', status: 'Room Change', oldRoom: 'Room 102', color: 'border-orange-500/50' },
-    { name: 'Physics', time: '11:20 - 12:20', room: 'Lab 2', teacher: 'Dr. Banner', status: 'Substitution', oldTeacher: 'Mrs. Stark', color: 'border-blue-500/50' },
-    { name: 'Mathematics Ext.', time: '13:00 - 14:00', room: 'Room 304', teacher: 'Mr. Ramanujan', status: 'Normal', color: 'border-zinc-800' }
+    { name: 'Software Design', time: '10:00 - 11:00', room: '504', teacher: 'Mr. Vance', status: 'Room Change', oldRoom: 'Room 102', color: 'border-orange-500/50' },
+    { name: 'Physics', time: '11:20 - 12:20', room: '307', teacher: 'Dr. Banner', status: 'Substitution', oldTeacher: 'Mrs. Stark', color: 'border-blue-500/50' },
+    { name: 'Mathematics Ext.', time: '13:00 - 14:00', room: 'Room 105', teacher: 'Mr. Ramanujan', status: 'Normal', color: 'border-zinc-800' }
   ];
 
   const mockNotices = [
@@ -147,7 +147,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 <div className="w-2.5 h-2.5 bg-black" />
                 <div className="w-2.5 h-2.5 bg-zinc-500" />
               </div>
-              <span className="font-bold text-base tracking-widest text-white uppercase font-space">Synchron</span>
+              <span className="font-bold text-base tracking-widest text-white uppercase font-space">Synchron v2</span>
             </div>
             
             {/* System Status Indicators */}
@@ -423,9 +423,9 @@ const LandingPage = ({ authError, clearAuthError }) => {
                     <div className="w-11 h-11 border border-zinc-855 flex items-center justify-center mb-6 bg-zinc-955 text-zinc-400 group-hover:border-white group-hover:text-white transition-colors duration-300">
                         <Cpu size={18} />
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-3 uppercase font-space">Developer Tools</h3>
+                    <h3 className="text-lg font-bold text-white mb-3 uppercase font-space">Built for You</h3>
                     <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Built by students, for students. Integrates advanced diagnostics, API status console logging, and control mechanisms within a localized admin/developer panel.
+                        Built by students, for students. Synchron integrates directly with official SBHS APIs while still being independently managed, even fitted with an inbuilt alert system. 
                     </p>
                 </div>
 

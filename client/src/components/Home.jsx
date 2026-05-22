@@ -13,9 +13,12 @@ const Home = ({ user, timetableData, notices }) => {
 
     // Get time-based greeting
     const hour = currentTime.getHours();
-    let greeting = 'Good Evening';
-    if (hour < 12) greeting = 'Good Morning';
+    let greeting;
+    if (hour < 5) greeting = 'Good Night';
+    else if (hour < 12) greeting = 'Good Morning';
     else if (hour < 18) greeting = 'Good Afternoon';
+    else if (hour < 22) greeting = 'Good Evening';
+    else greeting = 'Good Night';
 
     // Parse Timetable Data
     let innerTimetable = null;
