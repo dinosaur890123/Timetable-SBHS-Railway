@@ -449,6 +449,15 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
+// Serve static assets from Vite build in client/dist
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Fallback all unmatched routes to index.html (for client-side routing)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
+
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);

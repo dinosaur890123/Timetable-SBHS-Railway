@@ -136,7 +136,7 @@ export const fetchDateInfo = async (date) => {
 };
 
 // --- System API (Public) ---
-const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || 'https://timetable-sbhs-server.vercel.app/api';
+const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
 export const fetchSystemStatus = async () => {
     try {
