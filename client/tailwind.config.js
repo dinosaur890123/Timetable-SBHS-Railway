@@ -7,6 +7,11 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+        space: ['"Space Grotesk"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
       colors: {
         sbhs: {
           dark: '#1e1e1e', // Dark theme background

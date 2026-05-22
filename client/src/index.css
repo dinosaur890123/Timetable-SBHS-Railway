@@ -29,3 +29,23 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-black dark:bg-white border-2 border-zinc-100 dark:border-zinc-900;
 }
+
+/* Custom Technical Aesthetics */
+.bg-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(63, 63, 70, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(63, 63, 70, 0.12) 1px, transparent 1px);
+}
+
+.bg-grid-glow {
+  background: radial-gradient(circle 600px at 50% 20%, rgba(59, 130, 246, 0.08), transparent 80%);
+}
+
+.text-stroke-white {
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.85);
+}
+
+.text-stroke-zinc {
+  -webkit-text-stroke: 1px rgba(113, 113, 122, 0.5);
+}
