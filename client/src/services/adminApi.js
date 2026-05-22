@@ -34,6 +34,19 @@ export const fetchUsers = async () => {
     }
 };
 
+export const fetchUserTimetable = async (userId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/users/${userId}/timetable`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch user timetable');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const deleteUser = async (userId) => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {

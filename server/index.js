@@ -412,12 +412,32 @@ app.get('/api/stats', requireAuth, async (req, res) => {
     try {
         const allUsers = await listUsers();
         const state = await getSystemState();
+
+        const isPostgresDb = isDbEnabled;
+        let dbHealth = 'Offline';
+        if (isPostgresDb) {
+            try {
+                await db.query('SELECT 1');
+                dbHealth = 'Online';
+            } catch (e) {
+                dbHealth = `Error: ${e?.message || e}`;
+            }
+        }
+
         res.json({
             totalUsers: allUsers.length,
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
-            activeSessions: Math.floor(Math.random() * (allUsers.length > 0 ? allUsers.length : 1)) + 1 // Mock
+            activeSessions: Math.floor(Math.random() * (allUsers.length > 0 ? allUsers.length : 1)) + 1, // Mock
+            
+            // New diagnostic checks
+            databaseConfigured: !!process.env.DATABASE_URL,
+            databaseStatus: dbHealth,
+            nodeVersion: process.version,
+            platform: process.platform,
+            bypassAuthEnabled: process.env.BYPASS_AUTH === 'true',
+            adminCount: getAdminIds().length
         });
     } catch (e) {
         console.error('Stats error:', e);
@@ -520,6 +540,26 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Delete user error:', e);
         res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// GET /api/users/:id/timetable
+app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isDbEnabled) {
+            const localUser = users.find(u => String(u.id) === String(id));
+            return res.json(localUser?.timetable || null);
+        }
+        const result = await db.query(
+            'SELECT timetable FROM app_users WHERE id = $1',
+            [String(id)]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        res.json(result.rows[0].timetable || null);
+    } catch (e) {
+        console.error('Fetch timetable error:', e);
+        res.status(500).json({ error: 'Failed to fetch user timetable' });
     }
 });
 

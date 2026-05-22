@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -71,6 +71,28 @@ const AdminPanel = ({ user }) => {
             setLoading(false);
         }
     };
+
+    const [selectedUserTimetable, setSelectedUserTimetable] = useState(null);
+    const [loadingTimetable, setLoadingTimetable] = useState(false);
+
+    useEffect(() => {
+        if (viewingUserId) {
+            setLoadingTimetable(true);
+            setSelectedUserTimetable(null);
+            fetchUserTimetable(viewingUserId)
+                .then(data => {
+                    setSelectedUserTimetable(data);
+                })
+                .catch(err => {
+                    console.error("Failed to load user timetable:", err);
+                })
+                .finally(() => {
+                    setLoadingTimetable(false);
+                });
+        } else {
+            setSelectedUserTimetable(null);
+        }
+    }, [viewingUserId]);
 
     // Determine the user object for the modal based on latest data
     const viewingUserEntry = viewingUserId ? users.find(u => u.id === viewingUserId) : null;
@@ -355,14 +377,57 @@ const AdminPanel = ({ user }) => {
                     <h3 className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">
                         {loading ? '...' : (stats?.activeSessions || 0)}
                     </h3>
-                    <div className="text-xs text-zinc-500 mt-2">
-                        Estimated current users
-                    </div>
                 </div>
             </div>
         </div>
 
-                {/* Console Log Terminal */ }
+        {/* System Diagnostics & Connection Checks */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 font-mono text-xs">
+            <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                <ShieldCheck className="text-zinc-950 dark:text-zinc-100" size={16} />
+                System Health & Database Diagnostics
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Postgres Configured</span>
+                    <span className={`font-bold ${stats?.databaseConfigured ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {stats?.databaseConfigured ? 'YES' : 'NO'}
+                    </span>
+                </div>
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Database Connection</span>
+                    <span className={`font-bold ${stats?.databaseStatus === 'Online' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {stats?.databaseStatus || 'UNKNOWN'}
+                    </span>
+                </div>
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Active Administrators</span>
+                    <span className="font-bold text-zinc-900 dark:text-white">
+                        {stats?.adminCount || 0}
+                    </span>
+                </div>
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Node.js Version</span>
+                    <span className="font-bold text-zinc-900 dark:text-white">
+                        {stats?.nodeVersion || 'UNKNOWN'}
+                    </span>
+                </div>
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Server Platform</span>
+                    <span className="font-bold text-zinc-900 dark:text-white">
+                        {stats?.platform || 'UNKNOWN'}
+                    </span>
+                </div>
+                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                    <span className="text-zinc-500 block mb-1">Bypass Auth Enabled</span>
+                    <span className={`font-bold ${stats?.bypassAuthEnabled ? 'text-yellow-600 dark:text-yellow-400' : 'text-zinc-500'}`}>
+                        {stats?.bypassAuthEnabled ? 'YES (DEV MODE)' : 'NO'}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {/* Console Log Terminal */}
     <div className="bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl font-mono text-sm">
         <div className="bg-zinc-900 px-4 py-2 flex items-center justify-between border-b border-zinc-800">
             <div className="flex items-center gap-2">
@@ -733,16 +798,57 @@ const AdminPanel = ({ user }) => {
                     </button>
                 </div>
                 <div className="p-6">
-                    {viewingUserEntry.timetable ? (
-                        <Timetable timetableData={viewingUserEntry.timetable} showNow={false} />
+                    {loadingTimetable ? (
+                        <div className="text-center py-12 text-zinc-500 font-mono animate-pulse">
+                            [LOADING TIMETABLE DATA...]
+                        </div>
+                    ) : selectedUserTimetable ? (
+                        <div className="space-y-4 font-mono text-xs text-zinc-900 dark:text-zinc-100">
+                            <h4 className="font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                                Synced Schedule
+                            </h4>
+                            <div className="grid grid-cols-1 gap-1">
+                                {(() => {
+                                    const innerTimetable = selectedUserTimetable.timetable || selectedUserTimetable;
+                                    const periods = innerTimetable?.periods;
+                                    if (!periods || Object.keys(periods).length === 0) {
+                                        return <div className="text-center py-4 text-zinc-500">[No periods found in schedule]</div>;
+                                    }
+                                    return Object.entries(periods).map(([key, p]) => {
+                                        const isBreak = ["R", "L", "RC"].includes(key);
+                                        if (isBreak) return null; // Filter out breaks for compactness
+                                        return (
+                                            <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px]">
+                                                        P{key}
+                                                    </span>
+                                                    <span className="font-bold">{p.title}</span>
+                                                </div>
+                                                <div className="text-zinc-500 text-right text-[11px] flex gap-2">
+                                                    {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800">Rm {p.room}</span>}
+                                                    {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                            
+                            <details className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
+                                <summary className="text-[10px] text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-300 cursor-pointer select-none">
+                                    [View Raw JSON Timetable Payload]
+                                </summary>
+                                <pre className="mt-2 p-3 bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-left overflow-auto max-h-48 text-[9px] text-zinc-400">
+                                    {JSON.stringify(selectedUserTimetable, null, 2)}
+                                </pre>
+                            </details>
+                        </div>
                     ) : (
                         <div className="text-center py-12 text-zinc-500">
                             <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
                             <p>No timetable data available for this user yet.</p>
                             <p className="text-xs mt-1">Data is synced when the user logs in.</p>
-                            <pre className="text-[10px] mt-4 text-zinc-300 overflow-x-auto max-w-sm mx-auto">
-                                Debug: {JSON.stringify(viewingUserEntry.timetable, null, 2)}
-                            </pre>
                         </div>
                     )}
                 </div>
