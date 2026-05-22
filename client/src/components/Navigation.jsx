@@ -4,7 +4,7 @@ import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home } from 
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 border transition-all w-full text-left
+    className={`flex items-center justify-center md:flex-col gap-3 md:gap-1 px-4 py-3 md:px-2 md:py-3 border transition-all w-full md:rounded-xl text-center
       ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500' : ''}
       ${isActive 
         ? (isSpecialAdmin 
@@ -13,8 +13,8 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
         : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
       }`}
   >
-    <Icon size={20} />
-    <span className="hidden md:inline">{label}</span>
+    <Icon size={18} className="shrink-0" />
+    <span className="hidden md:block text-[11px] font-medium leading-tight">{label}</span>
   </button>
 );
 
@@ -34,13 +34,12 @@ const Navigation = ({ currentView, setView, user }) => {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full md:relative md:w-64 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
-       <div className="flex md:flex-col justify-around md:justify-start md:gap-2 p-2 md:p-4 h-full">
-         <div className="hidden md:flex items-center gap-3 px-4 py-4 mb-4">
-             <div className="w-8 h-8 bg-black dark:bg-white flex items-center justify-center">
-                 <span className="text-white dark:text-black font-extrabold">S</span>
+    <nav className="fixed bottom-0 left-0 w-full md:relative md:w-24 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
+       <div className="flex md:flex-col justify-around md:justify-start md:gap-2 p-2 md:p-3 h-full">
+         <div className="hidden md:flex items-center justify-center py-4 mb-4">
+             <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center">
+                 <span className="text-white dark:text-black font-extrabold text-xl">S</span>
              </div>
-             <span className="text-xl font-bold tracking-tight dark:text-white">Synchron</span>
          </div>
 
          {items.map(item => (
