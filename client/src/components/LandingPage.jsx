@@ -1,12 +1,87 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock, Shield, Award, LayoutDashboard } from 'lucide-react';
-import { performLogin } from '../services/api';
+import { ArrowRight, Calendar, Clock, Shield, Award, LayoutDashboard, AlertOctagon, X } from 'lucide-react';
+import { performLogin, getOauthConfig } from '../services/api';
 
-const LandingPage = () => {
+const LandingPage = ({ authError, clearAuthError }) => {
   return (
-    <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-blue-600/30">
+    <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-zinc-800">
       
+      {authError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <div className="bg-black border-2 border-white w-full max-w-2xl p-6 text-left transition-all">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3 text-white">
+                <AlertOctagon className="text-white shrink-0" size={24} />
+                <h3 className="text-lg font-black uppercase tracking-wider">Authentication Failure</h3>
+              </div>
+              <button 
+                onClick={clearAuthError}
+                className="p-1 hover:bg-zinc-900 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="mb-6 p-4 bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm break-all">
+              <span className="font-bold text-white uppercase block mb-1 text-xs">Error Message:</span>
+              {authError}
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <h4 className="font-bold text-white uppercase tracking-wider text-xs border-b border-zinc-900 pb-1">Troubleshooting Checklist:</h4>
+              <ul className="text-zinc-400 text-sm list-disc pl-5 space-y-2">
+                <li>
+                  <strong className="text-zinc-200">Redirect URI Mismatch:</strong> The redirect URL defined in SBHS developer portal must match <code className="bg-zinc-950 px-1.5 py-0.5 border border-zinc-900 font-mono text-white text-xs">{getOauthConfig().redirectUri}</code> exactly.
+                </li>
+                <li>
+                  <strong className="text-zinc-200">Client Secret:</strong> The developer portal client secret must match the one provided in settings.
+                </li>
+                <li>
+                  <strong className="text-zinc-200">Re-deploy Client:</strong> Vite builds client config at <span className="underline text-white">build time</span>. If you recently changed environment variables in Railway, you <strong className="text-white">MUST trigger a new deployment</strong> of the frontend service.
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3 bg-zinc-950 p-4 border border-zinc-900 font-mono text-xs">
+              <div className="font-bold text-white uppercase tracking-wider mb-2 text-[10px] text-zinc-500">Compiled Client Build Configuration:</div>
+              <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                <span className="text-zinc-500">Client ID</span>
+                <span className="text-zinc-300">{getOauthConfig().clientId}</span>
+              </div>
+              <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                <span className="text-zinc-500">Redirect URI</span>
+                <span className="text-zinc-300">{getOauthConfig().redirectUri}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Client Secret Status</span>
+                <span className={getOauthConfig().hasClientSecret ? "text-green-400 font-bold" : "text-yellow-500 font-bold"}>
+                  {getOauthConfig().hasClientSecret ? `Present (Length: ${getOauthConfig().clientSecretLength})` : "Not Present"}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button 
+                onClick={clearAuthError}
+                className="px-6 py-2 border border-zinc-700 text-zinc-300 font-bold hover:border-white hover:text-white transition-colors"
+              >
+                Dismiss
+              </button>
+              <button 
+                onClick={() => {
+                  clearAuthError();
+                  performLogin();
+                }}
+                className="px-6 py-2 bg-white text-black font-extrabold border border-white hover:bg-black hover:text-white transition-all"
+              >
+                Retry Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Ultra-minimal Header */}
       <nav className="flex items-center justify-between px-6 py-8 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">

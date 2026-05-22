@@ -598,7 +598,8 @@ const AdminPanel = ({ user }) => {
                                     No users found.
                                 </td>
                             </tr>
-                        ) : filteredUsers.map((user) =>                             <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''}`}>
+                        ) : filteredUsers.map((user) => (
+                            <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''}`}>
                                 <td className="px-6 py-4 text-center">
                                     <input 
                                         type="checkbox" 

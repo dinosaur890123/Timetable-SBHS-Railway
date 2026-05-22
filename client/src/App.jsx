@@ -87,7 +87,7 @@ function App() {
           await exchangeToken(code);
         } catch (err) {
             console.error(err);
-            setAuthError("Failed to authenticate.");
+            setAuthError(err.message || "Failed to authenticate.");
             setLoading(false); 
             return;
         }
@@ -200,7 +200,7 @@ function App() {
   if (!user) {
     return (
         <div className="transition-colors bg-white dark:bg-zinc-950">
-            <LandingPage />
+            <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} />
         </div>
     );
   }

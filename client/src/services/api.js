@@ -11,6 +11,13 @@ const API_BASE_URL = 'https://student.sbhs.net.au/api';
 
 const SCOPES = 'all-ro openid profile email';
 
+export const getOauthConfig = () => ({
+  clientId: CLIENT_ID || '(Not configured)',
+  redirectUri: REDIRECT_URI || '(Not configured)',
+  hasClientSecret: !!CLIENT_SECRET,
+  clientSecretLength: CLIENT_SECRET ? CLIENT_SECRET.length : 0
+});
+
 // --- Authentication ---
 
 export const performLogin = () => {
