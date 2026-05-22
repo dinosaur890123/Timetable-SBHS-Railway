@@ -232,10 +232,10 @@ const AdminPanel = ({ user }) => {
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all border
         ${activeTab === id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
                 }`}
         >
             <Icon size={18} />
@@ -340,8 +340,8 @@ const AdminPanel = ({ user }) => {
                         </h3>
                         <span className="text-sm font-medium text-zinc-400 mb-1">MB</span>
                     </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '45%' }}></div>
+                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 mt-3 overflow-hidden">
+                        <div className="h-full bg-black dark:bg-white animate-pulse" style={{ width: '45%' }}></div>
                     </div>
                 </div>
             </div>
@@ -397,7 +397,7 @@ const AdminPanel = ({ user }) => {
                         <span className={`font-bold ${log.action === 'ERROR' ? 'text-red-400' :
                             log.action === 'WARNING' ? 'text-yellow-400' :
                                 log.action === 'REGISTER' ? 'text-green-400' :
-                                    log.action === 'STARTUP' ? 'text-blue-400' :
+                                    log.action === 'STARTUP' ? 'text-zinc-400' :
                                         'text-purple-400'
                             }`}>{log.action}</span>
                         <span className="text-zinc-500">@</span>
@@ -427,10 +427,10 @@ const AdminPanel = ({ user }) => {
             </div>
 
             {currentBroadcast && (
-                <div className={`mb-6 p-4 rounded-xl border ${
+                <div className={`mb-6 p-4 border ${
                     currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
                     currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
-                    'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-850 dark:text-white'
                 }`}>
                     <div className="flex items-center gap-2 mb-1">
                         <Info size={16} />
@@ -460,10 +460,10 @@ const AdminPanel = ({ user }) => {
                                 key={type}
                                 type="button"
                                 onClick={() => setBroadcastType(type)}
-                                className={`py-3 rounded-xl border capitalize font-medium transition-all ${broadcastType === type
+                                className={`py-3 border capitalize font-medium transition-all ${broadcastType === type
                                     ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                                         : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                                            : 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                                            : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
                                     : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                                     }`}
                             >
@@ -598,58 +598,57 @@ const AdminPanel = ({ user }) => {
                                     No users found.
                                 </td>
                             </tr>
-                        ) : filteredUsers.map((user) => (
-                            <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                        ) : filteredUsers.map((user) =>                             <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''}`}>
                                 <td className="px-6 py-4 text-center">
                                     <input 
                                         type="checkbox" 
-                                        className="rounded border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-blue-500"
+                                        className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-black"
                                         checked={selectedUsers.has(user.id)}
                                         onChange={() => toggleSelectUser(user.id)}
                                     />
                                 </td>
                                 <td className="px-6 py-4">
                                     <div>
-                                        <div className="font-medium text-zinc-900 dark:text-white">{user.name}</div>
+                                        <div className="font-semibold text-zinc-900 dark:text-white">{user.name}</div>
                                         <div className="text-zinc-500 text-xs">{user.email}</div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 font-mono text-xs">{user.id}</td>
                                 <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            ${user.role === 'Prefect' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                                            user.role === 'Teacher' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'}`}>
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold
+                                            ${user.role === 'Prefect' ? 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750' :
+                                            user.role === 'Teacher' ? 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750' :
+                                                'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'}`}>
                                         {user.role}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{user.year}</td>
                                 <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium border
                                             ${user.status === 'Active' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-400' :
                                             'bg-zinc-50 border-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-green-500' : 'bg-zinc-400'}`}></span>
+                                        <span className={`w-1.5 h-1.5 ${user.status === 'Active' ? 'bg-green-500' : 'bg-zinc-400'}`}></span>
                                         {user.status}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                     <button
                                         onClick={() => setViewingUserId(user.id)}
-                                        className="p-1 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                        className="p-1 text-zinc-550 hover:text-black hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors"
                                         title="View Timetable"
                                     >
                                         <Eye size={16} />
                                     </button>
                                     <button
                                         onClick={() => setEditingUser(user)}
-                                        className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded transition-colors"
+                                        className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                         title="Edit User"
                                     >
                                         <Edit2 size={16} />
                                     </button>
                                     <button
                                         onClick={() => handleDeleteUser(user.id)}
-                                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                        className="p-1 text-red-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                         title="Delete User"
                                     >
                                         <Trash2 size={16} />
@@ -781,7 +780,7 @@ const AdminPanel = ({ user }) => {
                         </select>
                     </div>
                     <div className="pt-4">
-                        <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
+                        <button type="submit" className="w-full py-2 bg-black text-white hover:bg-zinc-850 font-bold border border-black dark:bg-white dark:text-black dark:border-white dark:hover:bg-zinc-200">
                             Save Changes
                         </button>
                     </div>

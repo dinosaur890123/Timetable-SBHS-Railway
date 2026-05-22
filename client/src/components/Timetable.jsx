@@ -84,22 +84,22 @@ const Timetable = ({ timetableData, showNow = true }) => {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full mt-4">
       <div className="flex items-center justify-between px-2">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             Daily Schedule
         </h2>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 shadow-sm border border-zinc-200/50 dark:border-zinc-800/50 relative">
+      <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative">
           
           {/* Vertical Timeline Axis Container */}
           <div className="relative">
               {/* Background Axis Line */}
-              <div className="absolute left-[39px] md:left-[55px] top-4 bottom-4 w-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-full" />
+              <div className="absolute left-[39px] md:left-[55px] top-4 bottom-4 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
               
               {/* Active Axis Line */}
               {showNow && currentMinutes >= firstMin && (
                   <motion.div 
-                      className="absolute left-[39px] md:left-[55px] top-4 w-0.5 bg-blue-500 rounded-full z-10 origin-top"
+                      className="absolute left-[39px] md:left-[55px] top-4 w-0.5 bg-black dark:bg-white z-10 origin-top"
                       initial={{ scaleY: 0 }}
                       animate={{ scaleY: timelineProgressPos / 100 }}
                       transition={{ duration: 1, ease: "easeOut" }}

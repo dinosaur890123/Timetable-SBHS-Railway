@@ -3,7 +3,29 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-white text-zinc-900 dark:bg-zinc-900 dark:text-slate-100 antialiased;
+  *, *::before, *::after {
+    border-radius: 0px !important;
   }
+  
+  body {
+    @apply bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50 antialiased;
+  }
+
+  ::selection {
+    @apply bg-black text-white dark:bg-white dark:text-black;
+  }
+}
+
+/* Custom Brutalist Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-zinc-100 dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-black dark:bg-white border-2 border-zinc-100 dark:border-zinc-900;
 }

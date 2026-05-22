@@ -29,17 +29,15 @@ const CalendarView = () => {
 
   const getEventTypeColor = (type) => {
     switch(type) {
-      case 'assessment': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
-      case 'school': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
-      default: return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+      case 'assessment': return 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white';
+      default: return 'bg-zinc-100 text-zinc-900 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800';
     }
   };
 
   const getEventTypeAccent = (type) => {
     switch(type) {
-      case 'assessment': return 'bg-red-500';
-      case 'school': return 'bg-blue-500';
-      default: return 'bg-emerald-500';
+      case 'assessment': return 'bg-black dark:bg-white';
+      default: return 'bg-zinc-400 dark:bg-zinc-600';
     }
   };
 
@@ -76,68 +74,68 @@ const CalendarView = () => {
           </button>
         </div>
       </motion.div>
-
-      {loading ? (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-20"
-        >
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4 mx-auto">
-            <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-blue-500 animate-spin"></div>
-          </div>
-          <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
-        </motion.div>
-      ) : events.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-16"
-        >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4">
-            <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600" />
-          </div>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">No events found</p>
-          <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try navigating to a different week</p>
-        </motion.div>
-      ) : (
-        <div className="space-y-3">
-          {events.map((dayGroup, idx) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              key={dayGroup.info.date}
-              className="bg-white dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
-            >
-              {/* Day Header */}
-              <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                        {format(new Date(dayGroup.info.date), 'EEEE')}
-                      </span>
-                      <span className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
-                        {format(new Date(dayGroup.info.date), 'd')}
-                      </span>
-                    </div>
-                    <div className="pl-4 border-l border-zinc-200 dark:border-zinc-800">
-                      <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                        Term {dayGroup.info.term}
-                      </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Week {dayGroup.info.week}{dayGroup.info.weekType}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                    <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                      {dayGroup.items.length} event{dayGroup.items.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
+ 
+       {loading ? (
+         <motion.div 
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           className="text-center py-20"
+         >
+           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4 mx-auto">
+             <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-black dark:border-t-white animate-spin"></div>
+           </div>
+           <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
+         </motion.div>
+       ) : events.length === 0 ? (
+         <motion.div 
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           className="text-center py-16"
+         >
+           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4">
+             <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600" />
+           </div>
+           <p className="text-zinc-500 dark:text-zinc-400 font-medium">No events found</p>
+           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try navigating to a different week</p>
+         </motion.div>
+       ) : (
+         <div className="space-y-3">
+           {events.map((dayGroup, idx) => (
+             <motion.div 
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: idx * 0.05 }}
+               key={dayGroup.info.date}
+               className="bg-white dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
+             >
+               {/* Day Header */}
+               <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 backdrop-blur-sm">
+                 <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                     <div className="flex flex-col">
+                       <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                         {format(new Date(dayGroup.info.date), 'EEEE')}
+                       </span>
+                       <span className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
+                         {format(new Date(dayGroup.info.date), 'd')}
+                       </span>
+                     </div>
+                     <div className="pl-4 border-l border-zinc-200 dark:border-zinc-800">
+                       <div className="text-xs font-extrabold uppercase tracking-wide text-zinc-900 dark:text-zinc-100 mb-1">
+                         Term {dayGroup.info.term}
+                       </div>
+                       <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                         Week {dayGroup.info.week}{dayGroup.info.weekType}
+                       </div>
+                     </div>
+                   </div>
+                   <div className="text-right hidden sm:block">
+                     <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                       {dayGroup.items.length} event{dayGroup.items.length !== 1 ? 's' : ''}
+                     </span>
+                   </div>
+                 </div>
+               </div>
 
               {/* Events List */}
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">

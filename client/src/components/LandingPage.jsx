@@ -10,17 +10,17 @@ const LandingPage = () => {
       {/* Ultra-minimal Header */}
       <nav className="flex items-center justify-between px-6 py-8 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
-             <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+             <div className="w-6 h-6 bg-white flex items-center justify-center">
                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white"/>
-                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="black"/>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                  </svg>
              </div>
-             <span className="font-semibold text-sm tracking-wide text-white">Synchron v2</span>
+             <span className="font-extrabold text-sm tracking-wide text-white uppercase">Synchron v2</span>
           </div>
           <button 
              onClick={performLogin}
-             className="text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+             className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-wider"
           >
              Log in
           </button>
@@ -37,13 +37,13 @@ const LandingPage = () => {
                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                className="flex flex-col items-center"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-600/30 bg-blue-600/10 text-blue-500 text-xs font-medium tracking-wide mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 text-xs font-bold tracking-widest uppercase mb-10">
                  Synchron for SBHS
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-semibold text-white mb-8 tracking-tight leading-tight">
+              <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-8 tracking-tight leading-tight uppercase">
                 Your student portal, <br />
-                <span className="text-zinc-500">renewed.</span>
+                <span className="text-zinc-650">renewed.</span>
               </h1>
               
               <p className="text-lg md:text-xl text-zinc-400 mb-12 leading-relaxed max-w-2xl font-light">
@@ -53,12 +53,12 @@ const LandingPage = () => {
               <div className="flex flex-col sm:flex-row items-center gap-6">
                   <button
                     onClick={performLogin}
-                    className="group flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black text-sm font-medium rounded-full hover:bg-zinc-200 transition-all w-full sm:w-auto"
+                    className="group flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black text-sm font-bold border-2 border-white hover:bg-black hover:text-white transition-all w-full sm:w-auto"
                   >
                     Continue with SBHS
                     <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                   </button>
-                  <p className="text-xs text-zinc-600">
+                  <p className="text-xs text-zinc-600 uppercase font-semibold tracking-wider">
                       Requires an active SBHS portal account.
                   </p>
               </div>
