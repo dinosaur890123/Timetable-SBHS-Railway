@@ -185,7 +185,7 @@ function App() {
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">System Maintenance</h1>
             <p className="text-zinc-400 max-w-md">Synchron is currently undergoing scheduled maintenance. Please check back later.</p>
-            {user?.studentId === '449130511' && (
+            {user?.role === 'Admin' && (
                 <button onClick={() => setCurrentView('admin')} className="mt-8 text-xs text-zinc-600 hover:text-white underline">
                     Admin Bypass
                 </button>

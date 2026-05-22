@@ -140,10 +140,14 @@ async function upsertUser(newUser) {
             users[existingIndex] = { ...users[existingIndex], ...safeUser, lastSeen: new Date() };
             return users[existingIndex];
         }
+
+        const adminIds = getAdminIds();
+        const initialRole = adminIds.includes(userId) ? 'Admin' : 'Student';
+
         const created = {
             ...safeUser,
             status: 'Active',
-            role: 'Student',
+            role: initialRole,
             joined: new Date(),
             timetable: safeUser.timetable || null,
         };
@@ -153,10 +157,12 @@ async function upsertUser(newUser) {
 
     const userId = String(newUser.id);
     const timetableJson = newUser.timetable ? JSON.stringify(newUser.timetable) : null;
+    const adminIds = getAdminIds();
+    const initialRole = adminIds.includes(userId) ? 'Admin' : 'Student';
 
     const result = await db.query(
-        `INSERT INTO app_users (id, email, name, year, timetable, last_seen)
-         VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
+        `INSERT INTO app_users (id, email, name, role, year, timetable, last_seen)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
          ON CONFLICT (id) DO UPDATE SET
            email = EXCLUDED.email,
            name = EXCLUDED.name,
@@ -164,7 +170,7 @@ async function upsertUser(newUser) {
            timetable = COALESCE(EXCLUDED.timetable, app_users.timetable),
            last_seen = NOW()
          RETURNING id, name, email, role, year, status, joined, last_seen, timetable`,
-        [userId, newUser.email, newUser.name || null, newUser.year || null, timetableJson]
+        [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null, timetableJson]
     );
 
     const row = result.rows[0];
@@ -182,11 +188,15 @@ async function upsertUser(newUser) {
 }
 
 async function updateUserById(id, updates) {
+    if (updates.role !== undefined && !['Student', 'Admin'].includes(updates.role)) {
+        return { error: 'Invalid role. Must be Student or Admin' };
+    }
+
     if (!isDbEnabled) {
         const userIndex = users.findIndex(u => String(u.id) === String(id));
         if (userIndex === -1) return null;
 
-        const allowedUpdates = ['role', 'status', 'name', 'year'];
+        const allowedUpdates = ['role', 'name', 'year'];
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) users[userIndex][field] = updates[field];
         });
@@ -195,7 +205,6 @@ async function updateUserById(id, updates) {
 
     const allowed = {
         role: 'role',
-        status: 'status',
         name: 'name',
         year: 'year',
     };
@@ -323,7 +332,7 @@ async function getUserById(id) {
     return result.rows[0] || null;
 }
 
-// Require admin privilege (Only authorized student IDs or users with Admin role in DB)
+// Require admin privilege (Only users with Admin role in DB, or bootstrap list if not configured in DB as Student)
 const requireAdminAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
@@ -334,23 +343,27 @@ const requireAdminAuth = async (req, res, next) => {
         return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
     }
     const studentId = String(userData.studentId);
-    const adminIds = getAdminIds();
     
-    // Check bootstrap list
-    if (adminIds.includes(studentId)) {
-        req.user = userData;
-        return next();
-    }
-
-    // Check database-assigned admin role
     try {
         const dbUser = await getUserById(studentId);
-        if (dbUser && dbUser.role === 'Admin') {
-            req.user = userData;
-            return next();
+        // If they exist in DB and are NOT Admin, reject immediately (strict check)
+        if (dbUser) {
+            if (dbUser.role === 'Admin') {
+                req.user = userData;
+                return next();
+            } else {
+                return res.status(403).json({ error: 'Forbidden: Admin access required' });
+            }
         }
     } catch (e) {
         console.error('[auth] Database admin check failed:', e?.message || e);
+    }
+
+    // Fallback: If not registered in DB yet, check bootstrap list
+    const adminIds = getAdminIds();
+    if (adminIds.includes(studentId)) {
+        req.user = userData;
+        return next();
     }
 
     return res.status(403).json({ error: 'Forbidden: Admin access required' });

@@ -5,9 +5,6 @@ import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
 const AdminPanel = ({ user }) => {
-    // Configured Admin IDs
-    const ADMIN_IDS = ["449130511", "449596935"];
-
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -23,12 +20,13 @@ const AdminPanel = ({ user }) => {
     const [broadcastType, setBroadcastType] = useState('info');
 
     const handleToggleMaintenance = async () => {
+        if (!stats) return;
+        const targetMode = !stats.maintenanceMode;
         try {
-            const newStatus = !stats?.systemStatus?.includes('Maintenance');
-            await setMaintenanceMode(newStatus);
-            loadData(); // Refresh stats
-            alert(`Maintenance mode ${newStatus ? 'ENABLED' : 'DISABLED'}`);
-        } catch (e) {
+            await setMaintenanceMode(targetMode);
+            setStats(prev => prev ? { ...prev, maintenanceMode: targetMode } : null);
+            loadData(); // Refresh logs
+        } catch (err) {
             alert("Failed to toggle maintenance mode");
         }
     };
@@ -38,7 +36,6 @@ const AdminPanel = ({ user }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [logSearchTerm, setLogSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
-    const [statusFilter, setStatusFilter] = useState('All');
     const [viewingUserId, setViewingUserId] = useState(null); // ID only, derive user from list
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
@@ -46,7 +43,7 @@ const AdminPanel = ({ user }) => {
     const [promoting, setPromoting] = useState(false);
 
     useEffect(() => {
-        if (user && (user.role === 'Admin' || ADMIN_IDS.includes(user.studentId))) {
+        if (user && user.role === 'Admin') {
             setIsAuthenticated(true);
         } else {
             setIsAuthenticated(false);
@@ -170,8 +167,7 @@ const AdminPanel = ({ user }) => {
             // Collect form data
             const formData = new FormData(e.target);
             const updates = {
-                role: formData.get('role'),
-                status: formData.get('status')
+                role: formData.get('role')
             };
 
             await updateUser(editingUser.id, updates);
@@ -260,8 +256,7 @@ const AdminPanel = ({ user }) => {
         const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               user.email?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = roleFilter === 'All' || user.role === roleFilter;
-        const matchesStatus = statusFilter === 'All' || user.status === statusFilter;
-        return matchesSearch && matchesRole && matchesStatus;
+        return matchesSearch && matchesRole;
     });
 
     const filteredLogs = logs.filter(log => 
@@ -645,19 +640,7 @@ const AdminPanel = ({ user }) => {
                     >
                         <option value="All">All Roles</option>
                         <option value="Student">Student</option>
-                        <option value="Prefect">Prefect</option>
-                        <option value="Teacher">Teacher</option>
                         <option value="Admin">Admin</option>
-                    </select>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="All">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                        <option value="Warning">Warning</option>
                     </select>
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -687,14 +670,13 @@ const AdminPanel = ({ user }) => {
                             <th className="px-6 py-4">ID</th>
                             <th className="px-6 py-4">Role</th>
                             <th className="px-6 py-4">Year</th>
-                            <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                         {loading ? (
                             <tr>
-                                <td colSpan="6" className="px-6 py-8 text-center text-zinc-500">
+                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
                                     <div className="flex items-center justify-center gap-2">
                                         <RefreshCw className="animate-spin w-4 h-4" />
                                         Loading users...
@@ -703,7 +685,7 @@ const AdminPanel = ({ user }) => {
                             </tr>
                         ) : filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="px-6 py-8 text-center text-zinc-500">
+                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
                                     No users found.
                                 </td>
                             </tr>
@@ -726,21 +708,12 @@ const AdminPanel = ({ user }) => {
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 font-mono text-xs">{user.id}</td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold
-                                            ${user.role === 'Prefect' ? 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750' :
-                                            user.role === 'Teacher' ? 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750' :
-                                                'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'}`}>
+                                            ${user.role === 'Admin' ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white' :
+                                            'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750'}`}>
                                         {user.role}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{user.year}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium border
-                                            ${user.status === 'Active' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-400' :
-                                            'bg-zinc-50 border-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400'}`}>
-                                        <span className={`w-1.5 h-1.5 ${user.status === 'Active' ? 'bg-green-500' : 'bg-zinc-400'}`}></span>
-                                        {user.status}
-                                    </span>
-                                </td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                     <button
                                         onClick={() => setViewingUserId(user.id)}
@@ -917,17 +890,7 @@ const AdminPanel = ({ user }) => {
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Role</label>
                         <select name="role" defaultValue={editingUser.role} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg dark:text-white">
                             <option value="Student">Student</option>
-                            <option value="Prefect">Prefect</option>
-                            <option value="Teacher">Teacher</option>
                             <option value="Admin">Admin</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Status</label>
-                        <select name="status" defaultValue={editingUser.status} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg dark:text-white">
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                            <option value="Warning">Warning</option>
                         </select>
                     </div>
                     <div className="pt-4">

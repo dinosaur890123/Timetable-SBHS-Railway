@@ -1,12 +1,15 @@
 import React from 'react';
 import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home } from 'lucide-react';
 
-const NavItem = ({ icon: Icon, label, isActive, onClick }) => (
+const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 border transition-all w-full text-left
+      ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500' : ''}
       ${isActive 
-        ? 'bg-zinc-950 text-white border-zinc-950 font-bold dark:bg-white dark:text-zinc-950 dark:border-white shadow-none' 
+        ? (isSpecialAdmin 
+            ? 'bg-zinc-950 text-white font-bold dark:bg-white dark:text-zinc-950 shadow-none' 
+            : 'bg-zinc-950 text-white border-zinc-950 font-bold dark:bg-white dark:text-zinc-950 dark:border-white shadow-none') 
         : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
       }`}
   >
@@ -16,8 +19,7 @@ const NavItem = ({ icon: Icon, label, isActive, onClick }) => (
 );
 
 const Navigation = ({ currentView, setView, user }) => {
-  const ADMIN_IDS = ["449130511", "449596935"];
-  const isAdmin = user && (user.role === 'Admin' || ADMIN_IDS.includes(user.studentId));
+  const isAdmin = user && user.role === 'Admin';
 
   const items = [
     { id: 'home', icon: Home, label: 'My Synchron'},
@@ -48,6 +50,7 @@ const Navigation = ({ currentView, setView, user }) => {
                 label={item.label}
                 isActive={currentView === item.id}
                 onClick={() => setView(item.id)}
+                isSpecialAdmin={item.id === 'admin'}
             />
          ))}
        </div>
