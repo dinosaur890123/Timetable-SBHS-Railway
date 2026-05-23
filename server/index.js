@@ -516,6 +516,68 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             });
         }
 
+        // Aggregate extended analytics
+        const now = new Date();
+        let activeToday = 0;
+        let activeThisWeek = 0;
+        const growthByDate = {}; // 'YYYY-MM-DD' -> count
+        const classCounts = {}; // subjectTitle -> count
+
+        allUsers.forEach(u => {
+            // Retention check
+            const lastSeenStr = u.lastSeen || u.joined;
+            const lastSeen = lastSeenStr ? new Date(lastSeenStr) : null;
+            if (lastSeen) {
+                const diffMs = now - lastSeen;
+                const diffDays = diffMs / (1000 * 60 * 60 * 24);
+                if (diffDays <= 1) activeToday++;
+                if (diffDays <= 7) activeThisWeek++;
+            }
+
+            // Growth registration check
+            const joinedStr = u.joined;
+            const joined = joinedStr ? new Date(joinedStr) : null;
+            if (joined) {
+                const dateStr = joined.toISOString().split('T')[0];
+                growthByDate[dateStr] = (growthByDate[dateStr] || 0) + 1;
+            }
+
+            // Parse timetable for popular classes
+            if (u.timetable) {
+                const innerTimetable = u.timetable.timetable || u.timetable;
+                const periods = innerTimetable?.periods;
+                if (periods) {
+                    Object.entries(periods).forEach(([key, p]) => {
+                        const isBreak = ["R", "L", "RC"].includes(key);
+                        if (!isBreak && p && p.title) {
+                            const title = String(p.title).trim();
+                            if (title && title.length > 1) {
+                                classCounts[title] = (classCounts[title] || 0) + 1;
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        // Format growth data for the past 14 days
+        const growthData = [];
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            growthData.push({
+                date: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                count: growthByDate[dateStr] || 0
+            });
+        }
+
+        // Format top classes (sorted by student enrollment count)
+        const popularClasses = Object.entries(classCounts)
+            .map(([title, count]) => ({ title, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+
         res.json({
             totalUsers: allUsers.length,
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
@@ -525,6 +587,12 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             
             // Year group analytics
             yearDistribution: yearBreakdown,
+
+            // New extended metrics
+            activeToday,
+            activeThisWeek,
+            growthData,
+            popularClasses,
 
             // New diagnostic checks
             databaseConfigured: !!process.env.DATABASE_URL,
@@ -611,35 +679,6 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/maintenance/prune-users (Prune users seen > 90 days ago)
-app.post('/api/maintenance/prune-users', requireAuth, async (req, res) => {
-    try {
-        let deletedCount = 0;
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - 90);
-
-        if (!isDbEnabled) {
-            const initialLength = users.length;
-            users = users.filter(u => {
-                const lastSeenDate = u.lastSeen ? new Date(u.lastSeen) : new Date(u.joined);
-                return lastSeenDate >= cutoffDate || u.role === 'Admin'; // Don't prune admins
-            });
-            deletedCount = initialLength - users.length;
-        } else {
-            const result = await db.query(
-                "DELETE FROM app_users WHERE role != 'Admin' AND last_seen < NOW() - INTERVAL '90 days' RETURNING id",
-                []
-            );
-            deletedCount = result.rows.length;
-        }
-
-        await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Pruned ${deletedCount} inactive users (unseen > 90 days)`);
-        res.json({ success: true, count: deletedCount });
-    } catch (e) {
-        console.error('Prune users error:', e);
-        res.status(500).json({ error: 'Failed to prune inactive users' });
-    }
-});
 
 // POST /api/maintenance/prune-logs (Prune logs older than 30 days)
 app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {

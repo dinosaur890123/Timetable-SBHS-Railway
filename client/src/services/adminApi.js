@@ -171,19 +171,6 @@ export const promoteUserToAdmin = async (studentId) => {
     }
 };
 
-export const pruneInactiveUsers = async () => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/maintenance/prune-users`, {
-            method: 'POST',
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to prune inactive users');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
 
 export const pruneOldLogs = async () => {
     try {

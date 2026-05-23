@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3 } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneInactiveUsers, pruneOldLogs, clearAllTimetables } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -42,7 +42,6 @@ const AdminPanel = ({ user }) => {
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
-    const [isPruningUsers, setIsPruningUsers] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
     const [isClearingTimetables, setIsClearingTimetables] = useState(false);
 
@@ -218,19 +217,6 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    const handlePruneInactiveUsers = async () => {
-        if (!window.confirm("Are you sure you want to prune inactive users? This will delete all student records who have not been seen for over 90 days.")) return;
-        setIsPruningUsers(true);
-        try {
-            const res = await pruneInactiveUsers();
-            alert(`Pruning complete. Removed ${res.count} inactive users.`);
-            loadData();
-        } catch (err) {
-            alert("Failed to prune inactive users.");
-        } finally {
-            setIsPruningUsers(false);
-        }
-    };
 
     const handlePruneOldLogs = async () => {
         if (!window.confirm("Are you sure you want to prune old logs? This will delete all audit/system logs older than 30 days.")) return;
@@ -362,6 +348,7 @@ const AdminPanel = ({ user }) => {
                 <div className="flex gap-2">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
+                    <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
@@ -591,6 +578,168 @@ const AdminPanel = ({ user }) => {
         </div>
     </div>
             </div >
+        )}
+
+        {activeTab === 'analytics' && (
+            <div className="space-y-6">
+                {/* Analytics Headline Stats */}
+                <div className="grid gap-6 md:grid-cols-3">
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Active Today</span>
+                            <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
+                                {stats?.activeToday || 0}
+                            </h3>
+                            <p className="text-zinc-500 text-xs mt-1">Logged in within the past 24 hours</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                            <span>Daily Active Ratio:</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {stats?.totalUsers ? Math.round((stats.activeToday / stats.totalUsers) * 100) : 0}%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Active This Week</span>
+                            <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
+                                {stats?.activeThisWeek || 0}
+                            </h3>
+                            <p className="text-zinc-500 text-xs mt-1">Logged in within the past 7 days</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                            <span>Weekly Active Ratio:</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {stats?.totalUsers ? Math.round((stats.activeThisWeek / stats.totalUsers) * 100) : 0}%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Inactive Users</span>
+                            <h3 className="text-3xl font-extrabold text-zinc-400 mt-1">
+                                {stats?.totalUsers ? Math.max(0, stats.totalUsers - stats.activeThisWeek) : 0}
+                            </h3>
+                            <p className="text-zinc-500 text-xs mt-1">Not active in the last 7 days</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                            <span>Inactive Ratio:</span>
+                            <span className="font-bold text-zinc-400">
+                                {stats?.totalUsers ? Math.round(((stats.totalUsers - stats.activeThisWeek) / stats.totalUsers) * 100) : 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Growth and Year Breakdown Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* User Growth Timeline Histogram */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
+                        <h4 className="text-sm font-bold uppercase tracking-wider mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <Activity className="text-zinc-950 dark:text-zinc-100" size={16} />
+                            User Registration Growth (Last 14 Days)
+                        </h4>
+                        <div className="h-48 flex items-end gap-2 pb-2">
+                            {stats?.growthData?.map((item, idx) => {
+                                const counts = stats.growthData.map(g => g.count);
+                                const maxVal = Math.max(1, ...counts);
+                                const pctHeight = (item.count / maxVal) * 85;
+                                return (
+                                    <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                                        <div className="absolute -top-6 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[10px] py-0.5 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-mono pointer-events-none shadow">
+                                            {item.count}
+                                        </div>
+                                        <div 
+                                            className="w-full bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all rounded-t-sm"
+                                            style={{ height: `${pctHeight}%` }}
+                                        ></div>
+                                        <span className="text-[9px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+                                            {item.date}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Year Group Distribution */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
+                        <h4 className="text-sm font-bold uppercase tracking-wider mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <BarChart3 className="text-zinc-950 dark:text-zinc-100" size={16} />
+                            Year Group Student Distribution
+                        </h4>
+                        <div className="space-y-3">
+                            {(() => {
+                                const dist = stats?.yearDistribution || {};
+                                const years = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
+                                
+                                let maxCount = 1;
+                                const dataPoints = years.map(yr => {
+                                    let count = 0;
+                                    Object.entries(dist).forEach(([k, v]) => {
+                                        const cleanKey = String(k).toLowerCase().replace(/^0+/, '');
+                                        const cleanYr = yr.toLowerCase();
+                                        if (cleanKey === cleanYr || (yr === 'Staff' && (cleanKey.includes('staff') || cleanKey.includes('admin') || cleanKey === 'st'))) {
+                                            count += v;
+                                        } else if (yr === 'Unknown' && (cleanKey === 'unknown' || cleanKey === 'null' || cleanKey === '')) {
+                                            count += v;
+                                        }
+                                    });
+                                    if (count > maxCount) maxCount = count;
+                                    return { label: yr, count };
+                                });
+
+                                return dataPoints.map(({ label, count }) => {
+                                    const pct = (count / maxCount) * 100;
+                                    return (
+                                        <div key={label} className="flex items-center gap-3 text-xs font-mono">
+                                            <span className="w-16 text-zinc-550 dark:text-zinc-400">Year {label}</span>
+                                            <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-3 rounded-full overflow-hidden relative">
+                                                <div 
+                                                    className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out" 
+                                                    style={{ width: `${Math.max(1, pct)}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="w-6 text-right font-bold text-zinc-900 dark:text-white">{count}</span>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Popular Synced Courses */}
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
+                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                        <Terminal className="text-zinc-950 dark:text-zinc-100" size={16} />
+                        Most Popular Synced Electives & Courses
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {stats?.popularClasses && stats.popularClasses.length > 0 ? (
+                            stats.popularClasses.map((item, idx) => (
+                                <div key={idx} className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-6 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center text-xs font-mono font-bold dark:text-white">
+                                            {idx + 1}
+                                        </span>
+                                        <span className="text-sm font-medium text-zinc-900 dark:text-white">{item.title}</span>
+                                    </div>
+                                    <span className="text-xs font-mono bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 rounded font-bold">
+                                        {item.count} students
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="col-span-2 text-center py-6 text-zinc-550 font-mono text-xs">
+                                [NO TIMETABLE PERIODS FOUND IN DATABASE TO AGGREGATE]
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         )}
 
 {
@@ -895,22 +1044,6 @@ const AdminPanel = ({ user }) => {
                     </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <Database size={16} />
-                            Prune Inactive User Profiles
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-1">Delete student records who have not accessed the app in the last 90 days (Admins are protected)</p>
-                    </div>
-                    <button
-                        onClick={handlePruneInactiveUsers}
-                        disabled={isPruningUsers}
-                        className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
-                    >
-                        {isPruningUsers ? 'Pruning...' : 'Prune Users'}
-                    </button>
-                </div>
 
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
