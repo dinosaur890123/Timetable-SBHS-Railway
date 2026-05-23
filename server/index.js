@@ -113,7 +113,17 @@ async function setMaintenance(maintenance) {
 }
 
 async function listUsers() {
-    if (!isDbEnabled) return users;
+    if (!isDbEnabled) {
+        users.forEach(u => {
+            if (u.timetable) {
+                const inner = u.timetable.timetable || u.timetable;
+                if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
+                    u.timetable = null;
+                }
+            }
+        });
+        return users;
+    }
     const result = await db.query(
         'SELECT id, name, email, role, year, status, joined, last_seen, timetable FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
@@ -787,14 +797,32 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
         const { id } = req.params;
         if (!isDbEnabled) {
             const localUser = users.find(u => String(u.id) === String(id));
-            return res.json(localUser?.timetable || null);
+            let timetable = localUser?.timetable || null;
+            if (timetable) {
+                const inner = timetable.timetable || timetable;
+                if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
+                    if (localUser) localUser.timetable = null;
+                    timetable = null;
+                }
+            }
+            return res.json(timetable);
         }
         const result = await db.query(
             'SELECT timetable FROM app_users WHERE id = $1',
             [String(id)]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-        res.json(result.rows[0].timetable || null);
+        
+        let timetable = result.rows[0].timetable || null;
+        if (timetable) {
+            const inner = timetable.timetable || timetable;
+            if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
+                // Background clean up
+                db.query('UPDATE app_users SET timetable = NULL WHERE id = $1', [String(id)]).catch(() => {});
+                timetable = null;
+            }
+        }
+        res.json(timetable);
     } catch (e) {
         console.error('Fetch timetable error:', e);
         res.status(500).json({ error: 'Failed to fetch user timetable' });
