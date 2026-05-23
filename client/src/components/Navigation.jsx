@@ -8,9 +8,9 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
       ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500' : ''}
       ${isActive 
         ? (isSpecialAdmin 
-            ? 'bg-zinc-950 text-white font-bold dark:bg-white dark:text-zinc-950 shadow-none' 
+            ? 'bg-zinc-950 text-white font-bold dark:bg-white dark:text-zinc-950 shadow-none border-orange-500 dark:border-orange-500' 
             : 'bg-zinc-950 text-white border-zinc-950 font-bold dark:bg-white dark:text-zinc-950 dark:border-white shadow-none') 
-        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
+        : `text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 ${isSpecialAdmin ? '' : 'border-transparent'}`
       }`}
   >
     <Icon size={18} className="shrink-0" />

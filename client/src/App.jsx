@@ -157,28 +157,32 @@ function App() {
             
              // Sync timetable to admin panel for this user
              if (user && user.studentId && data && !hasSyncedTimetable.current) {
-                console.log("Syncing timetable to admin:", user.studentId, data);
-                hasSyncedTimetable.current = true;
-                // Don't await this, let it happen in background
-                registerUser({
-                    id: user.studentId,
-                    email: user.email,
-                    name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                    timetable: data
-                }).then(dbSync => {
-                    if (dbSync && dbSync.user && dbSync.user.role) {
-                        setUser(prev => {
-                            if (prev && prev.role !== dbSync.user.role) {
-                                return { ...prev, role: dbSync.user.role };
-                            }
-                            return prev;
-                        });
-                    }
-                }).catch(e => {
-                    hasSyncedTimetable.current = false; // Reset on failure so it can retry next time
-                    console.log("Sync failed silently", e);
-                });
-            }
+                 const innerTimetable = data.timetable || data;
+                 const hasPeriods = innerTimetable && innerTimetable.periods && Object.keys(innerTimetable.periods).length > 0;
+
+                 console.log("Syncing details to admin (has valid timetable:", hasPeriods, ")");
+                 hasSyncedTimetable.current = true;
+                 // Don't await this, let it happen in background
+                 registerUser({
+                     id: user.studentId,
+                     email: user.email,
+                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                     year: user.yearGroup,
+                     timetable: hasPeriods ? data : undefined
+                 }).then(dbSync => {
+                     if (dbSync && dbSync.user && dbSync.user.role) {
+                         setUser(prev => {
+                             if (prev && prev.role !== dbSync.user.role) {
+                                 return { ...prev, role: dbSync.user.role };
+                             }
+                             return prev;
+                         });
+                     }
+                 }).catch(e => {
+                     hasSyncedTimetable.current = false; // Reset on failure so it can retry next time
+                     console.log("Sync failed silently", e);
+                 });
+             }
 
         } catch (err) {
             console.error("Failed to fetch timetable", err);

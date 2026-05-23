@@ -137,7 +137,15 @@ async function upsertUser(newUser) {
         const safeUser = { ...newUser, id: userId };
         const existingIndex = users.findIndex(u => String(u.id) === userId);
         if (existingIndex >= 0) {
-            users[existingIndex] = { ...users[existingIndex], ...safeUser, lastSeen: new Date() };
+            const existing = users[existingIndex];
+            users[existingIndex] = {
+                ...existing,
+                name: safeUser.name || existing.name,
+                email: safeUser.email || existing.email,
+                year: safeUser.year || existing.year,
+                timetable: safeUser.timetable || existing.timetable,
+                lastSeen: new Date()
+            };
             return users[existingIndex];
         }
 
@@ -145,10 +153,14 @@ async function upsertUser(newUser) {
         const initialRole = adminIds.includes(userId) ? 'Admin' : 'Student';
 
         const created = {
-            ...safeUser,
+            id: userId,
+            email: safeUser.email,
+            name: safeUser.name || null,
+            year: safeUser.year || null,
             status: 'Active',
             role: initialRole,
             joined: new Date(),
+            lastSeen: new Date(),
             timetable: safeUser.timetable || null,
         };
         users.push(created);
@@ -164,9 +176,9 @@ async function upsertUser(newUser) {
         `INSERT INTO app_users (id, email, name, role, year, timetable, last_seen)
          VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
          ON CONFLICT (id) DO UPDATE SET
-           email = EXCLUDED.email,
-           name = EXCLUDED.name,
-           year = EXCLUDED.year,
+           email = COALESCE(EXCLUDED.email, app_users.email),
+           name = COALESCE(EXCLUDED.name, app_users.name),
+           year = COALESCE(EXCLUDED.year, app_users.year),
            timetable = COALESCE(EXCLUDED.timetable, app_users.timetable),
            last_seen = NOW()
          RETURNING id, name, email, role, year, status, joined, last_seen, timetable`,
@@ -387,12 +399,20 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
             return res.status(403).json({ error: 'Forbidden: Cannot register details for another student' });
         }
 
+        let validTimetable = null;
+        if (timetable) {
+            const inner = timetable.timetable || timetable;
+            if (inner && inner.periods && Object.keys(inner.periods).length > 0) {
+                validTimetable = timetable;
+            }
+        }
+
         const safeUser = {
             id: userId,
             email: String(email),
             name: name ? String(name) : null,
             year: year ? String(year) : null,
-            timetable: timetable || null
+            timetable: validTimetable
         };
 
         const dbUser = await upsertUser(safeUser);
