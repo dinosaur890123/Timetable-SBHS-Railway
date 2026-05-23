@@ -148,7 +148,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 <div className="w-2.5 h-2.5 bg-black animate-pulse" />
               </div>
               <span className="font-bold text-base tracking-widest text-white uppercase font-space">
-                <span className="underline decoration-white decoration-2 underline-offset-4 font-black">synchron</span>ise
+                <span className="underline decoration-white decoration-2 underline-offset-4 font-black">synchron</span>
               </span>
             </div>
             
@@ -437,8 +437,8 @@ const LandingPage = ({ authError, clearAuthError }) => {
         {/* Technical Footer */}
         <div className="mt-40 pt-10 border-t-2 border-white flex flex-col md:flex-row items-center justify-between text-xs font-mono text-zinc-400">
             <div className="flex flex-col gap-1.5 text-center md:text-left">
-              <p>© {new Date().getFullYear()} SYNCHRONISE. UNOFFICIALLY THE OFFICIAL CLIENT FOR SYDNEY BOYS HIGH SCHOOL.</p>
-              <p className="text-zinc-500">BUILT INDEPENDENTLY. ALL DATA SYNCHRONIZED DIRECTLY VIA OFFICIAL STUDENT APIS.</p>
+              <p>© {new Date().getFullYear()} SYNCHRON. UNOFFICIALLY THE OFFICIAL CLIENT FOR SYDNEY BOYS HIGH SCHOOL.</p>
+              <p className="text-zinc-500">BUILT INDEPENDENTLY. ALL DATA SYNCHRONISED DIRECTLY VIA OFFICIAL STUDENT APIS.</p>
             </div>
             
             <div className="flex items-center gap-6 mt-6 md:mt-0">
