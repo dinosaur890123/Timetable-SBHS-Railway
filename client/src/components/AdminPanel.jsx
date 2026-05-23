@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3 } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneInactiveUsers, pruneOldLogs, clearAllTimetables } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -42,6 +42,9 @@ const AdminPanel = ({ user }) => {
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
+    const [isPruningUsers, setIsPruningUsers] = useState(false);
+    const [isPruningLogs, setIsPruningLogs] = useState(false);
+    const [isClearingTimetables, setIsClearingTimetables] = useState(false);
 
     useEffect(() => {
         if (user && user.role === 'Admin') {
@@ -212,6 +215,48 @@ const AdminPanel = ({ user }) => {
             alert("Server cache cleared.");
         } catch (err) {
             alert("Failed to clear server cache.");
+        }
+    };
+
+    const handlePruneInactiveUsers = async () => {
+        if (!window.confirm("Are you sure you want to prune inactive users? This will delete all student records who have not been seen for over 90 days.")) return;
+        setIsPruningUsers(true);
+        try {
+            const res = await pruneInactiveUsers();
+            alert(`Pruning complete. Removed ${res.count} inactive users.`);
+            loadData();
+        } catch (err) {
+            alert("Failed to prune inactive users.");
+        } finally {
+            setIsPruningUsers(false);
+        }
+    };
+
+    const handlePruneOldLogs = async () => {
+        if (!window.confirm("Are you sure you want to prune old logs? This will delete all audit/system logs older than 30 days.")) return;
+        setIsPruningLogs(true);
+        try {
+            const res = await pruneOldLogs();
+            alert(`Pruning complete. Removed ${res.count} old log entries.`);
+            loadData();
+        } catch (err) {
+            alert("Failed to prune old logs.");
+        } finally {
+            setIsPruningLogs(false);
+        }
+    };
+
+    const handleClearAllTimetables = async () => {
+        if (!window.confirm("Are you sure you want to clear cached timetables? This will reset the cached timetables for all users to NULL. They will be re-synced from the school portal on their next login.")) return;
+        setIsClearingTimetables(true);
+        try {
+            const res = await clearAllTimetables();
+            alert(`Timetable cache cleared for ${res.count} users.`);
+            loadData();
+        } catch (err) {
+            alert("Failed to clear timetables.");
+        } finally {
+            setIsClearingTimetables(false);
         }
     };
 
@@ -396,48 +441,101 @@ const AdminPanel = ({ user }) => {
             </div>
         </div>
 
-        {/* System Diagnostics & Connection Checks */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 font-mono text-xs">
-            <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                <ShieldCheck className="text-zinc-950 dark:text-zinc-100" size={16} />
-                System Health & Database Diagnostics
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Postgres Configured</span>
-                    <span className={`font-bold ${stats?.databaseConfigured ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {stats?.databaseConfigured ? 'YES' : 'NO'}
-                    </span>
+        {/* System Diagnostics & Year Distribution Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* System Diagnostics & Connection Checks */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 font-mono text-xs rounded-2xl shadow-sm flex flex-col justify-between">
+                <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                        <ShieldCheck className="text-zinc-950 dark:text-zinc-100" size={16} />
+                        System Health & Database Diagnostics
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Postgres Configured</span>
+                            <span className={`font-bold ${stats?.databaseConfigured ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {stats?.databaseConfigured ? 'YES' : 'NO'}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Database Connection</span>
+                            <span className={`font-bold ${stats?.databaseStatus === 'Online' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {stats?.databaseStatus || 'UNKNOWN'}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Active Administrators</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {stats?.adminCount || 0}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Node.js Version</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {stats?.nodeVersion || 'UNKNOWN'}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Server Platform</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {stats?.platform || 'UNKNOWN'}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
+                            <span className="text-zinc-500 block mb-1">Bypass Auth Enabled</span>
+                            <span className={`font-bold ${stats?.bypassAuthEnabled ? 'text-yellow-600 dark:text-yellow-400' : 'text-zinc-500'}`}>
+                                {stats?.bypassAuthEnabled ? 'YES (DEV MODE)' : 'NO'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Database Connection</span>
-                    <span className={`font-bold ${stats?.databaseStatus === 'Online' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {stats?.databaseStatus || 'UNKNOWN'}
-                    </span>
-                </div>
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Active Administrators</span>
-                    <span className="font-bold text-zinc-900 dark:text-white">
-                        {stats?.adminCount || 0}
-                    </span>
-                </div>
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Node.js Version</span>
-                    <span className="font-bold text-zinc-900 dark:text-white">
-                        {stats?.nodeVersion || 'UNKNOWN'}
-                    </span>
-                </div>
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Server Platform</span>
-                    <span className="font-bold text-zinc-900 dark:text-white">
-                        {stats?.platform || 'UNKNOWN'}
-                    </span>
-                </div>
-                <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
-                    <span className="text-zinc-500 block mb-1">Bypass Auth Enabled</span>
-                    <span className={`font-bold ${stats?.bypassAuthEnabled ? 'text-yellow-600 dark:text-yellow-400' : 'text-zinc-500'}`}>
-                        {stats?.bypassAuthEnabled ? 'YES (DEV MODE)' : 'NO'}
-                    </span>
+            </div>
+
+            {/* Year Group Student Distribution */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
+                        <BarChart3 className="text-zinc-950 dark:text-zinc-100" size={16} />
+                        Year Group Student Distribution
+                    </h4>
+                    <div className="space-y-2">
+                        {(() => {
+                            const dist = stats?.yearDistribution || {};
+                            const years = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
+                            
+                            let maxCount = 1;
+                            const dataPoints = years.map(yr => {
+                                let count = 0;
+                                Object.entries(dist).forEach(([k, v]) => {
+                                    const cleanKey = String(k).toLowerCase().replace(/^0+/, '');
+                                    const cleanYr = yr.toLowerCase();
+                                    if (cleanKey === cleanYr || (yr === 'Staff' && (cleanKey.includes('staff') || cleanKey.includes('admin') || cleanKey === 'st'))) {
+                                        count += v;
+                                    } else if (yr === 'Unknown' && (cleanKey === 'unknown' || cleanKey === 'null' || cleanKey === '')) {
+                                        count += v;
+                                    }
+                                });
+                                if (count > maxCount) maxCount = count;
+                                return { label: yr, count };
+                            });
+
+                            return dataPoints.map(({ label, count }) => {
+                                const pct = (count / maxCount) * 100;
+                                return (
+                                    <div key={label} className="flex items-center gap-3 text-xs font-mono">
+                                        <span className="w-16 text-zinc-500 dark:text-zinc-400">Year {label}</span>
+                                        <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-3 rounded-full overflow-hidden relative">
+                                            <div 
+                                                className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out" 
+                                                style={{ width: `${Math.max(1, pct)}%` }}
+                                            ></div>
+                                        </div>
+                                        <span className="w-6 text-right font-bold text-zinc-900 dark:text-white">{count}</span>
+                                    </div>
+                                );
+                            });
+                        })()}
+                    </div>
                 </div>
             </div>
         </div>
@@ -794,6 +892,57 @@ const AdminPanel = ({ user }) => {
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
                     >
                         Clear Server Cache
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Database size={16} />
+                            Prune Inactive User Profiles
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1">Delete student records who have not accessed the app in the last 90 days (Admins are protected)</p>
+                    </div>
+                    <button
+                        onClick={handlePruneInactiveUsers}
+                        disabled={isPruningUsers}
+                        className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
+                    >
+                        {isPruningUsers ? 'Pruning...' : 'Prune Users'}
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Terminal size={16} />
+                            Prune Old Activity Logs
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1">Delete database logs and history records older than 30 days</p>
+                    </div>
+                    <button
+                        onClick={handlePruneOldLogs}
+                        disabled={isPruningLogs}
+                        className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
+                    >
+                        {isPruningLogs ? 'Pruning...' : 'Prune Logs'}
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <RefreshCw size={16} />
+                            Reset Timetable Sync Cache
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1">Clear all cached timetable JSON files to force a fresh synchronization for all students on next login</p>
+                    </div>
+                    <button
+                        onClick={handleClearAllTimetables}
+                        disabled={isClearingTimetables}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
+                    >
+                        {isClearingTimetables ? 'Clearing...' : 'Clear Timetables'}
                     </button>
                 </div>
             </div>

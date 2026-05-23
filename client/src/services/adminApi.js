@@ -171,3 +171,45 @@ export const promoteUserToAdmin = async (studentId) => {
     }
 };
 
+export const pruneInactiveUsers = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/maintenance/prune-users`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to prune inactive users');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const pruneOldLogs = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/maintenance/prune-logs`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to prune old logs');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const clearAllTimetables = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/maintenance/clear-timetables`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to clear cached timetables');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+

@@ -494,6 +494,28 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             }
         }
 
+        // Aggregate year breakdown
+        const yearBreakdown = {};
+        if (isPostgresDb && dbHealth === 'Online') {
+            try {
+                const yrResult = await db.query(
+                    "SELECT COALESCE(year, 'Unknown') as year_val, COUNT(*) as count FROM app_users GROUP BY year_val ORDER BY year_val",
+                    []
+                );
+                yrResult.rows.forEach(r => {
+                    yearBreakdown[r.year_val] = Number(r.count);
+                });
+            } catch (e) {
+                console.error('Failed to query year groups:', e);
+            }
+        } else {
+            // Local fallback
+            allUsers.forEach(u => {
+                const yr = u.year || 'Unknown';
+                yearBreakdown[yr] = (yearBreakdown[yr] || 0) + 1;
+            });
+        }
+
         res.json({
             totalUsers: allUsers.length,
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
@@ -501,6 +523,9 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             memoryUsage: process.memoryUsage().heapUsed,
             activeSessions: Math.floor(Math.random() * (allUsers.length > 0 ? allUsers.length : 1)) + 1, // Mock
             
+            // Year group analytics
+            yearDistribution: yearBreakdown,
+
             // New diagnostic checks
             databaseConfigured: !!process.env.DATABASE_URL,
             databaseStatus: dbHealth,
@@ -583,6 +608,90 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Maintenance error:', e);
         res.status(500).json({ error: 'Failed to toggle maintenance' });
+    }
+});
+
+// POST /api/maintenance/prune-users (Prune users seen > 90 days ago)
+app.post('/api/maintenance/prune-users', requireAuth, async (req, res) => {
+    try {
+        let deletedCount = 0;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 90);
+
+        if (!isDbEnabled) {
+            const initialLength = users.length;
+            users = users.filter(u => {
+                const lastSeenDate = u.lastSeen ? new Date(u.lastSeen) : new Date(u.joined);
+                return lastSeenDate >= cutoffDate || u.role === 'Admin'; // Don't prune admins
+            });
+            deletedCount = initialLength - users.length;
+        } else {
+            const result = await db.query(
+                "DELETE FROM app_users WHERE role != 'Admin' AND last_seen < NOW() - INTERVAL '90 days' RETURNING id",
+                []
+            );
+            deletedCount = result.rows.length;
+        }
+
+        await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Pruned ${deletedCount} inactive users (unseen > 90 days)`);
+        res.json({ success: true, count: deletedCount });
+    } catch (e) {
+        console.error('Prune users error:', e);
+        res.status(500).json({ error: 'Failed to prune inactive users' });
+    }
+});
+
+// POST /api/maintenance/prune-logs (Prune logs older than 30 days)
+app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {
+    try {
+        let deletedCount = 0;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+        if (!isDbEnabled) {
+            const initialLength = logs.length;
+            logs = logs.filter(l => new Date(l.timestamp) >= cutoffDate);
+            deletedCount = initialLength - logs.length;
+        } else {
+            const result = await db.query(
+                "DELETE FROM logs WHERE created_at < NOW() - INTERVAL '30 days' RETURNING id",
+                []
+            );
+            deletedCount = result.rows.length;
+        }
+
+        await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Pruned ${deletedCount} logs older than 30 days`);
+        res.json({ success: true, count: deletedCount });
+    } catch (e) {
+        console.error('Prune logs error:', e);
+        res.status(500).json({ error: 'Failed to prune old logs' });
+    }
+});
+
+// POST /api/maintenance/clear-timetables (Clear cached student timetables)
+app.post('/api/maintenance/clear-timetables', requireAuth, async (req, res) => {
+    try {
+        let updatedCount = 0;
+        if (!isDbEnabled) {
+            users.forEach(u => {
+                if (u.timetable) {
+                    u.timetable = null;
+                    updatedCount++;
+                }
+            });
+        } else {
+            const result = await db.query(
+                'UPDATE app_users SET timetable = NULL WHERE timetable IS NOT NULL RETURNING id',
+                []
+            );
+            updatedCount = result.rows.length;
+        }
+
+        await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Cleared cached timetables for ${updatedCount} users`);
+        res.json({ success: true, count: updatedCount });
+    } catch (e) {
+        console.error('Clear timetables error:', e);
+        res.status(500).json({ error: 'Failed to clear cached timetables' });
     }
 });
 
