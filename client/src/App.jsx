@@ -160,28 +160,86 @@ function App() {
                  const innerTimetable = data.timetable || data;
                  const hasPeriods = innerTimetable && innerTimetable.periods && Object.keys(innerTimetable.periods).length > 0;
 
-                 console.log("Syncing details to admin (has valid timetable:", hasPeriods, ")");
-                 hasSyncedTimetable.current = true;
-                 // Don't await this, let it happen in background
-                 registerUser({
-                     id: user.studentId,
-                     email: user.email,
-                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                     year: user.yearGroup,
-                     timetable: hasPeriods ? data : undefined
-                 }).then(dbSync => {
-                     if (dbSync && dbSync.user && dbSync.user.role) {
-                         setUser(prev => {
-                             if (prev && prev.role !== dbSync.user.role) {
-                                 return { ...prev, role: dbSync.user.role };
+                 if (hasPeriods) {
+                     console.log("Syncing timetable to admin:", user.studentId, data);
+                     hasSyncedTimetable.current = true;
+                     registerUser({
+                         id: user.studentId,
+                         email: user.email,
+                         name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                         year: user.yearGroup,
+                         timetable: data
+                     }).then(dbSync => {
+                         if (dbSync && dbSync.user && dbSync.user.role) {
+                             setUser(prev => {
+                                 if (prev && prev.role !== dbSync.user.role) {
+                                     return { ...prev, role: dbSync.user.role };
+                                 }
+                                 return prev;
+                             });
+                         }
+                     }).catch(e => {
+                         hasSyncedTimetable.current = false; // Reset on failure so it can retry next time
+                         console.log("Sync failed silently", e);
+                     });
+                 } else {
+                     // If today has no classes, check if it's a weekend and fetch next Monday in the background
+                     const today = new Date();
+                     const day = today.getDay();
+                     if (day === 0 || day === 6) {
+                         const nextMonday = addDays(today, day === 6 ? 2 : 1);
+                         console.log("Weekend login. Fetching next Monday's timetable for admin sync:", nextMonday);
+                         fetchDayTimetable(nextMonday).then(mondayData => {
+                             const mInner = mondayData.timetable || mondayData;
+                             if (mInner && mInner.periods && Object.keys(mInner.periods).length > 0) {
+                                 hasSyncedTimetable.current = true;
+                                 registerUser({
+                                     id: user.studentId,
+                                     email: user.email,
+                                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                                     year: user.yearGroup,
+                                     timetable: mondayData
+                                 }).then(dbSync => {
+                                     if (dbSync && dbSync.user && dbSync.user.role) {
+                                         setUser(prev => {
+                                             if (prev && prev.role !== dbSync.user.role) {
+                                                 return { ...prev, role: dbSync.user.role };
+                                             }
+                                             return prev;
+                                         });
+                                     }
+                                 }).catch(e => {
+                                     hasSyncedTimetable.current = false;
+                                     console.log("Monday sync failed silently", e);
+                                 });
+                             } else {
+                                 // Fallback: sync user details without timetable
+                                 registerUser({
+                                     id: user.studentId,
+                                     email: user.email,
+                                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                                     year: user.yearGroup
+                                 }).catch(e => console.log("Details sync failed silently", e));
                              }
-                             return prev;
+                         }).catch(() => {
+                             // Fallback: sync user details without timetable
+                             registerUser({
+                                 id: user.studentId,
+                                 email: user.email,
+                                 name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                                 year: user.yearGroup
+                             }).catch(e => console.log("Details sync failed silently", e));
                          });
+                     } else {
+                         // Weekday but no periods (e.g. holidays), sync details only (do not lock sync so they can sync later)
+                         registerUser({
+                             id: user.studentId,
+                             email: user.email,
+                             name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
+                             year: user.yearGroup
+                         }).catch(e => console.log("Details sync failed silently", e));
                      }
-                 }).catch(e => {
-                     hasSyncedTimetable.current = false; // Reset on failure so it can retry next time
-                     console.log("Sync failed silently", e);
-                 });
+                 }
              }
 
         } catch (err) {
