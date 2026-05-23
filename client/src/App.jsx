@@ -23,7 +23,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
   // State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [currentView, setCurrentView] = useState('timetable');
+  const [currentView, setCurrentView] = useState('home');
   const [viewDate, setViewDate] = useState(new Date());
 
   useEffect(() => {
