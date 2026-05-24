@@ -14,7 +14,8 @@ import {
   isAuthenticated, 
   exchangeToken, 
   logout,
-  fetchSystemStatus
+  fetchSystemStatus,
+  fetchCompleteTimetable
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -100,10 +101,14 @@ function App() {
       }
 
       try {
-        const [noticesData, userData, systemData] = await Promise.all([
+        const [noticesData, userData, systemData, completeTimetableData] = await Promise.all([
           fetchDailyNews(),
           fetchUserInfo(),
-          fetchSystemStatus()
+          fetchSystemStatus(),
+          fetchCompleteTimetable().catch(e => {
+              console.warn("Failed to fetch complete timetable", e);
+              return null;
+          })
         ]);
         setNotices(noticesData);
         setUser(userData);
@@ -113,13 +118,14 @@ function App() {
             setMaintenance(systemData.maintenance);
         }
         
-        // Attempt to register/update user in Admin Panel in background
+        // Attempt to register/update user in Admin Panel in background with complete timetable
         if (userData && userData.studentId) {
             registerUser({
                 id: userData.studentId,
                 name: `${userData.givenName} ${userData.surname}`,
                 email: userData.email, // SBHS API usually provides this in ID token, checking availability helps
-                year: userData.yearGroup
+                year: userData.yearGroup,
+                timetable: completeTimetableData || undefined
             }).then(dbSync => {
                 if (dbSync && dbSync.user && dbSync.user.role) {
                     setUser(prev => {
@@ -148,100 +154,10 @@ function App() {
     
     // Reset timetable while loading to show feedback if needed
     // or just let it update smoothly. 
-    // setTimetable(null); // Optional: creates flicker but shows loading state
-    
     const loadTimetable = async () => {
         try {
             const data = await fetchDayTimetable(viewDate);
             setTimetable(data);
-            
-             // Sync timetable to admin panel for this user
-             if (user && user.studentId && data && !hasSyncedTimetable.current) {
-                 const innerTimetable = data.timetable?.timetable || data.timetable || data;
-                 const hasPeriods = innerTimetable && innerTimetable.periods && Object.keys(innerTimetable.periods).length > 0;
-
-                 if (hasPeriods) {
-                     console.log("Syncing timetable to admin:", user.studentId, data);
-                     hasSyncedTimetable.current = true;
-                     registerUser({
-                         id: user.studentId,
-                         email: user.email,
-                         name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                         year: user.yearGroup,
-                         timetable: data
-                     }).then(dbSync => {
-                         if (dbSync && dbSync.user && dbSync.user.role) {
-                             setUser(prev => {
-                                 if (prev && prev.role !== dbSync.user.role) {
-                                     return { ...prev, role: dbSync.user.role };
-                                 }
-                                 return prev;
-                             });
-                         }
-                     }).catch(e => {
-                         hasSyncedTimetable.current = false; // Reset on failure so it can retry next time
-                         console.log("Sync failed silently", e);
-                     });
-                 } else {
-                     // If today has no classes, check if it's a weekend and fetch next Monday in the background
-                     const today = new Date();
-                     const day = today.getDay();
-                     if (day === 0 || day === 6) {
-                         const nextMonday = addDays(today, day === 6 ? 2 : 1);
-                         console.log("Weekend login. Fetching next Monday's timetable for admin sync:", nextMonday);
-                         fetchDayTimetable(nextMonday).then(mondayData => {
-                             const mInner = mondayData.timetable?.timetable || mondayData.timetable || mondayData;
-                             if (mInner && mInner.periods && Object.keys(mInner.periods).length > 0) {
-                                 hasSyncedTimetable.current = true;
-                                 registerUser({
-                                     id: user.studentId,
-                                     email: user.email,
-                                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                                     year: user.yearGroup,
-                                     timetable: mondayData
-                                 }).then(dbSync => {
-                                     if (dbSync && dbSync.user && dbSync.user.role) {
-                                         setUser(prev => {
-                                             if (prev && prev.role !== dbSync.user.role) {
-                                                 return { ...prev, role: dbSync.user.role };
-                                             }
-                                             return prev;
-                                         });
-                                     }
-                                 }).catch(e => {
-                                     hasSyncedTimetable.current = false;
-                                     console.log("Monday sync failed silently", e);
-                                 });
-                             } else {
-                                 // Fallback: sync user details without timetable
-                                 registerUser({
-                                     id: user.studentId,
-                                     email: user.email,
-                                     name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                                     year: user.yearGroup
-                                 }).catch(e => console.log("Details sync failed silently", e));
-                             }
-                         }).catch(() => {
-                             // Fallback: sync user details without timetable
-                             registerUser({
-                                 id: user.studentId,
-                                 email: user.email,
-                                 name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                                 year: user.yearGroup
-                             }).catch(e => console.log("Details sync failed silently", e));
-                         });
-                     } else {
-                         // Weekday but no periods (e.g. holidays), sync details only (do not lock sync so they can sync later)
-                         registerUser({
-                             id: user.studentId,
-                             email: user.email,
-                             name: user.givenName ? `${user.givenName} ${user.surname}` : undefined,
-                             year: user.yearGroup
-                         }).catch(e => console.log("Details sync failed silently", e));
-                     }
-                 }
-             }
-
         } catch (err) {
             console.error("Failed to fetch timetable", err);
         }

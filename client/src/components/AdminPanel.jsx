@@ -76,6 +76,8 @@ const AdminPanel = ({ user }) => {
 
     const [selectedUserTimetable, setSelectedUserTimetable] = useState(null);
     const [loadingTimetable, setLoadingTimetable] = useState(false);
+    const [selectedWeek, setSelectedWeek] = useState("A");
+    const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
     useEffect(() => {
         if (viewingUserId) {
@@ -1114,33 +1116,117 @@ const AdminPanel = ({ user }) => {
                             <h4 className="font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800 pb-2">
                                 Synced Schedule
                             </h4>
-                            <div className="grid grid-cols-1 gap-1">
-                                {(() => {
-                                    const innerTimetable = selectedUserTimetable.timetable?.timetable || selectedUserTimetable.timetable || selectedUserTimetable;
-                                    const periods = innerTimetable?.periods;
-                                    if (!periods || Object.keys(periods).length === 0) {
-                                        return <div className="text-center py-4 text-zinc-500">[No periods found in schedule]</div>;
-                                    }
-                                    return Object.entries(periods).map(([key, p]) => {
-                                        const isBreak = ["R", "L", "RC"].includes(key);
-                                        if (isBreak) return null; // Filter out breaks for compactness
-                                        return (
-                                            <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px]">
-                                                        P{key}
-                                                    </span>
-                                                    <span className="font-bold">{p.title}</span>
+                            {(() => {
+                                const innerTimetable = selectedUserTimetable.timetable?.timetable || selectedUserTimetable.timetable || selectedUserTimetable;
+                                const days = innerTimetable?.days;
+                                
+                                if (days && Object.keys(days).length > 0) {
+                                    const currentDayKey = selectedWeek === "A" ? String(selectedDayIndex + 1) : String(selectedDayIndex + 6);
+                                    const dayData = days[currentDayKey];
+                                    const dayPeriods = dayData?.periods;
+                                    
+                                    return (
+                                        <div>
+                                            {/* Week & Day Selector */}
+                                            <div className="flex flex-col gap-3 mb-6 bg-zinc-500/5 dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                                                <div className="flex gap-2 justify-center">
+                                                    {['A', 'B'].map(wk => (
+                                                        <button
+                                                            key={wk}
+                                                            type="button"
+                                                            onClick={() => setSelectedWeek(wk)}
+                                                            className={`px-6 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                                                selectedWeek === wk
+                                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-850'
+                                                            }`}
+                                                        >
+                                                            Week {wk}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                                <div className="text-zinc-500 text-right text-[11px] flex gap-2">
-                                                    {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800">Rm {p.room}</span>}
-                                                    {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
+                                                <div className="grid grid-cols-5 gap-1">
+                                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((dayLabel, idx) => (
+                                                        <button
+                                                            key={dayLabel}
+                                                            type="button"
+                                                            onClick={() => setSelectedDayIndex(idx)}
+                                                            className={`py-2 rounded-lg text-xs font-semibold transition-all ${
+                                                                selectedDayIndex === idx
+                                                                    ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white font-bold'
+                                                                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-300'
+                                                            }`}
+                                                        >
+                                                            {dayLabel}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </div>
-                                        );
-                                    });
-                                })()}
-                            </div>
+                                            
+                                            {/* Schedule list */}
+                                            {!dayPeriods || Object.keys(dayPeriods).length === 0 ? (
+                                                <div className="text-center py-12 text-zinc-500 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                                                    No classes scheduled for {dayData?.dayname || `Day ${currentDayKey}`}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <div className="text-xs font-bold text-zinc-450 dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                                                        Schedule: {dayData?.dayname}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-1">
+                                                        {Object.entries(dayPeriods).map(([key, p]) => {
+                                                            const isBreak = ["R", "L", "RC"].includes(key);
+                                                            if (isBreak) return null;
+                                                            return (
+                                                                <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50 rounded-lg">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px] rounded-sm">
+                                                                            P{key}
+                                                                        </span>
+                                                                        <span className="font-bold">{p.title}</span>
+                                                                    </div>
+                                                                    <div className="text-zinc-500 text-right text-[11px] flex gap-2">
+                                                                        {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800 rounded-sm">Rm {p.room}</span>}
+                                                                        {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                
+                                // Fallback (daily timetable format)
+                                const periods = innerTimetable?.periods;
+                                if (!periods || Object.keys(periods).length === 0) {
+                                    return <div className="text-center py-4 text-zinc-500">[No periods found in schedule]</div>;
+                                }
+                                return (
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {Object.entries(periods).map(([key, p]) => {
+                                            const isBreak = ["R", "L", "RC"].includes(key);
+                                            if (isBreak) return null;
+                                            return (
+                                                <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px] rounded-sm">
+                                                            P{key}
+                                                        </span>
+                                                        <span className="font-bold">{p.title}</span>
+                                                    </div>
+                                                    <div className="text-zinc-500 text-right text-[11px] flex gap-2">
+                                                        {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800 rounded-sm">Rm {p.room}</span>}
+                                                        {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                             
                             <details className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
                                 <summary className="text-[10px] text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-300 cursor-pointer select-none">
