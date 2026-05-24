@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home, ShieldCog } from 'lucide-react';
+import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home, ShieldCheck } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
@@ -30,7 +30,7 @@ const Navigation = ({ currentView, setView, user }) => {
   ];
 
   if (isAdmin) {
-    items.push({ id: 'admin', icon: ShieldCog, label: 'Admin Panel' });
+    items.push({ id: 'admin', icon: ShieldCheck, label: 'Admin Panel' });
   }
 
   return (
