@@ -1,23 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react';
-import { fetchCalendarEvents } from '../services/api';
+import { fetchCalendarEvents, fetchDateInfo } from '../services/api';
 import { motion } from 'framer-motion';
 
 const CalendarView = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [termInfo, setTermInfo] = useState(null);
 
   // Load events for the month/week
   useEffect(() => {
     const loadEvents = async () => {
       setLoading(true);
       try {
-        const start = startOfWeek(currentDate);
-        const end = addDays(start, 30);
-        const data = await fetchCalendarEvents(start, end);
-        setEvents(data || []);
+        const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const end = addDays(start, 6);
+        const [eventsData, daysData] = await Promise.all([
+          fetchCalendarEvents(start, end),
+          fetchDateInfo(addDays(start, 3)).catch(() => null)
+        ]);
+        
+        setEvents(eventsData || []);
+
+        let currentTerm = null;
+        let currentWeek = null;
+
+        if (eventsData && eventsData.length > 0) {
+          const firstEventWithInfo = eventsData.find(d => d.info && d.info.term && d.info.week);
+          if (firstEventWithInfo) {
+            currentTerm = firstEventWithInfo.info.term;
+            currentWeek = firstEventWithInfo.info.week;
+          }
+        }
+
+        if (!currentTerm && daysData) {
+          const values = Object.values(daysData);
+          for (const val of values) {
+            if (val && typeof val === 'object' && val.term && val.week) {
+              currentTerm = val.term;
+              currentWeek = val.week;
+              break;
+            }
+          }
+        }
+
+        setTermInfo(currentTerm && currentWeek ? { term: currentTerm, week: currentWeek } : null);
       } catch (err) {
         console.error(err);
       } finally {
@@ -63,7 +92,7 @@ const CalendarView = () => {
             <ChevronLeft size={20} />
           </button>
           <span className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm min-w-fit">
-            {format(currentDate, 'MMM yyyy')}
+            {termInfo ? `Term ${termInfo.term} Week ${termInfo.week}` : format(currentDate, 'MMM yyyy')}
           </span>
           <button 
             onClick={() => setCurrentDate(d => addDays(d, 7))}
