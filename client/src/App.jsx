@@ -314,9 +314,19 @@ function App() {
             <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' : 
                   broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' : 
+                  broadcast.type === 'update' ? 'bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400' :
                   'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                 <Info size={18} className="shrink-0" />
-                <span>{broadcast.message}</span>
+                <span className="flex-1">{broadcast.message}</span>
+                
+                {broadcast.type === 'update' && (
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
+                    >
+                        Update
+                    </button>
+                )}
             </div>
          )}
 
