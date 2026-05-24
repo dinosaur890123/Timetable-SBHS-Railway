@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home } from 'lucide-react';
+import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Settings, Home, userStar } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
@@ -26,11 +26,11 @@ const Navigation = ({ currentView, setView, user }) => {
     { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
     { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
     { id: 'notices', icon: Newspaper, label: 'Notices' },
-    { id: 'profile', icon: UserCircle, label: 'Profile' },
+    { id: 'profile', icon: Settings, label: 'Settings' },
   ];
 
   if (isAdmin) {
-    items.push({ id: 'admin', icon: Settings, label: 'Admin Panel' });
+    items.push({ id: 'admin', icon: userStar, label: 'Admin Panel' });
   }
 
   return (
