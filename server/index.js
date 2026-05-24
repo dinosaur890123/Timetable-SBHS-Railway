@@ -116,7 +116,7 @@ async function listUsers() {
     if (!isDbEnabled) {
         users.forEach(u => {
             if (u.timetable) {
-                const inner = u.timetable.timetable || u.timetable;
+                const inner = u.timetable.timetable?.timetable || u.timetable.timetable || u.timetable;
                 if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
                     u.timetable = null;
                 }
@@ -411,7 +411,7 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
 
         let validTimetable = null;
         if (timetable) {
-            const inner = timetable.timetable || timetable;
+            const inner = timetable.timetable?.timetable || timetable.timetable || timetable;
             if (inner && inner.periods && Object.keys(inner.periods).length > 0) {
                 validTimetable = timetable;
             }
@@ -574,7 +574,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
             // Parse timetable for popular classes
             if (u.timetable) {
-                const innerTimetable = u.timetable.timetable || u.timetable;
+                const innerTimetable = u.timetable.timetable?.timetable || u.timetable.timetable || u.timetable;
                 const periods = innerTimetable?.periods;
                 if (periods) {
                     Object.entries(periods).forEach(([key, p]) => {
@@ -799,7 +799,7 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
             const localUser = users.find(u => String(u.id) === String(id));
             let timetable = localUser?.timetable || null;
             if (timetable) {
-                const inner = timetable.timetable || timetable;
+                const inner = timetable.timetable?.timetable || timetable.timetable || timetable;
                 if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
                     if (localUser) localUser.timetable = null;
                     timetable = null;
@@ -815,7 +815,7 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
         
         let timetable = result.rows[0].timetable || null;
         if (timetable) {
-            const inner = timetable.timetable || timetable;
+            const inner = timetable.timetable?.timetable || timetable.timetable || timetable;
             if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
                 // Background clean up
                 db.query('UPDATE app_users SET timetable = NULL WHERE id = $1', [String(id)]).catch(() => {});

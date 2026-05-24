@@ -1116,7 +1116,7 @@ const AdminPanel = ({ user }) => {
                             </h4>
                             <div className="grid grid-cols-1 gap-1">
                                 {(() => {
-                                    const innerTimetable = selectedUserTimetable.timetable || selectedUserTimetable;
+                                    const innerTimetable = selectedUserTimetable.timetable?.timetable || selectedUserTimetable.timetable || selectedUserTimetable;
                                     const periods = innerTimetable?.periods;
                                     if (!periods || Object.keys(periods).length === 0) {
                                         return <div className="text-center py-4 text-zinc-500">[No periods found in schedule]</div>;

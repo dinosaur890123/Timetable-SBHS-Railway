@@ -157,7 +157,7 @@ function App() {
             
              // Sync timetable to admin panel for this user
              if (user && user.studentId && data && !hasSyncedTimetable.current) {
-                 const innerTimetable = data.timetable || data;
+                 const innerTimetable = data.timetable?.timetable || data.timetable || data;
                  const hasPeriods = innerTimetable && innerTimetable.periods && Object.keys(innerTimetable.periods).length > 0;
 
                  if (hasPeriods) {
@@ -190,7 +190,7 @@ function App() {
                          const nextMonday = addDays(today, day === 6 ? 2 : 1);
                          console.log("Weekend login. Fetching next Monday's timetable for admin sync:", nextMonday);
                          fetchDayTimetable(nextMonday).then(mondayData => {
-                             const mInner = mondayData.timetable || mondayData;
+                             const mInner = mondayData.timetable?.timetable || mondayData.timetable || mondayData;
                              if (mInner && mInner.periods && Object.keys(mInner.periods).length > 0) {
                                  hasSyncedTimetable.current = true;
                                  registerUser({
