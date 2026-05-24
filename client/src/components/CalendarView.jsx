@@ -15,7 +15,7 @@ const CalendarView = () => {
     const loadEvents = async () => {
       setLoading(true);
       try {
-        const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const start = startOfWeek(currentDate, { weekStartsOn: 0 });
         const end = addDays(start, 6);
         const [eventsData, daysData] = await Promise.all([
           fetchCalendarEvents(start, end),
