@@ -19,7 +19,7 @@ import {
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings } from 'lucide-react';
 
 function App() {
   // State
@@ -227,12 +227,22 @@ function App() {
                 {currentView}
             </h1>
             
-            <div className="flex items-center gap-4">
-               <div className="hidden md:flex flex-col items-end">
+            <div className="flex items-center gap-4 pr-1">
+               <div className="hidden md:flex flex-col items-end mr-2">
                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
                    <span className="text-xs text-zinc-500">{user?.studentId || 'Staff'}</span>
                </div>
                <ThemeToggle isDark={theme === 'dark'} toggleTheme={toggleTheme} />
+               <button
+                  onClick={() => setCurrentView('profile')}
+                  className={`p-2 rounded-lg transition-colors flex items-center justify-center
+                    ${currentView === 'profile' 
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' 
+                      : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
+                  title="Settings"
+                >
+                  <Settings size={20} />
+               </button>
             </div>
          </header>
          
