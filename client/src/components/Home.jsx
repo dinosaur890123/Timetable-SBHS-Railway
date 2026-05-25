@@ -27,7 +27,8 @@ const ALL_TILES = {
     notices: { title: 'Latest Notices', minW: 1, maxW: 3, minH: 1, maxH: 2 },
     clock: { title: 'Brutalist Live Clock', minW: 1, maxW: 2, minH: 1, maxH: 2 },
     timetable_preview: { title: 'Timetable Preview', minW: 1, maxW: 3, minH: 1, maxH: 2 },
-    quick_links: { title: 'Quick Links & Actions', minW: 1, maxW: 3, minH: 1, maxH: 1 }
+    quick_links: { title: 'Quick Links & Actions', minW: 1, maxW: 3, minH: 1, maxH: 1 },
+    scratchpad: { title: 'Quick Scratchpad', minW: 1, maxW: 3, minH: 1, maxH: 2 }
 };
 
 // Tailwind grid utility mappings to prevent compilation issues
@@ -42,7 +43,7 @@ const rowSpanClasses = {
     2: 'row-span-1 md:row-span-2'
 };
 
-// Clock Widget sub-component to isolate live state updates
+// Live Digital & Analogue Clock Widget
 const ClockWidget = () => {
     const [time, setTime] = useState(new Date());
     const [formatType, setFormatType] = useState(() => localStorage.getItem('clock_widget_format') || 'both');
@@ -81,7 +82,7 @@ const ClockWidget = () => {
                 </h2>
                 <button 
                     onClick={toggleFormat}
-                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-105 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-450 hover:text-black dark:hover:text-white transition"
+                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-450 hover:text-black dark:hover:text-white transition"
                     title="Change clock view"
                 >
                     {formatType}
@@ -137,7 +138,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
 
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 mb-4 flex items-center gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
                 <BookOpen size={14} />
                 Today's Timeline
             </h2>
@@ -170,13 +171,13 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                     <div className={`w-8 h-8 flex items-center justify-center font-bold text-xs border ${
                                         isCurrent 
                                             ? 'border-white dark:border-black text-white dark:text-black' 
-                                            : 'border-zinc-300 dark:border-zinc-700 text-zinc-550 dark:text-zinc-450'
+                                            : 'border-zinc-300 dark:border-zinc-700 text-zinc-555 dark:text-zinc-455'
                                     }`}>
                                         {bellId}
                                     </div>
                                     <div>
                                         <h4 className="font-extrabold text-sm leading-none">{title}</h4>
-                                        <p className={`text-[10px] mt-1.5 font-semibold ${isCurrent ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-550'}`}>
+                                        <p className={`text-[10px] mt-1.5 font-semibold ${isCurrent ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-555'}`}>
                                             {bell.time} - {bell.endTime || '??'}
                                             {!isBreak && periodInfo.room && ` | ${periodInfo.room}`}
                                         </p>
@@ -199,11 +200,11 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
     );
 };
 
-// Samsung Quick Panel style toggles for fast navigation and theme management
+// Samsung Quick Panel Style Toggles Widget
 const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 mb-4 flex items-center gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
                 <LayoutGrid size={14} />
                 Quick Panel
             </h2>
@@ -238,7 +239,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
                 >
                     {theme === 'dark' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-350 group-hover:text-current"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-355 group-hover:text-current"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-750 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     )}
@@ -249,8 +250,36 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
     );
 };
 
+// Persistent Scratchpad Widget
+const ScratchpadWidget = () => {
+    const [text, setText] = useState(() => localStorage.getItem('scratchpad_content') || '');
+
+    const handleChange = (e) => {
+        setText(e.target.value);
+        localStorage.setItem('scratchpad_content', e.target.value);
+    };
+
+    return (
+        <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Scratchpad
+                </h2>
+                <span className="text-[9px] font-black uppercase text-zinc-400">Persisted</span>
+            </div>
+            <textarea 
+                value={text}
+                onChange={handleChange}
+                placeholder="Type reminders, room changes, or study tasks here..."
+                className="w-full flex-1 min-h-[90px] bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-850 p-3 text-sm focus:outline-none focus:border-zinc-450 focus:dark:border-zinc-700 resize-none font-medium placeholder-zinc-400 dark:text-zinc-200 custom-scrollbar"
+            />
+        </div>
+    );
+};
+
 // Main Home Component
-const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme }) => {
+const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
 
@@ -391,39 +420,123 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         return null;
     };
 
-    // Helper functions for modifying the active tiles layout
-    const moveTile = (index, direction) => {
+    // HTML5 Drag-and-Drop Reorder functions
+    const handleDragStart = (e, index) => {
+        e.dataTransfer.setData('text/plain', index);
+        e.dataTransfer.effectAllowed = 'move';
+        e.currentTarget.classList.add('opacity-40');
+    };
+
+    const handleDragEnd = (e) => {
+        e.currentTarget.classList.remove('opacity-40');
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault(); // Required to allow dropping
+    };
+
+    const handleDrop = (e, targetIndex) => {
+        e.preventDefault();
+        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (isNaN(sourceIndex) || sourceIndex === targetIndex) return;
+
         const newTiles = [...activeTiles];
-        if (direction === 'prev' && index > 0) {
-            const temp = newTiles[index];
-            newTiles[index] = newTiles[index - 1];
-            newTiles[index - 1] = temp;
-        } else if (direction === 'next' && index < newTiles.length - 1) {
-            const temp = newTiles[index];
-            newTiles[index] = newTiles[index + 1];
-            newTiles[index + 1] = temp;
-        }
+        const [draggedTile] = newTiles.splice(sourceIndex, 1);
+        newTiles.splice(targetIndex, 0, draggedTile);
         setActiveTiles(newTiles);
     };
 
-    const cycleWidth = (index) => {
-        const newTiles = [...activeTiles];
-        const tile = newTiles[index];
-        const config = ALL_TILES[tile.id];
-        let nextW = tile.w + 1;
-        if (nextW > config.maxW) nextW = config.minW;
-        newTiles[index] = { ...tile, w: nextW };
-        setActiveTiles(newTiles);
+    // Edge Drag-to-Resize functions (Mouse/Desktop)
+    const startResize = (e, tileIndex) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const tile = activeTiles[tileIndex];
+        const tileConfig = ALL_TILES[tile.id];
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startW = tile.w;
+        const startH = tile.h;
+
+        const cardElement = e.currentTarget.closest('.relative-tile-wrapper');
+        if (!cardElement) return;
+
+        const rect = cardElement.getBoundingClientRect();
+        const singleColWidth = rect.width / startW;
+        const singleRowHeight = rect.height / startH;
+
+        const handleMouseMove = (moveEvent) => {
+            const deltaX = moveEvent.clientX - startX;
+            const deltaY = moveEvent.clientY - startY;
+
+            const colChange = Math.round(deltaX / singleColWidth);
+            const rowChange = Math.round(deltaY / singleRowHeight);
+
+            const newW = Math.max(tileConfig.minW, Math.min(tileConfig.maxW, startW + colChange));
+            const newH = Math.max(tileConfig.minH, Math.min(tileConfig.maxH, startH + rowChange));
+
+            setActiveTiles(prev => {
+                if (prev[tileIndex].w === newW && prev[tileIndex].h === newH) return prev;
+                const updated = [...prev];
+                updated[tileIndex] = { ...updated[tileIndex], w: newW, h: newH };
+                return updated;
+            });
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
     };
 
-    const cycleHeight = (index) => {
-        const newTiles = [...activeTiles];
-        const tile = newTiles[index];
-        const config = ALL_TILES[tile.id];
-        let nextH = tile.h + 1;
-        if (nextH > config.maxH) nextH = config.minH;
-        newTiles[index] = { ...tile, h: nextH };
-        setActiveTiles(newTiles);
+    // Edge Drag-to-Resize functions (Touch/Mobile)
+    const startResizeTouch = (e, tileIndex) => {
+        e.stopPropagation();
+
+        const touch = e.touches[0];
+        const tile = activeTiles[tileIndex];
+        const tileConfig = ALL_TILES[tile.id];
+        const startX = touch.clientX;
+        const startY = touch.clientY;
+        const startW = tile.w;
+        const startH = tile.h;
+
+        const cardElement = e.currentTarget.closest('.relative-tile-wrapper');
+        if (!cardElement) return;
+
+        const rect = cardElement.getBoundingClientRect();
+        const singleColWidth = rect.width / startW;
+        const singleRowHeight = rect.height / startH;
+
+        const handleTouchMove = (moveEvent) => {
+            const moveTouch = moveEvent.touches[0];
+            const deltaX = moveTouch.clientX - startX;
+            const deltaY = moveTouch.clientY - startY;
+
+            const colChange = Math.round(deltaX / singleColWidth);
+            const rowChange = Math.round(deltaY / singleRowHeight);
+
+            const newW = Math.max(tileConfig.minW, Math.min(tileConfig.maxW, startW + colChange));
+            const newH = Math.max(tileConfig.minH, Math.min(tileConfig.maxH, startH + rowChange));
+
+            setActiveTiles(prev => {
+                if (prev[tileIndex].w === newW && prev[tileIndex].h === newH) return prev;
+                const updated = [...prev];
+                updated[tileIndex] = { ...updated[tileIndex], w: newW, h: newH };
+                return updated;
+            });
+        };
+
+        const handleTouchEnd = () => {
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('touchend', handleTouchEnd);
+        };
+
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
     };
 
     const removeTile = (id) => {
@@ -441,8 +554,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         setActiveTiles(prev => [...prev, newTile]);
     };
 
-    // Calculate which tiles are available to add (currently inactive)
-    const availableTiles = Object.keys(ALL_TILES).filter(id => !activeTiles.some(t => t.id === id));
+    // Filter layout based on global AI setting
+    const filteredActiveTiles = activeTiles.filter(tile => !(tile.id === 'ai_briefing' && aiDisabled));
+    const availableTiles = Object.keys(ALL_TILES).filter(id => {
+        if (id === 'ai_briefing' && aiDisabled) return false;
+        return !activeTiles.some(t => t.id === id);
+    });
 
     // Render individual tile elements based on their id
     const renderTileContent = (id) => {
@@ -552,7 +669,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'next_class':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 mb-4 flex items-center gap-2">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
                             <ArrowRight size={14} />
                             Up Next
                         </h2>
@@ -595,7 +712,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 <div className="text-sm font-semibold text-zinc-400">Notices</div>
                             </div>
                             {countdownStr && (
-                                <div className="border-l border-zinc-800 pl-6 animate-in fade-in duration-300">
+                                <div className="border-l border-zinc-850 pl-6 animate-in fade-in duration-300">
                                     <div className="text-lg font-extrabold text-amber-400 leading-none">{countdownStr}</div>
                                     <div className="text-[10px] font-bold text-zinc-500 uppercase mt-1">School Left</div>
                                 </div>
@@ -648,6 +765,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         toggleTheme={toggleTheme} 
                     />
                 );
+            case 'scratchpad':
+                return <ScratchpadWidget />;
             default:
                 return null;
         }
@@ -658,17 +777,17 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             {/* Header controls & Greeting */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-6">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none">
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none select-none">
                         Dashboard
                     </h1>
-                    <p className="text-zinc-500 dark:text-zinc-400 font-semibold text-sm flex items-center gap-2 mt-2">
+                    <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-sm flex items-center gap-2 mt-2 select-none">
                         <CalendarIcon size={16} />
                         {format(currentTime, 'EEEE, d MMMM yyyy')}
                     </p>
                 </div>
                 
                 {/* Customize Dashboard Controls */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 select-none">
                     {isEditing ? (
                         <>
                             <button 
@@ -708,7 +827,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     : ''
             }`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-                    {activeTiles.map((tile, index) => {
+                    {filteredActiveTiles.map((tile, index) => {
                         const tileConfig = ALL_TILES[tile.id];
                         if (!tileConfig) return null;
 
@@ -720,15 +839,23 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         const spanClass = `${colSpanClasses[tile.w] || 'col-span-1'} ${rowSpanClasses[tile.h] || 'row-span-1'}`;
 
                         return (
-                            <div key={tile.id} className={`${spanClass} relative group transition-all duration-300`}>
+                            <div 
+                                key={tile.id} 
+                                className={`${spanClass} relative-tile-wrapper relative group transition-all duration-300`}
+                                draggable={isEditing}
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, index)}
+                            >
                                 {renderTileContent(tile.id)}
                                 
                                 {/* Edit Mode Overlay Screen */}
                                 {isEditing && (
-                                    <div className="absolute inset-0 bg-zinc-950/70 dark:bg-black/85 backdrop-blur-[1.5px] border-2 border-dashed border-zinc-400 dark:border-zinc-700 flex flex-col justify-between p-3.5 z-20 animate-in fade-in duration-200 select-none">
+                                    <div className="absolute inset-0 bg-zinc-950/70 dark:bg-black/85 backdrop-blur-[1.5px] border-2 border-dashed border-zinc-400 dark:border-zinc-700 flex flex-col justify-between p-3.5 z-20 animate-in fade-in duration-200 select-none cursor-move">
                                         
                                         {/* Header Controls */}
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-center justify-between pointer-events-auto">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-white bg-black px-2 py-0.5 border border-zinc-700">
                                                 {tileConfig.title}
                                             </span>
@@ -736,66 +863,36 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                                 onClick={() => removeTile(tile.id)}
                                                 className="bg-red-650 hover:bg-red-750 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
                                                 title="Remove Widget"
+                                                draggable={false}
                                             >
                                                 <X size={14} />
                                             </button>
                                         </div>
 
-                                        {/* Resize & Rearrange Controls */}
-                                        <div className="flex flex-col gap-3.5 items-center justify-center my-auto">
-                                            <div className="flex items-center gap-1.5">
-                                                <button 
-                                                    onClick={() => moveTile(index, 'prev')}
-                                                    disabled={index === 0}
-                                                    className={`p-1.5 border text-white transition hover:scale-105 active:scale-95 ${
-                                                        index === 0 
-                                                            ? 'border-zinc-800 text-zinc-700 cursor-not-allowed bg-zinc-950/20' 
-                                                            : 'border-zinc-700 bg-zinc-900 hover:bg-zinc-800'
-                                                    }`}
-                                                    title="Move Left / Up"
-                                                >
-                                                    <ChevronLeft size={16} />
-                                                </button>
-                                                <span className="text-[10px] text-zinc-450 font-black uppercase tracking-wider px-1">Move</span>
-                                                <button 
-                                                    onClick={() => moveTile(index, 'next')}
-                                                    disabled={index === activeTiles.length - 1}
-                                                    className={`p-1.5 border text-white transition hover:scale-105 active:scale-95 ${
-                                                        index === activeTiles.length - 1 
-                                                            ? 'border-zinc-800 text-zinc-700 cursor-not-allowed bg-zinc-950/20' 
-                                                            : 'border-zinc-700 bg-zinc-900 hover:bg-zinc-800'
-                                                    }`}
-                                                    title="Move Right / Down"
-                                                >
-                                                    <ChevronRight size={16} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                {tileConfig.maxW > tileConfig.minW && (
-                                                    <button 
-                                                        onClick={() => cycleWidth(index)}
-                                                        className="px-2.5 py-1 text-[10px] font-black uppercase border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white transition flex items-center gap-1"
-                                                        title="Cycle column size"
-                                                    >
-                                                        Col: {tile.w}
-                                                    </button>
-                                                )}
-                                                {tileConfig.maxH > tileConfig.minH && (
-                                                    <button 
-                                                        onClick={() => cycleHeight(index)}
-                                                        className="px-2.5 py-1 text-[10px] font-black uppercase border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white transition flex items-center gap-1"
-                                                        title="Cycle row size"
-                                                    >
-                                                        Row: {tile.h}
-                                                    </button>
-                                                )}
-                                            </div>
+                                        {/* Drag instructions / info */}
+                                        <div className="text-center text-zinc-400 dark:text-zinc-550 pointer-events-none select-none my-auto">
+                                            <p className="text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5">
+                                                <LayoutGrid size={12} /> Drag Card to Reorder
+                                            </p>
                                         </div>
                                         
                                         {/* Size Details */}
-                                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 text-center">
+                                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 text-left pointer-events-none select-none">
                                             Size {tile.w}x{tile.h}
+                                        </div>
+
+                                        {/* Edge Resize Handle (Bottom-Right) */}
+                                        <div 
+                                            onMouseDown={(e) => startResize(e, index)}
+                                            onTouchStart={(e) => startResizeTouch(e, index)}
+                                            className="absolute bottom-0 right-0 w-7 h-7 cursor-se-resize flex items-end justify-end p-1.5 z-30 select-none pointer-events-auto"
+                                            draggable={false}
+                                            title="Grab and drag edge to Resize"
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 12 12" className="text-zinc-400 hover:text-white dark:text-zinc-550 dark:hover:text-zinc-350 transition-colors">
+                                                <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+                                                <line x1="10" y1="6" x2="6" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+                                            </svg>
                                         </div>
                                     </div>
                                 )}
@@ -808,7 +905,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             {/* Inactive Available Widgets Panel (Drawer) */}
             {isEditing && (
                 <div className="p-6 bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-bottom duration-300">
-                    <div className="flex items-center justify-between mb-5 border-b border-zinc-250 dark:border-zinc-800 pb-3">
+                    <div className="flex items-center justify-between mb-5 border-b border-zinc-250 dark:border-zinc-800 pb-3 select-none">
                         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
                             <Plus size={16} />
                             Available Widgets
@@ -845,7 +942,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             })}
                         </div>
                     ) : (
-                        <p className="text-zinc-500 dark:text-zinc-400 text-xs text-center py-6 border border-dashed border-zinc-250 dark:border-zinc-800 bg-white/40 dark:bg-zinc-950/20">
+                        <p className="text-zinc-505 dark:text-zinc-400 text-xs text-center py-6 border border-dashed border-zinc-250 dark:border-zinc-800 bg-white/40 dark:bg-zinc-950/20 select-none">
                             All available widgets are currently added to your dashboard.
                         </p>
                     )}

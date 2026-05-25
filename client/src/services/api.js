@@ -172,3 +172,19 @@ export const fetchAiBriefing = async (notices) => {
     return response.json();
 };
 
+export const fetchTimetableQa = async (question, timetable, currentMinutes) => {
+    const token = getAccessToken();
+    const response = await fetch(`${SYSTEM_API_URL}/ai/timetable-qa`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ question, timetable, currentMinutes })
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch Timetable Q&A: ${response.status}`);
+    }
+    return response.json();
+};
+

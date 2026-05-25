@@ -1170,6 +1170,101 @@ Return ONLY the JSON. Do not include markdown code block wraps.`;
     }
 });
 
+// POST /api/ai/timetable-qa
+app.post('/api/ai/timetable-qa', requireStudentAuth, async (req, res) => {
+    try {
+        const { question, timetable, currentMinutes } = req.body || {};
+        if (!question) {
+            return res.status(400).json({ error: 'Missing question' });
+        }
+
+        const systemStateObj = await getSystemState();
+        const activeProvider = systemStateObj.aiProvider || 'hackclub';
+        const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
+
+        // Construct a prompt with timetable context and current time
+        const systemPrompt = `You are a helpful school assistant. Answer the student's question about their daily timetable schedule.
+You are given the student's timetable data and the current time of day in minutes (from 0 to 1440, representing minutes elapsed since midnight).
+Format the answer in a friendly, conversational tone. Be concise (1-2 sentences).
+If you cannot answer the question based on the timetable data, politely explain why and provide a suggestion.
+
+Current time of day: ${currentMinutes} minutes (e.g. 540 is 9:00 AM, 915 is 3:15 PM).
+Today's Timetable Data:
+${JSON.stringify(timetable)}
+
+Answer the student's question:`;
+
+        let answer = '';
+
+        if (activeProvider === 'gemini') {
+            const apiKey = process.env.GEMINI_API_KEY;
+            if (!apiKey) {
+                return res.json({ answer: "AI features are temporarily unavailable because the API key is not configured on the server." });
+            }
+
+            console.log(`[ai] Querying Google Gemini API (${activeModel}) for Timetable Q&A...`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: `${systemPrompt}\n\nQuestion: ${question}`
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.4,
+                        maxOutputTokens: 150
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gemini API responded with status ${response.status}`);
+            }
+
+            const aiData = await response.json();
+            answer = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        } else {
+            const apiKey = process.env.HACKCLUB_AI_API_KEY;
+            if (!apiKey) {
+                return res.json({ answer: "AI features are temporarily unavailable because the API key is not configured on the server." });
+            }
+
+            console.log(`[ai] Querying Hack Club AI (${activeModel}) for Timetable Q&A...`);
+            const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: activeModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: question }
+                    ],
+                    temperature: 0.4,
+                    max_tokens: 150
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Hack Club AI responded with status ${response.status}`);
+            }
+
+            const aiData = await response.json();
+            answer = aiData.choices?.[0]?.message?.content?.trim() || '';
+        }
+
+        res.json({ answer });
+
+    } catch (err) {
+        console.error('[ai-timetable-qa] Failed:', err);
+        res.status(500).json({ error: 'Failed to generate answer' });
+    }
+});
+
 // POST /api/cache/clear
 app.post('/api/cache/clear', requireAuth, async (req, res) => {
     try {
