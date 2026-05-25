@@ -7,9 +7,6 @@ import DailyNotices from './components/DailyNotices';
 import AdminPanel from './components/AdminPanel';
 import LandingPage from './components/LandingPage';
 import Home from './components/Home';
-import AwardSchemeView from './components/AwardSchemeView';
-import ClipboardView from './components/ClipboardView';
-
 import { 
   fetchDayTimetable, 
   fetchDailyNews, 
@@ -18,24 +15,17 @@ import {
   exchangeToken, 
   logout,
   fetchSystemStatus,
-  fetchCompleteTimetable,
-  fetchAiBriefing
+  fetchCompleteTimetable
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon } from 'lucide-react';
 
 function App() {
   // State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
-  const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
   const [currentView, setCurrentView] = useState('home');
   const [viewDate, setViewDate] = useState(new Date());
-
-  useEffect(() => {
-    localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
-  }, [aiDisabled]);
 
   useEffect(() => {
     // Check if user is navigating exactly to /admin
@@ -45,13 +35,10 @@ function App() {
   }, []);
   
   const [timetable, setTimetable] = useState(null);
-  const [completeTimetable, setCompleteTimetable] = useState(null);
   const [notices, setNotices] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [aiBriefing, setAiBriefing] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
   
   // System State
   const [broadcast, setBroadcast] = useState(null);
@@ -93,26 +80,6 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Color Theme Config
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove(
-      'theme-zinc', 
-      'theme-mint', 
-      'theme-amber', 
-      'theme-blue', 
-      'theme-violet',
-      'theme-rose',
-      'theme-teal',
-      'theme-orange',
-      'theme-sky'
-    );
-    if (colorTheme !== 'zinc') {
-      root.classList.add(`theme-${colorTheme}`);
-    }
-    localStorage.setItem('color_theme', colorTheme);
-  }, [colorTheme]);
-
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   // Auth & Initial Data
@@ -150,7 +117,6 @@ function App() {
         ]);
         setNotices(noticesData);
         setUser(userData);
-        setCompleteTimetable(completeTimetableData);
         
         if (systemData) {
             const dismissedId = localStorage.getItem('dismissedUpdateId');
@@ -209,24 +175,6 @@ function App() {
     loadTimetable();
   }, [viewDate, user]); 
 
-  // Fetch AI Briefing in background once notices are loaded
-  useEffect(() => {
-    if (!user || !notices || !notices.notices || notices.notices.length === 0) return;
-    
-    const getAiData = async () => {
-        setAiLoading(true);
-        try {
-            const data = await fetchAiBriefing(notices.notices);
-            setAiBriefing(data);
-        } catch (err) {
-            console.error("Failed to load AI briefing:", err);
-        } finally {
-            setAiLoading(false);
-        }
-    };
-    getAiData();
-  }, [notices, user]);
-
   // Date Navigation Helpers
   const nextDay = () => setViewDate(d => addDays(d, 1));
   const prevDay = () => setViewDate(d => addDays(d, -1));
@@ -279,22 +227,12 @@ function App() {
                 {currentView}
             </h1>
             
-            <div className="flex items-center gap-4 pr-1">
-               <div className="hidden md:flex flex-col items-end mr-2">
+            <div className="flex items-center gap-4">
+               <div className="hidden md:flex flex-col items-end">
                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
                    <span className="text-xs text-zinc-500">{user?.studentId || 'Staff'}</span>
                </div>
                <ThemeToggle isDark={theme === 'dark'} toggleTheme={toggleTheme} />
-               <button
-                  onClick={() => setCurrentView('profile')}
-                  className={`p-2 rounded-lg transition-colors flex items-center justify-center
-                    ${currentView === 'profile' 
-                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' 
-                      : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
-                  title="Settings"
-                >
-                  <Settings size={20} />
-               </button>
             </div>
          </header>
          
@@ -326,19 +264,7 @@ function App() {
          <div className="p-4 md:p-8 max-w-7xl mx-auto">
             
             {/* HOME VIEW */}
-            {currentView === 'home' && (
-                <Home 
-                    user={user} 
-                    timetableData={timetable} 
-                    notices={notices} 
-                    setView={setCurrentView} 
-                    aiBriefing={aiBriefing} 
-                    aiLoading={aiLoading} 
-                    theme={theme}
-                    toggleTheme={toggleTheme}
-                    aiDisabled={aiDisabled}
-                />
-            )}
+            {currentView === 'home' && <Home user={user} timetableData={timetable} notices={notices} />}
 
             {/* TIMETABLE VIEW */}
             {currentView === 'timetable' && (
@@ -370,7 +296,7 @@ function App() {
                         )}
                     </div>
 
-                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} aiDisabled={aiDisabled} />
+                    <Timetable timetableData={timetable} />
                 </div>
             )}
 
@@ -380,16 +306,9 @@ function App() {
             {/* NOTICES VIEW */}
             {currentView === 'notices' && (
                 <div className="max-w-3xl mx-auto">
-                    <DailyNotices notices={notices} aiBriefing={aiBriefing} />
+                    <DailyNotices notices={notices} />
                 </div>
             )}
-
-            {/* AWARD SCHEME VIEW */}
-            {currentView === 'awards' && <AwardSchemeView user={user} />}
-
-            {/* CLIPBOARD VIEW */}
-            {currentView === 'clipboard' && <ClipboardView user={user} />}
-
              
             {/* ADMIN VIEW */}
             {currentView === 'admin' && <AdminPanel user={user} />}
@@ -404,60 +323,9 @@ function App() {
                         <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{user?.givenName} {user?.surname}</h2>
                         <p className="text-zinc-500 mt-1">{user?.email}</p>
                     </div>
-                    
-                    {/* AI Toggle Option */}
-                    <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-zinc-900 dark:text-white">AI Features</span>
-                            <button 
-                                onClick={() => setAiDisabled(prev => !prev)}
-                                className={`px-3 py-1.5 text-xs font-extrabold uppercase border transition ${
-                                    aiDisabled 
-                                        ? 'bg-zinc-200 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400' 
-                                        : 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                }`}
-                            >
-                                {aiDisabled ? 'Disabled' : 'Enabled'}
-                            </button>
-                        </div>
-                        <p className="text-[11px] text-zinc-550">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
-                    </div>
-
-                    {/* Color Themes Section */}
-                    <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none">
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
-                        <div className="flex flex-wrap gap-2">
-                            {[
-                                { id: 'zinc', name: 'Default', color: 'bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100' },
-                                { id: 'mint', name: 'Mint', color: 'bg-emerald-600 border-emerald-600' },
-                                { id: 'amber', name: 'Amber', color: 'bg-amber-500 border-amber-500' },
-                                { id: 'blue', name: 'Blue', color: 'bg-blue-600 border-blue-600' },
-                                { id: 'violet', name: 'Violet', color: 'bg-violet-500 border-violet-500' },
-                                { id: 'rose', name: 'Rose', color: 'bg-rose-500 border-rose-500' },
-                                { id: 'teal', name: 'Teal', color: 'bg-teal-600 border-teal-600' },
-                                { id: 'orange', name: 'Orange', color: 'bg-orange-500 border-orange-500' },
-                                { id: 'sky', name: 'Sky', color: 'bg-sky-500 border-sky-500' }
-                            ].map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setColorTheme(t.id)}
-                                    className={`px-3 py-1.5 text-xs font-black uppercase border transition-all flex items-center gap-1.5 ${
-                                        colorTheme === t.id
-                                            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                            : 'bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
-                                    }`}
-                                    title={t.name}
-                                >
-                                    <span className={`w-3.5 h-3.5 border ${t.color}`} />
-                                    {t.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
                     <button 
                         onClick={logout}
-                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
+                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors"
                     >
                         Sign Out
                     </button>
