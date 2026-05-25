@@ -7,6 +7,8 @@ import DailyNotices from './components/DailyNotices';
 import AdminPanel from './components/AdminPanel';
 import LandingPage from './components/LandingPage';
 import Home from './components/Home';
+import AwardSchemeView from './components/AwardSchemeView';
+import ClipboardView from './components/ClipboardView';
 import { 
   fetchDayTimetable, 
   fetchDailyNews, 
@@ -321,6 +323,12 @@ function App() {
                     <DailyNotices notices={notices} />
                 </div>
             )}
+
+            {/* AWARD SCHEME VIEW */}
+            {currentView === 'awards' && <AwardSchemeView user={user} />}
+
+            {/* CLIPBOARD VIEW */}
+            {currentView === 'clipboard' && <ClipboardView user={user} />}
              
             {/* ADMIN VIEW */}
             {currentView === 'admin' && <AdminPanel user={user} />}
