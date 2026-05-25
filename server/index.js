@@ -40,6 +40,7 @@ let logs = []; // System logs
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
+    aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b'
 };
 
@@ -104,35 +105,47 @@ const addLog = async (action, user, details) => {
 
 async function getSystemState() {
     if (!isDbEnabled) {
+        if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
         return systemState;
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_model, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_model: 'qwen/qwen3-32b', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
+        aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b'
     };
 }
 
-async function setAiModel(model) {
+async function setAiConfig(provider, model) {
+    const cleanProvider = provider === 'gemini' ? 'gemini' : 'hackclub';
+    let defaultModel = cleanProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
+    const cleanModel = model || defaultModel;
+
     if (!isDbEnabled) {
-        systemState.aiModel = model || 'qwen/qwen3-32b';
-        return systemState.aiModel;
+        systemState.aiProvider = cleanProvider;
+        systemState.aiModel = cleanModel;
+        return { aiProvider: cleanProvider, aiModel: cleanModel };
     }
 
     await db.query(
-        'UPDATE system_state SET ai_model = $1, updated_at = NOW() WHERE id = 1',
-        [model || 'qwen/qwen3-32b']
+        'UPDATE system_state SET ai_provider = $1, ai_model = $2, updated_at = NOW() WHERE id = 1',
+        [cleanProvider, cleanModel]
     );
 
-    return model || 'qwen/qwen3-32b';
+    return { aiProvider: cleanProvider, aiModel: cleanModel };
+}
+
+async function setAiModel(model) {
+    const res = await setAiConfig(undefined, model);
+    return res.aiModel;
 }
 
 async function setBroadcast(message, type) {
@@ -568,18 +581,18 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         const allUsers = await listUsers();
         const state = await getSystemState();
 
-        let availableModels = ['qwen/qwen3-32b'];
+        let availableHackClubModels = ['qwen/qwen3-32b'];
         try {
             const modelsRes = await fetch('https://ai.hackclub.com/proxy/v1/models');
             if (modelsRes.ok) {
                 const modelsData = await modelsRes.json();
                 if (modelsData && Array.isArray(modelsData.data)) {
-                    availableModels = modelsData.data.map(m => m.id);
+                    availableHackClubModels = modelsData.data.map(m => m.id);
                 }
             }
         } catch (e) {
             console.warn('[ai] Failed to fetch live models list:', e.message);
-            availableModels = [
+            availableHackClubModels = [
                 'qwen/qwen3-32b',
                 'meta-llama/llama-3-8b-instruct',
                 'meta-llama/llama-3-70b-instruct',
@@ -696,8 +709,15 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
+            aiProvider: state.aiProvider || 'hackclub',
             aiModel: state.aiModel || 'qwen/qwen3-32b',
-            availableModels,
+            availableHackClubModels,
+            availableGeminiModels: [
+                'gemini-1.5-flash',
+                'gemini-1.5-pro',
+                'gemini-2.0-flash',
+                'gemini-2.5-flash'
+            ],
             activeSessions: statsHistory[statsHistory.length - 1]?.sessions || 1,
             history: statsHistory,
             
@@ -857,12 +877,28 @@ app.post('/api/system/ai-model', requireAuth, async (req, res) => {
         if (!model) {
             return res.status(400).json({ error: 'Missing model name' });
         }
-        const updated = await setAiModel(model);
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI model to ${updated}`);
-        res.json({ success: true, aiModel: updated });
+        const updated = await setAiConfig(undefined, model);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI model to ${updated.aiModel}`);
+        res.json({ success: true, aiModel: updated.aiModel });
     } catch (e) {
         console.error('Update AI model error:', e);
         res.status(500).json({ error: 'Failed to update AI model' });
+    }
+});
+
+// POST /api/system/ai-config
+app.post('/api/system/ai-config', requireAuth, async (req, res) => {
+    try {
+        const { provider, model } = req.body || {};
+        if (!provider) {
+            return res.status(400).json({ error: 'Missing provider name' });
+        }
+        const updated = await setAiConfig(provider, model);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI config to ${updated.aiProvider} (${updated.aiModel})`);
+        res.json({ success: true, ...updated });
+    } catch (e) {
+        console.error('Update AI config error:', e);
+        res.status(500).json({ error: 'Failed to update AI configuration' });
     }
 });
 
@@ -973,19 +1009,10 @@ app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
             return res.json(defaultResult);
         }
 
-        // 3. Request Hack Club AI
-        const apiKey = process.env.HACKCLUB_AI_API_KEY;
-        if (!apiKey) {
-            console.warn('[ai] HACKCLUB_AI_API_KEY is not set. Using fallback sorting.');
-            const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-            return res.json({
-                briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
-                sortedNotices: sorted
-            });
-        }
-
+        // 3. Check configuration and request AI
         const systemStateObj = await getSystemState();
-        const activeModel = systemStateObj.aiModel || 'qwen/qwen3-32b';
+        const activeProvider = systemStateObj.aiProvider || 'hackclub';
+        const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
 
         const promptNotices = notices.map((n, i) => ({
             index: i,
@@ -995,7 +1022,7 @@ app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
             displayYears: n.displayYears || 'All Students'
         }));
 
-        const systemPrompt = `You are a helpful school assistant. Summarize the daily notices and prioritize them.
+        const systemPrompt = `You are a school assistant. Summarize the daily school notices and prioritize them.
 Return a JSON object in this exact format:
 {
   "briefing": "A friendly, engaging morning summary of the key notices (2-3 sentences max). Ensure you highlight important school-wide dates, sporting updates, or co-curricular requirements.",
@@ -1007,31 +1034,81 @@ Return a JSON object in this exact format:
     }
   ]
 }
-Return ONLY the JSON. Do not include markdown code block syntax (like \`\`\`json) in your final output, just raw JSON.`;
+Return ONLY the JSON. Do not include markdown code block wraps.`;
 
-        console.log(`[ai] Querying Hack Club AI for ${dateKey} using model ${activeModel}...`);
-        const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: activeModel,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: `Here are today's notices:\n${JSON.stringify(promptNotices)}` }
-                ],
-                temperature: 0.3
-            })
-        });
+        let aiText = '';
 
-        if (!response.ok) {
-            throw new Error(`AI API responded with status ${response.status}`);
+        if (activeProvider === 'gemini') {
+            const apiKey = process.env.GEMINI_API_KEY;
+            if (!apiKey) {
+                console.warn('[ai] GEMINI_API_KEY is not set. Using fallback sorting.');
+                const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+                return res.json({
+                    briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
+                    sortedNotices: sorted
+                });
+            }
+
+            console.log(`[ai] Querying Google Gemini API (${activeModel}) for ${dateKey}...`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: `${systemPrompt}\n\nHere are today's notices:\n${JSON.stringify(promptNotices)}`
+                        }]
+                    }],
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        temperature: 0.3
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gemini API responded with status ${response.status}`);
+            }
+
+            const aiData = await response.json();
+            aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        } else {
+            const apiKey = process.env.HACKCLUB_AI_API_KEY;
+            if (!apiKey) {
+                console.warn('[ai] HACKCLUB_AI_API_KEY is not set. Using fallback sorting.');
+                const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+                return res.json({
+                    briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
+                    sortedNotices: sorted
+                });
+            }
+
+            console.log(`[ai] Querying Hack Club AI (${activeModel}) for ${dateKey}...`);
+            const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: activeModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: `Here are today's notices:\n${JSON.stringify(promptNotices)}` }
+                    ],
+                    temperature: 0.3
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Hack Club AI responded with status ${response.status}`);
+            }
+
+            const aiData = await response.json();
+            aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
         }
-
-        const aiData = await response.json();
-        const aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
 
         // Clean up markdown block wraps if present
         let jsonText = aiText;

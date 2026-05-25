@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3 } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiModel } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiConfig } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -248,20 +248,36 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    const [updatingModel, setUpdatingModel] = useState(false);
+    const [updatingConfig, setUpdatingConfig] = useState(false);
+
+    const handleProviderChange = async (e) => {
+        const selectedProvider = e.target.value;
+        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
+        setUpdatingConfig(true);
+        try {
+            await updateAiConfig(selectedProvider, defaultModel);
+            setStats(prev => prev ? { ...prev, aiProvider: selectedProvider, aiModel: defaultModel } : null);
+            alert(`AI provider updated to ${selectedProvider} with default model ${defaultModel}`);
+            loadData();
+        } catch (err) {
+            alert("Failed to update AI provider configuration.");
+        } finally {
+            setUpdatingConfig(false);
+        }
+    };
 
     const handleModelChange = async (e) => {
         const selectedModel = e.target.value;
-        setUpdatingModel(true);
+        setUpdatingConfig(true);
         try {
-            await updateAiModel(selectedModel);
+            await updateAiConfig(stats?.aiProvider || 'hackclub', selectedModel);
             setStats(prev => prev ? { ...prev, aiModel: selectedModel } : null);
             alert(`AI briefing model updated to ${selectedModel}`);
             loadData();
         } catch (err) {
             alert("Failed to update AI briefing model.");
         } finally {
-            setUpdatingModel(false);
+            setUpdatingConfig(false);
         }
     };
 
@@ -1044,25 +1060,55 @@ const AdminPanel = ({ user }) => {
                 Perform system maintenance tasks.
             </p>
             <div className="space-y-4">
+                {/* AI Provider Config */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Database size={16} />
+                            AI Provider
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">Choose the active AI provider backend (requires appropriate API keys in .env)</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
+                        <select
+                            value={stats?.aiProvider || 'hackclub'}
+                            disabled={updatingConfig}
+                            onChange={handleProviderChange}
+                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
+                        >
+                            <option value="hackclub">Hack Club AI</option>
+                            <option value="gemini">Google Gemini API</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* AI Model Config */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
                             <Sparkles size={16} />
                             Select Daily AI Briefing Model
                         </h4>
-                        <p className="text-xs text-zinc-550 mt-1">Choose the LLM model to generate student morning briefings from the Hack Club AI proxy</p>
+                        <p className="text-xs text-zinc-550 mt-1">Choose the LLM model to generate student morning briefings from the active provider</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {updatingModel && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
+                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
                         <select
                             value={stats?.aiModel || 'qwen/qwen3-32b'}
-                            disabled={updatingModel}
+                            disabled={updatingConfig}
                             onChange={handleModelChange}
                             className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
                         >
-                            {stats?.availableModels?.map(m => (
-                                <option key={m} value={m}>{m}</option>
-                            )) || <option value="qwen/qwen3-32b">qwen/qwen3-32b</option>}
+                            {stats?.aiProvider === 'gemini' ? (
+                                stats?.availableGeminiModels?.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))
+                            ) : (
+                                stats?.availableHackClubModels?.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))
+                            )}
                         </select>
                     </div>
                 </div>
