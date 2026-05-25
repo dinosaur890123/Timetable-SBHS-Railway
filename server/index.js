@@ -74,29 +74,31 @@ async function getSystemState() {
     if (!isDbEnabled) return systemState;
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
-        broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info' } : null
+        broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null
     };
 }
 
 async function setBroadcast(message, type) {
     if (!isDbEnabled) {
-        systemState.broadcast = message ? { message, type: type || 'info' } : null;
+        const ts = new Date().toISOString();
+        systemState.broadcast = message ? { message, type: type || 'info', id: ts } : null;
         return systemState.broadcast;
     }
 
-    await db.query(
-        'UPDATE system_state SET broadcast_message = $1, broadcast_type = $2, updated_at = NOW() WHERE id = 1',
+    const res = await db.query(
+        'UPDATE system_state SET broadcast_message = $1, broadcast_type = $2, updated_at = NOW() WHERE id = 1 RETURNING updated_at',
         [message || null, message ? (type || 'info') : null]
     );
 
-    return message ? { message, type: type || 'info' } : null;
+    const ts = res.rows[0]?.updated_at;
+    return message ? { message, type: type || 'info', id: ts } : null;
 }
 
 async function setMaintenance(maintenance) {

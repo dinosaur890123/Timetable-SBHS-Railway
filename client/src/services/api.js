@@ -77,7 +77,11 @@ export const exchangeToken = async (code) => {
 const getAccessToken = () => localStorage.getItem('sbhs_access_token');
 
 export const logout = () => {
+    const theme = localStorage.getItem('theme');
+    const dismissedUpdateId = localStorage.getItem('dismissedUpdateId');
     localStorage.clear();
+    if (theme) localStorage.setItem('theme', theme);
+    if (dismissedUpdateId) localStorage.setItem('dismissedUpdateId', dismissedUpdateId);
     window.location.href = '/';
 };
 

@@ -790,7 +790,7 @@ const AdminPanel = ({ user }) => {
                                 onClick={() => {
                                     setBroadcastType(type);
                                     if (type === 'update' && (!broadcastMsg || broadcastMsg.trim() === '')) {
-                                        setBroadcastMsg('A new version is available!');
+                                        setBroadcastMsg('A new version of Synchron is available!');
                                     }
                                 }}
                                 className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type

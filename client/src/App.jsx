@@ -50,7 +50,12 @@ function App() {
         try {
             const systemData = await fetchSystemStatus();
             if (systemData) {
-                setBroadcast(systemData.broadcast);
+                const dismissedId = localStorage.getItem('dismissedUpdateId');
+                if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
+                    setBroadcast(null);
+                } else {
+                    setBroadcast(systemData.broadcast);
+                }
                 setMaintenance(systemData.maintenance);
             }
         } catch (e) {
@@ -109,7 +114,12 @@ function App() {
         setUser(userData);
         
         if (systemData) {
-            setBroadcast(systemData.broadcast);
+            const dismissedId = localStorage.getItem('dismissedUpdateId');
+            if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
+                setBroadcast(null);
+            } else {
+                setBroadcast(systemData.broadcast);
+            }
             setMaintenance(systemData.maintenance);
         }
         
@@ -321,10 +331,15 @@ function App() {
                 
                 {broadcast.type === 'update' && (
                     <button 
-                        onClick={() => window.location.reload()}
+                        onClick={() => {
+                            if (broadcast.id) {
+                                localStorage.setItem('dismissedUpdateId', String(broadcast.id));
+                            }
+                            logout();
+                        }}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
                     >
-                        Update
+                        Sign Out & Update
                     </button>
                 )}
             </div>
