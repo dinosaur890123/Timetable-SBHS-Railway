@@ -19,7 +19,7 @@ import {
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings } from 'lucide-react';
 
 function App() {
   // State
@@ -227,12 +227,24 @@ function App() {
                 {currentView}
             </h1>
             
-            <div className="flex items-center gap-4">
-               <div className="hidden md:flex flex-col items-end">
-                   <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
-                   <span className="text-xs text-zinc-500">{user?.studentId || 'Staff'}</span>
+            <div className="flex items-center gap-6">
+               <div className="flex items-center gap-4">
+                  <div className="hidden md:flex flex-col items-end">
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
+                      <span className="text-xs text-zinc-500">{user?.studentId || 'Staff'}</span>
+                  </div>
+                  <ThemeToggle isDark={theme === 'dark'} toggleTheme={toggleTheme} />
                </div>
-               <ThemeToggle isDark={theme === 'dark'} toggleTheme={toggleTheme} />
+               
+               <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800"></div>
+               
+               <button 
+                  onClick={() => setCurrentView('profile')}
+                  className={`p-2 rounded-xl transition-colors ${currentView === 'profile' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
+                  title="Settings"
+               >
+                  <Settings size={20} />
+               </button>
             </div>
          </header>
          
