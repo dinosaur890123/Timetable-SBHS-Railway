@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3 } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiModel } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -245,6 +245,23 @@ const AdminPanel = ({ user }) => {
             alert("Failed to clear timetables.");
         } finally {
             setIsClearingTimetables(false);
+        }
+    };
+
+    const [updatingModel, setUpdatingModel] = useState(false);
+
+    const handleModelChange = async (e) => {
+        const selectedModel = e.target.value;
+        setUpdatingModel(true);
+        try {
+            await updateAiModel(selectedModel);
+            setStats(prev => prev ? { ...prev, aiModel: selectedModel } : null);
+            alert(`AI briefing model updated to ${selectedModel}`);
+            loadData();
+        } catch (err) {
+            alert("Failed to update AI briefing model.");
+        } finally {
+            setUpdatingModel(false);
         }
     };
 
@@ -1027,6 +1044,29 @@ const AdminPanel = ({ user }) => {
                 Perform system maintenance tasks.
             </p>
             <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Sparkles size={16} />
+                            Select Daily AI Briefing Model
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">Choose the LLM model to generate student morning briefings from the Hack Club AI proxy</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {updatingModel && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
+                        <select
+                            value={stats?.aiModel || 'qwen/qwen3-32b'}
+                            disabled={updatingModel}
+                            onChange={handleModelChange}
+                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
+                        >
+                            {stats?.availableModels?.map(m => (
+                                <option key={m} value={m}>{m}</option>
+                            )) || <option value="qwen/qwen3-32b">qwen/qwen3-32b</option>}
+                        </select>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white">Clear Application Cache (Local)</h4>

@@ -39,7 +39,8 @@ let users = [];
 let logs = []; // System logs
 let systemState = {
     maintenance: false,
-    broadcast: null // { message: "...", type: "info/warning/error" }
+    broadcast: null, // { message: "...", type: "info/warning/error" }
+    aiModel: 'qwen/qwen3-32b'
 };
 
 // Historical system metrics buffer (last 20 entries)
@@ -102,18 +103,36 @@ const addLog = async (action, user, details) => {
 };
 
 async function getSystemState() {
-    if (!isDbEnabled) return systemState;
+    if (!isDbEnabled) {
+        if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
+        return systemState;
+    }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_model, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_model: 'qwen/qwen3-32b', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
-        broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null
+        broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
+        aiModel: row.ai_model || 'qwen/qwen3-32b'
     };
+}
+
+async function setAiModel(model) {
+    if (!isDbEnabled) {
+        systemState.aiModel = model || 'qwen/qwen3-32b';
+        return systemState.aiModel;
+    }
+
+    await db.query(
+        'UPDATE system_state SET ai_model = $1, updated_at = NOW() WHERE id = 1',
+        [model || 'qwen/qwen3-32b']
+    );
+
+    return model || 'qwen/qwen3-32b';
 }
 
 async function setBroadcast(message, type) {
@@ -549,6 +568,27 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         const allUsers = await listUsers();
         const state = await getSystemState();
 
+        let availableModels = ['qwen/qwen3-32b'];
+        try {
+            const modelsRes = await fetch('https://ai.hackclub.com/proxy/v1/models');
+            if (modelsRes.ok) {
+                const modelsData = await modelsRes.json();
+                if (modelsData && Array.isArray(modelsData.data)) {
+                    availableModels = modelsData.data.map(m => m.id);
+                }
+            }
+        } catch (e) {
+            console.warn('[ai] Failed to fetch live models list:', e.message);
+            availableModels = [
+                'qwen/qwen3-32b',
+                'meta-llama/llama-3-8b-instruct',
+                'meta-llama/llama-3-70b-instruct',
+                'mistralai/mixtral-8x7b-instruct',
+                'openai/gpt-4o-mini',
+                'anthropic/claude-3-haiku'
+            ];
+        }
+
         const isPostgresDb = isDbEnabled;
         let dbHealth = 'Offline';
         if (isPostgresDb) {
@@ -656,6 +696,8 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
+            aiModel: state.aiModel || 'qwen/qwen3-32b',
+            availableModels,
             activeSessions: statsHistory[statsHistory.length - 1]?.sessions || 1,
             history: statsHistory,
             
@@ -808,6 +850,22 @@ app.post('/api/maintenance/clear-timetables', requireAuth, async (req, res) => {
     }
 });
 
+// POST /api/system/ai-model
+app.post('/api/system/ai-model', requireAuth, async (req, res) => {
+    try {
+        const { model } = req.body || {};
+        if (!model) {
+            return res.status(400).json({ error: 'Missing model name' });
+        }
+        const updated = await setAiModel(model);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI model to ${updated}`);
+        res.json({ success: true, aiModel: updated });
+    } catch (e) {
+        console.error('Update AI model error:', e);
+        res.status(500).json({ error: 'Failed to update AI model' });
+    }
+});
+
 // GET /api/users
 app.get('/api/users', requireAuth, async (req, res) => {
     try {
@@ -926,6 +984,9 @@ app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
             });
         }
 
+        const systemStateObj = await getSystemState();
+        const activeModel = systemStateObj.aiModel || 'qwen/qwen3-32b';
+
         const promptNotices = notices.map((n, i) => ({
             index: i,
             title: n.title || '',
@@ -948,7 +1009,7 @@ Return a JSON object in this exact format:
 }
 Return ONLY the JSON. Do not include markdown code block syntax (like \`\`\`json) in your final output, just raw JSON.`;
 
-        console.log(`[ai] Querying Hack Club AI for ${dateKey}...`);
+        console.log(`[ai] Querying Hack Club AI for ${dateKey} using model ${activeModel}...`);
         const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -956,7 +1017,7 @@ Return ONLY the JSON. Do not include markdown code block syntax (like \`\`\`json
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'qwen/qwen3-32b',
+                model: activeModel,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: `Here are today's notices:\n${JSON.stringify(promptNotices)}` }

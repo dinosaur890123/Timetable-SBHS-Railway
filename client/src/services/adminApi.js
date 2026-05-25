@@ -200,3 +200,19 @@ export const clearAllTimetables = async () => {
     }
 };
 
+export const updateAiModel = async (model) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/system/ai-model`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ model })
+        });
+        if (!response.ok) throw new Error('Failed to update AI model');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+

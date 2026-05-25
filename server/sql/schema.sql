@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   maintenance BOOLEAN NOT NULL DEFAULT FALSE,
   broadcast_message TEXT NULL,
   broadcast_type TEXT NULL,
+  ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -43,4 +44,8 @@ CREATE TABLE IF NOT EXISTS ai_cache (
   prioritized_notices JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migrations
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b';
+
 
