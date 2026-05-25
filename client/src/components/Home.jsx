@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap, Sparkles,
-    LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight
+    LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight, Award, Clipboard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions } from '../services/api';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
@@ -26,8 +27,11 @@ const ALL_TILES = {
     clock: { title: 'Brutalist Live Clock', minW: 1, maxW: 2, minH: 1, maxH: 2 },
     timetable_preview: { title: 'Timetable Preview', minW: 1, maxW: 3, minH: 1, maxH: 2 },
     quick_links: { title: 'Quick Links & Actions', minW: 1, maxW: 3, minH: 1, maxH: 1 },
-    scratchpad: { title: 'Quick Scratchpad', minW: 1, maxW: 3, minH: 1, maxH: 2 }
+    scratchpad: { title: 'Quick Scratchpad', minW: 1, maxW: 3, minH: 1, maxH: 2 },
+    award_scheme_summary: { title: 'Awards Summary', minW: 1, maxW: 2, minH: 1, maxH: 1 },
+    clipboard_schedule: { title: 'Clipboard Training', minW: 1, maxW: 2, minH: 1, maxH: 1 }
 };
+
 
 // Tailwind grid utility mappings to prevent compilation issues
 const colSpanClasses = {
@@ -280,6 +284,31 @@ const ScratchpadWidget = () => {
 const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
+
+    // Fetch Award Scheme & Clipboard stats inside Home for the widgets
+    const [awardPoints, setAwardPoints] = useState(0);
+    const [badgesCount, setBadgesCount] = useState(0);
+    const [nextSession, setNextSession] = useState(null);
+
+    useEffect(() => {
+        if (!user?.studentId) return;
+        
+        fetchStudentAwards(user.studentId).then(data => {
+            const total = data.reduce((sum, a) => sum + (a.points || 0), 0);
+            setAwardPoints(total);
+        }).catch(() => {});
+
+        fetchStudentBadges(user.studentId).then(data => {
+            setBadgesCount(data.length);
+        }).catch(() => {});
+
+        fetchStudentClipboardSessions(user.studentId).then(data => {
+            if (data && data.length > 0) {
+                setNextSession(data[0]);
+            }
+        }).catch(() => {});
+    }, [user]);
+
 
     // Load active dashboard layout configuration from local storage
     const [activeTiles, setActiveTiles] = useState(() => {
@@ -785,6 +814,46 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 );
             case 'scratchpad':
                 return <ScratchpadWidget />;
+            case 'award_scheme_summary':
+                return (
+                    <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('awards')}>
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-2 flex items-center gap-2">
+                            <Award size={14} className="text-accent" />
+                            Award Scheme Summary
+                        </h2>
+                        <div className="flex items-center justify-between mt-2">
+                            <div>
+                                <div className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none">{awardPoints} Pts</div>
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Total Merits</span>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none">{badgesCount} Badges</div>
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Authorised</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'clipboard_schedule':
+                return (
+                    <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('clipboard')}>
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-2 flex items-center gap-2">
+                            <Clipboard size={14} className="text-accent" />
+                            Next Training Session
+                        </h2>
+                        {nextSession ? (
+                            <div className="space-y-1 mt-2">
+                                <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white line-clamp-1 leading-tight">{nextSession.activity}</h4>
+                                <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-2 mt-1">
+                                     <span>{nextSession.time}</span>
+                                     <span>|</span>
+                                     <span className="text-accent">{nextSession.location}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-xs font-semibold text-zinc-455 mt-2">No training sessions scheduled.</div>
+                        )}
+                    </div>
+                );
             default:
                 return null;
         }

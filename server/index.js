@@ -1290,6 +1290,390 @@ app.post('/api/cache/clear', requireAuth, async (req, res) => {
     }
 });
 
+
+// --- NEW STUDENT & PORTAL ENDPOINTS ---
+
+// Helper for student access control (Admin or the student themselves)
+const checkStudentAccess = async (req, res) => {
+    const requestedStudentId = String(req.params.studentId);
+    const loggedInStudentId = String(req.user.studentId);
+    if (requestedStudentId === loggedInStudentId) return true;
+    try {
+        const dbUser = await getUserById(loggedInStudentId);
+        if (dbUser && dbUser.role === 'Admin') return true;
+    } catch (e) {
+        console.error('[auth] Error checking admin access:', e);
+    }
+    const adminIds = getAdminIds();
+    if (adminIds.includes(loggedInStudentId)) return true;
+    res.status(403).json({ error: "Forbidden: Cannot access another student's records" });
+    return false;
+};
+
+// Main proxy/mock resolver for student endpoints
+const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
+    const isAuthorized = await checkStudentAccess(req, res);
+    if (!isAuthorized) return;
+    const studentId = req.params.studentId;
+    const authHeader = req.headers['authorization'];
+    if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const url = new URL(`https://student.sbhs.net.au/api/students/${studentId}/${subpath}`);
+            Object.entries(req.query).forEach(([key, val]) => {
+                url.searchParams.append(key, val);
+            });
+            console.log(`[proxy] Proxying student API request to: ${url.toString()}`);
+            const response = await fetch(url.toString(), {
+                headers: { 'Authorization': authHeader }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return res.json(data);
+            }
+            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}, falling back to mock`);
+        } catch (e) {
+            console.error(`[proxy] SBHS API call failed for ${subpath}:`, e.message);
+        }
+    }
+    res.json(generateMockData(studentId));
+};
+
+// Generic resolver for global endpoints
+const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
+    const authHeader = req.headers['authorization'];
+    if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const url = new URL(`https://student.sbhs.net.au/api/${subpath}`);
+            Object.entries(req.query).forEach(([key, val]) => {
+                url.searchParams.append(key, val);
+            });
+            console.log(`[proxy] Proxying global API request to: ${url.toString()}`);
+            const response = await fetch(url.toString(), {
+                headers: { 'Authorization': authHeader }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return res.json(data);
+            }
+            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}, falling back to mock`);
+        } catch (e) {
+            console.error(`[proxy] SBHS API call failed for global ${subpath}:`, e.message);
+        }
+    }
+    res.json(generateMockData());
+};
+
+const registerRoutePair = (path, middleware, handler) => {
+    app.get(path, middleware, handler);
+    app.get(`/api${path}`, middleware, handler);
+};
+
+// 1. Attendance Absences
+registerRoutePair('/students/:studentId/attendance/absences', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'attendance/absences', (studentId) => [
+        { id: "abs-2026-05-18", date: "2026-05-18", type: "Whole Day", reason: "Medical (Sick)", explained: true, periodsAbsent: ["1", "2", "3", "4", "5"] },
+        { id: "abs-2026-04-12", date: "2026-04-12", type: "Partial Day", reason: "Unexplained Absence", explained: false, periodsAbsent: ["4", "5"] }
+    ]);
+});
+
+// 2. Attendance Absence Detail
+registerRoutePair('/students/:studentId/attendance/absences/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveStudentPortalApi(req, res, `attendance/absences/${id}`, (studentId) => {
+        if (id === 'abs-2026-05-18') {
+            return { id: "abs-2026-05-18", date: "2026-05-18", type: "Whole Day", reason: "Medical (Sick)", explained: true, periodsAbsent: ["1", "2", "3", "4", "5"] };
+        } else if (id === 'abs-2026-04-12') {
+            return { id: "abs-2026-04-12", date: "2026-04-12", type: "Partial Day", reason: "Unexplained Absence", explained: false, periodsAbsent: ["4", "5"] };
+        }
+        return { id, date: new Date().toISOString().split('T')[0], type: "Partial Day", reason: "Mock Reason", explained: false, periodsAbsent: ["1"] };
+    });
+});
+
+// 3. Scan-ins
+registerRoutePair('/students/:studentId/attendance/scan-ins', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'attendance/scan-ins', (studentId) => [
+        { dateId: "2026-05-25", time: "08:44:12", station: "Gym Entrance", status: "On Time" },
+        { dateId: "2026-05-22", time: "08:55:03", station: "Main Office Barcode Reader", status: "Late (Excused)" },
+        { dateId: "2026-05-21", time: "08:42:55", station: "Library Foyer", status: "On Time" }
+    ]);
+});
+
+// 4. Scan-in Detail
+registerRoutePair('/students/:studentId/attendance/scan-ins/:dateId', requireStudentAuth, (req, res) => {
+    const dateId = req.params.dateId;
+    resolveStudentPortalApi(req, res, `attendance/scan-ins/${dateId}`, (studentId) => ({
+        dateId, time: "08:45:00", station: "Main Office Barcode Reader", status: "On Time"
+    }));
+});
+
+// 5. Issued Awards
+registerRoutePair('/students/:studentId/award-scheme/awards', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'award-scheme/awards', (studentId) => [
+        { id: "aw-2025-01", title: "Bronze Merit", dateIssued: "2025-06-15", points: 5, description: "Consistently high effort in Mathematics" },
+        { id: "aw-2025-02", title: "Silver Award", dateIssued: "2025-11-20", points: 10, description: "Outstanding performance in school debating" }
+    ]);
+});
+
+// 6. Badges
+registerRoutePair('/students/:studentId/award-scheme/badges', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'award-scheme/badges', (studentId) => [
+        { id: "bdg-debat", title: "Debating Blazer Badge", dateAuthorised: "2025-09-10", category: "Co-curricular" },
+        { id: "bdg-prefect", title: "Prefect Badge", dateAuthorised: "2026-02-01", category: "Leadership" }
+    ]);
+});
+
+// 7. Decorations
+registerRoutePair('/students/:studentId/award-scheme/decorations', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'award-scheme/decorations', (studentId) => [
+        { id: "dec-music", title: "Music Pocket Decoration", year: 2025, presentationNight: "Annual Presentation Night 2025" },
+        { id: "dec-academic", title: "Academic Proficiency Certificate", year: 2025, presentationNight: "Annual Presentation Night 2025" }
+    ]);
+});
+
+// 8. Student Prizes
+registerRoutePair('/students/:studentId/award-scheme/prizes', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'award-scheme/prizes', (studentId) => [
+        { id: "prz-phys", title: "Year 11 Physics Academic Prize", year: 2025, description: "Awarded for the highest aggregate mark in Year 11 Physics" }
+    ]);
+});
+
+// 9. Rollover
+registerRoutePair('/students/:studentId/award-scheme/rollover', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'award-scheme/rollover', (studentId) => ({
+        studentId, rolloverPoints: 15, previousYear: 2025, status: "Rolled Over"
+    }));
+});
+
+// 10. Clipboard Attendance
+registerRoutePair('/students/:studentId/clipboard/attendance', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'clipboard/attendance', (studentId) => [
+        { id: "clip-att-01", date: "2026-05-25", activity: "Winter Football - 2nd XI", status: "Present", recordedBy: "Mr J. Smith" },
+        { id: "clip-att-02", date: "2026-05-22", activity: "Debating Coaching Session", status: "Present", recordedBy: "Ms L. Davis" }
+    ]);
+});
+
+// 11. Clipboard Pre-explained Absences
+registerRoutePair('/students/:studentId/clipboard/pre-explained-absences', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'clipboard/pre-explained-absences', (studentId) => [
+        { id: "pea-01", startDate: "2026-06-10", endDate: "2026-06-12", reason: "Family Holiday", status: "Approved" }
+    ]);
+});
+
+// 12. Clipboard Sessions
+registerRoutePair('/students/:studentId/clipboard/sessions', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'clipboard/sessions', (studentId) => [
+        { id: "sess-football-tues", activity: "2nd XI Football Training", date: "2026-05-26", time: "15:30 - 17:00", location: "Lower McKay Oval" },
+        { id: "sess-debating-fri", activity: "Senior Debating Practice", date: "2026-05-29", time: "13:30 - 14:15", location: "Room 102" }
+    ]);
+});
+
+// 13. Clipboard Teams
+registerRoutePair('/students/:studentId/clipboard/teams', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'clipboard/teams', (studentId) => [
+        { id: "team-fb-2nd", name: "2nd XI Football", sportOrActivity: "Football", coach: "Mr J. Smith", season: "Winter 2026" },
+        { id: "team-deb-snr", name: "Senior A Debating", sportOrActivity: "Debating", coach: "Ms L. Davis", season: "Winter 2026" }
+    ]);
+});
+
+// 14. Clipboard Team Detail
+registerRoutePair('/students/:studentId/clipboard/teams/:teamId', requireStudentAuth, (req, res) => {
+    const teamId = req.params.teamId;
+    resolveStudentPortalApi(req, res, `clipboard/teams/${teamId}`, (studentId) => {
+        if (teamId === 'team-fb-2nd') {
+            return { id: "team-fb-2nd", name: "2nd XI Football", sportOrActivity: "Football", coach: "Mr J. Smith", season: "Winter 2026" };
+        } else if (teamId === 'team-deb-snr') {
+            return { id: "team-deb-snr", name: "Senior A Debating", sportOrActivity: "Debating", coach: "Ms L. Davis", season: "Winter 2026" };
+        }
+        return { id: teamId, name: `Mock Team (${teamId})`, sportOrActivity: "Activity", coach: "Staff Coach", season: "Winter 2026" };
+    });
+});
+
+// 15. Enrolments
+registerRoutePair('/students/:studentId/enrolments', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'enrolments', (studentId) => [
+        { schoolYear: 2026, yearGroup: "12", rollClass: "12Mt", status: "Enrolled" },
+        { schoolYear: 2025, yearGroup: "11", rollClass: "11Mt", status: "Completed" }
+    ]);
+});
+
+// 16. Enrolments Detail
+registerRoutePair('/students/:studentId/enrolments/:schoolYear', requireStudentAuth, (req, res) => {
+    const schoolYear = parseInt(req.params.schoolYear) || 2026;
+    resolveStudentPortalApi(req, res, `enrolments/${schoolYear}`, (studentId) => ({
+        schoolYear,
+        yearGroup: schoolYear === 2026 ? "12" : (schoolYear === 2025 ? "11" : "Unknown"),
+        rollClass: schoolYear === 2026 ? "12Mt" : (schoolYear === 2025 ? "11Mt" : "Unknown"),
+        status: schoolYear >= 2026 ? "Enrolled" : "Completed"
+    }));
+});
+
+// 17. Timetable Student Resource
+registerRoutePair('/students/:studentId/timetable', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'timetable', (studentId) => ({
+        studentId, name: "John Citizen", year: "12", rollClass: "12Mt", advisor: "Mr R. Dowdell"
+    }));
+});
+
+// 18. Timetable Classes
+registerRoutePair('/students/:studentId/timetable/classes', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'timetable/classes', (studentId) => [
+        { classCode: "12Ma1", title: "Mathematics Extension 1", teacher: "Mr A. Brown", room: "201" },
+        { classCode: "12Phy", title: "Physics", teacher: "Ms C. Davis", room: "Lab 3" },
+        { classCode: "12Eng", title: "English Advanced", teacher: "Mr E. Foster", room: "305" },
+        { classCode: "12Eco", title: "Economics", teacher: "Mrs G. Harris", room: "402" }
+    ]);
+});
+
+// 19. Timetable Dates
+registerRoutePair('/students/:studentId/timetable/dates', requireStudentAuth, (req, res) => {
+    resolveStudentPortalApi(req, res, 'timetable/dates', (studentId) => [
+        { date: "2026-05-25", dayname: "Monday A", routine: "1,2,R,3,4,L,5" },
+        { date: "2026-05-26", dayname: "Tuesday A", routine: "1,2,R,3,4,L,5" },
+        { date: "2026-05-27", dayname: "Wednesday A", routine: "1,2,R,3,4,L,5" }
+    ]);
+});
+
+// 20. Timetable Date Detail
+registerRoutePair('/students/:studentId/timetable/dates/:date', requireStudentAuth, (req, res) => {
+    const dateParam = req.params.date;
+    resolveStudentPortalApi(req, res, `timetable/dates/${dateParam}`, (studentId) => ({
+        date: dateParam,
+        dayname: "Monday A",
+        routine: "1,2,R,3,4,L,5",
+        periods: {
+            "1": { "title": "Mathematics Ext 1", "teacher": "AB", "room": "201", "year": "12", "fullTeacher": "Mr A Brown" },
+            "2": { "title": "Physics", "teacher": "CD", "room": "Lab 3", "year": "12", "fullTeacher": "Ms C Davis" },
+            "3": { "title": "English Advanced", "teacher": "EF", "room": "305", "year": "12", "fullTeacher": "Mr E Foster" },
+            "4": { "title": "Study", "teacher": "", "room": "Library", "year": "12", "fullTeacher": "" },
+            "5": { "title": "Economics", "teacher": "GH", "room": "402", "year": "12", "fullTeacher": "Mrs G Harris" }
+        }
+    }));
+});
+
+// Global Award Scheme & Clipboard routes
+
+// 21. Global Awards
+registerRoutePair('/award-scheme/awards', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'award-scheme/awards', () => [
+        { id: "gold-award", name: "Gold Award", pointsRequired: 20, description: "Recognises exceptional school representation and leadership." },
+        { id: "silver-award", name: "Silver Award", pointsRequired: 12, description: "Recognises high participation and service." },
+        { id: "bronze-award", name: "Bronze Award", pointsRequired: 6, description: "Recognises consistent effort and class participation." }
+    ]);
+});
+
+// 22. Global Award Detail
+registerRoutePair('/award-scheme/awards/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `award-scheme/awards/${id}`, () => ({
+        id,
+        name: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        pointsRequired: 10,
+        description: `Details for award: ${id}`
+    }));
+});
+
+// 23. Global Categories
+registerRoutePair('/award-scheme/categories', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'award-scheme/categories', () => [
+        { id: "sport", name: "Sport & Athletics", weight: 1.0 },
+        { id: "academic", name: "Academic & Classwork", weight: 1.0 },
+        { id: "co-curricular", name: "Co-curricular & Service", weight: 1.2 }
+    ]);
+});
+
+// 24. Global Category Detail
+registerRoutePair('/award-scheme/categories/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `award-scheme/categories/${id}`, () => ({
+        id, name: id.charAt(0).toUpperCase() + id.slice(1), weight: 1.0
+    }));
+});
+
+// 25. Global House Points
+registerRoutePair('/award-scheme/house-points', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'award-scheme/house-points', () => [
+        { house: "Eschol", points: 1420 },
+        { house: "Torrington", points: 1390 },
+        { house: "Rubie", points: 1315 },
+        { house: "Fairland", points: 1250 }
+    ]);
+});
+
+// 26. Global Nominations
+registerRoutePair('/award-scheme/nominations', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'award-scheme/nominations', () => [
+        { id: "nom-01", nomineeId: "430000000", nomineeName: "John Citizen", awardId: "silver-award", status: "Approved", nominatedBy: "Mr J. Smith", date: "2026-05-10" },
+        { id: "nom-02", nomineeId: "430000000", nomineeName: "John Citizen", awardId: "gold-award", status: "Pending", nominatedBy: "Ms L. Davis", date: "2026-05-24" }
+    ]);
+});
+
+// 27. Global Nomination Detail
+registerRoutePair('/award-scheme/nominations/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `award-scheme/nominations/${id}`, () => ({
+        id, nomineeId: "430000000", nomineeName: "John Citizen", awardId: "silver-award", status: "Approved", nominatedBy: "Mr J. Smith", date: "2026-05-10"
+    }));
+});
+
+// 28. Global Prizes
+registerRoutePair('/award-scheme/prizes', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'award-scheme/prizes', () => [
+        { id: "dux-12", name: "Year 12 School Dux Prize", sponsor: "SBHS Alumni", value: 500 },
+        { id: "deane-chem", name: "The W. J. Deane Prize for Chemistry", sponsor: "Deane Family", value: 150 },
+        { id: "deb-prize", name: "Senior Debating Excellence Trophy", sponsor: "P&C Association", value: 100 }
+    ]);
+});
+
+// 29. Global Prize Detail
+registerRoutePair('/award-scheme/prizes/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `award-scheme/prizes/${id}`, () => ({
+        id, name: `Prize definition (${id})`, sponsor: "SBHS", value: 100
+    }));
+});
+
+// 30. Global Clipboard Activities
+registerRoutePair('/clipboard/activities', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'clipboard/activities', () => [
+        { id: "act-fb", name: "Winter Football", type: "Sport", term: "2 & 3" },
+        { id: "act-deb", name: "Debating coaching & debates", type: "Academic", term: "1, 2 & 3" },
+        { id: "act-music", name: "Symphony Orchestra", type: "Music", term: "All Year" }
+    ]);
+});
+
+// 31. Global Clipboard Activity Detail
+registerRoutePair('/clipboard/activities/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `clipboard/activities/${id}`, () => ({
+        id, name: `Activity details for ${id}`, type: "General", term: "All Year"
+    }));
+});
+
+// 32. Global Clipboard Departments
+registerRoutePair('/clipboard/departments', requireStudentAuth, (req, res) => {
+    resolveGlobalPortalApi(req, res, 'clipboard/departments', () => [
+        { id: "dept-sport", name: "Sports & Co-curricular", head: "Mr K. Smith" },
+        { id: "dept-music", name: "Music Department", head: "Ms M. Melba" },
+        { id: "dept-debate", name: "English & Public Speaking", head: "Mr E. Foster" }
+    ]);
+});
+
+// 33. Global Clipboard Department Detail
+registerRoutePair('/clipboard/departments/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `clipboard/departments/${id}`, () => ({
+        id, name: `Department ${id}`, head: "Staff Member"
+    }));
+});
+
+// 34. Global Clipboard Team Detail (this is GET /clipboard/teams/{id})
+registerRoutePair('/clipboard/teams/:id', requireStudentAuth, (req, res) => {
+    const id = req.params.id;
+    resolveGlobalPortalApi(req, res, `clipboard/teams/${id}`, () => ({
+        id, name: `Global Team (${id})`, sportOrActivity: "General Activity", coach: "Staff Coach", season: "Winter 2026"
+    }));
+});
+
 // Health check endpoint (public)
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });

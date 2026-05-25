@@ -188,3 +188,57 @@ export const fetchTimetableQa = async (question, timetable, currentMinutes, comp
     return response.json();
 };
 
+async function fetchFromBackend(endpoint) {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}${endpoint}`, { headers });
+    if (!response.ok) {
+        throw new Error(`Backend API Error ${response.status}: ${endpoint}`);
+    }
+    return response.json();
+}
+
+// --- New Award Scheme & Clipboard APIs ---
+
+// Student-specific APIs
+export const fetchStudentAbsences = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/absences`);
+export const fetchStudentAbsenceDetail = (studentId, id) => fetchFromBackend(`/students/${studentId}/attendance/absences/${id}`);
+export const fetchStudentScanIns = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins`);
+export const fetchStudentScanInDetail = (studentId, dateId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${dateId}`);
+export const fetchStudentAwards = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/awards`);
+export const fetchStudentBadges = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/badges`);
+export const fetchStudentDecorations = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/decorations`);
+export const fetchStudentPrizes = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/prizes`);
+export const fetchStudentRollover = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/rollover`);
+export const fetchStudentClipboardAttendance = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/attendance`);
+export const fetchStudentPreExplainedAbsences = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`);
+export const fetchStudentClipboardSessions = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/sessions`);
+export const fetchStudentClipboardTeams = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/teams`);
+export const fetchStudentClipboardTeamDetail = (studentId, teamId) => fetchFromBackend(`/students/${studentId}/clipboard/teams/${teamId}`);
+export const fetchStudentEnrolments = (studentId) => fetchFromBackend(`/students/${studentId}/enrolments`);
+export const fetchStudentEnrolmentDetail = (studentId, schoolYear) => fetchFromBackend(`/students/${studentId}/enrolments/${schoolYear}`);
+export const fetchStudentTimetable = (studentId) => fetchFromBackend(`/students/${studentId}/timetable`);
+export const fetchStudentTimetableClasses = (studentId) => fetchFromBackend(`/students/${studentId}/timetable/classes`);
+export const fetchStudentTimetableDates = (studentId) => fetchFromBackend(`/students/${studentId}/timetable/dates`);
+export const fetchStudentTimetableDateDetail = (studentId, date) => fetchFromBackend(`/students/${studentId}/timetable/dates/${date}`);
+
+// Global APIs
+export const fetchGlobalAwards = () => fetchFromBackend('/award-scheme/awards');
+export const fetchGlobalAwardDetail = (id) => fetchFromBackend(`/award-scheme/awards/${id}`);
+export const fetchGlobalCategories = () => fetchFromBackend('/award-scheme/categories');
+export const fetchGlobalCategoryDetail = (id) => fetchFromBackend(`/award-scheme/categories/${id}`);
+export const fetchGlobalHousePoints = () => fetchFromBackend('/award-scheme/house-points');
+export const fetchGlobalNominations = () => fetchFromBackend('/award-scheme/nominations');
+export const fetchGlobalNominationDetail = (id) => fetchFromBackend(`/award-scheme/nominations/${id}`);
+export const fetchGlobalPrizes = () => fetchFromBackend('/award-scheme/prizes');
+export const fetchGlobalPrizeDetail = (id) => fetchFromBackend(`/award-scheme/prizes/${id}`);
+export const fetchGlobalActivities = () => fetchFromBackend('/clipboard/activities');
+export const fetchGlobalActivityDetail = (id) => fetchFromBackend(`/clipboard/activities/${id}`);
+export const fetchGlobalDepartments = () => fetchFromBackend('/clipboard/departments');
+export const fetchGlobalDepartmentDetail = (id) => fetchFromBackend(`/clipboard/departments/${id}`);
+export const fetchGlobalTeamDetail = (id) => fetchFromBackend(`/clipboard/teams/${id}`);
+
+
