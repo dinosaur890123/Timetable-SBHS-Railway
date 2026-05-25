@@ -13,6 +13,8 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
+        accent: 'hsl(var(--color-accent) / <alpha-value>)',
+        'accent-contrast': 'hsl(var(--color-accent-contrast) / <alpha-value>)',
         sbhs: {
           dark: '#1e1e1e', // Dark theme background
           panel: '#2d2d2d',

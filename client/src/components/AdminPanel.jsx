@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3 } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiConfig } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -245,6 +245,54 @@ const AdminPanel = ({ user }) => {
             alert("Failed to clear timetables.");
         } finally {
             setIsClearingTimetables(false);
+        }
+    };
+
+    const [updatingConfig, setUpdatingConfig] = useState(false);
+    const [customModelName, setCustomModelName] = useState('');
+
+    useEffect(() => {
+        if (stats?.aiModel) {
+            setCustomModelName(stats.aiModel);
+        }
+    }, [stats?.aiModel]);
+
+    const handleProviderChange = async (e) => {
+        const selectedProvider = e.target.value;
+        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
+        setUpdatingConfig(true);
+        try {
+            await updateAiConfig(selectedProvider, defaultModel);
+            setStats(prev => prev ? { ...prev, aiProvider: selectedProvider, aiModel: defaultModel } : null);
+            alert(`AI provider updated to ${selectedProvider} with default model ${defaultModel}`);
+            loadData();
+        } catch (err) {
+            alert("Failed to update AI provider configuration.");
+        } finally {
+            setUpdatingConfig(false);
+        }
+    };
+
+    const handleModelSave = async () => {
+        const modelToSave = customModelName.trim();
+        if (!modelToSave) return;
+        setUpdatingConfig(true);
+        try {
+            await updateAiConfig(stats?.aiProvider || 'hackclub', modelToSave);
+            setStats(prev => prev ? { ...prev, aiModel: modelToSave } : null);
+            alert(`AI briefing model updated to ${modelToSave}`);
+            loadData();
+        } catch (err) {
+            alert("Failed to update AI briefing model.");
+        } finally {
+            setUpdatingConfig(false);
+        }
+    };
+
+    const handleModelKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleModelSave();
         }
     };
 
@@ -1027,6 +1075,74 @@ const AdminPanel = ({ user }) => {
                 Perform system maintenance tasks.
             </p>
             <div className="space-y-4">
+                {/* AI Provider Config */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Database size={16} />
+                            AI Provider
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">Choose the active AI provider backend (requires appropriate API keys in .env)</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
+                        <select
+                            value={stats?.aiProvider || 'hackclub'}
+                            disabled={updatingConfig}
+                            onChange={handleProviderChange}
+                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
+                        >
+                            <option value="hackclub">Hack Club AI</option>
+                            <option value="gemini">Google Gemini API</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* AI Model Config */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Sparkles size={16} />
+                            Select Daily AI Briefing Model
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">Choose or type the LLM model to generate student morning briefings from the active provider</p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                list="ai-models-datalist"
+                                value={customModelName}
+                                disabled={updatingConfig}
+                                onChange={(e) => setCustomModelName(e.target.value)}
+                                onKeyDown={handleModelKeyDown}
+                                placeholder="Enter model name..."
+                                className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
+                            />
+                            <datalist id="ai-models-datalist">
+                                {stats?.aiProvider === 'gemini' ? (
+                                    stats?.availableGeminiModels?.map(m => (
+                                        <option key={m} value={m} />
+                                    ))
+                                ) : (
+                                    stats?.availableHackClubModels?.map(m => (
+                                        <option key={m} value={m} />
+                                    ))
+                                )}
+                            </datalist>
+                            <button
+                                type="button"
+                                onClick={handleModelSave}
+                                disabled={updatingConfig || !customModelName.trim() || customModelName.trim() === stats?.aiModel}
+                                className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg text-sm disabled:opacity-50"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white">Clear Application Cache (Local)</h4>

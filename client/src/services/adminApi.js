@@ -200,3 +200,20 @@ export const clearAllTimetables = async () => {
     }
 };
 
+export const updateAiConfig = async (provider, model) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/system/ai-config`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ provider, model })
+        });
+        if (!response.ok) throw new Error('Failed to update AI configuration');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+
+

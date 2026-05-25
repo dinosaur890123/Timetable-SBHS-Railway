@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const getSubjectStyle = (title, isCurrent) => {
     if (isCurrent) {
-        return 'bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white';
+        return 'bg-accent text-accent-contrast border border-accent';
     }
     return 'bg-zinc-100 text-zinc-850 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800';
 };
@@ -22,7 +22,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
 
   // Dot styling based on state
   let dotClass = "bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700";
-  if (isCurrent) dotClass = "bg-black dark:bg-white border-2 border-white dark:border-zinc-900 ring-4 ring-black/10 dark:ring-white/10";
+  if (isCurrent) dotClass = "bg-accent border-2 border-white dark:border-zinc-900 ring-4 ring-accent/10";
   else if (isPast) dotClass = "bg-zinc-400 dark:bg-zinc-600 border border-zinc-200 dark:border-zinc-800";
   
   // Icon/Dot size
@@ -79,7 +79,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
         <div className={`
           flex-1 flex flex-col justify-center relative p-4 border transition-all duration-300 overflow-hidden
           ${isCurrent 
-            ? "bg-white dark:bg-zinc-900 border-2 border-black dark:border-white scale-[1.01] z-20" 
+            ? "bg-white dark:bg-zinc-900 border-2 border-accent scale-[1.01] z-20" 
             : "bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80" 
           }
         `}>
@@ -133,7 +133,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                        </span>
                    )}
                    {isCurrent && (
-                        <span className="text-xs font-bold text-black dark:text-white flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-2 py-1 border border-zinc-300 dark:border-zinc-700">
+                        <span className="text-xs font-bold text-accent flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-2 py-1 border border-zinc-300 dark:border-zinc-700">
                             <Clock size={12} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
                         </span>
                    )}

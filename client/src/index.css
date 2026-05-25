@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-accent: 240 5.9% 10%; /* zinc-900 */
+  --color-accent-contrast: 0 0% 100%; /* white */
+}
+
+.dark {
+  --color-accent: 0 0% 100%; /* white */
+  --color-accent-contrast: 240 5.9% 10%; /* zinc-900 */
+}
+
+/* Theme overrides */
+.theme-mint {
+  --color-accent: 150 84% 37%; /* emerald-600 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-amber {
+  --color-accent: 38 92% 50%; /* amber-500 */
+  --color-accent-contrast: 0 0% 0%;
+}
+
+.theme-blue {
+  --color-accent: 217 91% 60%; /* blue-600 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-violet {
+  --color-accent: 271 91% 65%; /* violet-500 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-rose {
+  --color-accent: 349 86% 60%; /* rose-500 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-teal {
+  --color-accent: 174 84% 41%; /* teal-600 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-orange {
+  --color-accent: 24 95% 53%; /* orange-500 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
+.theme-sky {
+  --color-accent: 199 89% 48%; /* sky-500 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
 @layer base {
   *, *::before, *::after {
     border-radius: 0px !important;
@@ -12,7 +63,7 @@
   }
 
   ::selection {
-    @apply bg-black text-white dark:bg-white dark:text-black;
+    @apply bg-accent text-accent-contrast;
   }
 }
 
@@ -53,3 +104,13 @@
 .text-stroke-zinc {
   -webkit-text-stroke: 1px rgba(113, 113, 122, 0.5);
 }
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
