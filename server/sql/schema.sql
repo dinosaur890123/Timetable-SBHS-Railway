@@ -36,3 +36,11 @@ CREATE TABLE IF NOT EXISTS logs (
 );
 
 CREATE INDEX IF NOT EXISTS logs_created_at_idx ON logs (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ai_cache (
+  date_key TEXT PRIMARY KEY, -- 'YYYY-MM-DD' (Sydney time)
+  briefing TEXT NOT NULL,
+  prioritized_notices JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

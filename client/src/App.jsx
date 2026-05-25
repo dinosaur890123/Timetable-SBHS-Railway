@@ -15,7 +15,8 @@ import {
   exchangeToken, 
   logout,
   fetchSystemStatus,
-  fetchCompleteTimetable
+  fetchCompleteTimetable,
+  fetchAiBriefing
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -39,6 +40,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [aiBriefing, setAiBriefing] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   
   // System State
   const [broadcast, setBroadcast] = useState(null);
@@ -175,6 +178,24 @@ function App() {
     loadTimetable();
   }, [viewDate, user]); 
 
+  // Fetch AI Briefing in background once notices are loaded
+  useEffect(() => {
+    if (!user || !notices || !notices.notices || notices.notices.length === 0) return;
+    
+    const getAiData = async () => {
+        setAiLoading(true);
+        try {
+            const data = await fetchAiBriefing(notices.notices);
+            setAiBriefing(data);
+        } catch (err) {
+            console.error("Failed to load AI briefing:", err);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+    getAiData();
+  }, [notices, user]);
+
   // Date Navigation Helpers
   const nextDay = () => setViewDate(d => addDays(d, 1));
   const prevDay = () => setViewDate(d => addDays(d, -1));
@@ -264,7 +285,16 @@ function App() {
          <div className="p-4 md:p-8 max-w-7xl mx-auto">
             
             {/* HOME VIEW */}
-            {currentView === 'home' && <Home user={user} timetableData={timetable} notices={notices} />}
+            {currentView === 'home' && (
+                <Home 
+                    user={user} 
+                    timetableData={timetable} 
+                    notices={notices} 
+                    setView={setCurrentView} 
+                    aiBriefing={aiBriefing} 
+                    aiLoading={aiLoading} 
+                />
+            )}
 
             {/* TIMETABLE VIEW */}
             {currentView === 'timetable' && (
@@ -306,7 +336,7 @@ function App() {
             {/* NOTICES VIEW */}
             {currentView === 'notices' && (
                 <div className="max-w-3xl mx-auto">
-                    <DailyNotices notices={notices} />
+                    <DailyNotices notices={notices} aiBriefing={aiBriefing} />
                 </div>
             )}
              

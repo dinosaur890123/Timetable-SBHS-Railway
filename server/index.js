@@ -42,6 +42,37 @@ let systemState = {
     broadcast: null // { message: "...", type: "info/warning/error" }
 };
 
+// Historical system metrics buffer (last 20 entries)
+const statsHistory = [];
+const MAX_HISTORY = 20;
+
+// Initialize history with initial baseline values so it is populated at boot
+const startMemory = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+for (let i = 19; i >= 0; i--) {
+    const time = new Date(Date.now() - i * 10000);
+    statsHistory.push({
+        time: time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+        memory: Math.round(startMemory + (Math.random() * 6 - 3)),
+        sessions: Math.floor(Math.random() * 3) + 1
+    });
+}
+
+// Update history every 10 seconds
+setInterval(() => {
+    const currentMemory = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+    const sessions = Math.floor(Math.random() * 4) + 1; // Active simulation
+    
+    statsHistory.push({
+        time: new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+        memory: currentMemory,
+        sessions: sessions
+    });
+    
+    if (statsHistory.length > MAX_HISTORY) {
+        statsHistory.shift();
+    }
+}, 10000);
+
 const isDbEnabled = db.hasDb();
 if (!isDbEnabled) {
     console.warn('[admin-db] POSTGRES_URL/DATABASE_URL not set; using in-memory admin storage');
@@ -625,7 +656,8 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
-            activeSessions: Math.floor(Math.random() * (allUsers.length > 0 ? allUsers.length : 1)) + 1, // Mock
+            activeSessions: statsHistory[statsHistory.length - 1]?.sessions || 1,
+            history: statsHistory,
             
             // Year group analytics
             yearDistribution: yearBreakdown,
@@ -835,11 +867,184 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
     }
 });
 
+let aiMemoryCache = {};
+
+// POST /api/ai/briefing
+app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
+    try {
+        const notices = req.body.notices || [];
+        const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+
+        // 1. Check in-memory / DB cache
+        if (isDbEnabled) {
+            try {
+                const cacheResult = await db.query(
+                    'SELECT briefing, prioritized_notices FROM ai_cache WHERE date_key = $1',
+                    [dateKey]
+                );
+                if (cacheResult.rows.length > 0) {
+                    console.log(`[ai-cache] DB cache hit for ${dateKey}`);
+                    return res.json({
+                        briefing: cacheResult.rows[0].briefing,
+                        sortedNotices: cacheResult.rows[0].prioritized_notices
+                    });
+                }
+            } catch (err) {
+                console.error('[ai-cache] Failed to query cache database, falling back to memory:', err);
+            }
+        }
+
+        if (aiMemoryCache[dateKey]) {
+            console.log(`[ai-cache] In-memory cache hit for ${dateKey}`);
+            return res.json(aiMemoryCache[dateKey]);
+        }
+
+        // 2. Handle empty notices quickly
+        if (notices.length === 0) {
+            const defaultResult = {
+                briefing: "No notices for today.",
+                sortedNotices: []
+            };
+            if (isDbEnabled) {
+                await db.query(
+                    'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
+                    [dateKey, defaultResult.briefing, JSON.stringify(defaultResult.sortedNotices)]
+                ).catch(() => {});
+            }
+            aiMemoryCache[dateKey] = defaultResult;
+            return res.json(defaultResult);
+        }
+
+        // 3. Request Hack Club AI
+        const apiKey = process.env.HACKCLUB_AI_API_KEY;
+        if (!apiKey) {
+            console.warn('[ai] HACKCLUB_AI_API_KEY is not set. Using fallback sorting.');
+            const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+            return res.json({
+                briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
+                sortedNotices: sorted
+            });
+        }
+
+        const promptNotices = notices.map((n, i) => ({
+            index: i,
+            title: n.title || '',
+            content: (n.content || '').replace(/<[^>]*>/g, ''), // strip HTML to save context window tokens
+            isMeeting: n.isMeeting || 0,
+            displayYears: n.displayYears || 'All Students'
+        }));
+
+        const systemPrompt = `You are a helpful school assistant. Summarize the daily notices and prioritize them.
+Return a JSON object in this exact format:
+{
+  "briefing": "A friendly, engaging morning summary of the key notices (2-3 sentences max). Ensure you highlight important school-wide dates, sporting updates, or co-curricular requirements.",
+  "prioritizedNotices": [
+    {
+      "index": 0, // The index of the notice in the original array
+      "priority": 3, // 1 to 5, where 5 is highest/urgent (meetings today, deadlines, important year assemblies) and 1 is lowest
+      "reason": "Brief reason for this priority rating"
+    }
+  ]
+}
+Return ONLY the JSON. Do not include markdown code block syntax (like \`\`\`json) in your final output, just raw JSON.`;
+
+        console.log(`[ai] Querying Hack Club AI for ${dateKey}...`);
+        const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'qwen/qwen3-32b',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Here are today's notices:\n${JSON.stringify(promptNotices)}` }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`AI API responded with status ${response.status}`);
+        }
+
+        const aiData = await response.json();
+        const aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
+
+        // Clean up markdown block wraps if present
+        let jsonText = aiText;
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.substring(7);
+        } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.substring(3);
+        }
+        if (jsonText.endsWith('```')) {
+            jsonText = jsonText.substring(0, jsonText.length - 3);
+        }
+        jsonText = jsonText.trim();
+
+        const parsed = JSON.parse(jsonText);
+        const briefing = parsed.briefing || "Here is your notices summary for today.";
+        const priorities = parsed.prioritizedNotices || [];
+
+        // Map priorities to original notices list
+        const noticesWithPriority = notices.map((n, i) => {
+            const prio = priorities.find(p => p.index === i);
+            return {
+                ...n,
+                priority: prio ? prio.priority : 1,
+                priorityReason: prio ? prio.reason : ''
+            };
+        });
+
+        // Sort by priority descending (highest first)
+        noticesWithPriority.sort((a, b) => b.priority - a.priority);
+
+        const result = {
+            briefing,
+            sortedNotices: noticesWithPriority
+        };
+
+        // Write cache
+        if (isDbEnabled) {
+            try {
+                await db.query(
+                    'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
+                    [dateKey, result.briefing, JSON.stringify(result.sortedNotices)]
+                );
+            } catch (err) {
+                console.error('[ai-cache] Failed to write cache to DB:', err);
+            }
+        }
+        aiMemoryCache[dateKey] = result;
+
+        console.log(`[ai] Cache updated successfully for ${dateKey}`);
+        res.json(result);
+
+    } catch (err) {
+        console.error('[ai] Hack Club AI failed, returning fallback:', err);
+        const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+        res.json({
+            briefing: "Welcome to your notices for today! Check out co-curricular meetings and activities below.",
+            sortedNotices: sorted
+        });
+    }
+});
+
 // POST /api/cache/clear
-app.post('/api/cache/clear', requireAuth, (req, res) => {
-    // Logic to clear server cache would go here
-    console.log('Cache clear requested by admin');
-    res.json({ success: true, message: 'Server cache cleared successfully' });
+app.post('/api/cache/clear', requireAuth, async (req, res) => {
+    try {
+        console.log('Cache clear requested by admin');
+        aiMemoryCache = {};
+        if (isDbEnabled) {
+            await db.query('DELETE FROM ai_cache', []);
+        }
+        res.json({ success: true, message: 'Server cache and AI cache cleared successfully' });
+    } catch (e) {
+        console.error('Clear cache error:', e);
+        res.status(500).json({ error: 'Failed to clear cache' });
+    }
 });
 
 // Health check endpoint (public)

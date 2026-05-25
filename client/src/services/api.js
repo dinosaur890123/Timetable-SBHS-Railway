@@ -155,3 +155,20 @@ export const fetchSystemStatus = async () => {
         return null;
     }
 };
+
+export const fetchAiBriefing = async (notices) => {
+    const token = getAccessToken();
+    const response = await fetch(`${SYSTEM_API_URL}/ai/briefing`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ notices })
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch AI briefing: ${response.status}`);
+    }
+    return response.json();
+};
+

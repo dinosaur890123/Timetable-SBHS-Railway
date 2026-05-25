@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap } from 'lucide-react';
+import { Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
-const Home = ({ user, timetableData, notices }) => {
+const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -89,7 +89,10 @@ const Home = ({ user, timetableData, notices }) => {
         }
     }
 
-    const todayNotices = notices?.notices ? notices.notices.slice(0, 3) : [];
+    const rawNotices = aiBriefing && aiBriefing.sortedNotices ? aiBriefing.sortedNotices : (notices?.notices || []);
+    const todayNotices = rawNotices.slice(0, 3);
+    const totalNoticesCount = rawNotices.length;
+    const academicPeriodsCount = routine.filter(bellId => bellId !== "R" && bellId !== "L" && bellId !== "RC").length;
 
     const getSubjectGradient = (title) => {
         return 'bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white border-zinc-300 dark:border-zinc-750';
@@ -115,6 +118,40 @@ const Home = ({ user, timetableData, notices }) => {
                     </p>
                 </div>
             </div>
+
+            {/* Morning Briefing Section */}
+            {(aiLoading || aiBriefing) && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 md:p-8 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group"
+                >
+                    <div className="absolute -right-16 -top-16 w-44 h-44 bg-zinc-700/10 rounded-full blur-3xl pointer-events-none group-hover:bg-zinc-700/20 transition-all duration-700" />
+                    
+                    <div className="flex flex-col md:flex-row md:items-center gap-6 relative z-10">
+                        <div className="shrink-0 flex items-center justify-center w-12 h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
+                            <Sparkles size={24} className={aiLoading ? "animate-pulse" : "animate-bounce duration-1000"} />
+                        </div>
+                        
+                        <div className="flex-1 space-y-2">
+                            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                Daily AI Briefing
+                                {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
+                            </h2>
+                            {aiLoading ? (
+                                <div className="space-y-2 animate-pulse">
+                                    <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
+                                    <div className="h-4 bg-zinc-800 rounded w-1/2"></div>
+                                </div>
+                            ) : (
+                                <p className="text-zinc-200 text-base md:text-lg font-medium leading-relaxed font-sans">
+                                    {aiBriefing?.briefing}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Status Column */}
@@ -212,11 +249,11 @@ const Home = ({ user, timetableData, notices }) => {
                             </h2>
                             <div className="flex gap-6 mt-2 relative z-10">
                                 <div>
-                                    <div className="text-3xl font-extrabold">{routine.length}</div>
+                                    <div className="text-3xl font-extrabold">{academicPeriodsCount}</div>
                                     <div className="text-sm font-semibold text-zinc-400">Periods</div>
                                 </div>
                                 <div>
-                                    <div className="text-3xl font-extrabold">{todayNotices.length}</div>
+                                    <div className="text-3xl font-extrabold">{totalNoticesCount}</div>
                                     <div className="text-sm font-semibold text-zinc-400">Notices</div>
                                 </div>
                             </div>
@@ -233,7 +270,7 @@ const Home = ({ user, timetableData, notices }) => {
                                 <Bell size={16} className="text-black dark:text-white" />
                                 Latest Notices
                             </h2>
-                            <button className="text-xs font-bold text-zinc-900 dark:text-white underline decoration-zinc-400 hover:text-black dark:hover:text-white">View All</button>
+                            <button onClick={() => setView && setView('notices')} className="text-xs font-bold text-zinc-900 dark:text-white underline decoration-zinc-400 hover:text-black dark:hover:text-white">View All</button>
                         </div>
                         
                         <div className="space-y-4">
