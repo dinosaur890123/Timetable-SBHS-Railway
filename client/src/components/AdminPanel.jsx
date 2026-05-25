@@ -249,6 +249,13 @@ const AdminPanel = ({ user }) => {
     };
 
     const [updatingConfig, setUpdatingConfig] = useState(false);
+    const [customModelName, setCustomModelName] = useState('');
+
+    useEffect(() => {
+        if (stats?.aiModel) {
+            setCustomModelName(stats.aiModel);
+        }
+    }, [stats?.aiModel]);
 
     const handleProviderChange = async (e) => {
         const selectedProvider = e.target.value;
@@ -266,18 +273,26 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    const handleModelChange = async (e) => {
-        const selectedModel = e.target.value;
+    const handleModelSave = async () => {
+        const modelToSave = customModelName.trim();
+        if (!modelToSave) return;
         setUpdatingConfig(true);
         try {
-            await updateAiConfig(stats?.aiProvider || 'hackclub', selectedModel);
-            setStats(prev => prev ? { ...prev, aiModel: selectedModel } : null);
-            alert(`AI briefing model updated to ${selectedModel}`);
+            await updateAiConfig(stats?.aiProvider || 'hackclub', modelToSave);
+            setStats(prev => prev ? { ...prev, aiModel: modelToSave } : null);
+            alert(`AI briefing model updated to ${modelToSave}`);
             loadData();
         } catch (err) {
             alert("Failed to update AI briefing model.");
         } finally {
             setUpdatingConfig(false);
+        }
+    };
+
+    const handleModelKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleModelSave();
         }
     };
 
@@ -1090,26 +1105,41 @@ const AdminPanel = ({ user }) => {
                             <Sparkles size={16} />
                             Select Daily AI Briefing Model
                         </h4>
-                        <p className="text-xs text-zinc-550 mt-1">Choose the LLM model to generate student morning briefings from the active provider</p>
+                        <p className="text-xs text-zinc-550 mt-1">Choose or type the LLM model to generate student morning briefings from the active provider</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
-                        <select
-                            value={stats?.aiModel || 'qwen/qwen3-32b'}
-                            disabled={updatingConfig}
-                            onChange={handleModelChange}
-                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
-                        >
-                            {stats?.aiProvider === 'gemini' ? (
-                                stats?.availableGeminiModels?.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))
-                            ) : (
-                                stats?.availableHackClubModels?.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))
-                            )}
-                        </select>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                list="ai-models-datalist"
+                                value={customModelName}
+                                disabled={updatingConfig}
+                                onChange={(e) => setCustomModelName(e.target.value)}
+                                onKeyDown={handleModelKeyDown}
+                                placeholder="Enter model name..."
+                                className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
+                            />
+                            <datalist id="ai-models-datalist">
+                                {stats?.aiProvider === 'gemini' ? (
+                                    stats?.availableGeminiModels?.map(m => (
+                                        <option key={m} value={m} />
+                                    ))
+                                ) : (
+                                    stats?.availableHackClubModels?.map(m => (
+                                        <option key={m} value={m} />
+                                    ))
+                                )}
+                            </datalist>
+                            <button
+                                type="button"
+                                onClick={handleModelSave}
+                                disabled={updatingConfig || !customModelName.trim() || customModelName.trim() === stats?.aiModel}
+                                className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg text-sm disabled:opacity-50"
+                            >
+                                Save
+                            </button>
+                        </div>
                     </div>
                 </div>
 
