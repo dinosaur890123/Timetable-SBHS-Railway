@@ -6,9 +6,8 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
-// Default layout configuration
+// Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
-    { id: 'greeting', w: 3, h: 1 },
     { id: 'ai_briefing', w: 3, h: 1 },
     { id: 'current_class', w: 2, h: 2 },
     { id: 'notices', w: 1, h: 2 },
@@ -19,7 +18,6 @@ const DEFAULT_LAYOUT = [
 
 // Available tiles and their resizing constraints
 const ALL_TILES = {
-    greeting: { title: 'Greeting & Date', minW: 1, maxW: 3, minH: 1, maxH: 1 },
     ai_briefing: { title: 'AI Daily Briefing', minW: 1, maxW: 3, minH: 1, maxH: 2 },
     current_class: { title: 'Current Class (Right Now)', minW: 1, maxW: 3, minH: 1, maxH: 2 },
     next_class: { title: 'Up Next Class', minW: 1, maxW: 2, minH: 1, maxH: 1 },
@@ -76,13 +74,13 @@ const ClockWidget = () => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between relative group select-none">
             <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 flex items-center gap-2">
                     <Clock size={14} />
                     Time
                 </h2>
                 <button 
                     onClick={toggleFormat}
-                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-450 hover:text-black dark:hover:text-white transition"
+                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-455 hover:text-black dark:hover:text-white transition"
                     title="Change clock view"
                 >
                     {formatType}
@@ -262,7 +260,7 @@ const ScratchpadWidget = () => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-550 dark:text-zinc-450 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-450 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     Scratchpad
                 </h2>
@@ -288,7 +286,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         const saved = localStorage.getItem('dashboard_layout');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                // Filter out the greeting tile if it exists in their saved layout
+                return parsed.filter(t => t.id !== 'greeting');
             } catch (e) {
                 console.error("Failed to parse saved layout:", e);
             }
@@ -387,7 +387,43 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const rawNotices = aiBriefing && aiBriefing.sortedNotices ? aiBriefing.sortedNotices : (notices?.notices || []);
     const todayNotices = rawNotices.slice(0, 3);
     const totalNoticesCount = rawNotices.length;
-    const academicPeriodsCount = routine.filter(bellId => bellId !== "R" && bellId !== "L" && bellId !== "RC").length;
+
+    // Helper function to check if a period is an academic period (rather than recess, lunch, or breaks)
+    const isAcademicPeriod = (bellId) => {
+        if (!bellId) return false;
+        const id = bellId.toUpperCase().trim();
+        
+        // Filter standard break IDs
+        if (id === "R" || id === "L" || id === "RC" || id === "REC" || id === "LUN" || id === "ROLL" || id === "MC") {
+            return false;
+        }
+        if (id.includes("RECESS") || id.includes("LUNCH") || id.includes("ROLL") || id.includes("BREAK")) {
+            return false;
+        }
+
+        // Check details in periods map
+        const periodInfo = periods[bellId];
+        if (periodInfo) {
+            const title = (periodInfo.title || "").toUpperCase();
+            if (title.includes("RECESS") || title.includes("LUNCH") || title.includes("ROLL CALL") || title.includes("BREAK") || title.includes("PEER SUPPORT")) {
+                return false;
+            }
+        }
+
+        // Check details in bells schedule config
+        const bell = bells.find(b => b.bell === bellId);
+        if (bell) {
+            const display = (bell.bellDisplay || "").toUpperCase();
+            if (display.includes("RECESS") || display.includes("LUNCH") || display.includes("ROLL CALL") || display.includes("BREAK")) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    // Calculate dynamic academic period count (exactly 5 periods for standard days)
+    const academicPeriodsCount = routine.filter(bellId => isAcademicPeriod(bellId)).length;
 
     const getSubjectGradient = (title) => {
         return 'bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white border-zinc-300 dark:border-zinc-750';
@@ -564,23 +600,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     // Render individual tile elements based on their id
     const renderTileContent = (id) => {
         switch (id) {
-            case 'greeting':
-                return (
-                    <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-center select-none">
-                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-tight">
-                            {greeting}, <span className="text-black dark:text-white underline decoration-zinc-400 underline-offset-4">{user?.givenName || 'Student'}</span>
-                        </h1>
-                        <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-base flex flex-wrap items-center gap-2">
-                            <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
-                            {format(currentTime, 'EEEE, d MMMM yyyy')}
-                            {innerTimetable?.dayname && (
-                                <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-850 dark:text-zinc-250 text-xs font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-800">
-                                    {innerTimetable.dayname}
-                                </span>
-                            )}
-                        </p>
-                    </div>
-                );
             case 'ai_briefing':
                 if (!aiLoading && !aiBriefing) {
                     return (
@@ -621,7 +640,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
                         </div>
-                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
+                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400 mb-6 flex items-center gap-2">
                             <div className="w-2 h-2 bg-black dark:bg-white animate-pulse" />
                             Right Now
                         </h2>
@@ -661,7 +680,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <div className="text-center py-8 z-10 relative select-none">
                                 <CheckCircle size={48} className="mx-auto text-black dark:text-white mb-4 opacity-70" />
                                 <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white mb-2">No Classes Right Now</h3>
-                                <p className="text-zinc-500">Take a break or catch up on study.</p>
+                                <p className="text-zinc-550">Take a break or catch up on study.</p>
                             </div>
                         )}
                     </div>
@@ -734,7 +753,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <div className="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[220px] custom-scrollbar">
                             {todayNotices.length > 0 ? todayNotices.map((notice, idx) => (
                                 <div key={idx} className="group cursor-pointer">
-                                    <h3 className="text-sm font-extrabold text-zinc-850 dark:text-zinc-200 group-hover:text-zinc-650 dark:group-hover:text-white transition-colors line-clamp-1">{notice.title}</h3>
+                                    <h3 className="text-sm font-extrabold text-zinc-855 dark:text-zinc-200 group-hover:text-zinc-650 dark:group-hover:text-white transition-colors line-clamp-1">{notice.title}</h3>
                                     <p className="text-xs text-zinc-500 mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: notice.content }}></p>
                                 </div>
                             )) : (
@@ -774,20 +793,25 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-            {/* Header controls & Greeting */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-6">
+            {/* Header controls & Greeting (Fixed, non-editable greeting at the top) */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-6">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none select-none">
-                        Dashboard
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none">
+                        {greeting}, <span className="text-black dark:text-white underline decoration-zinc-400 underline-offset-4">{user?.givenName || 'Student'}</span>
                     </h1>
-                    <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-sm flex items-center gap-2 mt-2 select-none">
-                        <CalendarIcon size={16} />
+                    <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
+                        <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
                         {format(currentTime, 'EEEE, d MMMM yyyy')}
+                        {innerTimetable?.dayname && (
+                            <span className="ml-2 px-2.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700">
+                                {innerTimetable.dayname}
+                            </span>
+                        )}
                     </p>
                 </div>
                 
                 {/* Customize Dashboard Controls */}
-                <div className="flex items-center gap-2 shrink-0 select-none">
+                <div className="flex items-center gap-2 shrink-0 select-none pb-0.5">
                     {isEditing ? (
                         <>
                             <button 
@@ -861,7 +885,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             </span>
                                             <button 
                                                 onClick={() => removeTile(tile.id)}
-                                                className="bg-red-650 hover:bg-red-750 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
+                                                className="bg-red-655 hover:bg-red-750 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
                                                 title="Remove Widget"
                                                 draggable={false}
                                             >
@@ -961,7 +985,7 @@ const MapPin = ({ size }) => (
 );
 
 const UserIcon = ({ size }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2500/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
     </svg>
