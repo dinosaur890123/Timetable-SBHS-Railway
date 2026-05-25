@@ -116,6 +116,10 @@ export const fetchDayTimetable = async (date) => {
     return fetchWithAuth(`/timetable/daytimetable.json${dateStr}`);
 };
 
+export const fetchCompleteTimetable = async () => {
+    return fetchWithAuth('/timetable/timetable.json');
+};
+
 // 2. Daily News
 export const fetchDailyNews = async (date) => {
     const dateStr = date ? `?date=${format(date, 'yyyy-MM-dd')}` : '';

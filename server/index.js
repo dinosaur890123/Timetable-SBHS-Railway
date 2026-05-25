@@ -117,11 +117,8 @@ async function setMaintenance(maintenance) {
 async function listUsers() {
     if (!isDbEnabled) {
         users.forEach(u => {
-            if (u.timetable) {
-                const inner = u.timetable.timetable || u.timetable;
-                if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
-                    u.timetable = null;
-                }
+            if (u.timetable && !isTimetableValid(u.timetable)) {
+                u.timetable = null;
             }
         });
         return users;
@@ -142,6 +139,15 @@ async function listUsers() {
         timetable: row.timetable ?? null,
     }));
 }
+
+const isTimetableValid = (timetable) => {
+    if (!timetable) return false;
+    const inner = timetable.timetable?.timetable || timetable.timetable || timetable;
+    if (!inner) return false;
+    if (inner.days && Object.keys(inner.days).length > 0) return true;
+    if (inner.periods && Object.keys(inner.periods).length > 0) return true;
+    return false;
+};
 
 async function upsertUser(newUser) {
     if (!isDbEnabled) {
@@ -412,11 +418,8 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
         }
 
         let validTimetable = null;
-        if (timetable) {
-            const inner = timetable.timetable || timetable;
-            if (inner && inner.periods && Object.keys(inner.periods).length > 0) {
-                validTimetable = timetable;
-            }
+        if (timetable && isTimetableValid(timetable)) {
+            validTimetable = timetable;
         }
 
         const safeUser = {
@@ -576,16 +579,23 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
             // Parse timetable for popular classes
             if (u.timetable) {
-                const innerTimetable = u.timetable.timetable || u.timetable;
-                const periods = innerTimetable?.periods;
-                if (periods) {
-                    Object.entries(periods).forEach(([key, p]) => {
-                        const isBreak = ["R", "L", "RC"].includes(key);
-                        if (!isBreak && p && p.title) {
-                            const title = String(p.title).trim();
-                            if (title && title.length > 1) {
-                                classCounts[title] = (classCounts[title] || 0) + 1;
-                            }
+                const innerTimetable = u.timetable.timetable?.timetable || u.timetable.timetable || u.timetable;
+                const countPeriod = (key, p) => {
+                    const isBreak = ["R", "L", "RC"].includes(key);
+                    if (!isBreak && p && p.title) {
+                        const title = String(p.title).trim();
+                        if (title && title.length > 1) {
+                            classCounts[title] = (classCounts[title] || 0) + 1;
+                        }
+                    }
+                };
+
+                if (innerTimetable?.periods) {
+                    Object.entries(innerTimetable.periods).forEach(([key, p]) => countPeriod(key, p));
+                } else if (innerTimetable?.days) {
+                    Object.values(innerTimetable.days).forEach(day => {
+                        if (day && day.periods) {
+                            Object.entries(day.periods).forEach(([key, p]) => countPeriod(key, p));
                         }
                     });
                 }
@@ -800,12 +810,9 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
         if (!isDbEnabled) {
             const localUser = users.find(u => String(u.id) === String(id));
             let timetable = localUser?.timetable || null;
-            if (timetable) {
-                const inner = timetable.timetable || timetable;
-                if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
-                    if (localUser) localUser.timetable = null;
-                    timetable = null;
-                }
+            if (timetable && !isTimetableValid(timetable)) {
+                if (localUser) localUser.timetable = null;
+                timetable = null;
             }
             return res.json(timetable);
         }
@@ -816,13 +823,10 @@ app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
         if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
         
         let timetable = result.rows[0].timetable || null;
-        if (timetable) {
-            const inner = timetable.timetable || timetable;
-            if (!inner || !inner.periods || Object.keys(inner.periods).length === 0) {
-                // Background clean up
-                db.query('UPDATE app_users SET timetable = NULL WHERE id = $1', [String(id)]).catch(() => {});
-                timetable = null;
-            }
+        if (timetable && !isTimetableValid(timetable)) {
+            // Background clean up
+            db.query('UPDATE app_users SET timetable = NULL WHERE id = $1', [String(id)]).catch(() => {});
+            timetable = null;
         }
         res.json(timetable);
     } catch (e) {
