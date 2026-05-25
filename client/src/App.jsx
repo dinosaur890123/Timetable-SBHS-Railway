@@ -41,6 +41,7 @@ function App() {
   }, []);
   
   const [timetable, setTimetable] = useState(null);
+  const [completeTimetable, setCompleteTimetable] = useState(null);
   const [notices, setNotices] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -125,6 +126,7 @@ function App() {
         ]);
         setNotices(noticesData);
         setUser(userData);
+        setCompleteTimetable(completeTimetableData);
         
         if (systemData) {
             const dismissedId = localStorage.getItem('dismissedUpdateId');
@@ -334,7 +336,7 @@ function App() {
                         )}
                     </div>
 
-                    <Timetable timetableData={timetable} aiDisabled={aiDisabled} />
+                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} aiDisabled={aiDisabled} />
                 </div>
             )}
 

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { fetchTimetableQa } from '../services/api';
 import { Sparkles } from 'lucide-react';
 
-const Timetable = ({ timetableData, showNow = true, aiDisabled }) => {
+const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetable }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
@@ -93,7 +93,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled }) => {
         setQaLoading(true);
         setAnswer('');
         try {
-            const data = await fetchTimetableQa(question, timetableData, currentMinutes);
+            const data = await fetchTimetableQa(question, timetableData, currentMinutes, completeTimetable);
             setAnswer(data.answer || "I couldn't generate an answer. Please try again.");
         } catch (err) {
             console.error("Q&A failed:", err);
