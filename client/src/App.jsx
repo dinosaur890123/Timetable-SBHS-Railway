@@ -293,6 +293,8 @@ function App() {
                     setView={setCurrentView} 
                     aiBriefing={aiBriefing} 
                     aiLoading={aiLoading} 
+                    theme={theme}
+                    toggleTheme={toggleTheme}
                 />
             )}
 
