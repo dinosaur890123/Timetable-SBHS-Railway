@@ -1318,7 +1318,7 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
-            const url = new URL(`https://student.sbhs.net.au/api/students/${studentId}/${subpath}`);
+            const url = new URL(`https://api.sbhs.net.au/api/core/students/${studentId}/${subpath}`);
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
@@ -1343,7 +1343,7 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
-            const url = new URL(`https://student.sbhs.net.au/api/${subpath}`);
+            const url = new URL(`https://api.sbhs.net.au/api/core/${subpath}`);
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
