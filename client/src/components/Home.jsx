@@ -159,7 +159,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                 key={idx} 
                                 className={`p-2.5 border transition-all duration-300 flex items-center justify-between ${
                                     isCurrent 
-                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white animate-pulse-subtle' 
+                                        ? 'bg-accent text-accent-contrast border-accent animate-pulse-subtle' 
                                         : isBreak
                                             ? 'bg-zinc-50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-500'
                                             : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
@@ -641,7 +641,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <Clock size={120} />
                         </div>
                         <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400 mb-6 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-black dark:bg-white animate-pulse" />
+                            <div className="w-2 h-2 bg-accent animate-pulse" />
                             Right Now
                         </h2>
                         {currentClass ? (
@@ -654,8 +654,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             animate={{ strokeDasharray: `${(progress / 100) * 351.86} 351.86` }}
                                             transition={{ duration: 1, ease: "easeOut" }}
                                             cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                                            className="text-black dark:text-white" 
-                                        />
+                                            className="text-accent"                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <span className="text-2xl font-bold text-zinc-900 dark:text-white">{Math.max(0, currentClass.endMin - currentMinutes)}</span>
@@ -678,7 +677,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             </div>
                         ) : (
                             <div className="text-center py-8 z-10 relative select-none">
-                                <CheckCircle size={48} className="mx-auto text-black dark:text-white mb-4 opacity-70" />
+                                <CheckCircle size={48} className="mx-auto text-accent mb-4 opacity-70" />
                                 <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white mb-2">No Classes Right Now</h3>
                                 <p className="text-zinc-550">Take a break or catch up on study.</p>
                             </div>
@@ -714,7 +713,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'stats':
                 const countdownStr = getSchoolCountdown();
                 return (
-                    <div className="bg-black text-white dark:bg-zinc-950 p-6 border border-black dark:border-zinc-850 relative overflow-hidden h-full flex flex-col justify-between select-none">
+                    <div className="bg-accent text-accent-contrast p-6 border border-accent relative overflow-hidden h-full flex flex-col justify-between select-none">
                          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                              <Zap size={80} />
                          </div>
@@ -744,7 +743,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
-                                <Bell size={16} className="text-black dark:text-white" />
+                                <Bell size={16} className="text-accent" />
                                 Latest Notices
                             </h2>
                             <button onClick={() => setView && setView('notices')} className="text-xs font-bold text-zinc-900 dark:text-white underline decoration-zinc-400 hover:text-black dark:hover:text-white">View All</button>
@@ -797,7 +796,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-6">
                 <div>
                     <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none">
-                        {greeting}, <span className="text-black dark:text-white underline decoration-zinc-400 underline-offset-4">{user?.givenName || 'Student'}</span>
+                        {greeting}, <span className="text-accent underline decoration-accent/40 underline-offset-4">{user?.givenName || 'Student'}</span>
                     </h1>
                     <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
                         <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
@@ -824,7 +823,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             </button>
                             <button 
                                 onClick={() => setIsEditing(false)}
-                                className="px-4 py-2 text-xs font-extrabold uppercase bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-150 border border-black dark:border-white transition flex items-center gap-1.5 shadow-md"
+                                className="px-4 py-2 text-xs font-extrabold uppercase bg-accent text-accent-contrast hover:opacity-90 border border-accent transition flex items-center gap-1.5 shadow-md"
                                 title="Finish customization"
                             >
                                 <Check size={14} />
@@ -956,7 +955,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         </div>
                                         <button 
                                             onClick={() => addTile(id)}
-                                            className="p-1.5 bg-black text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 border border-black dark:border-white transition flex items-center justify-center hover:scale-105 active:scale-95"
+                                            className="p-1.5 bg-accent text-accent-contrast hover:opacity-90 border border-accent transition flex items-center justify-center hover:scale-105 active:scale-95"
                                             title="Add Widget"
                                         >
                                             <Plus size={14} />

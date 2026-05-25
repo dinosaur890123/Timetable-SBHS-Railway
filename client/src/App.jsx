@@ -25,6 +25,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
   // State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
   const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
   const [currentView, setCurrentView] = useState('home');
   const [viewDate, setViewDate] = useState(new Date());
@@ -88,6 +89,26 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Color Theme Config
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove(
+      'theme-zinc', 
+      'theme-mint', 
+      'theme-amber', 
+      'theme-blue', 
+      'theme-violet',
+      'theme-rose',
+      'theme-teal',
+      'theme-orange',
+      'theme-sky'
+    );
+    if (colorTheme !== 'zinc') {
+      root.classList.add(`theme-${colorTheme}`);
+    }
+    localStorage.setItem('color_theme', colorTheme);
+  }, [colorTheme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -379,12 +400,44 @@ function App() {
                                 {aiDisabled ? 'Disabled' : 'Enabled'}
                             </button>
                         </div>
-                        <p className="text-[11px] text-zinc-500">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
+                        <p className="text-[11px] text-zinc-550">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
+                    </div>
+
+                    {/* Color Themes Section */}
+                    <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: 'zinc', name: 'Default', color: 'bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100' },
+                                { id: 'mint', name: 'Mint', color: 'bg-emerald-600 border-emerald-600' },
+                                { id: 'amber', name: 'Amber', color: 'bg-amber-500 border-amber-500' },
+                                { id: 'blue', name: 'Blue', color: 'bg-blue-600 border-blue-600' },
+                                { id: 'violet', name: 'Violet', color: 'bg-violet-500 border-violet-500' },
+                                { id: 'rose', name: 'Rose', color: 'bg-rose-500 border-rose-500' },
+                                { id: 'teal', name: 'Teal', color: 'bg-teal-600 border-teal-600' },
+                                { id: 'orange', name: 'Orange', color: 'bg-orange-500 border-orange-500' },
+                                { id: 'sky', name: 'Sky', color: 'bg-sky-500 border-sky-500' }
+                            ].map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setColorTheme(t.id)}
+                                    className={`px-3 py-1.5 text-xs font-black uppercase border transition-all flex items-center gap-1.5 ${
+                                        colorTheme === t.id
+                                            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                            : 'bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                                    }`}
+                                    title={t.name}
+                                >
+                                    <span className={`w-3.5 h-3.5 border ${t.color}`} />
+                                    {t.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <button 
                         onClick={logout}
-                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors"
+                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
                     >
                         Sign Out
                     </button>
