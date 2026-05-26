@@ -208,15 +208,222 @@ export const fetchStudentAbsences = (studentId) => fetchFromBackend(`/students/$
 export const fetchStudentAbsenceDetail = (studentId, id) => fetchFromBackend(`/students/${studentId}/attendance/absences/${id}`);
 export const fetchStudentScanIns = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins`);
 export const fetchStudentScanInDetail = (studentId, dateId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${dateId}`);
-export const fetchStudentAwards = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/awards`);
-export const fetchStudentBadges = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/badges`);
-export const fetchStudentDecorations = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/decorations`);
-export const fetchStudentPrizes = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/prizes`);
-export const fetchStudentRollover = (studentId) => fetchFromBackend(`/students/${studentId}/award-scheme/rollover`);
-export const fetchStudentClipboardAttendance = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/attendance`);
-export const fetchStudentPreExplainedAbsences = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`);
-export const fetchStudentClipboardSessions = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/sessions`);
-export const fetchStudentClipboardTeams = (studentId) => fetchFromBackend(`/students/${studentId}/clipboard/teams`);
+export const fetchStudentAwards = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/award-scheme/awards`)
+    .then(data => {
+        const parseAwards = (items) => {
+            return items.map(item => {
+                if (item && item.title && item.points !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    title: item.award?.name || item.title || 'Unknown Award',
+                    description: item.nomination?.name || item.award?.category?.name || item.description || 'Issued Award',
+                    dateIssued: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : (item.dateIssued || ''),
+                    points: item.award?.points !== undefined ? item.award.points : (item.points || 0),
+                    category: item.award?.category?.name || item.category || ''
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseAwards(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseAwards(data);
+        }
+        return [];
+    });
+
+export const fetchStudentBadges = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/award-scheme/badges`)
+    .then(data => {
+        const parseBadges = (items) => {
+            return items.map(item => {
+                if (item && item.title && item.category !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    title: item.award?.name || item.title || 'Unknown Badge',
+                    category: item.award?.category?.name || item.category || 'Badge',
+                    dateIssued: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : (item.dateIssued || '')
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseBadges(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseBadges(data);
+        }
+        return [];
+    });
+
+export const fetchStudentDecorations = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/award-scheme/decorations`)
+    .then(data => {
+        const parseDecorations = (items) => {
+            return items.map(item => {
+                if (item && item.title && item.presentationNight !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    title: item.award?.name || item.title || 'Unknown Decoration',
+                    presentationNight: item.presentationNight || item.award?.metadata?.find(m => m.name === 'presentationNight')?.value || 'Presentation Night',
+                    year: item.year || (item.date ? new Date(item.date).getFullYear() : (item.year || ''))
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseDecorations(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseDecorations(data);
+        }
+        return [];
+    });
+
+export const fetchStudentPrizes = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/award-scheme/prizes`)
+    .then(data => {
+        const parsePrizes = (items) => {
+            return items.map(item => {
+                if (item && item.title && item.description !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    title: item.award?.name || item.title || 'Unknown Prize',
+                    description: item.award?.description || item.description || '',
+                    year: item.year || (item.date ? new Date(item.date).getFullYear() : (item.year || ''))
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parsePrizes(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parsePrizes(data);
+        }
+        return [];
+    });
+
+export const fetchStudentRollover = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/award-scheme/rollover`)
+    .then(data => {
+        if (!data) return null;
+        if (data.member && Array.isArray(data.member) && data.member.length > 0) {
+            return data.member[0];
+        }
+        return data;
+    });
+
+export const fetchStudentClipboardAttendance = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/attendance`)
+    .then(data => {
+        const parseAttendance = (items) => {
+            return items.map(item => {
+                if (item && item.activity && item.status !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    activity: item.activity || item.session?.activity || 'Activity',
+                    date: item.date || item.session?.date || '',
+                    recordedBy: item.recordedBy || '',
+                    status: item.status || 'Present'
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseAttendance(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseAttendance(data);
+        }
+        return [];
+    });
+
+export const fetchStudentPreExplainedAbsences = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`)
+    .then(data => {
+        const parsePreExplained = (items) => {
+            return items.map(item => {
+                if (item && item.reason && item.status !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    reason: item.reason || '',
+                    startDate: item.startDate || item.start || '',
+                    endDate: item.endDate || item.end || '',
+                    status: item.status || 'Pending'
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parsePreExplained(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parsePreExplained(data);
+        }
+        return [];
+    });
+
+export const fetchStudentClipboardSessions = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
+    .then(data => {
+        const parseSessions = (items) => {
+            return items.map(item => {
+                if (item && item.activity && item.location !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    activity: item.activity || '',
+                    date: item.date || '',
+                    time: item.time || '',
+                    location: item.location || ''
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseSessions(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseSessions(data);
+        }
+        return [];
+    });
+
+export const fetchStudentClipboardTeams = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/teams`)
+    .then(data => {
+        const parseTeams = (items) => {
+            return items.map(item => {
+                if (item && item.name && item.sportOrActivity !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    name: item.name || '',
+                    season: item.season || '',
+                    sportOrActivity: item.sportOrActivity || item.activity || '',
+                    coach: item.coach || ''
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseTeams(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseTeams(data);
+        }
+        return [];
+    });
+
 export const fetchStudentClipboardTeamDetail = (studentId, teamId) => fetchFromBackend(`/students/${studentId}/clipboard/teams/${teamId}`);
 export const fetchStudentEnrolments = (studentId) => fetchFromBackend(`/students/${studentId}/enrolments`);
 export const fetchStudentEnrolmentDetail = (studentId, schoolYear) => fetchFromBackend(`/students/${studentId}/enrolments/${schoolYear}`);
@@ -226,18 +433,164 @@ export const fetchStudentTimetableDates = (studentId) => fetchFromBackend(`/stud
 export const fetchStudentTimetableDateDetail = (studentId, date) => fetchFromBackend(`/students/${studentId}/timetable/dates/${date}`);
 
 // Global APIs
-export const fetchGlobalAwards = () => fetchFromBackend('/award-scheme/awards');
+export const fetchGlobalAwards = () => 
+    fetchFromBackend('/award-scheme/awards')
+    .then(data => {
+        const parseGlobalAwards = (items) => {
+            return items.map(item => {
+                if (item && item.name && item.pointsRequired !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    name: item.name || item.award?.name || '',
+                    pointsRequired: item.pointsRequired || item.points || 0,
+                    description: item.description || ''
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseGlobalAwards(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseGlobalAwards(data);
+        }
+        return [];
+    });
+
 export const fetchGlobalAwardDetail = (id) => fetchFromBackend(`/award-scheme/awards/${id}`);
-export const fetchGlobalCategories = () => fetchFromBackend('/award-scheme/categories');
+
+export const fetchGlobalCategories = () => 
+    fetchFromBackend('/award-scheme/categories')
+    .then(data => {
+        const parseCategories = (items) => {
+            return items.map(item => {
+                if (item && item.name && item.weight !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    name: item.name || '',
+                    weight: item.weight || 1
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseCategories(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseCategories(data);
+        }
+        return [];
+    });
+
 export const fetchGlobalCategoryDetail = (id) => fetchFromBackend(`/award-scheme/categories/${id}`);
-export const fetchGlobalHousePoints = () => fetchFromBackend('/award-scheme/house-points');
-export const fetchGlobalNominations = () => fetchFromBackend('/award-scheme/nominations');
+
+export const fetchGlobalHousePoints = () => 
+    fetchFromBackend('/award-scheme/house-points')
+    .then(data => {
+        const parseHousePoints = (items) => {
+            return items.map(item => {
+                if (item && item.house && item.points !== undefined) {
+                    return item;
+                }
+                return {
+                    house: item.house || '',
+                    points: item.points || 0
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseHousePoints(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseHousePoints(data);
+        }
+        return [];
+    });
+
+export const fetchGlobalNominations = () => 
+    fetchFromBackend('/award-scheme/nominations')
+    .then(data => {
+        const parseNominations = (items) => {
+            return items.map(item => {
+                if (item && item.nomineeName && item.status !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    nomineeName: item.nomineeName || '',
+                    nomineeId: item.nomineeId || '',
+                    awardId: item.awardId || '',
+                    nominatedBy: item.nominatedBy || '',
+                    date: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+                    status: item.status || 'Pending'
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseNominations(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseNominations(data);
+        }
+        return [];
+    });
+
 export const fetchGlobalNominationDetail = (id) => fetchFromBackend(`/award-scheme/nominations/${id}`);
 export const fetchGlobalPrizes = () => fetchFromBackend('/award-scheme/prizes');
 export const fetchGlobalPrizeDetail = (id) => fetchFromBackend(`/award-scheme/prizes/${id}`);
-export const fetchGlobalActivities = () => fetchFromBackend('/clipboard/activities');
+
+export const fetchGlobalActivities = () => 
+    fetchFromBackend('/clipboard/activities')
+    .then(data => {
+        const parseActivities = (items) => {
+            return items.map(item => {
+                if (item && item.name && item.type !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    name: item.name || '',
+                    type: item.type || '',
+                    term: item.term || 1
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseActivities(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseActivities(data);
+        }
+        return [];
+    });
+
 export const fetchGlobalActivityDetail = (id) => fetchFromBackend(`/clipboard/activities/${id}`);
-export const fetchGlobalDepartments = () => fetchFromBackend('/clipboard/departments');
+
+export const fetchGlobalDepartments = () => 
+    fetchFromBackend('/clipboard/departments')
+    .then(data => {
+        const parseDepartments = (items) => {
+            return items.map(item => {
+                if (item && item.name !== undefined) {
+                    return item;
+                }
+                return {
+                    id: item.id || Math.random(),
+                    name: item.name || ''
+                };
+            });
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseDepartments(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseDepartments(data);
+        }
+        return [];
+    });
+
 export const fetchGlobalDepartmentDetail = (id) => fetchFromBackend(`/clipboard/departments/${id}`);
 export const fetchGlobalTeamDetail = (id) => fetchFromBackend(`/clipboard/teams/${id}`);
 
