@@ -9,14 +9,17 @@ const getHeaders = () => {
 };
 
 /**
- * Creates a Stripe checkout session for Synchron Pro subscription
+ * Creates a Stripe checkout session for Synchron Pro subscription or donations
+ * @param {string|null} priceId - Stripe Price ID. If null, defaults to server's configured price ID.
+ * @param {string} mode - 'subscription' or 'payment'
  * @returns {Promise<{url: string, mock?: boolean}>} Checkout session URL
  */
-export const createCheckoutSession = async () => {
+export const createCheckoutSession = async (priceId = null, mode = 'subscription') => {
     try {
         const response = await fetch(`${API_BASE_URL}/billing/create-checkout-session`, {
             method: 'POST',
-            headers: getHeaders()
+            headers: getHeaders(),
+            body: JSON.stringify({ priceId, mode })
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -50,25 +53,4 @@ export const createPortalSession = async () => {
     }
 };
 
-/**
- * Toggles a mock subscription in local development environments where Stripe is disabled
- * @param {boolean} subscribe - Set true to subscribe, false to unsubscribe
- * @returns {Promise<{success: boolean, user?: any}>} Sync status
- */
-export const mockActivateSubscription = async (subscribe = true) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/billing/mock-activate`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ action: subscribe ? 'subscribe' : 'cancel' })
-        });
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'Failed to update mock subscription status');
-        }
-        return await response.json();
-    } catch (error) {
-        console.error("Billing API Error (mockActivateSubscription):", error);
-        throw error;
-    }
-};
+

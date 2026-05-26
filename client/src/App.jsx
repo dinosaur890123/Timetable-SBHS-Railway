@@ -21,7 +21,7 @@ import {
   fetchAiBriefing
 } from './services/api';
 import { registerUser } from './services/adminApi';
-import { createCheckoutSession, createPortalSession, mockActivateSubscription } from './services/billingApi';
+import { createCheckoutSession, createPortalSession } from './services/billingApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck } from 'lucide-react';
 
@@ -92,12 +92,10 @@ function App() {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
 
-      if (billingStatus === 'success' || billingStatus === 'success-mock') {
+      if (billingStatus === 'success') {
         setBillingMessage({
           type: 'success',
-          text: billingStatus === 'success-mock'
-            ? 'Developer Mock Subscription Activated! Thank you for supporting Synchron Pro!'
-            : 'Upgrade Successful! Thank you for subscribing to Synchron Pro. Your account features have been unlocked!'
+          text: 'Upgrade Successful! Thank you for subscribing to Synchron Pro. Your account features have been unlocked!'
         });
         
         // Re-trigger user sync/fetch user info to get the updated status from backend
@@ -119,15 +117,15 @@ function App() {
                 }
             }).catch(e => console.error("Billing sync failed", e));
         }
+      } else if (billingStatus === 'donation-success') {
+        setBillingMessage({
+          type: 'success',
+          text: 'Thank you! Your donation was processed successfully. We appreciate your support for Synchron!'
+        });
       } else if (billingStatus === 'cancel') {
         setBillingMessage({
           type: 'info',
-          text: 'Upgrade process cancelled. If you have any questions, feel free to contact support!'
-        });
-      } else if (billingStatus === 'manage-mock') {
-        setBillingMessage({
-          type: 'info',
-          text: 'Stripe Billing Portal is currently mocked. You can toggle your mock status below.'
+          text: 'Checkout process cancelled. If you have any questions, feel free to contact support!'
         });
       }
     }
@@ -538,32 +536,6 @@ function App() {
                                             </>
                                         )}
                                     </button>
-                                    
-                                    {/* Developer controls (if local dev / mock mode) */}
-                                    {user.stripeCustomerId === 'cus_mock_123456' && (
-                                        <div className="pt-2 mt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                                            <span className="text-[10px] font-bold text-zinc-400">Dev Settings (Mock Stripe)</span>
-                                            <button
-                                                onClick={async () => {
-                                                    setBillingLoading(true);
-                                                    try {
-                                                        const res = await mockActivateSubscription(false);
-                                                        if (res.success) {
-                                                            setUser(prev => prev ? { ...prev, subscriptionStatus: null } : null);
-                                                            setBillingMessage({ type: 'info', text: 'Dev Mode: Mock subscription cancelled.' });
-                                                        }
-                                                    } catch (e) {
-                                                        alert(e.message);
-                                                    } finally {
-                                                        setBillingLoading(false);
-                                                    }
-                                                }}
-                                                className="text-[10px] text-red-500 hover:underline font-bold"
-                                            >
-                                                Downgrade to Free
-                                            </button>
-                                        </div>
-                                    )}
                                 </>
                             ) : (
                                 <>
@@ -617,36 +589,47 @@ function App() {
                                             </>
                                         )}
                                     </button>
-
-                                    {/* Mock Subscriber Toggle for Dev Environments */}
-                                    <div className="pt-2 mt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                                        <span className="text-[10px] font-bold text-zinc-400">Local Dev Testing</span>
-                                        <button
-                                            onClick={async () => {
-                                                setBillingLoading(true);
-                                                try {
-                                                    const res = await mockActivateSubscription(true);
-                                                    if (res.success) {
-                                                        setUser(prev => prev ? {
-                                                            ...prev,
-                                                            subscriptionStatus: 'active',
-                                                            stripeCustomerId: 'cus_mock_123456'
-                                                        } : null);
-                                                        setBillingMessage({ type: 'success', text: 'Dev Mode: Simulated active Pro subscription successfully!' });
-                                                    }
-                                                } catch (e) {
-                                                    alert(e.message);
-                                                } finally {
-                                                    setBillingLoading(false);
-                                                }
-                                            }}
-                                            className="text-[10px] text-blue-500 hover:underline font-bold"
-                                        >
-                                            Quick Mock Subscribe
-                                        </button>
-                                    </div>
                                 </>
                             )}
+                        </div>
+
+                        {/* One-off Donations Section */}
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Sparkles size={16} className="text-amber-500 shrink-0" />
+                                Support Synchron
+                            </h3>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                Synchron is free and open source. If it helps you get through the school day, consider supporting with a one-off donation!
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { amount: '$1', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_1 },
+                                    { amount: '$2', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_2 },
+                                    { amount: '$3', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_3 }
+                                ].map((d, index) => (
+                                    <button
+                                        key={index}
+                                        disabled={billingLoading}
+                                        onClick={async () => {
+                                            setBillingLoading(true);
+                                            try {
+                                                const session = await createCheckoutSession(d.priceId || null, 'payment');
+                                                if (session.url) {
+                                                    window.location.href = session.url;
+                                                }
+                                            } catch (e) {
+                                                alert(e.message || "Failed to start donation checkout");
+                                            } finally {
+                                                setBillingLoading(false);
+                                            }
+                                        }}
+                                        className="py-2 px-3 text-xs font-bold bg-white hover:bg-zinc-100 dark:bg-zinc-850 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl transition flex items-center justify-center gap-1 shadow-sm"
+                                    >
+                                        Donate {d.amount}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* AI Toggle Option */}

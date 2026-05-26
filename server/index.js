@@ -9,7 +9,7 @@ dotenv.config();
 
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 if (!stripe) {
-    console.warn('[billing] STRIPE_SECRET_KEY is not configured. Stripe features will be mocked for local testing.');
+    console.warn('[billing] STRIPE_SECRET_KEY is not configured. Stripe billing routes will fail until configured.');
 }
 
 const app = express();
@@ -66,23 +66,32 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), asyn
                 const stripeCustomerId = session.customer;
                 const stripeSubscriptionId = session.subscription;
                 
-                let subscriptionStatus = 'active';
-                try {
-                    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-                    subscriptionStatus = subscription.status;
-                } catch (subErr) {
-                    console.error('[webhook] Error retrieving subscription details:', subErr);
-                }
-
-                if (studentId) {
-                    await updateUserSubscription(studentId, {
-                        stripeCustomerId,
-                        stripeSubscriptionId,
-                        subscriptionStatus
-                    });
-                    console.log(`[webhook] User subscription activated for studentId: ${studentId}`);
+                if (session.mode === 'payment') {
+                    // This is a one-off donation
+                    await addLog('DONATION', studentId || 'GUEST', `Processed successful one-off donation of ${(session.amount_total / 100).toFixed(2)} ${session.currency.toUpperCase()}`);
+                    console.log(`[webhook] Donation processed successfully for customer: ${stripeCustomerId}`);
                 } else {
-                    console.error('[webhook] No studentId found in checkout session metadata or client_reference_id');
+                    // Subscription checkout
+                    let subscriptionStatus = 'active';
+                    if (stripeSubscriptionId) {
+                        try {
+                            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+                            subscriptionStatus = subscription.status;
+                        } catch (subErr) {
+                            console.error('[webhook] Error retrieving subscription details:', subErr);
+                        }
+                    }
+
+                    if (studentId) {
+                        await updateUserSubscription(studentId, {
+                            stripeCustomerId,
+                            stripeSubscriptionId,
+                            subscriptionStatus
+                        });
+                        console.log(`[webhook] User subscription activated for studentId: ${studentId}`);
+                    } else {
+                        console.error('[webhook] No studentId found in checkout session metadata or client_reference_id');
+                    }
                 }
                 break;
             }
@@ -784,10 +793,11 @@ app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req,
         const email = req.user.email;
         const name = `${req.user.givenName} ${req.user.surname}`;
 
+        let { priceId, mode } = req.body || {};
+        if (!mode) mode = 'subscription';
+
         if (!stripe) {
-            console.log('[billing] Stripe not initialized. Using developer mock checkout URL.');
-            const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-            return res.json({ url: `${clientUrl}/?billing=success-mock`, mock: true });
+            return res.status(500).json({ error: 'Stripe is not configured on the server. Please check your environment variables.' });
         }
 
         const dbUser = await getUserById(studentId);
@@ -804,9 +814,13 @@ app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req,
         }
 
         const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-        const priceId = process.env.STRIPE_PRICE_ID;
+        
         if (!priceId) {
-            return res.status(400).json({ error: 'Stripe Price ID (STRIPE_PRICE_ID) is not configured on the server.' });
+            priceId = process.env.SYNCHRON_PRO_PRICE_ID;
+        }
+
+        if (!priceId) {
+            return res.status(400).json({ error: 'Stripe Pro Price ID (SYNCHRON_PRO_PRICE_ID) is not configured on the server.' });
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -818,10 +832,10 @@ app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req,
                     quantity: 1,
                 },
             ],
-            mode: 'subscription',
-            success_url: `${clientUrl}/?billing=success`,
+            mode: mode,
+            success_url: mode === 'payment' ? `${clientUrl}/?billing=donation-success` : `${clientUrl}/?billing=success`,
             cancel_url: `${clientUrl}/?billing=cancel`,
-            metadata: { studentId }
+            metadata: { studentId, type: mode === 'payment' ? 'donation' : 'subscription' }
         });
 
         res.json({ url: session.url });
@@ -837,9 +851,7 @@ app.post('/api/billing/create-portal-session', requireStudentAuth, async (req, r
         const studentId = String(req.user.studentId);
 
         if (!stripe) {
-            console.log('[billing] Stripe not initialized. Using developer mock billing portal.');
-            const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-            return res.json({ url: `${clientUrl}/?billing=manage-mock`, mock: true });
+            return res.status(500).json({ error: 'Stripe is not configured on the server. Please check your environment variables.' });
         }
 
         const dbUser = await getUserById(studentId);
@@ -862,36 +874,6 @@ app.post('/api/billing/create-portal-session', requireStudentAuth, async (req, r
     }
 });
 
-// POST /api/billing/mock-activate - Simulate subscription change in dev (mocking stripe events)
-app.post('/api/billing/mock-activate', requireStudentAuth, async (req, res) => {
-    if (stripe) {
-        return res.status(400).json({ error: 'Mock billing is disabled in production environments where Stripe API is active.' });
-    }
-    try {
-        const studentId = String(req.user.studentId);
-        const { action } = req.body || {};
-
-        let updated;
-        if (action === 'subscribe') {
-            updated = await updateUserSubscription(studentId, {
-                stripeCustomerId: 'cus_mock_123456',
-                stripeSubscriptionId: 'sub_mock_123456',
-                subscriptionStatus: 'active'
-            });
-            await addLog('BILLING_MOCK', req.user?.studentId || 'MOCK', 'Simulated mock Pro subscription activation');
-        } else {
-            updated = await updateUserSubscription(studentId, {
-                subscriptionStatus: 'canceled'
-            });
-            await addLog('BILLING_MOCK', req.user?.studentId || 'MOCK', 'Simulated mock Pro subscription cancellation');
-        }
-
-        res.json({ success: true, user: updated });
-    } catch (e) {
-        console.error('Mock billing activate error:', e);
-        res.status(500).json({ error: 'Failed to toggle mock subscription' });
-    }
-});
 
 // POST /api/users/promote - Promote user to Admin by student ID
 app.post('/api/users/promote', requireAuth, async (req, res) => {
