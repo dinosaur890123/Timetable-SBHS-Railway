@@ -104,8 +104,7 @@ function App() {
                 id: user.studentId,
                 name: `${user.givenName} ${user.surname}`,
                 email: user.email,
-                year: user.yearGroup,
-                timetable: completeTimetable || undefined
+                year: user.yearGroup
             }).then(dbSync => {
                 if (dbSync && dbSync.user) {
                     setUser(prev => prev ? {
@@ -215,14 +214,13 @@ function App() {
             setMaintenance(systemData.maintenance);
         }
         
-        // Attempt to register/update user in Admin Panel in background with complete timetable
+        // Attempt to register/update user in Admin Panel in background
         if (userData && userData.studentId) {
             registerUser({
                 id: userData.studentId,
                 name: `${userData.givenName} ${userData.surname}`,
                 email: userData.email, // SBHS API usually provides this in ID token, checking availability helps
-                year: userData.yearGroup,
-                timetable: completeTimetableData || undefined
+                year: userData.yearGroup
             }).then(dbSync => {
                 if (dbSync && dbSync.user) {
                     setUser(prev => {

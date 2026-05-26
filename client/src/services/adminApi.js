@@ -34,19 +34,6 @@ export const fetchUsers = async () => {
     }
 };
 
-export const fetchUserTimetable = async (userId) => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/users/${userId}/timetable`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to fetch user timetable');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
 export const deleteUser = async (userId) => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {
@@ -186,19 +173,6 @@ export const pruneOldLogs = async () => {
     }
 };
 
-export const clearAllTimetables = async () => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/maintenance/clear-timetables`, {
-            method: 'POST',
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to clear cached timetables');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
 
 export const updateAiConfig = async (provider, model) => {
     try {

@@ -55,18 +55,6 @@ async function ensureSchema() {
     const sql = fs.readFileSync(schemaPath, 'utf8');
     await activePool.query(sql);
 
-    // Automatically clean up any historically clobbered or error timetable JSON payloads
-    try {
-      await activePool.query(`
-        UPDATE app_users 
-        SET timetable = NULL 
-        WHERE timetable IS NOT NULL 
-          AND (timetable = 'false'::jsonb OR timetable->>'status' = 'error')
-      `);
-    } catch (err) {
-      console.error('Failed to run startup database timetable cleanup:', err);
-    }
-
     schemaEnsured = true;
   })();
 

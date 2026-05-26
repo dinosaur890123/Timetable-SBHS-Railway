@@ -308,15 +308,10 @@ async function setMaintenance(maintenance) {
 
 async function listUsers() {
     if (!isDbEnabled) {
-        users.forEach(u => {
-            if (u.timetable && !isTimetableValid(u.timetable)) {
-                u.timetable = null;
-            }
-        });
         return users;
     }
     const result = await db.query(
-        'SELECT id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users ORDER BY last_seen DESC, joined DESC',
+        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
     );
     return result.rows.map((row) => ({
@@ -328,21 +323,11 @@ async function listUsers() {
         status: row.status,
         joined: toIso(row.joined),
         lastSeen: toIso(row.last_seen),
-        timetable: row.timetable ?? null,
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
     }));
 }
-
-const isTimetableValid = (timetable) => {
-    if (!timetable) return false;
-    const inner = timetable.timetable?.timetable || timetable.timetable || timetable;
-    if (!inner) return false;
-    if (inner.days && Object.keys(inner.days).length > 0) return true;
-    if (inner.periods && Object.keys(inner.periods).length > 0) return true;
-    return false;
-};
 
 async function upsertUser(newUser) {
     if (!isDbEnabled) {
@@ -356,7 +341,6 @@ async function upsertUser(newUser) {
                 name: safeUser.name || existing.name,
                 email: safeUser.email || existing.email,
                 year: safeUser.year || existing.year,
-                timetable: safeUser.timetable || existing.timetable,
                 lastSeen: new Date()
             };
             return users[existingIndex];
@@ -374,7 +358,6 @@ async function upsertUser(newUser) {
             role: initialRole,
             joined: new Date(),
             lastSeen: new Date(),
-            timetable: safeUser.timetable || null,
             stripeCustomerId: null,
             stripeSubscriptionId: null,
             subscriptionStatus: null
@@ -384,21 +367,19 @@ async function upsertUser(newUser) {
     }
 
     const userId = String(newUser.id);
-    const timetableJson = newUser.timetable ? JSON.stringify(newUser.timetable) : null;
     const adminIds = getAdminIds();
     const initialRole = adminIds.includes(userId) ? 'Admin' : 'Student';
 
     const result = await db.query(
-        `INSERT INTO app_users (id, email, name, role, year, timetable, last_seen)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
+        `INSERT INTO app_users (id, email, name, role, year, last_seen)
+         VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (id) DO UPDATE SET
            email = COALESCE(EXCLUDED.email, app_users.email),
            name = COALESCE(EXCLUDED.name, app_users.name),
            year = COALESCE(EXCLUDED.year, app_users.year),
-           timetable = COALESCE(EXCLUDED.timetable, app_users.timetable),
            last_seen = NOW()
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
-        [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null, timetableJson]
+         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status`,
+        [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null]
     );
 
     const row = result.rows[0];
@@ -732,7 +713,7 @@ const requireAuth = requireAdminAuth;
 // POST /api/register - Auto-register users on login (DB-backed)
 app.post('/api/register', requireStudentAuth, async (req, res) => {
     try {
-        const { id, email, name, year, timetable } = req.body || {};
+        const { id, email, name, year } = req.body || {};
 
         if (!id || !email) {
             return res.status(400).json({ error: 'Missing user ID or email' });
@@ -743,17 +724,11 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
             return res.status(403).json({ error: 'Forbidden: Cannot register details for another student' });
         }
 
-        let validTimetable = null;
-        if (timetable && isTimetableValid(timetable)) {
-            validTimetable = timetable;
-        }
-
         const safeUser = {
             id: userId,
             email: String(email),
             name: name ? String(name) : null,
-            year: year ? String(year) : null,
-            timetable: validTimetable
+            year: year ? String(year) : null
         };
 
         const dbUser = await upsertUser(safeUser);
@@ -1236,33 +1211,6 @@ app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/maintenance/clear-timetables (Clear cached student timetables)
-app.post('/api/maintenance/clear-timetables', requireAuth, async (req, res) => {
-    try {
-        let updatedCount = 0;
-        if (!isDbEnabled) {
-            users.forEach(u => {
-                if (u.timetable) {
-                    u.timetable = null;
-                    updatedCount++;
-                }
-            });
-        } else {
-            const result = await db.query(
-                'UPDATE app_users SET timetable = NULL WHERE timetable IS NOT NULL RETURNING id',
-                []
-            );
-            updatedCount = result.rows.length;
-        }
-
-        await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Cleared cached timetables for ${updatedCount} users`);
-        res.json({ success: true, count: updatedCount });
-    } catch (e) {
-        console.error('Clear timetables error:', e);
-        res.status(500).json({ error: 'Failed to clear cached timetables' });
-    }
-});
-
 // POST /api/system/ai-model
 app.post('/api/system/ai-model', requireAuth, async (req, res) => {
     try {
@@ -1323,36 +1271,7 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
 });
 
 // GET /api/users/:id/timetable
-app.get('/api/users/:id/timetable', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!isDbEnabled) {
-            const localUser = users.find(u => String(u.id) === String(id));
-            let timetable = localUser?.timetable || null;
-            if (timetable && !isTimetableValid(timetable)) {
-                if (localUser) localUser.timetable = null;
-                timetable = null;
-            }
-            return res.json(timetable);
-        }
-        const result = await db.query(
-            'SELECT timetable FROM app_users WHERE id = $1',
-            [String(id)]
-        );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-        
-        let timetable = result.rows[0].timetable || null;
-        if (timetable && !isTimetableValid(timetable)) {
-            // Background clean up
-            db.query('UPDATE app_users SET timetable = NULL WHERE id = $1', [String(id)]).catch(() => {});
-            timetable = null;
-        }
-        res.json(timetable);
-    } catch (e) {
-        console.error('Fetch timetable error:', e);
-        res.status(500).json({ error: 'Failed to fetch user timetable' });
-    }
-});
+// REMOVED FOR PRIVACY
 
 let aiMemoryCache = {};
 

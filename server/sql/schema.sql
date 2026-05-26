@@ -23,8 +23,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   role TEXT NOT NULL DEFAULT 'Student',
   status TEXT NOT NULL DEFAULT 'Active',
   joined TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  timetable JSONB NULL
+  last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS app_users_last_seen_idx ON app_users (last_seen DESC);

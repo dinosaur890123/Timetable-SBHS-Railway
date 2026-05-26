@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
-import Timetable from './Timetable';
 
 const AdminPanel = ({ user }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,14 +38,12 @@ const AdminPanel = ({ user }) => {
     const [logSearchTerm, setLogSearchTerm] = useState('');
     const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
-    const [viewingUserId, setViewingUserId] = useState(null); // ID only, derive user from list
     const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
-    const [isClearingTimetables, setIsClearingTimetables] = useState(false);
     const [clearingAiCache, setClearingAiCache] = useState(false);
 
     useEffect(() => {
@@ -82,33 +79,6 @@ const AdminPanel = ({ user }) => {
             setLoading(false);
         }
     };
-
-    const [selectedUserTimetable, setSelectedUserTimetable] = useState(null);
-    const [loadingTimetable, setLoadingTimetable] = useState(false);
-    const [selectedWeek, setSelectedWeek] = useState("A");
-    const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-
-    useEffect(() => {
-        if (viewingUserId) {
-            setLoadingTimetable(true);
-            setSelectedUserTimetable(null);
-            fetchUserTimetable(viewingUserId)
-                .then(data => {
-                    setSelectedUserTimetable(data);
-                })
-                .catch(err => {
-                    console.error("Failed to load user timetable:", err);
-                })
-                .finally(() => {
-                    setLoadingTimetable(false);
-                });
-        } else {
-            setSelectedUserTimetable(null);
-        }
-    }, [viewingUserId]);
-
-    // Determine the user object for the modal based on latest data
-    const viewingUserEntry = viewingUserId ? users.find(u => u.id === viewingUserId) : null;
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -283,7 +253,7 @@ const AdminPanel = ({ user }) => {
 
     const handleProviderChange = async (e) => {
         const selectedProvider = e.target.value;
-        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
+        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-2.5';
         setUpdatingConfig(true);
         try {
             await updateAiConfig(selectedProvider, defaultModel);
@@ -1166,13 +1136,6 @@ const AdminPanel = ({ user }) => {
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{user.year}</td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                     <button
-                                        onClick={() => setViewingUserId(user.id)}
-                                        className="p-1 text-zinc-550 hover:text-black hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors"
-                                        title="View Timetable"
-                                    >
-                                        <Eye size={16} />
-                                    </button>
-                                    <button
                                         onClick={() => setEditingUser(user)}
                                         className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                         title="Edit User"
@@ -1348,184 +1311,12 @@ const AdminPanel = ({ user }) => {
                     </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <RefreshCw size={16} />
-                            Reset Timetable Sync Cache
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-1">Clear all cached timetable JSON files to force a fresh synchronization for all students on next login</p>
-                    </div>
-                    <button
-                        onClick={handleClearAllTimetables}
-                        disabled={isClearingTimetables}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
-                    >
-                        {isClearingTimetables ? 'Clearing...' : 'Clear Timetables'}
-                    </button>
-                </div>
+
             </div>
         </div>
     )
 }
 
-{/* Timetable Modal */ }
-{
-    viewingUserEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10">
-                    <div>
-                        <h3 className="text-xl font-bold dark:text-white">User Timetable</h3>
-                        <p className="text-sm text-zinc-500">{viewingUserEntry.name} ({viewingUserEntry.id})</p>
-                    </div>
-                    <button onClick={() => setViewingUserId(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg dark:text-zinc-400">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6">
-                    {loadingTimetable ? (
-                        <div className="text-center py-12 text-zinc-500 font-mono animate-pulse">
-                            [LOADING TIMETABLE DATA...]
-                        </div>
-                    ) : selectedUserTimetable ? (
-                        <div className="space-y-4 font-mono text-xs text-zinc-900 dark:text-zinc-100">
-                            <h4 className="font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800 pb-2">
-                                Synced Schedule
-                            </h4>
-                            {(() => {
-                                const innerTimetable = selectedUserTimetable.timetable?.timetable || selectedUserTimetable.timetable || selectedUserTimetable;
-                                const days = innerTimetable?.days;
-                                
-                                if (days && Object.keys(days).length > 0) {
-                                    const currentDayKey = selectedWeek === "A" ? String(selectedDayIndex + 1) : String(selectedDayIndex + 6);
-                                    const dayData = days[currentDayKey];
-                                    const dayPeriods = dayData?.periods;
-                                    
-                                    return (
-                                        <div>
-                                            {/* Week & Day Selector */}
-                                            <div className="flex flex-col gap-3 mb-6 bg-zinc-500/5 dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                                                <div className="flex gap-2 justify-center">
-                                                    {['A', 'B'].map(wk => (
-                                                        <button
-                                                            key={wk}
-                                                            type="button"
-                                                            onClick={() => setSelectedWeek(wk)}
-                                                            className={`px-6 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                                                selectedWeek === wk
-                                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-850'
-                                                            }`}
-                                                        >
-                                                            Week {wk}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <div className="grid grid-cols-5 gap-1">
-                                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((dayLabel, idx) => (
-                                                        <button
-                                                            key={dayLabel}
-                                                            type="button"
-                                                            onClick={() => setSelectedDayIndex(idx)}
-                                                            className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                                                                selectedDayIndex === idx
-                                                                    ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white font-bold'
-                                                                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-300'
-                                                            }`}
-                                                        >
-                                                            {dayLabel}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Schedule list */}
-                                            {!dayPeriods || Object.keys(dayPeriods).length === 0 ? (
-                                                <div className="text-center py-12 text-zinc-500 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
-                                                    No classes scheduled for {dayData?.dayname || `Day ${currentDayKey}`}
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    <div className="text-xs font-bold text-zinc-450 dark:text-zinc-500 mb-2 uppercase tracking-wider">
-                                                        Schedule: {dayData?.dayname}
-                                                    </div>
-                                                    <div className="grid grid-cols-1 gap-1">
-                                                        {Object.entries(dayPeriods).map(([key, p]) => {
-                                                            const isBreak = ["R", "L", "RC"].includes(key);
-                                                            if (isBreak) return null;
-                                                            return (
-                                                                <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50 rounded-lg">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px] rounded-sm">
-                                                                            P{key}
-                                                                        </span>
-                                                                        <span className="font-bold">{p.title}</span>
-                                                                    </div>
-                                                                    <div className="text-zinc-500 text-right text-[11px] flex gap-2">
-                                                                        {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800 rounded-sm">Rm {p.room}</span>}
-                                                                        {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                }
-                                
-                                // Fallback (daily timetable format)
-                                const periods = innerTimetable?.periods;
-                                if (!periods || Object.keys(periods).length === 0) {
-                                    return <div className="text-center py-4 text-zinc-500">[No periods found in schedule]</div>;
-                                }
-                                return (
-                                    <div className="grid grid-cols-1 gap-1">
-                                        {Object.entries(periods).map(([key, p]) => {
-                                            const isBreak = ["R", "L", "RC"].includes(key);
-                                            if (isBreak) return null;
-                                            return (
-                                                <div key={key} className="border border-zinc-200 dark:border-zinc-800 p-3 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="bg-black text-white dark:bg-white dark:text-black font-extrabold px-1.5 py-0.5 text-[10px] rounded-sm">
-                                                            P{key}
-                                                        </span>
-                                                        <span className="font-bold">{p.title}</span>
-                                                    </div>
-                                                    <div className="text-zinc-500 text-right text-[11px] flex gap-2">
-                                                        {p.room && <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 border border-zinc-200 dark:border-zinc-800 rounded-sm">Rm {p.room}</span>}
-                                                        {p.fullTeacher && <span className="py-0.5">{p.fullTeacher}</span>}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })()}
-                            
-                            <details className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
-                                <summary className="text-[10px] text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-300 cursor-pointer select-none">
-                                    [View Raw JSON Timetable Payload]
-                                </summary>
-                                <pre className="mt-2 p-3 bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-left overflow-auto max-h-48 text-[9px] text-zinc-400">
-                                    {JSON.stringify(selectedUserTimetable, null, 2)}
-                                </pre>
-                            </details>
-                        </div>
-                    ) : (
-                        <div className="text-center py-12 text-zinc-500">
-                            <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                            <p>No timetable data available for this user yet.</p>
-                            <p className="text-xs mt-1">Data is synced when the user logs in.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
-}
 
 {/* Edit User Modal */ }
 {
