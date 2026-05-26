@@ -37,6 +37,7 @@ app.use(express.json());
 // In-memory fallback storage (used only when POSTGRES_URL/DATABASE_URL is not set)
 let users = [];
 let logs = []; // System logs
+let aiUsageLogs = []; // AI usage logs memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -101,6 +102,33 @@ const addLog = async (action, user, details) => {
         'INSERT INTO logs (id, created_at, action, actor, details) VALUES ($1, NOW(), $2, $3, $4)',
         [log.id, log.action, log.user, log.details || null]
     );
+};
+
+const addAiLog = async (studentId, question, answer, provider, model) => {
+    const log = {
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        studentId: studentId || 'UNKNOWN',
+        question: question || '',
+        answer: answer || '',
+        provider: provider || 'unknown',
+        model: model || 'unknown'
+    };
+
+    if (!isDbEnabled) {
+        aiUsageLogs.unshift(log);
+        if (aiUsageLogs.length > 100) aiUsageLogs.pop();
+        return;
+    }
+
+    try {
+        await db.query(
+            'INSERT INTO ai_usage_logs (id, created_at, student_id, question, answer, provider, model) VALUES ($1, NOW(), $2, $3, $4, $5, $6)',
+            [log.id, log.studentId, log.question, log.answer, log.provider, log.model]
+        );
+    } catch (err) {
+        console.error('Failed to write AI log to DB:', err);
+    }
 };
 
 async function getSystemState() {
@@ -1209,69 +1237,72 @@ Answer the student's question:`;
         if (activeProvider === 'gemini') {
             const apiKey = process.env.GEMINI_API_KEY;
             if (!apiKey) {
-                return res.json({ answer: "AI features are temporarily unavailable because the API key is not configured on the server." });
+                answer = "AI features are temporarily unavailable because the API key is not configured on the server.";
+            } else {
+                console.log(`[ai] Querying Google Gemini API (${activeModel}) for Timetable Q&A...`);
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `${systemPrompt}\n\nQuestion: ${question}`
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.4,
+                            maxOutputTokens: 150
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Gemini API responded with status ${response.status}`);
+                }
+
+                const aiData = await response.json();
+                answer = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
             }
-
-            console.log(`[ai] Querying Google Gemini API (${activeModel}) for Timetable Q&A...`);
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `${systemPrompt}\n\nQuestion: ${question}`
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.4,
-                        maxOutputTokens: 150
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Gemini API responded with status ${response.status}`);
-            }
-
-            const aiData = await response.json();
-            answer = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
         } else {
             const apiKey = process.env.HACKCLUB_AI_API_KEY;
             if (!apiKey) {
-                return res.json({ answer: "AI features are temporarily unavailable because the API key is not configured on the server." });
+                answer = "AI features are temporarily unavailable because the API key is not configured on the server.";
+            } else {
+                console.log(`[ai] Querying Hack Club AI (${activeModel}) for Timetable Q&A...`);
+                const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: activeModel,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: question }
+                        ],
+                        temperature: 0.4,
+                        max_tokens: 150
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Hack Club AI responded with status ${response.status}`);
+                }
+
+                const aiData = await response.json();
+                answer = aiData.choices?.[0]?.message?.content?.trim() || '';
             }
-
-            console.log(`[ai] Querying Hack Club AI (${activeModel}) for Timetable Q&A...`);
-            const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: activeModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: question }
-                    ],
-                    temperature: 0.4,
-                    max_tokens: 150
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Hack Club AI responded with status ${response.status}`);
-            }
-
-            const aiData = await response.json();
-            answer = aiData.choices?.[0]?.message?.content?.trim() || '';
         }
 
+        await addAiLog(req.user?.studentId || 'UNKNOWN', question, answer, activeProvider, activeModel);
         res.json({ answer });
 
     } catch (err) {
         console.error('[ai-timetable-qa] Failed:', err);
-        res.status(500).json({ error: 'Failed to generate answer' });
+        const errMsg = 'Failed to generate answer';
+        await addAiLog(req.user?.studentId || 'UNKNOWN', req.body?.question || 'Unknown Question', `Error: ${err.message || err}`, activeProvider || 'unknown', activeModel || 'unknown').catch(() => {});
+        res.status(500).json({ error: errMsg });
     }
 });
 
@@ -1289,6 +1320,49 @@ app.post('/api/cache/clear', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to clear cache' });
     }
 });
+
+// GET /api/ai/logs (Admin only: view AI usage logs)
+app.get('/api/ai/logs', requireAuth, async (req, res) => {
+    try {
+        if (!isDbEnabled) {
+            return res.json(aiUsageLogs);
+        }
+        const result = await db.query(
+            'SELECT id, created_at, student_id, question, answer, provider, model FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100',
+            []
+        );
+        const out = result.rows.map(row => ({
+            id: row.id,
+            timestamp: row.created_at,
+            studentId: row.student_id,
+            question: row.question,
+            answer: row.answer,
+            provider: row.provider,
+            model: row.model
+        }));
+        res.json(out);
+    } catch (e) {
+        console.error('AI logs fetch error:', e);
+        res.status(500).json({ error: 'Failed to fetch AI usage logs' });
+    }
+});
+
+// POST /api/ai/cache/clear (Admin only: clear AI briefings cache)
+app.post('/api/ai/cache/clear', requireAuth, async (req, res) => {
+    try {
+        console.log('AI cache clear requested by admin');
+        aiMemoryCache = {};
+        if (isDbEnabled) {
+            await db.query('DELETE FROM ai_cache', []);
+        }
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', 'Cleared AI cache (briefing notices and summary)');
+        res.json({ success: true, message: 'AI Cache cleared successfully' });
+    } catch (e) {
+        console.error('Clear AI cache error:', e);
+        res.status(500).json({ error: 'Failed to clear AI cache' });
+    }
+});
+
 
 
 // --- NEW STUDENT & PORTAL ENDPOINTS ---

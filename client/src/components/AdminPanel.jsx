@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiConfig } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, fetchUserTimetable, promoteUserToAdmin, pruneOldLogs, clearAllTimetables, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 import Timetable from './Timetable';
 
@@ -11,6 +11,7 @@ const AdminPanel = ({ user }) => {
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
+    const [aiLogs, setAiLogs] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -36,14 +37,17 @@ const AdminPanel = ({ user }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [logSearchTerm, setLogSearchTerm] = useState('');
+    const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
     const [viewingUserId, setViewingUserId] = useState(null); // ID only, derive user from list
+    const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
     const [isClearingTimetables, setIsClearingTimetables] = useState(false);
+    const [clearingAiCache, setClearingAiCache] = useState(false);
 
     useEffect(() => {
         if (user && user.role === 'Admin') {
@@ -56,15 +60,20 @@ const AdminPanel = ({ user }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, statsData, logsData, systemData] = await Promise.all([
+            const [usersData, statsData, logsData, systemData, aiLogsData] = await Promise.all([
                 fetchUsers(),
                 fetchAdminStats(),
                 fetchLogs(),
-                fetchSystemStatus()
+                fetchSystemStatus(),
+                fetchAiLogs().catch(err => {
+                    console.warn("Failed to fetch AI logs:", err);
+                    return [];
+                })
             ]);
             setUsers(usersData);
             setStats(statsData);
             setLogs(logsData);
+            setAiLogs(aiLogsData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
@@ -219,6 +228,21 @@ const AdminPanel = ({ user }) => {
         }
     };
 
+    const handleClearAiCache = async () => {
+        if (!window.confirm("Are you sure you want to clear the AI briefing cache? This will force a new generation on the next student access.")) return;
+        setClearingAiCache(true);
+        try {
+            await clearAiCache();
+            alert("AI cache cleared successfully.");
+            loadData();
+        } catch (err) {
+            alert("Failed to clear AI cache.");
+        } finally {
+            setClearingAiCache(false);
+        }
+    };
+
+
 
     const handlePruneOldLogs = async () => {
         if (!window.confirm("Are you sure you want to prune old logs? This will delete all audit/system logs older than 30 days.")) return;
@@ -346,6 +370,18 @@ const AdminPanel = ({ user }) => {
         log.user?.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
         log.details?.toLowerCase().includes(logSearchTerm.toLowerCase())
     );
+
+    const filteredAiLogs = aiLogs.filter(log => {
+        const term = aiLogSearchTerm.toLowerCase();
+        return (
+            String(log.studentId || '').toLowerCase().includes(term) ||
+            String(log.question || '').toLowerCase().includes(term) ||
+            String(log.answer || '').toLowerCase().includes(term) ||
+            String(log.model || '').toLowerCase().includes(term) ||
+            String(log.provider || '').toLowerCase().includes(term)
+        );
+    });
+
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
@@ -789,6 +825,115 @@ const AdminPanel = ({ user }) => {
                         )}
                     </div>
                 </div>
+
+                {/* Timetable Text AI Usage Logs */}
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-200/20">
+                                <Brain className="w-5 h-5 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                                    Timetable Text AI Activity
+                                </h4>
+                                <p className="text-xs text-zinc-500 mt-1">Audit log of student questions and AI responses</p>
+                            </div>
+                        </div>
+                        <div className="relative w-full md:w-72">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                            <input
+                                type="text"
+                                placeholder="Search questions, student IDs, models..."
+                                value={aiLogSearchTerm}
+                                onChange={(e) => setAiLogSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+                    </div>
+
+                    {/* AI Quick Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Total Questions</span>
+                            <span className="text-xl font-bold text-zinc-900 dark:text-white mt-1 block">{aiLogs.length}</span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Filtered Queries</span>
+                            <span className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1 block">{filteredAiLogs.length}</span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Gemini API Calls</span>
+                            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">
+                                {aiLogs.filter(l => String(l.provider).toLowerCase() === 'gemini').length}
+                            </span>
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Hack Club AI Calls</span>
+                            <span className="text-xl font-bold text-green-600 dark:text-green-400 mt-1 block">
+                                {aiLogs.filter(l => String(l.provider).toLowerCase() !== 'gemini').length}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* AI Logs Feed */}
+                    <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <table className="w-full text-left border-collapse text-sm">
+                            <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-semibold border-b border-zinc-250 dark:border-zinc-850">
+                                <tr>
+                                    <th className="px-4 py-3 w-32">Time</th>
+                                    <th className="px-4 py-3 w-28">Student ID</th>
+                                    <th className="px-4 py-3 w-36">Model Provider</th>
+                                    <th className="px-4 py-3">Question</th>
+                                    <th className="px-4 py-3 w-24 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                {filteredAiLogs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-4 py-8 text-center text-zinc-500 font-mono text-xs">
+                                            {aiLogs.length === 0 ? '[NO AI USAGE LOGS FOUND]' : '[NO MATCHING LOGS FOUND]'}
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredAiLogs.map((log) => {
+                                        const isGemini = String(log.provider).toLowerCase() === 'gemini';
+                                        return (
+                                            <tr key={log.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 transition-colors">
+                                                <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
+                                                    {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                                <td className="px-4 py-3 text-xs text-zinc-650 dark:text-zinc-400 font-mono">
+                                                    {log.studentId}
+                                                </td>
+                                                <td className="px-4 py-3 text-xs whitespace-nowrap">
+                                                    <span className={`px-2 py-0.5 rounded-full font-semibold border text-[10px] ${
+                                                        isGemini 
+                                                            ? 'bg-blue-50/80 text-blue-700 border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30' 
+                                                            : 'bg-green-50/80 text-green-700 border-green-200/50 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'
+                                                    }`}>
+                                                        {isGemini ? 'Gemini' : 'Hack Club'} ({log.model?.split('/').pop()})
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-150 font-medium">
+                                                    {log.question}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        onClick={() => setViewingAiLog(log)}
+                                                        className="text-xs px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-lg transition-colors font-medium border border-zinc-200/20"
+                                                    >
+                                                        Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         )}
 
@@ -1169,6 +1314,22 @@ const AdminPanel = ({ user }) => {
                     </button>
                 </div>
 
+                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Sparkles size={16} className="text-purple-500" />
+                            Clear AI Cache
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1">Clear cached daily briefings and prioritized notices from the database and memory</p>
+                    </div>
+                    <button
+                        onClick={handleClearAiCache}
+                        disabled={clearingAiCache}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors text-sm shadow-sm disabled:opacity-50"
+                    >
+                        {clearingAiCache ? 'Clearing...' : 'Clear AI Cache'}
+                    </button>
+                </div>
 
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
@@ -1391,6 +1552,68 @@ const AdminPanel = ({ user }) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    )
+}
+
+{/* AI Log Detail Modal */}
+{
+    viewingAiLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 bg-purple-100 dark:bg-purple-950/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-200/20">
+                            <Brain className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">AI Log Details</h3>
+                            <p className="text-xs text-zinc-500 mt-1">Student: {viewingAiLog.studentId} • {new Date(viewingAiLog.timestamp).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setViewingAiLog(null)} className="p-2 hover:bg-zinc-150 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                    {/* Metadata */}
+                    <div className="grid grid-cols-2 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                        <div>
+                            <span className="text-zinc-450 dark:text-zinc-500 block mb-1">Provider</span>
+                            <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingAiLog.provider}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-450 dark:text-zinc-500 block mb-1">Model</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">{viewingAiLog.model}</span>
+                        </div>
+                    </div>
+
+                    {/* Question & Answer bubbles */}
+                    <div className="space-y-4 text-left">
+                        <div className="space-y-1.5">
+                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Question</span>
+                            <div className="p-4 bg-zinc-100 dark:bg-zinc-850 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
+                                {viewingAiLog.question}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">AI Response</span>
+                            <div className="p-4 bg-purple-50/30 dark:bg-purple-950/10 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tr-none border border-purple-100/20 dark:border-purple-900/30 text-sm whitespace-pre-wrap">
+                                {viewingAiLog.answer}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+                    <button
+                        onClick={() => setViewingAiLog(null)}
+                        className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     )

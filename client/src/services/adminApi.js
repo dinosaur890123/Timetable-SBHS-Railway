@@ -215,5 +215,33 @@ export const updateAiConfig = async (provider, model) => {
     }
 };
 
+export const fetchAiLogs = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/ai/logs`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch AI logs');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const clearAiCache = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/ai/cache/clear`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to clear AI cache');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+
 
 
