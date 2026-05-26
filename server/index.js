@@ -818,6 +818,9 @@ app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req,
 
         const dbUser = await getUserById(studentId);
         let stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
+        if (stripeCustomerId && stripeCustomerId.startsWith('cus_mock_')) {
+            stripeCustomerId = null;
+        }
 
         if (!stripeCustomerId) {
             const customer = await stripe.customers.create({
@@ -871,7 +874,10 @@ app.post('/api/billing/create-portal-session', requireStudentAuth, async (req, r
         }
 
         const dbUser = await getUserById(studentId);
-        const stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
+        let stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
+        if (stripeCustomerId && stripeCustomerId.startsWith('cus_mock_')) {
+            stripeCustomerId = null;
+        }
 
         if (!stripeCustomerId) {
             return res.status(400).json({ error: 'No active billing profile found. Please subscribe first.' });
