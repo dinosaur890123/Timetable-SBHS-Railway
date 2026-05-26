@@ -21,8 +21,9 @@ import {
   fetchAiBriefing
 } from './services/api';
 import { registerUser } from './services/adminApi';
+import { createCheckoutSession, createPortalSession, mockActivateSubscription } from './services/billingApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck } from 'lucide-react';
 
 function App() {
   // State
@@ -47,6 +48,10 @@ function App() {
   const [authError, setAuthError] = useState(null);
   const [aiBriefing, setAiBriefing] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  
+  // Billing State
+  const [billingMessage, setBillingMessage] = useState(null);
+  const [billingLoading, setBillingLoading] = useState(false);
   
   // System State
   const [broadcast, setBroadcast] = useState(null);
@@ -76,6 +81,57 @@ function App() {
     const interval = setInterval(pollStatus, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Handle billing query parameters and notifications
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billingStatus = params.get('billing');
+    
+    if (billingStatus) {
+      // Clean URL params without page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      if (billingStatus === 'success' || billingStatus === 'success-mock') {
+        setBillingMessage({
+          type: 'success',
+          text: billingStatus === 'success-mock'
+            ? 'Developer Mock Subscription Activated! Thank you for supporting Synchron Pro!'
+            : 'Upgrade Successful! Thank you for subscribing to Synchron Pro. Your account features have been unlocked!'
+        });
+        
+        // Re-trigger user sync/fetch user info to get the updated status from backend
+        if (user && user.studentId) {
+            registerUser({
+                id: user.studentId,
+                name: `${user.givenName} ${user.surname}`,
+                email: user.email,
+                year: user.yearGroup,
+                timetable: completeTimetable || undefined
+            }).then(dbSync => {
+                if (dbSync && dbSync.user) {
+                    setUser(prev => prev ? {
+                        ...prev,
+                        role: dbSync.user.role || prev.role,
+                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                        stripeCustomerId: dbSync.user.stripeCustomerId || null
+                    } : null);
+                }
+            }).catch(e => console.error("Billing sync failed", e));
+        }
+      } else if (billingStatus === 'cancel') {
+        setBillingMessage({
+          type: 'info',
+          text: 'Upgrade process cancelled. If you have any questions, feel free to contact support!'
+        });
+      } else if (billingStatus === 'manage-mock') {
+        setBillingMessage({
+          type: 'info',
+          text: 'Stripe Billing Portal is currently mocked. You can toggle your mock status below.'
+        });
+      }
+    }
+  }, [user?.studentId, completeTimetable]);
 
   // Theme Config
   useEffect(() => {
@@ -170,10 +226,15 @@ function App() {
                 year: userData.yearGroup,
                 timetable: completeTimetableData || undefined
             }).then(dbSync => {
-                if (dbSync && dbSync.user && dbSync.user.role) {
+                if (dbSync && dbSync.user) {
                     setUser(prev => {
-                        if (prev && prev.role !== dbSync.user.role) {
-                            return { ...prev, role: dbSync.user.role };
+                        if (prev) {
+                            return { 
+                                ...prev, 
+                                role: dbSync.user.role || prev.role,
+                                subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                                stripeCustomerId: dbSync.user.stripeCustomerId || null
+                            };
                         }
                         return prev;
                     });
@@ -396,71 +457,255 @@ function App() {
 
             {/* PROFILE VIEW (Simple placeholder) */}
             {currentView === 'profile' && (
-                <div className="max-w-md mx-auto bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 mt-10">
-                    <div className="w-24 h-24 bg-blue-500 rounded-full mx-auto flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
-                        {user?.givenName?.[0]}{user?.surname?.[0]}
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{user?.givenName} {user?.surname}</h2>
-                        <p className="text-zinc-500 mt-1">{user?.email}</p>
-                    </div>
-
-                    {/* AI Toggle Option */}
-                    <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-zinc-900 dark:text-white">AI Features</span>
-                            <button 
-                                onClick={() => setAiDisabled(prev => !prev)}
-                                className={`px-3 py-1.5 text-xs font-extrabold uppercase border transition ${
-                                    aiDisabled 
-                                        ? 'bg-zinc-200 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400' 
-                                        : 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                }`}
-                            >
-                                {aiDisabled ? 'Disabled' : 'Enabled'}
-                            </button>
+                <div className="max-w-md mx-auto space-y-6 mt-6">
+                    {/* Billing Message Alert */}
+                    {billingMessage && (
+                        <div className={`p-4 rounded-2xl border flex items-start gap-3 text-sm select-none ${
+                            billingMessage.type === 'success' 
+                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                : 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'
+                        }`}>
+                            <Info size={18} className="shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="font-semibold">{billingMessage.type === 'success' ? 'Subscription Updated' : 'Notice'}</p>
+                                <p className="text-xs opacity-90 mt-0.5">{billingMessage.text}</p>
+                            </div>
+                            <button onClick={() => setBillingMessage(null)} className="text-xs opacity-50 hover:opacity-100 font-bold">Dismiss</button>
                         </div>
-                        <p className="text-[11px] text-zinc-550">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
-                    </div>
+                    )}
 
-                    {/* Color Themes Section */}
-                    <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none">
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
-                        <div className="flex flex-wrap gap-2">
-                            {[
-                                { id: 'zinc', name: 'Default', color: 'bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100' },
-                                { id: 'mint', name: 'Mint', color: 'bg-emerald-600 border-emerald-600' },
-                                { id: 'amber', name: 'Amber', color: 'bg-amber-500 border-amber-500' },
-                                { id: 'blue', name: 'Blue', color: 'bg-blue-600 border-blue-600' },
-                                { id: 'violet', name: 'Violet', color: 'bg-violet-500 border-violet-500' },
-                                { id: 'rose', name: 'Rose', color: 'bg-rose-500 border-rose-500' },
-                                { id: 'teal', name: 'Teal', color: 'bg-teal-600 border-teal-600' },
-                                { id: 'orange', name: 'Orange', color: 'bg-orange-500 border-orange-500' },
-                                { id: 'sky', name: 'Sky', color: 'bg-sky-500 border-sky-500' }
-                            ].map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setColorTheme(t.id)}
-                                    className={`px-3 py-1.5 text-xs font-black uppercase border transition-all flex items-center gap-1.5 ${
-                                        colorTheme === t.id
-                                            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                            : 'bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                    <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm">
+                        <div className="relative w-24 h-24 mx-auto">
+                            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
+                                {user?.givenName?.[0]}{user?.surname?.[0]}
+                            </div>
+                            {user?.subscriptionStatus === 'active' && (
+                                <span className="absolute -bottom-1 -right-1 bg-violet-600 text-white p-1.5 rounded-xl border-4 border-white dark:border-zinc-900 shadow-md animate-bounce" title="Synchron Pro Active">
+                                    <Sparkles size={14} />
+                                </span>
+                            )}
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-2">
+                                {user?.givenName} {user?.surname}
+                                {user?.subscriptionStatus === 'active' && (
+                                    <span className="text-[10px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full animate-pulse">Pro</span>
+                                )}
+                            </h2>
+                            <p className="text-zinc-500 mt-1">{user?.email}</p>
+                        </div>
+
+                        {/* Synchron Pro Premium Billing Section */}
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-6 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none relative overflow-hidden space-y-4">
+                            {user?.subscriptionStatus === 'active' ? (
+                                <>
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl -z-10" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-violet-100 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400">
+                                            <ShieldCheck size={22} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Synchron Pro Subscriber</h3>
+                                            <p className="text-[11px] text-zinc-500 mt-0.5">Subscription active</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">
+                                        Thank you for subscribing! Your premium account is fully unlocked. You have access to AI assistants, custom themes, and early updates.
+                                    </p>
+                                    <button
+                                        disabled={billingLoading}
+                                        onClick={async () => {
+                                            setBillingLoading(true);
+                                            try {
+                                                const session = await createPortalSession();
+                                                if (session.url) {
+                                                    window.location.href = session.url;
+                                                }
+                                            } catch (e) {
+                                                alert(e.message || "Failed to load billing portal");
+                                            } finally {
+                                                setBillingLoading(false);
+                                            }
+                                        }}
+                                        className="w-full py-2.5 text-xs font-bold text-zinc-900 dark:text-white bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-xl transition flex items-center justify-center gap-2"
+                                    >
+                                        {billingLoading ? (
+                                            <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-zinc-650 dark:border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <CreditCard size={14} />
+                                                Manage Subscription
+                                            </>
+                                        )}
+                                    </button>
+                                    
+                                    {/* Developer controls (if local dev / mock mode) */}
+                                    {user.stripeCustomerId === 'cus_mock_123456' && (
+                                        <div className="pt-2 mt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                                            <span className="text-[10px] font-bold text-zinc-400">Dev Settings (Mock Stripe)</span>
+                                            <button
+                                                onClick={async () => {
+                                                    setBillingLoading(true);
+                                                    try {
+                                                        const res = await mockActivateSubscription(false);
+                                                        if (res.success) {
+                                                            setUser(prev => prev ? { ...prev, subscriptionStatus: null } : null);
+                                                            setBillingMessage({ type: 'info', text: 'Dev Mode: Mock subscription cancelled.' });
+                                                        }
+                                                    } catch (e) {
+                                                        alert(e.message);
+                                                    } finally {
+                                                        setBillingLoading(false);
+                                                    }
+                                                }}
+                                                className="text-[10px] text-red-500 hover:underline font-bold"
+                                            >
+                                                Downgrade to Free
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -z-10 animate-pulse" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+                                            <Sparkles size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Upgrade to Synchron Pro</h3>
+                                            <p className="text-[11px] text-zinc-500 mt-0.5">$5.00 AUD / month</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5 pt-1">
+                                        <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0 animate-pulse" />
+                                            <span>AI-Powered daily briefings & schedule Q&A</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />
+                                            <span>Unlimited access to custom theme colors</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
+                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />
+                                            <span>Priority backend updates & fast load times</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        disabled={billingLoading}
+                                        onClick={async () => {
+                                            setBillingLoading(true);
+                                            try {
+                                                const session = await createCheckoutSession();
+                                                if (session.url) {
+                                                    window.location.href = session.url;
+                                                }
+                                            } catch (e) {
+                                                alert(e.message || "Failed to start checkout");
+                                            } finally {
+                                                setBillingLoading(false);
+                                            }
+                                        }}
+                                        className="w-full py-2.5 text-xs font-bold text-white bg-black hover:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-zinc-100 rounded-xl transition flex items-center justify-center gap-2 shadow-sm font-space"
+                                    >
+                                        {billingLoading ? (
+                                            <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-white dark:border-zinc-650 dark:border-t-black rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <CreditCard size={14} />
+                                                Upgrade to Pro
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {/* Mock Subscriber Toggle for Dev Environments */}
+                                    <div className="pt-2 mt-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-zinc-400">Local Dev Testing</span>
+                                        <button
+                                            onClick={async () => {
+                                                setBillingLoading(true);
+                                                try {
+                                                    const res = await mockActivateSubscription(true);
+                                                    if (res.success) {
+                                                        setUser(prev => prev ? {
+                                                            ...prev,
+                                                            subscriptionStatus: 'active',
+                                                            stripeCustomerId: 'cus_mock_123456'
+                                                        } : null);
+                                                        setBillingMessage({ type: 'success', text: 'Dev Mode: Simulated active Pro subscription successfully!' });
+                                                    }
+                                                } catch (e) {
+                                                    alert(e.message);
+                                                } finally {
+                                                    setBillingLoading(false);
+                                                }
+                                            }}
+                                            className="text-[10px] text-blue-500 hover:underline font-bold"
+                                        >
+                                            Quick Mock Subscribe
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* AI Toggle Option */}
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-zinc-900 dark:text-white">AI Features</span>
+                                <button 
+                                    onClick={() => setAiDisabled(prev => !prev)}
+                                    className={`px-3 py-1.5 text-xs font-extrabold uppercase border transition rounded-lg ${
+                                        aiDisabled 
+                                            ? 'bg-zinc-200 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400' 
+                                            : 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                     }`}
-                                    title={t.name}
                                 >
-                                    <span className={`w-3.5 h-3.5 border ${t.color}`} />
-                                    {t.name}
+                                    {aiDisabled ? 'Disabled' : 'Enabled'}
                                 </button>
-                            ))}
+                            </div>
+                            <p className="text-[11px] text-zinc-500">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
                         </div>
-                    </div>
 
-                    <button 
-                        onClick={logout}
-                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
-                    >
-                        Sign Out
-                    </button>
+                        {/* Color Themes Section */}
+                        <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
+                            <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { id: 'zinc', name: 'Default', color: 'bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100' },
+                                    { id: 'mint', name: 'Mint', color: 'bg-emerald-600 border-emerald-600' },
+                                    { id: 'amber', name: 'Amber', color: 'bg-amber-500 border-amber-500' },
+                                    { id: 'blue', name: 'Blue', color: 'bg-blue-600 border-blue-600' },
+                                    { id: 'violet', name: 'Violet', color: 'bg-violet-500 border-violet-500' },
+                                    { id: 'rose', name: 'Rose', color: 'bg-rose-500 border-rose-500' },
+                                    { id: 'teal', name: 'Teal', color: 'bg-teal-600 border-teal-600' },
+                                    { id: 'orange', name: 'Orange', color: 'bg-orange-500 border-orange-500' },
+                                    { id: 'sky', name: 'Sky', color: 'bg-sky-500 border-sky-500' }
+                                ].map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setColorTheme(t.id)}
+                                        className={`px-3 py-1.5 text-xs font-black uppercase border transition-all flex items-center gap-1.5 rounded-lg ${
+                                            colorTheme === t.id
+                                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                                : 'bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                                        }`}
+                                        title={t.name}
+                                    >
+                                        <span className={`w-3.5 h-3.5 border rounded-sm ${t.color}`} />
+                                        {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={logout}
+                            className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
+                        >
+                            Sign Out
+                        </button>
+                    </div>
                 </div>
             )}
 

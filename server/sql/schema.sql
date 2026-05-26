@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS ai_usage_logs (
 
 CREATE INDEX IF NOT EXISTS ai_usage_logs_created_at_idx ON ai_usage_logs (created_at DESC);
 
-
-
-
+-- Stripe subscription billing migrations
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT NULL;
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS subscription_status TEXT NULL;

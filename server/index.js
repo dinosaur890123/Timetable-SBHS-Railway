@@ -7,6 +7,11 @@ const db = require('./db');
 
 dotenv.config();
 
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+if (!stripe) {
+    console.warn('[billing] STRIPE_SECRET_KEY is not configured. Stripe features will be mocked for local testing.');
+}
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -31,6 +36,93 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token']
 }));
+
+// Stripe Webhook Endpoint (needs raw body parser before express.json)
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!stripe) {
+        console.error('[webhook] Stripe is not configured.');
+        return res.status(500).json({ error: 'Stripe not configured' });
+    }
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+        console.error(`[webhook] Error verifying signature: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    console.log(`[webhook] Received event: ${event.type}`);
+
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed': {
+                const session = event.data.object;
+                const studentId = session.client_reference_id || (session.metadata && session.metadata.studentId);
+                const stripeCustomerId = session.customer;
+                const stripeSubscriptionId = session.subscription;
+                
+                let subscriptionStatus = 'active';
+                try {
+                    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+                    subscriptionStatus = subscription.status;
+                } catch (subErr) {
+                    console.error('[webhook] Error retrieving subscription details:', subErr);
+                }
+
+                if (studentId) {
+                    await updateUserSubscription(studentId, {
+                        stripeCustomerId,
+                        stripeSubscriptionId,
+                        subscriptionStatus
+                    });
+                    console.log(`[webhook] User subscription activated for studentId: ${studentId}`);
+                } else {
+                    console.error('[webhook] No studentId found in checkout session metadata or client_reference_id');
+                }
+                break;
+            }
+            case 'customer.subscription.updated': {
+                const subscription = event.data.object;
+                const stripeSubscriptionId = subscription.id;
+                const stripeCustomerId = subscription.customer;
+                const subscriptionStatus = subscription.status;
+
+                await updateUserSubscriptionByStripeId({
+                    stripeCustomerId,
+                    stripeSubscriptionId,
+                    subscriptionStatus
+                });
+                console.log(`[webhook] Subscription updated: ${stripeSubscriptionId} to status: ${subscriptionStatus}`);
+                break;
+            }
+            case 'customer.subscription.deleted': {
+                const subscription = event.data.object;
+                const stripeSubscriptionId = subscription.id;
+                const stripeCustomerId = subscription.customer;
+                const subscriptionStatus = 'canceled';
+
+                await updateUserSubscriptionByStripeId({
+                    stripeCustomerId,
+                    stripeSubscriptionId,
+                    subscriptionStatus
+                });
+                console.log(`[webhook] Subscription deleted: ${stripeSubscriptionId}`);
+                break;
+            }
+            default:
+                break;
+        }
+        res.json({ received: true });
+    } catch (err) {
+        console.error('[webhook] Error handling event:', err);
+        res.status(500).json({ error: 'Webhook handler failed' });
+    }
+});
 
 app.use(express.json());
 
@@ -215,7 +307,7 @@ async function listUsers() {
         return users;
     }
     const result = await db.query(
-        'SELECT id, name, email, role, year, status, joined, last_seen, timetable FROM app_users ORDER BY last_seen DESC, joined DESC',
+        'SELECT id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
     );
     return result.rows.map((row) => ({
@@ -228,6 +320,9 @@ async function listUsers() {
         joined: toIso(row.joined),
         lastSeen: toIso(row.last_seen),
         timetable: row.timetable ?? null,
+        stripeCustomerId: row.stripe_customer_id ?? null,
+        stripeSubscriptionId: row.stripe_subscription_id ?? null,
+        subscriptionStatus: row.subscription_status ?? null,
     }));
 }
 
@@ -271,6 +366,9 @@ async function upsertUser(newUser) {
             joined: new Date(),
             lastSeen: new Date(),
             timetable: safeUser.timetable || null,
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            subscriptionStatus: null
         };
         users.push(created);
         return created;
@@ -290,7 +388,7 @@ async function upsertUser(newUser) {
            year = COALESCE(EXCLUDED.year, app_users.year),
            timetable = COALESCE(EXCLUDED.timetable, app_users.timetable),
            last_seen = NOW()
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
         [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null, timetableJson]
     );
 
@@ -305,6 +403,9 @@ async function upsertUser(newUser) {
         joined: toIso(row.joined),
         lastSeen: toIso(row.last_seen),
         timetable: row.timetable ?? null,
+        stripeCustomerId: row.stripe_customer_id ?? null,
+        stripeSubscriptionId: row.stripe_subscription_id ?? null,
+        subscriptionStatus: row.subscription_status ?? null,
     };
 }
 
@@ -317,7 +418,7 @@ async function updateUserById(id, updates) {
         const userIndex = users.findIndex(u => String(u.id) === String(id));
         if (userIndex === -1) return null;
 
-        const allowedUpdates = ['role', 'name', 'year'];
+        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus'];
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) users[userIndex][field] = updates[field];
         });
@@ -328,6 +429,9 @@ async function updateUserById(id, updates) {
         role: 'role',
         name: 'name',
         year: 'year',
+        stripeCustomerId: 'stripe_customer_id',
+        stripeSubscriptionId: 'stripe_subscription_id',
+        subscriptionStatus: 'subscription_status'
     };
 
     const sets = [];
@@ -348,7 +452,7 @@ async function updateUserById(id, updates) {
     values.push(String(id));
     const result = await db.query(
         `UPDATE app_users SET ${sets.join(', ')} WHERE id = $${paramIndex}
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
         values
     );
 
@@ -364,6 +468,9 @@ async function updateUserById(id, updates) {
         joined: toIso(row.joined),
         lastSeen: toIso(row.last_seen),
         timetable: row.timetable ?? null,
+        stripeCustomerId: row.stripe_customer_id ?? null,
+        stripeSubscriptionId: row.stripe_subscription_id ?? null,
+        subscriptionStatus: row.subscription_status ?? null,
     };
 }
 
@@ -444,13 +551,132 @@ const requireStudentAuth = async (req, res, next) => {
 // Get a user by ID
 async function getUserById(id) {
     if (!isDbEnabled) {
-        return users.find(u => String(u.id) === String(id)) || null;
+        const u = users.find(u => String(u.id) === String(id));
+        if (!u) return null;
+        return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            status: u.status,
+            stripeCustomerId: u.stripeCustomerId ?? null,
+            stripeSubscriptionId: u.stripeSubscriptionId ?? null,
+            subscriptionStatus: u.subscriptionStatus ?? null
+        };
     }
     const result = await db.query(
-        'SELECT id, name, email, role, status FROM app_users WHERE id = $1',
+        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users WHERE id = $1',
         [String(id)]
     );
-    return result.rows[0] || null;
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        status: row.status,
+        stripeCustomerId: row.stripe_customer_id ?? null,
+        stripeSubscriptionId: row.stripe_subscription_id ?? null,
+        subscriptionStatus: row.subscription_status ?? null
+    };
+}
+
+// Update subscription status functions
+async function updateUserSubscription(studentId, { stripeCustomerId, stripeSubscriptionId, subscriptionStatus }) {
+    if (!isDbEnabled) {
+        const userIndex = users.findIndex(u => String(u.id) === String(studentId));
+        if (userIndex !== -1) {
+            if (stripeCustomerId !== undefined) users[userIndex].stripeCustomerId = stripeCustomerId;
+            if (stripeSubscriptionId !== undefined) users[userIndex].stripeSubscriptionId = stripeSubscriptionId;
+            if (subscriptionStatus !== undefined) users[userIndex].subscriptionStatus = subscriptionStatus;
+            return users[userIndex];
+        }
+        return null;
+    }
+
+    const sets = [];
+    const values = [];
+    let paramIndex = 2;
+
+    if (stripeCustomerId !== undefined) {
+        sets.push(`stripe_customer_id = $${paramIndex++}`);
+        values.push(stripeCustomerId);
+    }
+    if (stripeSubscriptionId !== undefined) {
+        sets.push(`stripe_subscription_id = $${paramIndex++}`);
+        values.push(stripeSubscriptionId);
+    }
+    if (subscriptionStatus !== undefined) {
+        sets.push(`subscription_status = $${paramIndex++}`);
+        values.push(subscriptionStatus);
+    }
+
+    if (sets.length === 0) return null;
+
+    values.unshift(String(studentId));
+    const result = await db.query(
+        `UPDATE app_users 
+         SET ${sets.join(', ')}
+         WHERE id = $1
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
+        values
+    );
+
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        year: row.year,
+        status: row.status,
+        joined: toIso(row.joined),
+        lastSeen: toIso(row.last_seen),
+        timetable: row.timetable ?? null,
+        stripeCustomerId: row.stripe_customer_id,
+        stripeSubscriptionId: row.stripe_subscription_id,
+        subscriptionStatus: row.subscription_status
+    };
+}
+
+async function updateUserSubscriptionByStripeId({ stripeCustomerId, stripeSubscriptionId, subscriptionStatus }) {
+    if (!isDbEnabled) {
+        let userIndex = users.findIndex(u => u.stripeSubscriptionId === stripeSubscriptionId);
+        if (userIndex === -1 && stripeCustomerId) {
+            userIndex = users.findIndex(u => u.stripeCustomerId === stripeCustomerId);
+        }
+        if (userIndex !== -1) {
+            users[userIndex].subscriptionStatus = subscriptionStatus;
+            if (stripeSubscriptionId) users[userIndex].stripeSubscriptionId = stripeSubscriptionId;
+            return users[userIndex];
+        }
+        return null;
+    }
+
+    let result;
+    if (stripeSubscriptionId) {
+        result = await db.query(
+            `UPDATE app_users 
+             SET subscription_status = $2
+             WHERE stripe_subscription_id = $1
+             RETURNING id, name`,
+            [stripeSubscriptionId, subscriptionStatus]
+        );
+    }
+
+    if ((!result || result.rows.length === 0) && stripeCustomerId) {
+        result = await db.query(
+            `UPDATE app_users 
+             SET subscription_status = $2
+             WHERE stripe_customer_id = $1
+             RETURNING id, name`,
+            [stripeCustomerId, subscriptionStatus]
+        );
+    }
+
+    return result ? result.rows[0] : null;
 }
 
 // Require admin privilege (Only users with Admin role in DB, or bootstrap list if not configured in DB as Student)
@@ -529,6 +755,141 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });
+    }
+});
+
+// GET /api/billing/status - Fetch latest billing status for the logged-in student
+app.get('/api/billing/status', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({
+            stripeCustomerId: dbUser.stripeCustomerId || null,
+            stripeSubscriptionId: dbUser.stripeSubscriptionId || null,
+            subscriptionStatus: dbUser.subscriptionStatus || null
+        });
+    } catch (e) {
+        console.error('Fetch billing status error:', e);
+        res.status(500).json({ error: 'Failed to fetch billing status' });
+    }
+});
+
+// POST /api/billing/create-checkout-session - Start checkout flow
+app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const email = req.user.email;
+        const name = `${req.user.givenName} ${req.user.surname}`;
+
+        if (!stripe) {
+            console.log('[billing] Stripe not initialized. Using developer mock checkout URL.');
+            const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
+            return res.json({ url: `${clientUrl}/?billing=success-mock`, mock: true });
+        }
+
+        const dbUser = await getUserById(studentId);
+        let stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
+
+        if (!stripeCustomerId) {
+            const customer = await stripe.customers.create({
+                email: email,
+                name: name,
+                metadata: { studentId }
+            });
+            stripeCustomerId = customer.id;
+            await updateUserSubscription(studentId, { stripeCustomerId });
+        }
+
+        const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
+        const priceId = process.env.STRIPE_PRICE_ID;
+        if (!priceId) {
+            return res.status(400).json({ error: 'Stripe Price ID (STRIPE_PRICE_ID) is not configured on the server.' });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+            customer: stripeCustomerId,
+            client_reference_id: studentId,
+            line_items: [
+                {
+                    price: priceId,
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription',
+            success_url: `${clientUrl}/?billing=success`,
+            cancel_url: `${clientUrl}/?billing=cancel`,
+            metadata: { studentId }
+        });
+
+        res.json({ url: session.url });
+    } catch (e) {
+        console.error('Create checkout session error:', e);
+        res.status(500).json({ error: e.message || 'Failed to create checkout session' });
+    }
+});
+
+// POST /api/billing/create-portal-session - Manage subscription in Stripe Customer Portal
+app.post('/api/billing/create-portal-session', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+
+        if (!stripe) {
+            console.log('[billing] Stripe not initialized. Using developer mock billing portal.');
+            const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
+            return res.json({ url: `${clientUrl}/?billing=manage-mock`, mock: true });
+        }
+
+        const dbUser = await getUserById(studentId);
+        const stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
+
+        if (!stripeCustomerId) {
+            return res.status(400).json({ error: 'No active billing profile found. Please subscribe first.' });
+        }
+
+        const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
+        const session = await stripe.billingPortal.sessions.create({
+            customer: stripeCustomerId,
+            return_url: clientUrl,
+        });
+
+        res.json({ url: session.url });
+    } catch (e) {
+        console.error('Create portal session error:', e);
+        res.status(500).json({ error: e.message || 'Failed to create portal session' });
+    }
+});
+
+// POST /api/billing/mock-activate - Simulate subscription change in dev (mocking stripe events)
+app.post('/api/billing/mock-activate', requireStudentAuth, async (req, res) => {
+    if (stripe) {
+        return res.status(400).json({ error: 'Mock billing is disabled in production environments where Stripe API is active.' });
+    }
+    try {
+        const studentId = String(req.user.studentId);
+        const { action } = req.body || {};
+
+        let updated;
+        if (action === 'subscribe') {
+            updated = await updateUserSubscription(studentId, {
+                stripeCustomerId: 'cus_mock_123456',
+                stripeSubscriptionId: 'sub_mock_123456',
+                subscriptionStatus: 'active'
+            });
+            await addLog('BILLING_MOCK', req.user?.studentId || 'MOCK', 'Simulated mock Pro subscription activation');
+        } else {
+            updated = await updateUserSubscription(studentId, {
+                subscriptionStatus: 'canceled'
+            });
+            await addLog('BILLING_MOCK', req.user?.studentId || 'MOCK', 'Simulated mock Pro subscription cancellation');
+        }
+
+        res.json({ success: true, user: updated });
+    } catch (e) {
+        console.error('Mock billing activate error:', e);
+        res.status(500).json({ error: 'Failed to toggle mock subscription' });
     }
 });
 
