@@ -767,6 +767,22 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
+// GET /api/billing/debug - Debug environment variables configuration
+app.get('/api/billing/debug', async (req, res) => {
+    res.json({
+        stripeInitialized: !!stripe,
+        envKeys: {
+            STRIPE_SECRET_KEY_defined: !!process.env.STRIPE_SECRET_KEY,
+            STRIPE_SECRET_KEY_length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0,
+            STRIPE_SECRET_KEY_prefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) : null,
+            STRIPE_WEBHOOK_SECRET_defined: !!process.env.STRIPE_WEBHOOK_SECRET,
+            SYNCHRON_PRO_PRICE_ID_defined: !!process.env.SYNCHRON_PRO_PRICE_ID,
+            STRIPE_CLIENT_URL: process.env.STRIPE_CLIENT_URL || null,
+            NODE_ENV: process.env.NODE_ENV || null
+        }
+    });
+});
+
 // GET /api/billing/status - Fetch latest billing status for the logged-in student
 app.get('/api/billing/status', requireStudentAuth, async (req, res) => {
     try {
