@@ -5,13 +5,14 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions } from '../services/api';
+import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
     { id: 'ai_briefing', w: 3, h: 1 },
     { id: 'current_class', w: 2, h: 2 },
     { id: 'notices', w: 1, h: 2 },
+    { id: 'transit_departures', w: 1, h: 1 },
     { id: 'next_class', w: 1, h: 1 },
     { id: 'stats', w: 1, h: 1 },
     { id: 'clock', w: 1, h: 1 }
@@ -29,7 +30,8 @@ const ALL_TILES = {
     quick_links: { title: 'Quick Links & Actions', minW: 1, maxW: 3, minH: 1, maxH: 1 },
     scratchpad: { title: 'Quick Scratchpad', minW: 1, maxW: 3, minH: 1, maxH: 2 },
     award_scheme_summary: { title: 'Awards Summary', minW: 1, maxW: 2, minH: 1, maxH: 1 },
-    clipboard_schedule: { title: 'Clipboard Training', minW: 1, maxW: 2, minH: 1, maxH: 1 }
+    clipboard_schedule: { title: 'Clipboard Training', minW: 1, maxW: 2, minH: 1, maxH: 1 },
+    transit_departures: { title: 'Live Transit Departures', minW: 1, maxW: 3, minH: 1, maxH: 2 }
 };
 
 
@@ -276,6 +278,225 @@ const ScratchpadWidget = () => {
                 placeholder="Type reminders, room changes, or study tasks here..."
                 className="w-full flex-1 min-h-[90px] bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-850 p-3 text-sm focus:outline-none focus:border-zinc-500 focus:dark:border-zinc-700 resize-none font-medium placeholder-zinc-400 dark:text-zinc-200 custom-scrollbar"
             />
+        </div>
+    );
+};
+
+// Live Transit departures Widget (Synchron Pro Feature)
+const TransitWidget = ({ user, setView }) => {
+    const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
+    const [stopName, setStopName] = useState(() => localStorage.getItem('transit_widget_stop') || 'Moore Park Light Rail');
+    const [tempStopName, setTempStopName] = useState(stopName);
+    const [departures, setDepartures] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [isConfiguring, setIsConfiguring] = useState(false);
+
+    const fetchDepartures = async () => {
+        if (!isProUser) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchTransitDepartures(stopName);
+            setDepartures(data);
+        } catch (err) {
+            console.error("Failed to fetch departures:", err);
+            setError("Failed to sync departures");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isProUser) return;
+        fetchDepartures();
+        const timer = setInterval(fetchDepartures, 60000);
+        return () => clearInterval(timer);
+    }, [stopName, isProUser]);
+
+    const handleSaveConfig = (e) => {
+        e.preventDefault();
+        const cleanName = tempStopName.trim();
+        if (!cleanName) return;
+        setStopName(cleanName);
+        localStorage.setItem('transit_widget_stop', cleanName);
+        setIsConfiguring(false);
+    };
+
+    // Lock screen for free tier
+    if (!isProUser) {
+        return (
+            <div className="relative overflow-hidden bg-gradient-to-br from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-between select-none text-left">
+                <div className="absolute -right-16 -top-16 w-36 h-36 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="16" x="3" y="4" rx="2"/><path d="M7 22v-2"/><path d="M17 22v-2"/><path d="M8 12h8"/><path d="M12 4v8"/></svg>
+                            Live Commute departures
+                        </h2>
+                        <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-red-650 text-white rounded-full">Pro Only</span>
+                    </div>
+                    <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-white leading-snug">Track Moore Park Light Rail & Buses Live</h3>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">Get active real-time countdown alerts for L2/L3 light rail or school buses directly on your dashboard. Fully customizable stops.</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setView && setView('profile')}
+                    className="mt-4 px-4 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white text-xs font-bold uppercase tracking-wider hover:from-red-700 hover:to-amber-700 transition active:scale-95 shrink-0 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Upgrade to Pro ($6.99)
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-1 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="16" x="3" y="4" rx="2"/><path d="M7 22v-2"/><path d="M17 22v-2"/><path d="M8 12h8"/><path d="M12 4v8"/></svg>
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-xs font-extrabold uppercase tracking-widest text-zinc-900 dark:text-white leading-none">
+                            Live departures
+                        </h2>
+                        <span className="text-[9px] font-mono text-zinc-400 block mt-0.5 max-w-[150px] truncate" title={stopName}>
+                            {stopName}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={() => {
+                            setIsConfiguring(!isConfiguring);
+                            setTempStopName(stopName);
+                        }}
+                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition"
+                        title="Configure Stop"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button
+                        onClick={fetchDepartures}
+                        disabled={loading}
+                        className={`p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition ${loading ? 'animate-spin' : ''}`}
+                        title="Refresh"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            {/* Main view area */}
+            <div className="flex-1 flex flex-col justify-center min-h-0">
+                {isConfiguring ? (
+                    <form onSubmit={handleSaveConfig} className="space-y-3 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200 text-left">
+                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block">
+                            Configure Station / Stop Name
+                        </label>
+                        <div className="flex flex-col gap-2">
+                            <input
+                                type="text"
+                                value={tempStopName}
+                                onChange={(e) => setTempStopName(e.target.value)}
+                                placeholder="e.g. Moore Park Light Rail"
+                                className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-850 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-1.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 border border-black dark:border-white"
+                                >
+                                    Save Stop
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsConfiguring(false)}
+                                    className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-850 text-[10px] font-black uppercase tracking-wider text-zinc-650 dark:text-zinc-400 transition"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                ) : loading && departures.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-zinc-400 font-mono text-[10px] uppercase tracking-widest">
+                        <div className="w-6 h-6 border-2 border-zinc-200 dark:border-zinc-800 border-t-zinc-500 dark:border-t-zinc-400 rounded-full animate-spin mb-2" />
+                        Fetching Live Times...
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-4 text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-950/30 p-3">
+                        ⚠️ {error}
+                        <button type="button" onClick={fetchDepartures} className="block mx-auto mt-2 text-[10px] font-black uppercase underline hover:text-red-700">Try Again</button>
+                    </div>
+                ) : departures.length === 0 ? (
+                    <div className="text-center py-6 text-zinc-450 font-mono text-[10px] uppercase tracking-widest italic">
+                        No active departures found
+                    </div>
+                ) : (
+                    /* Departures List */
+                    <div className="space-y-2.5 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
+                        {departures.slice(0, 5).map((dep, idx) => {
+                            const isLightRail = dep.type === 'Light Rail';
+                            const isTrain = dep.type === 'Train';
+                            const typeColor = isLightRail 
+                                ? 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/50' 
+                                : isTrain
+                                    ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-900/50'
+                                    : 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50';
+                            
+                            return (
+                                <div 
+                                    key={idx} 
+                                    className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2 last:border-b-0 last:pb-0 animate-in fade-in slide-in-from-bottom-1 duration-200"
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        {/* Route Badge */}
+                                        <span className={`w-9 py-0.5 border text-center text-xs font-black uppercase select-none ${typeColor}`}>
+                                            {dep.route}
+                                        </span>
+                                        {/* Destination */}
+                                        <span className="font-extrabold text-xs text-zinc-800 dark:text-zinc-200 truncate leading-tight">
+                                            {dep.destination}
+                                        </span>
+                                    </div>
+
+                                    {/* Departure Countdown */}
+                                    <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                                        <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                                            {dep.minutes === 0 ? 'Now' : `${dep.minutes}m`}
+                                        </span>
+                                        {dep.realtime ? (
+                                            <span className="relative flex h-2 w-2" title="Live real-time data">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                        ) : (
+                                            <span className="w-1.5 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" title="Scheduled time" />
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            {!isConfiguring && (
+                <div className="text-[8px] font-mono text-zinc-400 dark:text-zinc-550 flex items-center justify-between mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-900 select-none">
+                    <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                        TfNSW Live Proxy
+                    </span>
+                    <span>Auto-refresh 60s</span>
+                </div>
+            )}
         </div>
     );
 };
@@ -883,6 +1104,10 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <div className="text-xs font-semibold text-zinc-500 mt-2">No training sessions scheduled.</div>
                         )}
                     </div>
+                );
+            case 'transit_departures':
+                return (
+                    <TransitWidget user={user} setView={setView} />
                 );
             default:
                 return null;

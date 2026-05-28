@@ -133,7 +133,9 @@ const getSubjectBgColor = (subject) => {
     return colors[index];
 };
 
-const NotesView = ({ user, timetableData }) => {
+const NotesView = ({ user, timetableData, setView }) => {
+    const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
+
     const [notes, setNotes] = useState([]);
     const [activeNoteId, setActiveNoteId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -141,6 +143,52 @@ const NotesView = ({ user, timetableData }) => {
     const [sortBy, setSortBy] = useState('updatedAt-desc');
     const [previewMode, setPreviewMode] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    if (!isProUser) {
+        return (
+            <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white dark:bg-zinc-950 p-12 border-2 border-black dark:border-zinc-800 text-center relative overflow-hidden select-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="w-20 h-20 bg-purple-100 dark:bg-purple-950/40 rounded-2xl flex items-center justify-center mx-auto mb-6 text-purple-600 dark:text-purple-400 border border-purple-200/20">
+                        <BookOpen size={36} className="animate-pulse" />
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 bg-purple-600 text-white border border-purple-700">PRO FEATURE</span>
+                    </div>
+
+                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-2">Unlock Study Notes Platform</h2>
+                    
+                    <p className="text-zinc-550 dark:text-zinc-450 text-sm max-w-md mx-auto mb-8 leading-relaxed">
+                        Organise your school life. Take detailed notes, view instant Markdown previews, auto-save to the cloud, and categorize subjects automatically using your actual timetable.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8 text-left text-xs font-mono">
+                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
+                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">📝 Markdown Editor</span>
+                            Write notes in clean markdown with headings, bold, lists, and a live toggle preview.
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
+                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">📅 Class Suggestions</span>
+                            Subject tags are automatically populated using your custom class timetable.
+                        </div>
+                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
+                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">💾 Offline Auto-Save</span>
+                            Changes are saved instantly with full LocalStorage offline caching.
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setView && setView('profile')}
+                        className="px-6 py-3 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                    >
+                        Upgrade to Pro ($6.99 Lifetime)
+                    </button>
+                </div>
+            </div>
+        );
+    }
     
     // Save State: 'idle' | 'saving' | 'saved' | 'offline-saved' | 'error'
     const [saveStatus, setSaveStatus] = useState('idle');

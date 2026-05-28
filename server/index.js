@@ -1162,7 +1162,7 @@ app.put('/api/users/:id', requireAuth, async (req, res) => {
         if (!updated) return res.status(404).json({ error: 'User not found' });
         if (updated?.error) return res.status(400).json({ error: updated.error });
 
-        await addLog('UPDATE', updated.name || updated.id, `Updated fields: ${Object.keys(updates).join(', ')}`);
+        await addLog('UPDATE', updated.name || updated.id, `Updated fields: ${Object.keys(updates).join(', ')} by Admin (${req.user?.studentId || 'unknown'})`);
 
         res.json({ success: true, user: updated });
     } catch (e) {
@@ -2177,6 +2177,143 @@ registerRoutePair('/clipboard/departments/:id', requireStudentAuth, (req, res) =
 registerRoutePair('/clipboard/teams/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `clipboard/teams/${id}`, () => null);
+});
+
+// 35. Transit departures API (Synchron Pro Feature)
+registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: Transit widget requires a Synchron Pro subscription.' });
+        }
+
+        const { stopName = 'Moore Park Light Rail' } = req.query;
+        const apiKey = process.env.TRANSPORT_NSW_API_KEY;
+
+        if (apiKey) {
+            console.log(`[transit] Querying TfNSW APIs for: "${stopName}"`);
+            
+            // 1. Resolve stop name to ID using Stop Finder
+            const stopFinderUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/stop_finder');
+            stopFinderUrl.searchParams.append('outputFormat', 'rapidJSON');
+            stopFinderUrl.searchParams.append('type_sf', 'any');
+            stopFinderUrl.searchParams.append('name_sf', stopName);
+            stopFinderUrl.searchParams.append('TfNSWStopFinder', 'true');
+
+            const stopFinderRes = await fetch(stopFinderUrl.toString(), {
+                headers: { 'Authorization': `Apikey ${apiKey}` }
+            });
+
+            if (!stopFinderRes.ok) {
+                throw new Error(`Stop Finder failed with status ${stopFinderRes.status}`);
+            }
+
+            const stopFinderData = await stopFinderRes.json();
+            const points = stopFinderData.stopFinder?.points || [];
+            
+            // Filter to actual stops/stations
+            const matchedPoint = points.find(p => p.type === 'stop' || p.type === 'station') || points[0];
+            
+            if (!matchedPoint || !matchedPoint.id) {
+                return res.json([]); // No stops found
+            }
+
+            const stopId = matchedPoint.id;
+            console.log(`[transit] Resolved stop ID: ${stopId} (${matchedPoint.name})`);
+
+            // 2. Query Departure Monitor API
+            const depMonUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/departure_mon');
+            depMonUrl.searchParams.append('outputFormat', 'rapidJSON');
+            depMonUrl.searchParams.append('coordOutputFormat', 'EPSG:4326');
+            depMonUrl.searchParams.append('mode', 'direct');
+            depMonUrl.searchParams.append('type_dm', 'stop');
+            depMonUrl.searchParams.append('name_dm', stopId);
+            depMonUrl.searchParams.append('TfNSWDM', 'true');
+
+            const depMonRes = await fetch(depMonUrl.toString(), {
+                headers: { 'Authorization': `Apikey ${apiKey}` }
+            });
+
+            if (!depMonRes.ok) {
+                throw new Error(`Departure Monitor failed with status ${depMonRes.status}`);
+            }
+
+            const depMonData = await depMonRes.json();
+            const stopEvents = depMonData.stopEvents || [];
+            
+            const now = new Date();
+            const departures = stopEvents.map(event => {
+                const planned = new Date(event.departureTimePlanned);
+                const estimated = event.departureTimeEstimated ? new Date(event.departureTimeEstimated) : null;
+                const actualTime = estimated || planned;
+                const diffMs = actualTime - now;
+                const minutes = Math.max(0, Math.round(diffMs / 60000));
+                
+                const route = event.transportation?.number || event.transportation?.name || 'Bus';
+                let type = 'Bus';
+                if (route.startsWith('L') && !isNaN(route.substring(1))) {
+                    type = 'Light Rail';
+                } else if (route.startsWith('T') && !isNaN(route.substring(1))) {
+                    type = 'Train';
+                }
+
+                return {
+                    route,
+                    destination: event.transportation?.destination?.name || 'Unknown',
+                    minutes,
+                    realtime: !!event.departureTimeEstimated,
+                    type
+                };
+            });
+
+            return res.json(departures.slice(0, 10)); // Limit to top 10 departures
+        } else {
+            // fallback to dynamic simulated mock data
+            const nowMs = Date.now();
+            const getMockMinutes = (interval, offset) => {
+                const cycle = interval * 60 * 1000;
+                const elapsed = (nowMs + offset * 60 * 1000) % cycle;
+                return Math.max(0, Math.round((cycle - elapsed) / 60000));
+            };
+
+            let departures = [];
+            const cleanStopName = stopName.toLowerCase();
+            if (cleanStopName.includes('moore') || cleanStopName.includes('park')) {
+                departures = [
+                    { route: 'L2', destination: 'Circular Quay via Central', minutes: getMockMinutes(10, 0), realtime: true, type: 'Light Rail' },
+                    { route: 'L3', destination: 'Circular Quay via Central', minutes: getMockMinutes(12, 3), realtime: true, type: 'Light Rail' },
+                    { route: 'L2', destination: 'Randwick', minutes: getMockMinutes(10, 5), realtime: true, type: 'Light Rail' },
+                    { route: 'L3', destination: 'Kingsford', minutes: getMockMinutes(12, 8), realtime: true, type: 'Light Rail' },
+                    { route: '396', destination: 'Circular Quay', minutes: getMockMinutes(15, 2), realtime: false, type: 'Bus' },
+                    { route: '374', destination: 'Central Pitt St', minutes: getMockMinutes(20, 11), realtime: true, type: 'Bus' }
+                ];
+            } else if (cleanStopName.includes('central')) {
+                departures = [
+                    { route: 'T1', destination: 'Hornsby via Chatswood', minutes: getMockMinutes(6, 1), realtime: true, type: 'Train' },
+                    { route: 'T2', destination: 'Parramatta', minutes: getMockMinutes(8, 2), realtime: true, type: 'Train' },
+                    { route: 'T8', destination: 'Macarthur via Airport', minutes: getMockMinutes(10, 4), realtime: true, type: 'Train' },
+                    { route: 'L2', destination: 'Randwick', minutes: getMockMinutes(10, 0), realtime: true, type: 'Light Rail' },
+                    { route: 'L3', destination: 'Kingsford', minutes: getMockMinutes(12, 2), realtime: true, type: 'Light Rail' }
+                ];
+            } else {
+                departures = [
+                    { route: '396', destination: 'City Circular Quay', minutes: getMockMinutes(15, 0), realtime: true, type: 'Bus' },
+                    { route: '373', destination: 'Coogee Beach', minutes: getMockMinutes(12, 4), realtime: true, type: 'Bus' },
+                    { route: 'L2', destination: 'Circular Quay', minutes: getMockMinutes(10, 5), realtime: true, type: 'Light Rail' }
+                ];
+            }
+            departures.sort((a, b) => a.minutes - b.minutes);
+            return res.json(departures);
+        }
+    } catch (e) {
+        console.error('Transit API error:', e);
+        res.status(500).json({ error: 'Failed to fetch transit departures' });
+    }
 });
 
 // Health check endpoint (public)
