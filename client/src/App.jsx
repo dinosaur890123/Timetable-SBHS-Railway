@@ -487,13 +487,48 @@ function App() {
             {currentView === 'profile' && (() => {
                 const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
                 return (
-                    <div className="max-w-5xl mx-auto w-full px-4 h-[calc(100vh-120px)] flex flex-col md:flex-row gap-6 mt-6 pb-12">
+                    <div className="max-w-5xl mx-auto w-full px-4 flex flex-col md:flex-row gap-6 mt-6 pb-12">
                         
-                        {/* Left Third (Static) */}
-                        <div className="w-full md:w-1/3 flex flex-col gap-6 shrink-0 h-full">
+                        {/* Left Third (Sticky Sidebar) */}
+                        <div className="w-full md:w-1/3 flex flex-col gap-6 shrink-0 md:sticky md:top-24 h-max">
+                            <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm flex flex-col">
+                                <div>
+                                    <div className="relative w-24 h-24 mx-auto">
+                                        <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
+                                            {user?.givenName?.[0]}{user?.surname?.[0]}
+                                        </div>
+                                        {isProUser && (
+                                            <span className="absolute -bottom-1 -right-1 bg-violet-600 text-white p-1.5 rounded-xl border-4 border-white dark:border-zinc-900 shadow-md animate-bounce" title="Synchron Pro Active">
+                                                <Sparkles size={14} />
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="mt-6 flex flex-col items-center w-full">
+                                        <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white flex flex-wrap items-center justify-center gap-2 text-center w-full break-words leading-tight">
+                                            <span>{user?.givenName} {user?.surname}</span>
+                                            {isProUser && (
+                                                <span className="text-[10px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white rounded-full animate-pulse shrink-0">Pro</span>
+                                            )}
+                                        </h2>
+                                        <p className="text-[11px] text-zinc-500 mt-1 text-center w-full break-all px-2">{user?.email}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-2">
+                                    <button 
+                                        onClick={logout}
+                                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Two-Thirds (Scrolls with page) */}
+                        <div className="w-full md:w-2/3 flex flex-col gap-6">
                             {/* Billing Message Alert */}
                             {billingMessage && (
-                                <div className={`p-4 rounded-2xl border flex items-start gap-3 text-sm select-none ${
+                                <div className={`p-4 rounded-2xl border flex items-start gap-3 text-sm select-none shadow-sm ${
                                     billingMessage.type === 'success' 
                                         ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400'
                                         : 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'
@@ -507,29 +542,8 @@ function App() {
                                 </div>
                             )}
 
-                            <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm flex flex-col">
-                                <div>
-                                    <div className="relative w-24 h-24 mx-auto">
-                                        <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
-                                            {user?.givenName?.[0]}{user?.surname?.[0]}
-                                        </div>
-                                        {isProUser && (
-                                            <span className="absolute -bottom-1 -right-1 bg-violet-600 text-white p-1.5 rounded-xl border-4 border-white dark:border-zinc-900 shadow-md animate-bounce" title="Synchron Pro Active">
-                                                <Sparkles size={14} />
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="mt-6">
-                                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-2">
-                                            {user?.givenName} {user?.surname}
-                                            {isProUser && (
-                                                <span className="text-[10px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white rounded-full animate-pulse">Pro</span>
-                                            )}
-                                        </h2>
-                                        <p className="text-zinc-500 mt-1">{user?.email}</p>
-                                    </div>
-                                </div>
-
+                            <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm">
+                                
                                 {/* Synchron Pro Premium Billing Section */}
                                 <div className="border border-zinc-200 dark:border-zinc-800 p-6 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none relative overflow-hidden space-y-4">
                                     {isProUser ? (
@@ -670,20 +684,7 @@ function App() {
                                         ))}
                                     </div>
                                 </div>
-                                <div className="mt-auto pt-2">
-                                    <button 
-                                        onClick={logout}
-                                        className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
-                                    >
-                                        Sign Out
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Right Two-Thirds (Scrollable) */}
-                        <div className="w-full md:w-2/3 h-full overflow-y-auto pr-2">
-                            <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm min-h-max">
                                 {/* AI Toggle Option */}
                                 <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
                                     <div className="flex items-center justify-between">
