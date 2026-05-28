@@ -478,7 +478,7 @@ function App() {
             {currentView === 'clipboard' && <ClipboardView user={user} />}
              
             {/* NOTES VIEW */}
-            {currentView === 'notes' && <NotesView user={user} timetableData={timetable} />}
+            {currentView === 'notes' && <NotesView user={user} timetableData={timetable} setView={setCurrentView} />}
 
             {/* ADMIN VIEW */}
             {currentView === 'admin' && <AdminPanel user={user} />}

@@ -594,4 +594,8 @@ export const fetchGlobalDepartments = () =>
 export const fetchGlobalDepartmentDetail = (id) => fetchFromBackend(`/clipboard/departments/${id}`);
 export const fetchGlobalTeamDetail = (id) => fetchFromBackend(`/clipboard/teams/${id}`);
 
+export const fetchTransitDepartures = (stopName) => 
+    fetchFromBackend(`/transit/departures?stopName=${encodeURIComponent(stopName || 'Moore Park Light Rail')}`);
+
+
 
