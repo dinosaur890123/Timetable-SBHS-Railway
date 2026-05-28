@@ -479,7 +479,7 @@ const TransitWidget = ({ user, setView }) => {
                                     onClick={() => setView && setView('profile')}
                                     className="px-3 py-1 bg-gradient-to-r from-red-600 to-amber-600 text-white text-[8px] font-black uppercase tracking-wider hover:opacity-90 transition active:scale-95 rounded-md shadow-sm"
                                 >
-                                    Upgrade — $6.99
+                                    Upgrade — $5/year
                                 </button>
                             </div>
                         )}
