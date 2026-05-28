@@ -53,4 +53,27 @@ export const createPortalSession = async () => {
     }
 };
 
+/**
+ * Updates the user's profile settings (e.g., supporter checkbox toggle)
+ * @param {boolean} showSupporter - Whether to show the user's name as a supporter
+ * @returns {Promise<any>}
+ */
+export const updateProfileSettings = async (showSupporter) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/profile`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ showSupporter })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to update profile settings');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Billing API Error (updateProfileSettings):", error);
+        throw error;
+    }
+};
+
 

@@ -311,7 +311,7 @@ async function listUsers() {
         return users;
     }
     const result = await db.query(
-        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users ORDER BY last_seen DESC, joined DESC',
+        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
     );
     return result.rows.map((row) => ({
@@ -326,6 +326,7 @@ async function listUsers() {
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
+        showSupporter: row.show_supporter !== false,
     }));
 }
 
@@ -360,7 +361,8 @@ async function upsertUser(newUser) {
             lastSeen: new Date(),
             stripeCustomerId: null,
             stripeSubscriptionId: null,
-            subscriptionStatus: null
+            subscriptionStatus: null,
+            showSupporter: true
         };
         users.push(created);
         return created;
@@ -378,7 +380,7 @@ async function upsertUser(newUser) {
            name = COALESCE(EXCLUDED.name, app_users.name),
            year = COALESCE(EXCLUDED.year, app_users.year),
            last_seen = NOW()
-         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
         [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null]
     );
 
@@ -396,6 +398,7 @@ async function upsertUser(newUser) {
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
+        showSupporter: row.show_supporter !== false,
     };
 }
 
@@ -408,7 +411,7 @@ async function updateUserById(id, updates) {
         const userIndex = users.findIndex(u => String(u.id) === String(id));
         if (userIndex === -1) return null;
 
-        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus'];
+        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus', 'showSupporter'];
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) users[userIndex][field] = updates[field];
         });
@@ -421,7 +424,8 @@ async function updateUserById(id, updates) {
         year: 'year',
         stripeCustomerId: 'stripe_customer_id',
         stripeSubscriptionId: 'stripe_subscription_id',
-        subscriptionStatus: 'subscription_status'
+        subscriptionStatus: 'subscription_status',
+        showSupporter: 'show_supporter'
     };
 
     const sets = [];
@@ -442,7 +446,7 @@ async function updateUserById(id, updates) {
     values.push(String(id));
     const result = await db.query(
         `UPDATE app_users SET ${sets.join(', ')} WHERE id = $${paramIndex}
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
         values
     );
 
@@ -461,6 +465,7 @@ async function updateUserById(id, updates) {
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
+        showSupporter: row.show_supporter !== false,
     };
 }
 
@@ -551,11 +556,12 @@ async function getUserById(id) {
             status: u.status,
             stripeCustomerId: u.stripeCustomerId ?? null,
             stripeSubscriptionId: u.stripeSubscriptionId ?? null,
-            subscriptionStatus: u.subscriptionStatus ?? null
+            subscriptionStatus: u.subscriptionStatus ?? null,
+            showSupporter: u.showSupporter !== false
         };
     }
     const result = await db.query(
-        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status FROM app_users WHERE id = $1',
+        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users WHERE id = $1',
         [String(id)]
     );
     if (result.rows.length === 0) return null;
@@ -568,7 +574,8 @@ async function getUserById(id) {
         status: row.status,
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
-        subscriptionStatus: row.subscription_status ?? null
+        subscriptionStatus: row.subscription_status ?? null,
+        showSupporter: row.show_supporter !== false
     };
 }
 
@@ -739,6 +746,57 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });
+    }
+});
+
+// POST /api/users/profile - Update student settings (e.g. show_supporter toggle)
+app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = req.user.studentId;
+        const { showSupporter } = req.body || {};
+        
+        let updated;
+        if (!isDbEnabled) {
+            const userIndex = users.findIndex(u => String(u.id) === String(studentId));
+            if (userIndex !== -1) {
+                if (showSupporter !== undefined) {
+                    users[userIndex].showSupporter = Boolean(showSupporter);
+                }
+                updated = users[userIndex];
+            }
+        } else {
+            const result = await db.query(
+                `UPDATE app_users SET show_supporter = $1 WHERE id = $2
+                 RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
+                [Boolean(showSupporter), String(studentId)]
+            );
+            if (result.rows.length > 0) {
+                const row = result.rows[0];
+                updated = {
+                    id: row.id,
+                    name: row.name,
+                    email: row.email,
+                    role: row.role,
+                    year: row.year,
+                    status: row.status,
+                    joined: toIso(row.joined),
+                    lastSeen: toIso(row.last_seen),
+                    stripeCustomerId: row.stripe_customer_id ?? null,
+                    stripeSubscriptionId: row.stripe_subscription_id ?? null,
+                    subscriptionStatus: row.subscription_status ?? null,
+                    showSupporter: row.show_supporter !== false
+                };
+            }
+        }
+        
+        if (!updated) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ success: true, user: updated });
+    } catch (e) {
+        console.error('Update profile error:', e);
+        res.status(500).json({ error: 'Failed to update settings' });
     }
 });
 
@@ -1151,15 +1209,36 @@ app.get('/api/broadcast', requireAuth, async (req, res) => {
     }
 });
 
+async function getSupporters() {
+    if (!isDbEnabled) {
+        return users
+            .filter(u => (u.subscriptionStatus === 'active' || u.subscriptionStatus === 'pro') && u.showSupporter !== false)
+            .map(u => u.name)
+            .filter(Boolean);
+    }
+    try {
+        const result = await db.query(
+            "SELECT name FROM app_users WHERE (subscription_status = 'active' OR subscription_status = 'pro') AND show_supporter = TRUE",
+            []
+        );
+        return result.rows.map(r => r.name).filter(Boolean);
+    } catch (err) {
+        console.error('Failed to fetch supporters:', err);
+        return [];
+    }
+}
+
 // GET /api/system/status (Public endpoint for client app)
 app.get('/api/system/status', (req, res) => {
     (async () => {
         try {
             const state = await getSystemState();
+            const supporters = await getSupporters();
             res.json({
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
-                version: VERSION
+                version: VERSION,
+                supporters
             });
         } catch (e) {
             console.error('System status error:', e);
@@ -1278,6 +1357,16 @@ let aiMemoryCache = {};
 // POST /api/ai/briefing
 app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
     try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
+        }
+
         const notices = req.body.notices || [];
         const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
@@ -1485,6 +1574,16 @@ Return ONLY the JSON. Do not include markdown code block wraps.`;
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, async (req, res) => {
     try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
+        }
+
         const { question, timetable, currentMinutes, completeTimetable } = req.body || {};
         if (!question) {
             return res.status(400).json({ error: 'Missing question' });

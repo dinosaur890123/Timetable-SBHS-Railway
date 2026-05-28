@@ -629,7 +629,36 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     // Render individual tile elements based on their id
     const renderTileContent = (id) => {
         switch (id) {
-            case 'ai_briefing':
+            case 'ai_briefing': {
+                const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
+                if (!isProUser) {
+                    return (
+                        <div className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 md:p-8 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-center select-none">
+                            <div className="absolute -right-16 -top-16 w-44 h-44 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+                                <div className="flex items-center gap-4">
+                                    <div className="shrink-0 flex items-center justify-center w-12 h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
+                                        <Sparkles size={24} className="text-violet-400" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                            Daily AI Briefing
+                                            <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
+                                        </h2>
+                                        <h3 className="text-base font-bold text-white mt-1">Unlock Personalized Morning Briefings</h3>
+                                        <p className="text-xs text-zinc-400">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $6.99 lifetime.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setView && setView('profile')}
+                                    className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
+                                >
+                                    Upgrade ($6.99)
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
                 if (!aiLoading && !aiBriefing) {
                     return (
                         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex items-center justify-center text-center text-zinc-500 text-sm">
@@ -663,6 +692,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         </div>
                     </div>
                 );
+            }
             case 'current_class':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center">

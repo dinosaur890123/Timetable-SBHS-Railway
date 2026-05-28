@@ -151,7 +151,8 @@ const AdminPanel = ({ user }) => {
             // Collect form data
             const formData = new FormData(e.target);
             const updates = {
-                role: formData.get('role')
+                role: formData.get('role'),
+                subscriptionStatus: formData.get('subscriptionStatus') === 'active' ? 'active' : null
             };
 
             await updateUser(editingUser.id, updates);
@@ -1096,6 +1097,7 @@ const AdminPanel = ({ user }) => {
                             <th className="px-6 py-4">Name</th>
                             <th className="px-6 py-4">ID</th>
                             <th className="px-6 py-4">Role</th>
+                            <th className="px-6 py-4">Pro</th>
                             <th className="px-6 py-4">Year</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
@@ -1103,7 +1105,7 @@ const AdminPanel = ({ user }) => {
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                         {loading ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
+                                <td colSpan="6" className="px-6 py-8 text-center text-zinc-550">
                                     <div className="flex items-center justify-center gap-2">
                                         <RefreshCw className="animate-spin w-4 h-4" />
                                         Loading users...
@@ -1112,7 +1114,7 @@ const AdminPanel = ({ user }) => {
                             </tr>
                         ) : filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
+                                <td colSpan="6" className="px-6 py-8 text-center text-zinc-550">
                                     No users found.
                                 </td>
                             </tr>
@@ -1138,6 +1140,13 @@ const AdminPanel = ({ user }) => {
                                             ${user.role === 'Admin' ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white' :
                                             'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'}`}>
                                         {user.role}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold
+                                            ${(user.subscriptionStatus === 'active' || user.subscriptionStatus === 'pro') ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800/40' :
+                                            'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'}`}>
+                                        {(user.subscriptionStatus === 'active' || user.subscriptionStatus === 'pro') ? 'Pro' : 'No'}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{user.year}</td>
@@ -1342,6 +1351,13 @@ const AdminPanel = ({ user }) => {
                         <select name="role" defaultValue={editingUser.role} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg dark:text-white">
                             <option value="Student">Student</option>
                             <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Synchron Pro Status</label>
+                        <select name="subscriptionStatus" defaultValue={editingUser.subscriptionStatus === 'active' || editingUser.subscriptionStatus === 'pro' ? 'active' : 'none'} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg dark:text-white">
+                            <option value="none">Standard (None)</option>
+                            <option value="active">Active (Pro)</option>
                         </select>
                     </div>
                     <div className="pt-4">
