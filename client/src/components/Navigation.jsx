@@ -4,7 +4,7 @@ import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Awa
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-2 md:px-2 md:py-1.5 border transition-all flex-1 md:w-full md:flex-none md:rounded-xl text-center
+    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all flex-1 md:w-full md:rounded-xl text-center
       ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500' : ''}
       ${isActive 
         ? (isSpecialAdmin 
@@ -36,9 +36,9 @@ const Navigation = ({ currentView, setView, user }) => {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full md:relative md:w-24 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
-       <div className="flex md:flex-col justify-around md:justify-start gap-1 p-1 md:gap-1 md:p-2 h-full w-full">
-         <div className="hidden md:flex items-center justify-center py-4 mb-4">
+    <nav className="fixed bottom-0 left-0 w-full md:sticky md:top-0 md:w-24 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
+       <div className="flex md:flex-col justify-around gap-2 p-2 md:gap-3 md:p-3 h-full w-full">
+         <div className="hidden md:flex items-center justify-center py-4 mb-2">
              <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center">
                  <span className="text-white dark:text-black font-extrabold text-xl">S</span>
              </div>
