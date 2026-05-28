@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, FileText } from 'lucide-react';
+import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
   <button
@@ -28,7 +28,7 @@ const Navigation = ({ currentView, setView, user }) => {
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'awards', icon: Award, label: 'Awards' },
     { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
-    { id: 'notes', icon: FileText, label: 'Notes' },
+    { id: 'notes', icon: GraduationCap, label: 'Study' },
   ];
 
   if (isAdmin) {
