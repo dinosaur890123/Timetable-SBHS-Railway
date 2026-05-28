@@ -9,6 +9,7 @@ import LandingPage from './components/LandingPage';
 import Home from './components/Home';
 import AwardSchemeView from './components/AwardSchemeView';
 import ClipboardView from './components/ClipboardView';
+import NotesView from './components/NotesView';
 import { 
   fetchDayTimetable, 
   fetchDailyNews, 
@@ -347,7 +348,7 @@ function App() {
   if (!user) {
     return (
         <div className="transition-colors bg-white dark:bg-zinc-950">
-            <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} />
+            <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} />
         </div>
     );
   }
@@ -476,6 +477,9 @@ function App() {
             {/* CLIPBOARD VIEW */}
             {currentView === 'clipboard' && <ClipboardView user={user} />}
              
+            {/* NOTES VIEW */}
+            {currentView === 'notes' && <NotesView user={user} timetableData={timetable} />}
+
             {/* ADMIN VIEW */}
             {currentView === 'admin' && <AdminPanel user={user} />}
 

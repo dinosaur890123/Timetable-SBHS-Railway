@@ -139,6 +139,7 @@ app.use(express.json());
 let users = [];
 let logs = []; // System logs
 let aiUsageLogs = []; // AI usage logs memory fallback
+let notes = []; // Study notes memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -797,6 +798,175 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Update profile error:', e);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+// --- Study Notes Endpoints (CRUD) ---
+
+// GET /api/notes - Retrieve notes for authenticated student
+app.get('/api/notes', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        if (!isDbEnabled) {
+            const studentNotes = notes.filter(n => String(n.studentId) === studentId);
+            return res.json({ success: true, notes: studentNotes });
+        }
+        
+        const result = await db.query(
+            'SELECT id, subject, title, content, created_at, updated_at FROM app_notes WHERE student_id = $1 ORDER BY updated_at DESC',
+            [studentId]
+        );
+        
+        const formattedNotes = result.rows.map(row => ({
+            id: row.id,
+            subject: row.subject,
+            title: row.title,
+            content: row.content,
+            createdAt: toIso(row.created_at),
+            updatedAt: toIso(row.updated_at)
+        }));
+        
+        res.json({ success: true, notes: formattedNotes });
+    } catch (e) {
+        console.error('Fetch notes error:', e);
+        res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+});
+
+// POST /api/notes - Create or update a note
+app.post('/api/notes', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { id, subject, title, content } = req.body || {};
+        
+        if (!id || !subject || !title || content === undefined) {
+            return res.status(400).json({ error: 'Missing required note fields (id, subject, title, content)' });
+        }
+        
+        const noteId = String(id);
+        const noteSubject = String(subject);
+        const noteTitle = String(title);
+        const noteContent = String(content);
+        const now = new Date();
+        
+        let savedNote;
+        if (!isDbEnabled) {
+            const existingIndex = notes.findIndex(n => String(n.id) === noteId);
+            if (existingIndex !== -1) {
+                if (String(notes[existingIndex].studentId) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot edit another student\'s note' });
+                }
+                notes[existingIndex] = {
+                    ...notes[existingIndex],
+                    subject: noteSubject,
+                    title: noteTitle,
+                    content: noteContent,
+                    updatedAt: now
+                };
+                savedNote = notes[existingIndex];
+            } else {
+                savedNote = {
+                    id: noteId,
+                    studentId,
+                    subject: noteSubject,
+                    title: noteTitle,
+                    content: noteContent,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                notes.push(savedNote);
+            }
+        } else {
+            // First check if note exists and who it belongs to
+            const existingCheck = await db.query(
+                'SELECT student_id FROM app_notes WHERE id = $1',
+                [noteId]
+            );
+            if (existingCheck.rows.length > 0) {
+                if (String(existingCheck.rows[0].student_id) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot edit another student\'s note' });
+                }
+                
+                const result = await db.query(
+                    'UPDATE app_notes SET subject = $1, title = $2, content = $3, updated_at = NOW() WHERE id = $4 RETURNING id, subject, title, content, created_at, updated_at',
+                    [noteSubject, noteTitle, noteContent, noteId]
+                );
+                
+                const row = result.rows[0];
+                savedNote = {
+                    id: row.id,
+                    subject: row.subject,
+                    title: row.title,
+                    content: row.content,
+                    createdAt: toIso(row.created_at),
+                    updatedAt: toIso(row.updated_at)
+                };
+            } else {
+                const result = await db.query(
+                    'INSERT INTO app_notes (id, student_id, subject, title, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, subject, title, content, created_at, updated_at',
+                    [noteId, studentId, noteSubject, noteTitle, noteContent]
+                );
+                
+                const row = result.rows[0];
+                savedNote = {
+                    id: row.id,
+                    subject: row.subject,
+                    title: row.title,
+                    content: row.content,
+                    createdAt: toIso(row.created_at),
+                    updatedAt: toIso(row.updated_at)
+                };
+            }
+        }
+        
+        res.json({ success: true, note: savedNote });
+    } catch (e) {
+        console.error('Save note error:', e);
+        res.status(500).json({ error: 'Failed to save note' });
+    }
+});
+
+// DELETE /api/notes/:id - Delete a note
+app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ error: 'Missing note ID' });
+        }
+        
+        if (!isDbEnabled) {
+            const noteIndex = notes.findIndex(n => String(n.id) === String(id));
+            if (noteIndex !== -1) {
+                if (String(notes[noteIndex].studentId) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot delete another student\'s note' });
+                }
+                notes.splice(noteIndex, 1);
+            }
+            return res.json({ success: true });
+        }
+        
+        const checkResult = await db.query(
+            'SELECT student_id FROM app_notes WHERE id = $1',
+            [String(id)]
+        );
+        
+        if (checkResult.rows.length > 0) {
+            if (String(checkResult.rows[0].student_id) !== studentId) {
+                return res.status(403).json({ error: 'Forbidden: Cannot delete another student\'s note' });
+            }
+            
+            await db.query(
+                'DELETE FROM app_notes WHERE id = $1',
+                [String(id)]
+            );
+        }
+        
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Delete note error:', e);
+        res.status(500).json({ error: 'Failed to delete note' });
     }
 });
 

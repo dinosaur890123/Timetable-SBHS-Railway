@@ -66,3 +66,16 @@ ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS subscription_status TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS show_supporter BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- Study Notes migrations
+CREATE TABLE IF NOT EXISTS app_notes (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  subject TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_notes_student_id_idx ON app_notes (student_id);

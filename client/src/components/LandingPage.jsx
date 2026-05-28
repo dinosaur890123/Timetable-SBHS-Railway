@@ -12,11 +12,12 @@ import {
   Terminal,
   Activity,
   Cpu,
-  Lock
+  Lock,
+  Heart
 } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
 
-const LandingPage = ({ authError, clearAuthError }) => {
+const LandingPage = ({ authError, clearAuthError, supporters }) => {
   // State for mock timetable widget interaction
   const [mockActiveTab, setMockActiveTab] = useState('timetable');
   const [currentTime, setCurrentTime] = useState('');
@@ -433,6 +434,29 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
             </div>
         </motion.div>
+
+        {/* Supporters Wall Section */}
+        {supporters && supporters.length > 0 && (
+            <div className="mt-32 border-2 border-white p-8 bg-zinc-950/60 relative animate-in fade-in duration-500">
+                <div className="absolute top-0 left-0 bg-white text-black font-mono text-xs px-2.5 py-1 uppercase font-bold flex items-center gap-1.5 select-none">
+                    <Heart size={10} className="fill-black text-black" />
+                    Our Supporters
+                </div>
+                <div className="mt-4 space-y-3 text-left">
+                    <h3 className="text-xl font-bold uppercase tracking-tight text-white font-space">Synchron Pro Supporters</h3>
+                    <p className="text-sm text-zinc-400 max-w-xl font-light leading-relaxed">
+                        Special thanks to the amazing individuals who support the development and hosting of Synchron:
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-3">
+                        {supporters.map((supporter, idx) => (
+                            <span key={idx} className="inline-flex items-center px-3 py-1 font-mono text-xs text-white border border-zinc-800 bg-black hover:border-white transition-colors select-none">
+                                {supporter}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Technical Footer */}
         <div className="mt-40 pt-10 border-t-2 border-white flex flex-col md:flex-row items-center justify-between text-xs font-mono text-zinc-400">

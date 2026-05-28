@@ -625,7 +625,10 @@ const AdminPanel = ({ user }) => {
                                         'text-purple-400'
                             }`}>{log.action}</span>
                         <span className="text-zinc-500">@</span>
-                        <span className="text-zinc-400 underline decoration-zinc-800 underline-offset-2">{log.user}</span>
+                        <span className="text-zinc-400 underline decoration-zinc-800 underline-offset-2" title={log.user}>
+                            {users.find(u => String(u.id) === String(log.user))?.name || log.user}
+                            {users.find(u => String(u.id) === String(log.user)) && ` (${log.user})`}
+                        </span>
                         <span className="text-zinc-300">{log.details}</span>
                     </div>
                 ))
@@ -893,7 +896,7 @@ const AdminPanel = ({ user }) => {
                                                         {isGemini ? 'Gemini' : 'Hack Club'} ({log.model?.split('/').pop()})
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-100 font-medium">
+                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-50 font-medium">
                                                     {log.question}
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
@@ -1408,14 +1411,14 @@ const AdminPanel = ({ user }) => {
                     <div className="space-y-4 text-left">
                         <div className="space-y-1.5">
                             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Question</span>
-                            <div className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
+                            <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
                                 {viewingAiLog.question}
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
                             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">AI Response</span>
-                            <div className="p-4 bg-purple-50/30 dark:bg-purple-950/10 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tr-none border border-purple-100/20 dark:border-purple-900/30 text-sm whitespace-pre-wrap">
+                            <div className="p-4 bg-purple-50/30 dark:bg-purple-950/20 text-zinc-900 dark:text-zinc-50 rounded-2xl rounded-tr-none border border-purple-100/20 dark:border-purple-900/30 text-sm whitespace-pre-wrap">
                                 {viewingAiLog.answer}
                             </div>
                         </div>
