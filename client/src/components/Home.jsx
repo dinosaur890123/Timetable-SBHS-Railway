@@ -292,12 +292,14 @@ const TransitWidget = ({ user, setView }) => {
     const [error, setError] = useState(null);
     const [isConfiguring, setIsConfiguring] = useState(false);
 
+    // Free users are locked to Moore Park Light Rail departures
+    const activeStopName = isProUser ? stopName : 'Moore Park Light Rail';
+
     const fetchDepartures = async () => {
-        if (!isProUser) return;
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchTransitDepartures(stopName);
+            const data = await fetchTransitDepartures(activeStopName);
             setDepartures(data);
         } catch (err) {
             console.error("Failed to fetch departures:", err);
@@ -308,11 +310,10 @@ const TransitWidget = ({ user, setView }) => {
     };
 
     useEffect(() => {
-        if (!isProUser) return;
         fetchDepartures();
         const timer = setInterval(fetchDepartures, 60000);
         return () => clearInterval(timer);
-    }, [stopName, isProUser]);
+    }, [activeStopName]);
 
     const handleSaveConfig = (e) => {
         e.preventDefault();
@@ -322,35 +323,6 @@ const TransitWidget = ({ user, setView }) => {
         localStorage.setItem('transit_widget_stop', cleanName);
         setIsConfiguring(false);
     };
-
-    // Lock screen for free tier
-    if (!isProUser) {
-        return (
-            <div className="relative overflow-hidden bg-gradient-to-br from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-between select-none text-left">
-                <div className="absolute -right-16 -top-16 w-36 h-36 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="16" x="3" y="4" rx="2"/><path d="M7 22v-2"/><path d="M17 22v-2"/><path d="M8 12h8"/><path d="M12 4v8"/></svg>
-                            Live Commute departures
-                        </h2>
-                        <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-red-650 text-white rounded-full">Pro Only</span>
-                    </div>
-                    <div className="space-y-1">
-                        <h3 className="text-sm font-bold text-white leading-snug">Track Moore Park Light Rail & Buses Live</h3>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed">Get active real-time countdown alerts for L2/L3 light rail or school buses directly on your dashboard. Fully customizable stops.</p>
-                    </div>
-                </div>
-                <button
-                    onClick={() => setView && setView('profile')}
-                    className="mt-4 px-4 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white text-xs font-bold uppercase tracking-wider hover:from-red-700 hover:to-amber-700 transition active:scale-95 shrink-0 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Upgrade to Pro ($6.99)
-                </button>
-            </div>
-        );
-    }
 
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
@@ -364,23 +336,29 @@ const TransitWidget = ({ user, setView }) => {
                         <h2 className="text-xs font-extrabold uppercase tracking-widest text-zinc-900 dark:text-white leading-none">
                             Live departures
                         </h2>
-                        <span className="text-[9px] font-mono text-zinc-400 block mt-0.5 max-w-[150px] truncate" title={stopName}>
-                            {stopName}
+                        <span className="text-[9px] font-mono text-zinc-400 block mt-0.5 max-w-[150px] truncate" title={activeStopName}>
+                            {activeStopName}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                    <button
-                        onClick={() => {
-                            setIsConfiguring(!isConfiguring);
-                            setTempStopName(stopName);
-                        }}
-                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition"
-                        title="Configure Stop"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
+                    {isProUser ? (
+                        <button
+                            onClick={() => {
+                                setIsConfiguring(!isConfiguring);
+                                setTempStopName(stopName);
+                            }}
+                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition"
+                            title="Configure Stop"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    ) : (
+                        <div className="px-1.5 py-0.5 bg-red-100 dark:bg-red-955/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider border border-red-200/30">
+                            Free Preview
+                        </div>
+                    )}
                     <button
                         onClick={fetchDepartures}
                         disabled={loading}
@@ -440,8 +418,8 @@ const TransitWidget = ({ user, setView }) => {
                     </div>
                 ) : (
                     /* Departures List */
-                    <div className="space-y-2.5 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
-                        {departures.slice(0, 5).map((dep, idx) => {
+                    <div className="space-y-0 overflow-y-auto max-h-[260px] pr-1.5 custom-scrollbar relative">
+                        {departures.map((dep, idx) => {
                             const isLightRail = dep.type === 'Light Rail';
                             const isTrain = dep.type === 'Train';
                             const typeColor = isLightRail 
@@ -450,10 +428,13 @@ const TransitWidget = ({ user, setView }) => {
                                     ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-900/50'
                                     : 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50';
                             
+                            const isBlurred = !isProUser && idx >= 3;
+                            
                             return (
                                 <div 
                                     key={idx} 
-                                    className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 pb-2 last:border-b-0 last:pb-0 animate-in fade-in slide-in-from-bottom-1 duration-200"
+                                    className={`flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 py-2 last:border-b-0 animate-in fade-in slide-in-from-bottom-1 duration-200 ${isBlurred ? 'blur-[3px] select-none pointer-events-none' : ''}`}
+                                    aria-hidden={isBlurred}
                                 >
                                     <div className="flex items-center gap-2.5 min-w-0">
                                         {/* Route Badge */}
@@ -483,6 +464,25 @@ const TransitWidget = ({ user, setView }) => {
                                 </div>
                             );
                         })}
+
+                        {/* Blurred overlay with Synchron Pro upgrade prompt */}
+                        {!isProUser && departures.length > 3 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-zinc-950 dark:via-zinc-950/95 dark:to-transparent pt-10 pb-1 px-3 flex flex-col items-center justify-end z-10">
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">Synchron Pro</span>
+                                </div>
+                                <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium text-center leading-tight mb-2">
+                                    Unlock all departures & custom stops
+                                </p>
+                                <button
+                                    onClick={() => setView && setView('profile')}
+                                    className="px-3 py-1 bg-gradient-to-r from-red-600 to-amber-600 text-white text-[8px] font-black uppercase tracking-wider hover:opacity-90 transition active:scale-95 rounded-md shadow-sm"
+                                >
+                                    Upgrade — $6.99
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

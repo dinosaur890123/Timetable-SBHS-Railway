@@ -2187,22 +2187,24 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
         }
+        
+        // Determine Pro user status
         const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: Transit widget requires a Synchron Pro subscription.' });
-        }
 
         const { stopName = 'Moore Park Light Rail' } = req.query;
+        
+        // Free users are restricted to the default school stop
+        const stopToQuery = isPro ? stopName : 'Moore Park Light Rail';
         const apiKey = process.env.TRANSPORT_NSW_API_KEY;
 
         if (apiKey) {
-            console.log(`[transit] Querying TfNSW APIs for: "${stopName}"`);
+            console.log(`[transit] Querying TfNSW APIs for: "${stopToQuery}" (isPro: ${isPro})`);
             
             // 1. Resolve stop name to ID using Stop Finder
             const stopFinderUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/stop_finder');
             stopFinderUrl.searchParams.append('outputFormat', 'rapidJSON');
             stopFinderUrl.searchParams.append('type_sf', 'any');
-            stopFinderUrl.searchParams.append('name_sf', stopName);
+            stopFinderUrl.searchParams.append('name_sf', stopToQuery);
             stopFinderUrl.searchParams.append('TfNSWStopFinder', 'true');
 
             const stopFinderRes = await fetch(stopFinderUrl.toString(), {
@@ -2271,7 +2273,8 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
                 };
             });
 
-            return res.json(departures.slice(0, 10)); // Limit to top 10 departures
+            // Free users get 6 (3 visible + 3 blurred), Pro gets 10
+            return res.json(departures.slice(0, isPro ? 10 : 6));
         } else {
             // fallback to dynamic simulated mock data
             const nowMs = Date.now();
@@ -2282,7 +2285,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
             };
 
             let departures = [];
-            const cleanStopName = stopName.toLowerCase();
+            const cleanStopName = stopToQuery.toLowerCase();
             if (cleanStopName.includes('moore') || cleanStopName.includes('park')) {
                 departures = [
                     { route: 'L2', destination: 'Circular Quay via Central', minutes: getMockMinutes(10, 0), realtime: true, type: 'Light Rail' },
@@ -2308,7 +2311,9 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
                 ];
             }
             departures.sort((a, b) => a.minutes - b.minutes);
-            return res.json(departures);
+            
+            // Free users get 6 (3 visible + 3 blurred), Pro gets all
+            return res.json(isPro ? departures : departures.slice(0, 6));
         }
     } catch (e) {
         console.error('Transit API error:', e);
