@@ -48,8 +48,6 @@ CREATE TABLE IF NOT EXISTS ai_cache (
 -- Migrations
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_provider TEXT NOT NULL DEFAULT 'hackclub';
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_message TEXT NULL;
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_id TEXT NULL;
 
 CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id TEXT PRIMARY KEY,

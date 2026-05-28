@@ -12,7 +12,6 @@ const AdminPanel = ({ user }) => {
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
-    const [currentUpdateBroadcast, setCurrentUpdateBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
 
@@ -73,7 +72,6 @@ const AdminPanel = ({ user }) => {
             setLogs(logsData);
             setAiLogs(aiLogsData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
-            setCurrentUpdateBroadcast(systemData?.updateBroadcast || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
             console.error(err);
@@ -935,23 +933,14 @@ const AdminPanel = ({ user }) => {
                 <div className={`mb-6 p-4 border rounded-xl ${
                     currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
                     currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
-                    'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                    currentBroadcast.type === 'update' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
+                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
                 }`}>
                     <div className="flex items-center gap-2 mb-1">
                         <Info size={16} />
-                        <h3 className="font-bold text-sm uppercase tracking-wider">Current Info Broadcast</h3>
+                        <h3 className="font-bold text-sm uppercase tracking-wider">Current Active Broadcast</h3>
                     </div>
                     <p className="text-sm">{currentBroadcast.message}</p>
-                </div>
-            )}
-            
-            {currentUpdateBroadcast && (
-                <div className="mb-6 p-4 border rounded-xl bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Info size={16} />
-                        <h3 className="font-bold text-sm uppercase tracking-wider">Current Update Broadcast</h3>
-                    </div>
-                    <p className="text-sm">{currentUpdateBroadcast.message}</p>
                 </div>
             )}
 
@@ -994,46 +983,28 @@ const AdminPanel = ({ user }) => {
                     </div>
                 </div>
 
-                <div className="pt-4 flex flex-wrap gap-4">
+                <div className="pt-4 flex gap-4">
                     {currentBroadcast && (
                         <button
                             type="button"
                             onClick={async () => { 
                                 try {
                                     await setBroadcast('', 'info');
-                                    alert("Info broadcast cleared successfully!");
+                                    alert("Broadcast cleared successfully!");
                                     setBroadcastMsg('');
                                     loadData();
                                 } catch (err) {
-                                    alert("Failed to clear info broadcast");
+                                    alert("Failed to clear broadcast");
                                 }
                             }}
-                            className="flex-1 min-w-32 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
+                            className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
                         >
-                            Clear Info/Alert
-                        </button>
-                    )}
-                    {currentUpdateBroadcast && (
-                        <button
-                            type="button"
-                            onClick={async () => { 
-                                try {
-                                    await setBroadcast('', 'update');
-                                    alert("Update broadcast cleared successfully!");
-                                    setBroadcastMsg('');
-                                    loadData();
-                                } catch (err) {
-                                    alert("Failed to clear update broadcast");
-                                }
-                            }}
-                            className="flex-1 min-w-32 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
-                        >
-                            Clear Update
+                            Clear Broadcast
                         </button>
                     )}
                     <button
                         type="submit"
-                        className="flex-[2] min-w-48 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
+                        className="flex-[2] py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
                     >
                         Send Announcement
                     </button>

@@ -143,7 +143,6 @@ let notes = []; // Study notes memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
-    updateBroadcast: null, // { message: "...", type: "update" }
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b'
 };
@@ -242,15 +241,14 @@ async function getSystemState() {
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, update_message, update_id, ai_provider, ai_model, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, update_message: null, update_id: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
-        updateBroadcast: row.update_message ? { message: row.update_message, type: 'update', id: row.update_id } : null,
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b'
     };
@@ -281,30 +279,16 @@ async function setAiModel(model) {
 }
 
 async function setBroadcast(message, type) {
-    const isUpdate = type === 'update';
-    
     if (!isDbEnabled) {
         const ts = new Date().toISOString();
-        if (isUpdate) {
-            systemState.updateBroadcast = message ? { message, type: 'update', id: ts } : null;
-            return systemState.updateBroadcast;
-        } else {
-            systemState.broadcast = message ? { message, type: type || 'info', id: ts } : null;
-            return systemState.broadcast;
-        }
+        systemState.broadcast = message ? { message, type: type || 'info', id: ts } : null;
+        return systemState.broadcast;
     }
 
-    let query;
-    let params;
-    if (isUpdate) {
-        query = 'UPDATE system_state SET update_message = $1, update_id = NOW() WHERE id = 1 RETURNING update_id as updated_at';
-        params = [message || null];
-    } else {
-        query = 'UPDATE system_state SET broadcast_message = $1, broadcast_type = $2, updated_at = NOW() WHERE id = 1 RETURNING updated_at';
-        params = [message || null, message ? (type || 'info') : null];
-    }
-    
-    const res = await db.query(query, params);
+    const res = await db.query(
+        'UPDATE system_state SET broadcast_message = $1, broadcast_type = $2, updated_at = NOW() WHERE id = 1 RETURNING updated_at',
+        [message || null, message ? (type || 'info') : null]
+    );
 
     const ts = res.rows[0]?.updated_at;
     return message ? { message, type: type || 'info', id: ts } : null;
