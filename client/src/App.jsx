@@ -56,6 +56,7 @@ function App() {
   
   // System State
   const [broadcast, setBroadcast] = useState(null);
+  const [updateBroadcast, setUpdateBroadcast] = useState(null);
   const [maintenance, setMaintenance] = useState(false);
   const [supporters, setSupporters] = useState([]);
   const hasSyncedTimetable = useRef(false);
@@ -67,11 +68,12 @@ function App() {
             const systemData = await fetchSystemStatus();
             if (systemData) {
                 const dismissedId = localStorage.getItem('dismissedUpdateId');
-                if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
-                    setBroadcast(null);
+                if (systemData.updateBroadcast && String(systemData.updateBroadcast.id) === dismissedId) {
+                    setUpdateBroadcast(null);
                 } else {
-                    setBroadcast(systemData.broadcast);
+                    setUpdateBroadcast(systemData.updateBroadcast || null);
                 }
+                setBroadcast(systemData.broadcast || null);
                 setMaintenance(systemData.maintenance);
                 setSupporters(systemData.supporters || []);
             }
@@ -210,11 +212,12 @@ function App() {
         
         if (systemData) {
             const dismissedId = localStorage.getItem('dismissedUpdateId');
-            if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
-                setBroadcast(null);
+            if (systemData.updateBroadcast && String(systemData.updateBroadcast.id) === dismissedId) {
+                setUpdateBroadcast(null);
             } else {
-                setBroadcast(systemData.broadcast);
+                setUpdateBroadcast(systemData.updateBroadcast || null);
             }
+            setBroadcast(systemData.broadcast || null);
             setMaintenance(systemData.maintenance);
             setSupporters(systemData.supporters || []);
         }
@@ -389,24 +392,27 @@ function App() {
             <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' : 
                   broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' : 
-                  broadcast.type === 'update' ? 'bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400' :
                   'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                 <Info size={18} className="shrink-0" />
                 <span className="flex-1">{broadcast.message}</span>
-                
-                {broadcast.type === 'update' && (
-                    <button 
-                        onClick={() => {
-                            if (broadcast.id) {
-                                localStorage.setItem('dismissedUpdateId', String(broadcast.id));
-                            }
-                            logout();
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
-                    >
-                        Sign Out & Update
-                    </button>
-                )}
+            </div>
+         )}
+         
+         {updateBroadcast && (
+            <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400">
+                <Info size={18} className="shrink-0" />
+                <span className="flex-1">{updateBroadcast.message}</span>
+                <button 
+                    onClick={() => {
+                        if (updateBroadcast.id) {
+                            localStorage.setItem('dismissedUpdateId', String(updateBroadcast.id));
+                        }
+                        logout();
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
+                >
+                    Update
+                </button>
             </div>
          )}
 
