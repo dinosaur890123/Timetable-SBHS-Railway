@@ -343,8 +343,10 @@ const AdminPanel = ({ user }) => {
 
     const filteredAiLogs = aiLogs.filter(log => {
         const term = aiLogSearchTerm.toLowerCase();
+        const studentName = users.find(u => String(u.id) === String(log.studentId))?.name || '';
         return (
             String(log.studentId || '').toLowerCase().includes(term) ||
+            studentName.toLowerCase().includes(term) ||
             String(log.question || '').toLowerCase().includes(term) ||
             String(log.answer || '').toLowerCase().includes(term) ||
             String(log.model || '').toLowerCase().includes(term) ||
@@ -642,13 +644,13 @@ const AdminPanel = ({ user }) => {
                 <div className="grid gap-6 md:grid-cols-3">
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
                         <div>
-                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Active Today</span>
+                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Active Today</span>
                             <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
                                 {stats?.activeToday || 0}
                             </h3>
                             <p className="text-zinc-500 text-xs mt-1">Logged in within the past 24 hours</p>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
                             <span>Daily Active Ratio:</span>
                             <span className="font-bold text-zinc-900 dark:text-white">
                                 {stats?.totalUsers ? Math.round((stats.activeToday / stats.totalUsers) * 100) : 0}%
@@ -658,13 +660,13 @@ const AdminPanel = ({ user }) => {
 
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
                         <div>
-                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Active This Week</span>
+                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Active This Week</span>
                             <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
                                 {stats?.activeThisWeek || 0}
                             </h3>
                             <p className="text-zinc-500 text-xs mt-1">Logged in within the past 7 days</p>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
                             <span>Weekly Active Ratio:</span>
                             <span className="font-bold text-zinc-900 dark:text-white">
                                 {stats?.totalUsers ? Math.round((stats.activeThisWeek / stats.totalUsers) * 100) : 0}%
@@ -674,13 +676,13 @@ const AdminPanel = ({ user }) => {
 
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
                         <div>
-                            <span className="text-zinc-550 text-xs font-semibold uppercase tracking-wider">Inactive Users</span>
+                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Inactive Users</span>
                             <h3 className="text-3xl font-extrabold text-zinc-400 mt-1">
                                 {stats?.totalUsers ? Math.max(0, stats.totalUsers - stats.activeThisWeek) : 0}
                             </h3>
                             <p className="text-zinc-500 text-xs mt-1">Not active in the last 7 days</p>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-550">
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
                             <span>Inactive Ratio:</span>
                             <span className="font-bold text-zinc-400">
                                 {stats?.totalUsers ? Math.round(((stats.totalUsers - stats.activeThisWeek) / stats.totalUsers) * 100) : 0}%
@@ -751,7 +753,7 @@ const AdminPanel = ({ user }) => {
                                     const pct = (count / maxCount) * 100;
                                     return (
                                         <div key={label} className="flex items-center gap-3 text-xs font-mono">
-                                            <span className="w-16 text-zinc-550 dark:text-zinc-400">Year {label}</span>
+                                            <span className="w-16 text-zinc-500 dark:text-zinc-400">Year {label}</span>
                                             <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-3 rounded-full overflow-hidden relative">
                                                 <div 
                                                     className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out" 
@@ -789,7 +791,7 @@ const AdminPanel = ({ user }) => {
                                 </div>
                             ))
                         ) : (
-                            <div className="col-span-2 text-center py-6 text-zinc-550 font-mono text-xs">
+                            <div className="col-span-2 text-center py-6 text-zinc-500 font-mono text-xs">
                                 [NO TIMETABLE PERIODS FOUND IN DATABASE TO AGGREGATE]
                             </div>
                         )}
@@ -849,10 +851,10 @@ const AdminPanel = ({ user }) => {
                     {/* AI Logs Feed */}
                     <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl">
                         <table className="w-full text-left border-collapse text-sm">
-                            <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-semibold border-b border-zinc-250 dark:border-zinc-850">
+                            <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-semibold border-b border-zinc-200 dark:border-zinc-800">
                                 <tr>
                                     <th className="px-4 py-3 w-32">Time</th>
-                                    <th className="px-4 py-3 w-28">Student ID</th>
+                                    <th className="px-4 py-3 w-48">Student</th>
                                     <th className="px-4 py-3 w-36">Model Provider</th>
                                     <th className="px-4 py-3">Question</th>
                                     <th className="px-4 py-3 w-24 text-right">Action</th>
@@ -873,8 +875,13 @@ const AdminPanel = ({ user }) => {
                                                 <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
                                                     {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </td>
-                                                <td className="px-4 py-3 text-xs text-zinc-650 dark:text-zinc-400 font-mono">
-                                                    {log.studentId}
+                                                <td className="px-4 py-3 text-xs">
+                                                    <div className="font-semibold text-zinc-900 dark:text-white">
+                                                        {users.find(u => String(u.id) === String(log.studentId))?.name || 'Unknown Student'}
+                                                    </div>
+                                                    <div className="text-zinc-500 font-mono text-[10px] mt-0.5">
+                                                        {log.studentId}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-xs whitespace-nowrap">
                                                     <span className={`px-2 py-0.5 rounded-full font-semibold border text-[10px] ${
@@ -885,7 +892,7 @@ const AdminPanel = ({ user }) => {
                                                         {isGemini ? 'Gemini' : 'Hack Club'} ({log.model?.split('/').pop()})
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-150 font-medium">
+                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-100 font-medium">
                                                     {log.question}
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
@@ -923,7 +930,7 @@ const AdminPanel = ({ user }) => {
                     currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
                     currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
                     currentBroadcast.type === 'update' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
-                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-850 dark:text-white'
+                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
                 }`}>
                     <div className="flex items-center gap-2 mb-1">
                         <Info size={16} />
@@ -1018,7 +1025,7 @@ const AdminPanel = ({ user }) => {
                         placeholder="Student ID (e.g., 449130511)"
                         value={promoteId}
                         onChange={(e) => setPromoteId(e.target.value)}
-                        className="px-3 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-750 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white w-full md:w-64"
+                        className="px-3 py-2 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white w-full md:w-64"
                         required
                     />
                     <button
@@ -1129,7 +1136,7 @@ const AdminPanel = ({ user }) => {
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold
                                             ${user.role === 'Admin' ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white' :
-                                            'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-250 dark:border-zinc-750'}`}>
+                                            'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700'}`}>
                                         {user.role}
                                     </span>
                                 </td>
@@ -1357,13 +1364,14 @@ const AdminPanel = ({ user }) => {
                     <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 bg-purple-100 dark:bg-purple-950/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-200/20">
                             <Brain className="w-5 h-5 animate-pulse" />
-                        </div>
-                        <div>
+                        </div>                        <div>
                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">AI Log Details</h3>
-                            <p className="text-xs text-zinc-500 mt-1">Student: {viewingAiLog.studentId} • {new Date(viewingAiLog.timestamp).toLocaleString()}</p>
+                            <p className="text-xs text-zinc-500 mt-1">
+                                Student: {users.find(u => String(u.id) === String(viewingAiLog.studentId))?.name || 'Unknown Student'} ({viewingAiLog.studentId}) • {new Date(viewingAiLog.timestamp).toLocaleString()}
+                            </p>
                         </div>
                     </div>
-                    <button onClick={() => setViewingAiLog(null)} className="p-2 hover:bg-zinc-150 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                    <button onClick={() => setViewingAiLog(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -1371,11 +1379,11 @@ const AdminPanel = ({ user }) => {
                     {/* Metadata */}
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
                         <div>
-                            <span className="text-zinc-450 dark:text-zinc-500 block mb-1">Provider</span>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Provider</span>
                             <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingAiLog.provider}</span>
                         </div>
                         <div>
-                            <span className="text-zinc-450 dark:text-zinc-500 block mb-1">Model</span>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Model</span>
                             <span className="font-bold text-zinc-900 dark:text-white">{viewingAiLog.model}</span>
                         </div>
                     </div>
@@ -1384,7 +1392,7 @@ const AdminPanel = ({ user }) => {
                     <div className="space-y-4 text-left">
                         <div className="space-y-1.5">
                             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Question</span>
-                            <div className="p-4 bg-zinc-100 dark:bg-zinc-850 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
+                            <div className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
                                 {viewingAiLog.question}
                             </div>
                         </div>

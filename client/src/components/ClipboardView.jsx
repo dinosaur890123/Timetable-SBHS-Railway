@@ -65,7 +65,7 @@ const ClipboardView = ({ user }) => {
         return (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
                 <div className="w-10 h-10 border-4 border-accent/30 border-t-accent rounded-full animate-spin"></div>
-                <p className="text-zinc-555 dark:text-zinc-400 font-bold text-sm font-space">Synchronising Clipboard data...</p>
+                <p className="text-zinc-500 dark:text-zinc-400 font-bold text-sm font-space">Synchronising Clipboard data...</p>
             </div>
         );
     }
@@ -246,7 +246,7 @@ const ClipboardView = ({ user }) => {
                         <Clipboard size={18} className="text-accent" />
                         Co-curricular Attendance History
                     </h3>
-                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-sm divide-y divide-zinc-150 dark:divide-zinc-900">
+                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-sm divide-y divide-zinc-200 dark:divide-zinc-900">
                         {attendance.length > 0 ? attendance.map(att => (
                             <div key={att.id} className="flex items-center justify-between py-4 px-6 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 transition-colors">
                                 <div className="space-y-1">

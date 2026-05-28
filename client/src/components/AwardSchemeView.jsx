@@ -264,7 +264,7 @@ const AwardSchemeView = ({ user }) => {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {prizes.map(p => (
-                                    <div key={p.id} className="bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 p-5 border border-zinc-250 dark:border-zinc-800 shadow-sm flex items-start gap-4">
+                                    <div key={p.id} className="bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 p-5 border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-start gap-4">
                                         <div className="w-10 h-10 flex items-center justify-center bg-accent text-accent-contrast border border-accent shrink-0">
                                             <Trophy size={18} />
                                         </div>
@@ -335,7 +335,7 @@ const AwardSchemeView = ({ user }) => {
                         <p className="text-zinc-550 text-sm">Aggregated merit points of all students by House group.</p>
                     </div>
 
-                    <div className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm divide-y divide-zinc-150 dark:divide-zinc-900">
+                    <div className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm divide-y divide-zinc-200 dark:divide-zinc-900">
                         {housePoints.map((hp, idx) => {
                             const medals = ["bg-amber-400 text-black", "bg-zinc-350 text-black", "bg-amber-600 text-white"];
                             return (

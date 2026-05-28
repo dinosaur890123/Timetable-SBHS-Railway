@@ -57,11 +57,11 @@ const DailyNotices = ({ notices, aiBriefing }) => {
                     </div>
                 </div>
                 
-                <div className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed max-w-none line-clamp-4 prose dark:prose-invert prose-p:my-0 prose-ul:my-0" 
+                <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-none line-clamp-4 prose dark:prose-invert prose-p:my-0 prose-ul:my-0" 
                     dangerouslySetInnerHTML={{ __html: notice.content }} 
                 />
                 
-                <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-500 mt-3 pt-3 border-t border-zinc-150 dark:border-zinc-850">
+                <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-500 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-850">
                     <span className="font-semibold text-zinc-600 dark:text-zinc-400">{notice.authorName}</span>
                     <span className="flex items-center gap-1 opacity-70">
                         <Calendar size={10} />

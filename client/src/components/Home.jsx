@@ -78,13 +78,13 @@ const ClockWidget = () => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between relative group select-none">
             <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                     <Clock size={14} />
                     Time
                 </h2>
                 <button 
                     onClick={toggleFormat}
-                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 text-zinc-650 dark:text-zinc-455 hover:text-black dark:hover:text-white transition"
+                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition"
                     title="Change clock view"
                 >
                     {formatType}
@@ -206,7 +206,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
 const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-2">
                 <LayoutGrid size={14} />
                 Quick Panel
             </h2>
@@ -241,9 +241,9 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
                 >
                     {theme === 'dark' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-355 group-hover:text-current"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-current"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
                     ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-750 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-700 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     )}
                     <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Theme</span>
                 </button>
@@ -264,7 +264,7 @@ const ScratchpadWidget = () => {
     return (
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
             <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-450 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     Scratchpad
                 </h2>
@@ -274,7 +274,7 @@ const ScratchpadWidget = () => {
                 value={text}
                 onChange={handleChange}
                 placeholder="Type reminders, room changes, or study tasks here..."
-                className="w-full flex-1 min-h-[90px] bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-850 p-3 text-sm focus:outline-none focus:border-zinc-450 focus:dark:border-zinc-700 resize-none font-medium placeholder-zinc-400 dark:text-zinc-200 custom-scrollbar"
+                className="w-full flex-1 min-h-[90px] bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-850 p-3 text-sm focus:outline-none focus:border-zinc-500 focus:dark:border-zinc-700 resize-none font-medium placeholder-zinc-400 dark:text-zinc-200 custom-scrollbar"
             />
         </div>
     );
@@ -455,7 +455,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const academicPeriodsCount = routine.filter(bellId => isAcademicPeriod(bellId)).length;
 
     const getSubjectGradient = (title) => {
-        return 'bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white border-zinc-300 dark:border-zinc-750';
+        return 'bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white border-zinc-300 dark:border-zinc-700';
     };
 
     // Calculate countdown to the end of the school day
@@ -655,7 +655,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         <div className="h-4 bg-zinc-800 rounded w-1/2"></div>
                                     </div>
                                 ) : (
-                                    <p className="text-zinc-250 text-base md:text-lg font-medium leading-relaxed font-sans">
+                                    <p className="text-zinc-300 text-base md:text-lg font-medium leading-relaxed font-sans">
                                         {aiBriefing?.briefing}
                                     </p>
                                 )}
@@ -669,7 +669,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
                         </div>
-                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400 mb-6 flex items-center gap-2">
+                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
                             <div className="w-2 h-2 bg-accent animate-pulse" />
                             Right Now
                         </h2>
@@ -691,15 +691,15 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     </div>
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-805 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest mb-3">
+                                    <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest mb-3">
                                         Period {currentClass.bell}
                                     </div>
                                     <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-2 leading-tight">
                                         {currentClass.title || "Free Period"}
                                     </h3>
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-650 dark:text-zinc-400">
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
                                         <span className="flex items-center gap-1.5"><Clock size={16} /> {currentClass.time} - {currentClass.endTime || '??'}</span>
-                                        {currentClass.room && <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-805 dark:text-zinc-200"><MapPin size={16} /> {currentClass.room}</span>}
+                                        {currentClass.room && <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200"><MapPin size={16} /> {currentClass.room}</span>}
                                         {currentClass.fullTeacher && <span className="flex items-center gap-1.5"><UserIcon size={16} /> {currentClass.fullTeacher}</span>}
                                     </div>
                                 </div>
@@ -708,7 +708,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <div className="text-center py-8 z-10 relative select-none">
                                 <CheckCircle size={48} className="mx-auto text-accent mb-4 opacity-70" />
                                 <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white mb-2">No Classes Right Now</h3>
-                                <p className="text-zinc-550">Take a break or catch up on study.</p>
+                                <p className="text-zinc-500">Take a break or catch up on study.</p>
                             </div>
                         )}
                     </div>
@@ -716,7 +716,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'next_class':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-2">
                             <ArrowRight size={14} />
                             Up Next
                         </h2>
@@ -759,7 +759,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 <div className="text-sm font-semibold text-zinc-400">Notices</div>
                             </div>
                             {countdownStr && (
-                                <div className="border-l border-zinc-850 pl-6 animate-in fade-in duration-300">
+                                <div className="border-l border-zinc-800 pl-6 animate-in fade-in duration-300">
                                     <div className="text-lg font-extrabold text-amber-400 leading-none">{countdownStr}</div>
                                     <div className="text-[10px] font-bold text-zinc-500 uppercase mt-1">School Left</div>
                                 </div>
@@ -781,7 +781,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <div className="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[220px] custom-scrollbar">
                             {todayNotices.length > 0 ? todayNotices.map((notice, idx) => (
                                 <div key={idx} className="group cursor-pointer">
-                                    <h3 className="text-sm font-extrabold text-zinc-855 dark:text-zinc-200 group-hover:text-zinc-650 dark:group-hover:text-white transition-colors line-clamp-1">{notice.title}</h3>
+                                    <h3 className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 group-hover:text-zinc-600 dark:group-hover:text-white transition-colors line-clamp-1">{notice.title}</h3>
                                     <p className="text-xs text-zinc-500 mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: notice.content }}></p>
                                 </div>
                             )) : (
@@ -817,7 +817,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'award_scheme_summary':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('awards')}>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-2 flex items-center gap-2">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
                             <Award size={14} className="text-accent" />
                             Award Scheme Summary
                         </h2>
@@ -836,7 +836,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'clipboard_schedule':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('clipboard')}>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-2 flex items-center gap-2">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
                             <Clipboard size={14} className="text-accent" />
                             Next Training Session
                         </h2>
@@ -850,7 +850,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-xs font-semibold text-zinc-455 mt-2">No training sessions scheduled.</div>
+                            <div className="text-xs font-semibold text-zinc-500 mt-2">No training sessions scheduled.</div>
                         )}
                     </div>
                 );
@@ -867,7 +867,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none">
                         {greeting}, <span className="text-accent underline decoration-accent/40 underline-offset-4">{user?.givenName || 'Student'}</span>
                     </h1>
-                    <p className="text-zinc-550 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
+                    <p className="text-zinc-500 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
                         <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
                         {format(currentTime, 'EEEE, d MMMM yyyy')}
                         {innerTimetable?.dayname && (
@@ -884,7 +884,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <>
                             <button 
                                 onClick={() => setActiveTiles(DEFAULT_LAYOUT)}
-                                className="px-4 py-2 text-xs font-extrabold uppercase bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-205 border border-zinc-300 dark:border-zinc-800 transition flex items-center gap-1.5"
+                                className="px-4 py-2 text-xs font-extrabold uppercase bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 transition flex items-center gap-1.5"
                                 title="Reset dashboard to default widgets"
                             >
                                 <RotateCcw size={14} />
@@ -902,7 +902,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     ) : (
                         <button 
                             onClick={() => setIsEditing(true)}
-                            className="px-4 py-2 text-xs font-extrabold uppercase bg-white hover:bg-zinc-50 text-zinc-850 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-205 border border-zinc-250 dark:border-zinc-800 transition flex items-center gap-1.5 shadow-sm"
+                            className="px-4 py-2 text-xs font-extrabold uppercase bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition flex items-center gap-1.5 shadow-sm"
                             title="Customize your dashboard layout"
                         >
                             <LayoutGrid size={14} className="text-zinc-500" />
@@ -953,7 +953,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             </span>
                                             <button 
                                                 onClick={() => removeTile(tile.id)}
-                                                className="bg-red-655 hover:bg-red-750 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
+                                                className="bg-red-600 hover:bg-red-700 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
                                                 title="Remove Widget"
                                                 draggable={false}
                                             >
@@ -962,7 +962,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         </div>
 
                                         {/* Drag instructions / info */}
-                                        <div className="text-center text-zinc-400 dark:text-zinc-550 pointer-events-none select-none my-auto">
+                                        <div className="text-center text-zinc-400 dark:text-zinc-500 pointer-events-none select-none my-auto">
                                             <p className="text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5">
                                                 <LayoutGrid size={12} /> Drag Card to Reorder
                                             </p>
@@ -981,7 +981,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             draggable={false}
                                             title="Grab and drag edge to Resize"
                                         >
-                                            <svg width="12" height="12" viewBox="0 0 12 12" className="text-zinc-400 hover:text-white dark:text-zinc-550 dark:hover:text-zinc-350 transition-colors">
+                                            <svg width="12" height="12" viewBox="0 0 12 12" className="text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors">
                                                 <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
                                                 <line x1="10" y1="6" x2="6" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
                                             </svg>
@@ -997,7 +997,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             {/* Inactive Available Widgets Panel (Drawer) */}
             {isEditing && (
                 <div className="p-6 bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-bottom duration-300">
-                    <div className="flex items-center justify-between mb-5 border-b border-zinc-250 dark:border-zinc-800 pb-3 select-none">
+                    <div className="flex items-center justify-between mb-5 border-b border-zinc-200 dark:border-zinc-800 pb-3 select-none">
                         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
                             <Plus size={16} />
                             Available Widgets
@@ -1017,7 +1017,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         className="p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-black dark:hover:border-white flex items-center justify-between transition group select-none"
                                     >
                                         <div>
-                                            <h4 className="font-extrabold text-sm text-zinc-850 dark:text-zinc-250 leading-tight">{config.title}</h4>
+                                            <h4 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200 leading-tight">{config.title}</h4>
                                             <p className="text-[9px] text-zinc-500 font-extrabold uppercase mt-1 tracking-wider">
                                                 Size: {config.minW}x{config.minH}
                                             </p>
