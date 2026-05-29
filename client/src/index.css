@@ -67,6 +67,23 @@
   }
 }
 
+/* Dark Mode Style Overrides */
+html.dark[data-dark-style="black"] body {
+  @apply bg-zinc-950;
+}
+html.dark[data-dark-style="black"] .dark\:bg-black {
+  @apply bg-zinc-950 !important;
+}
+html.dark[data-dark-style="black"] .dark\:bg-black\/80 {
+  @apply bg-zinc-950/80 !important;
+}
+html.dark[data-dark-style="black"] .dark\:bg-black\/85 {
+  @apply bg-zinc-950/85 !important;
+}
+html.dark[data-dark-style="black"] .dark\:bg-black\/50 {
+  @apply bg-zinc-950/50 !important;
+}
+
 /* Custom Brutalist Scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
   width: 10px;

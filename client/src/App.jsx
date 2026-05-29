@@ -42,6 +42,7 @@ function App() {
   const [timetable, setTimetable] = useState(null);
   const [completeTimetable, setCompleteTimetable] = useState(null);
   const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
+  const [darkStyle, setDarkStyle] = useState(() => localStorage.getItem('dark_style') || 'true-black');
   const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
   const [notices, setNotices] = useState(null);
   const [user, setUser] = useState(null);
@@ -144,6 +145,13 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Dark Style Config
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.setAttribute('data-dark-style', darkStyle);
+    localStorage.setItem('dark_style', darkStyle);
+  }, [darkStyle]);
 
   useEffect(() => {
     localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
@@ -752,6 +760,55 @@ function App() {
                                                 {t.name}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Dark Mode Style Section */}
+                                <div className={`border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl transition ${theme !== 'dark' ? 'opacity-50 pointer-events-none grayscale-[0.5]' : ''}`}>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Dark Theme Style</span>
+                                        {theme !== 'dark' && <span className="text-[11px] text-zinc-500 mt-0.5">Switch to Dark Mode to use</span>}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* True Black Option */}
+                                        <button 
+                                            onClick={() => setDarkStyle('true-black')}
+                                            className={`p-3 rounded-xl border-2 transition-all flex flex-col gap-2 ${
+                                                darkStyle === 'true-black' 
+                                                    ? 'border-blue-500 bg-blue-500/5' 
+                                                    : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-[#000000]'
+                                            }`}
+                                        >
+                                            <div className="w-full h-16 rounded-md bg-[#000000] border border-zinc-800 flex flex-col p-2 gap-1.5 overflow-hidden">
+                                                <div className="w-full flex items-center justify-between">
+                                                    <div className="w-1/3 h-2 bg-zinc-800 rounded-sm"></div>
+                                                    <div className="w-4 h-4 bg-zinc-800 rounded-full"></div>
+                                                </div>
+                                                <div className="w-2/3 h-2 bg-zinc-800 rounded-sm mt-1"></div>
+                                                <div className="w-full h-10 bg-zinc-900 rounded-md border border-zinc-800 mt-0.5"></div>
+                                            </div>
+                                            <span className="text-xs font-bold text-center w-full mt-1">True Black</span>
+                                        </button>
+
+                                        {/* Black Option */}
+                                        <button 
+                                            onClick={() => setDarkStyle('black')}
+                                            className={`p-3 rounded-xl border-2 transition-all flex flex-col gap-2 ${
+                                                darkStyle === 'black' 
+                                                    ? 'border-blue-500 bg-blue-500/5' 
+                                                    : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950'
+                                            }`}
+                                        >
+                                            <div className="w-full h-16 rounded-md bg-zinc-950 border border-zinc-800 flex flex-col p-2 gap-1.5 overflow-hidden">
+                                                <div className="w-full flex items-center justify-between">
+                                                    <div className="w-1/3 h-2 bg-zinc-800 rounded-sm"></div>
+                                                    <div className="w-4 h-4 bg-zinc-800 rounded-full"></div>
+                                                </div>
+                                                <div className="w-2/3 h-2 bg-zinc-800 rounded-sm mt-1"></div>
+                                                <div className="w-full h-10 bg-zinc-900 rounded-md border border-zinc-800 mt-0.5"></div>
+                                            </div>
+                                            <span className="text-xs font-bold text-center w-full mt-1">Black</span>
+                                        </button>
                                     </div>
                                 </div>
 
