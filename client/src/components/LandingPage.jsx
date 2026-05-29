@@ -36,7 +36,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
     { name: 'English', time: '09:00 - 10:00', room: 'Room 203', teacher: 'Mrs. B', status: 'Normal', color: 'border-zinc-800' },
     { name: 'Design and Technology', time: '10:05 - 11:05', room: 'Room 502', teacher: 'Mr. G', status: 'Room Change', oldRoom: 'Room 102', color: 'border-orange-500/50' },
     { name: 'Physics', time: '11:25 - 12:25', room: 'Room 307', teacher: 'Mr. H', status: 'Substitution', oldTeacher: 'Mrs. S', color: 'border-blue-500/50' },
-    { name: 'Mathematics Ext. 2', time: '12:30 - 13:30', room: 'Room 105', teacher: 'Mr. J', status: 'Normal', color: 'border-zinc-800' }
+    { name: 'Mathematics Ext. 2', time: '12:30 - 13:30', room: 'Room 105', teacher: 'Mr. J', status: 'Normal', color: 'border-zinc-800' },
     { name: 'History', time: '14:10 - 15:10', room: 'Room 205', teacher: 'Ms. R', status: 'Normal', color: 'border-zinc-800' }
   ];
 
