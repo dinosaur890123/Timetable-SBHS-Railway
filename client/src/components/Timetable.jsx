@@ -32,7 +32,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
             <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
                 <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">🎉</div>
                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No Classes Today!</h3>
-                <p className="text-zinc-500">Enjoy your day off or catch up on some study.</p>
+                <p className="text-zinc-500">Enjoy your day off or do something fun.</p>
             </div>
         );
     }
