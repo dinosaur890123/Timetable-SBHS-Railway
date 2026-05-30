@@ -92,7 +92,7 @@ const ClipboardView = ({ user }) => {
                         <Users size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">My Rosters</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Teams</span>
                         <h4 className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{teams.length} Teams</h4>
                     </div>
                 </div>
