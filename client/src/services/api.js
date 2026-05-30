@@ -76,13 +76,17 @@ export const exchangeToken = async (code) => {
 
 const getAccessToken = () => localStorage.getItem('sbhs_access_token');
 
-export const logout = () => {
+export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
     const dismissedUpdateId = localStorage.getItem('dismissedUpdateId');
     localStorage.clear();
     if (theme) localStorage.setItem('theme', theme);
     if (dismissedUpdateId) localStorage.setItem('dismissedUpdateId', dismissedUpdateId);
-    window.location.href = '/';
+    if (redirectToLogin === true) {
+        performLogin();
+    } else {
+        window.location.href = '/';
+    }
 };
 
 export const isAuthenticated = () => {

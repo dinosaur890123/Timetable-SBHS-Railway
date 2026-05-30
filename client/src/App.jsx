@@ -408,11 +408,11 @@ function App() {
                             if (broadcast.id) {
                                 localStorage.setItem('dismissedUpdateId', String(broadcast.id));
                             }
-                            logout();
+                            logout(true);
                         }}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
                     >
-                        Sign Out & Update
+                        Update
                     </button>
                 )}
             </div>
