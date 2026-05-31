@@ -140,6 +140,7 @@ let users = [];
 let logs = []; // System logs
 let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
+let feedbackEntries = []; // Feedback submissions memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -232,6 +233,25 @@ const addAiLog = async (studentId, question, answer, provider, model) => {
         console.error('Failed to write AI log to DB:', err);
     }
 };
+
+const FEEDBACK_CATEGORIES = new Set(['error', 'suggestion']);
+
+const generateFeedbackTicket = () => {
+    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const shortId = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+    return `FB-${dateStamp}-${shortId}`;
+};
+
+const formatFeedbackRow = (row) => ({
+    id: row.id,
+    ticketNumber: row.ticket_number,
+    studentId: row.student_id,
+    category: row.category,
+    severity: row.severity,
+    details: row.details,
+    createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at)
+});
 
 async function getSystemState() {
     if (!isDbEnabled) {
@@ -802,6 +822,62 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
 });
 
 // --- Study Notes Endpoints (CRUD) ---
+
+// POST /api/feedback - Submit authenticated feedback
+app.post('/api/feedback', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const category = String(req.body?.category || '').toLowerCase().trim();
+        const severity = Number.parseInt(req.body?.severity, 10);
+        const details = String(req.body?.details || '').trim();
+
+        if (!FEEDBACK_CATEGORIES.has(category)) {
+            return res.status(400).json({ error: 'Invalid feedback category' });
+        }
+
+        if (!Number.isInteger(severity) || severity < 1 || severity > 5) {
+            return res.status(400).json({ error: 'Severity must be between 1 and 5' });
+        }
+
+        if (details.length < 20) {
+            return res.status(400).json({ error: 'Please add more detail to your feedback' });
+        }
+
+        const now = new Date();
+        const id = crypto.randomUUID();
+        const ticketNumber = generateFeedbackTicket();
+
+        let savedFeedback;
+        if (!isDbEnabled) {
+            savedFeedback = {
+                id,
+                ticketNumber,
+                studentId,
+                category,
+                severity,
+                details,
+                createdAt: now,
+                updatedAt: now
+            };
+            feedbackEntries.unshift(savedFeedback);
+            if (feedbackEntries.length > 200) feedbackEntries.pop();
+        } else {
+            const result = await db.query(
+                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+                 RETURNING id, ticket_number, student_id, category, severity, details, created_at, updated_at`,
+                [id, ticketNumber, studentId, category, severity, details]
+            );
+            savedFeedback = formatFeedbackRow(result.rows[0]);
+        }
+
+        await addLog('FEEDBACK', studentId, `Submitted ${category} feedback (${ticketNumber})`);
+        res.status(201).json({ success: true, ticket: ticketNumber, feedback: savedFeedback });
+    } catch (e) {
+        console.error('Feedback submit error:', e);
+        res.status(500).json({ error: 'Failed to submit feedback' });
+    }
+});
 
 // GET /api/notes - Retrieve notes for authenticated student
 app.get('/api/notes', requireStudentAuth, async (req, res) => {

@@ -1591,7 +1591,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                         onClick={() => setView && setView('profile')}
                         className="px-6 py-3 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                     >
-                        Upgrade to Pro ($6.99 Lifetime)
+                        Upgrade to Pro ($5.99 Annually)
                     </button>
                 </div>
             </div>

@@ -79,3 +79,17 @@ CREATE TABLE IF NOT EXISTS app_notes (
 );
 
 CREATE INDEX IF NOT EXISTS app_notes_student_id_idx ON app_notes (student_id);
+
+CREATE TABLE IF NOT EXISTS app_feedback (
+  id TEXT PRIMARY KEY,
+  ticket_number TEXT NOT NULL UNIQUE,
+  student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  severity INTEGER NOT NULL CHECK (severity BETWEEN 1 AND 5),
+  details TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_feedback_student_id_idx ON app_feedback (student_id);
+CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_at DESC);

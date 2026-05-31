@@ -10,6 +10,7 @@ import Home from './components/Home';
 import AwardSchemeView from './components/AwardSchemeView';
 import ClipboardView from './components/ClipboardView';
 import NotesView from './components/NotesView';
+import FeedbackView from './components/FeedbackView';
 import { 
   fetchDayTimetable, 
   fetchDailyNews, 
@@ -24,7 +25,7 @@ import {
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail } from 'lucide-react';
 
 function App() {
   // State
@@ -488,6 +489,11 @@ function App() {
             {/* NOTES VIEW */}
             {currentView === 'notes' && <NotesView user={user} timetableData={timetable} setView={setCurrentView} />}
 
+            {/* FEEDBACK VIEW */}
+            {currentView === 'feedback' && (
+                <FeedbackView user={user} onBack={() => setCurrentView('profile')} />
+            )}
+
             {/* ADMIN VIEW */}
             {currentView === 'admin' && <AdminPanel user={user} />}
 
@@ -831,6 +837,22 @@ function App() {
                                         </div>
                                     </div>
                                 )}
+
+                                <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={16} className="text-blue-500 shrink-0" />
+                                        <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Feedback</h3>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                        Report an error or suggest an improvement. Please include as much detail as possible so it can be investigated quickly.
+                                    </p>
+                                    <button
+                                        onClick={() => setCurrentView('feedback')}
+                                        className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
+                                    >
+                                        Open Feedback Form
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
