@@ -235,6 +235,7 @@ const addAiLog = async (studentId, question, answer, provider, model) => {
 };
 
 const FEEDBACK_CATEGORIES = new Set(['error', 'suggestion']);
+const FEEDBACK_STATUSES = new Set(['open', 'resolved', 'archived']);
 
 const generateFeedbackTicket = () => {
     const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -246,12 +247,57 @@ const formatFeedbackRow = (row) => ({
     id: row.id,
     ticketNumber: row.ticket_number,
     studentId: row.student_id,
+    submitterName: row.submitter_name || null,
+    submitterEmail: row.submitter_email || null,
     category: row.category,
     severity: row.severity,
+    status: row.status || 'open',
     details: row.details,
+    resolvedAt: toIso(row.resolved_at),
+    archivedAt: toIso(row.archived_at),
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at)
 });
+
+const formatFeedbackEntry = (entry) => ({
+    id: entry.id,
+    ticketNumber: entry.ticketNumber,
+    studentId: entry.studentId,
+    submitterName: entry.submitterName || null,
+    submitterEmail: entry.submitterEmail || null,
+    category: entry.category,
+    severity: entry.severity,
+    status: entry.status || 'open',
+    details: entry.details,
+    resolvedAt: toIso(entry.resolvedAt),
+    archivedAt: toIso(entry.archivedAt),
+    createdAt: toIso(entry.createdAt),
+    updatedAt: toIso(entry.updatedAt)
+});
+
+const cleanupArchivedFeedback = async () => {
+    if (!isDbEnabled) {
+        const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+        const before = feedbackEntries.length;
+        feedbackEntries = feedbackEntries.filter(entry => {
+            if (entry.status !== 'archived' || !entry.archivedAt) return true;
+            return new Date(entry.archivedAt).getTime() >= cutoff;
+        });
+        return before - feedbackEntries.length;
+    }
+
+    const result = await db.query(
+        `DELETE FROM app_feedback
+         WHERE status = 'archived'
+           AND archived_at IS NOT NULL
+           AND archived_at < NOW() - INTERVAL '90 days'`
+    );
+    return result.rowCount || 0;
+};
+
+setInterval(() => {
+    cleanupArchivedFeedback().catch(err => console.error('[feedback] cleanup failed:', err));
+}, 24 * 60 * 60 * 1000);
 
 async function getSystemState() {
     if (!isDbEnabled) {
@@ -827,6 +873,8 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
 app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
+        const submitterName = [req.user.givenName, req.user.surname].filter(Boolean).join(' ').trim() || String(req.user.name || '').trim() || `Student ${studentId}`;
+        const submitterEmail = String(req.user.email || '').trim();
         const category = String(req.body?.category || '').toLowerCase().trim();
         const severity = Number.parseInt(req.body?.severity, 10);
         const details = String(req.body?.details || '').trim();
@@ -853,9 +901,12 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
                 id,
                 ticketNumber,
                 studentId,
+                submitterName,
+                submitterEmail,
                 category,
                 severity,
                 details,
+                status: 'open',
                 createdAt: now,
                 updatedAt: now
             };
@@ -863,10 +914,10 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
             if (feedbackEntries.length > 200) feedbackEntries.pop();
         } else {
             const result = await db.query(
-                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-                 RETURNING id, ticket_number, student_id, category, severity, details, created_at, updated_at`,
-                [id, ticketNumber, studentId, category, severity, details]
+                `INSERT INTO app_feedback (id, ticket_number, student_id, submitter_name, submitter_email, category, severity, details, status, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', NOW(), NOW())
+                 RETURNING id, ticket_number, student_id, submitter_name, submitter_email, category, severity, details, status, resolved_at, archived_at, created_at, updated_at`,
+                [id, ticketNumber, studentId, submitterName, submitterEmail, category, severity, details]
             );
             savedFeedback = formatFeedbackRow(result.rows[0]);
         }
@@ -1043,6 +1094,143 @@ app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Delete note error:', e);
         res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// --- Feedback Endpoints (Admin Review) ---
+
+app.get('/api/feedback', requireAuth, async (req, res) => {
+    try {
+        await cleanupArchivedFeedback();
+
+        const statusFilter = String(req.query?.status || '').toLowerCase().trim();
+        const validStatusFilter = FEEDBACK_STATUSES.has(statusFilter) ? statusFilter : null;
+
+        if (!isDbEnabled) {
+            const feedback = feedbackEntries
+                .filter(entry => !validStatusFilter || entry.status === validStatusFilter)
+                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+                .map(formatFeedbackEntry);
+            return res.json({ success: true, feedback });
+        }
+
+        const params = [];
+        const where = [];
+        if (validStatusFilter) {
+            params.push(validStatusFilter);
+            where.push(`status = $${params.length}`);
+        }
+
+        const result = await db.query(
+            `SELECT id, ticket_number, student_id, submitter_name, submitter_email, category, severity, details, status, resolved_at, archived_at, created_at, updated_at
+             FROM app_feedback
+             ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+             ORDER BY updated_at DESC`,
+            params
+        );
+
+        res.json({ success: true, feedback: result.rows.map(formatFeedbackRow) });
+    } catch (e) {
+        console.error('Fetch feedback error:', e);
+        res.status(500).json({ error: 'Failed to fetch feedback' });
+    }
+});
+
+app.put('/api/feedback/:id/resolve', requireAuth, async (req, res) => {
+    try {
+        const feedbackId = String(req.params.id).trim();
+        await cleanupArchivedFeedback();
+
+        if (!isDbEnabled) {
+            const item = feedbackEntries.find(entry => String(entry.id) === feedbackId);
+            if (!item) return res.status(404).json({ error: 'Feedback not found' });
+            if (item.status === 'archived') return res.status(400).json({ error: 'Archived feedback cannot be resolved' });
+            item.status = 'resolved';
+            item.resolvedAt = item.resolvedAt || new Date();
+            item.updatedAt = new Date();
+            return res.json({ success: true, feedback: formatFeedbackEntry(item) });
+        }
+
+        const result = await db.query(
+            `UPDATE app_feedback
+             SET status = 'resolved',
+                 resolved_at = COALESCE(resolved_at, NOW()),
+                 updated_at = NOW()
+             WHERE id = $1 AND status <> 'archived'
+             RETURNING id, ticket_number, student_id, submitter_name, submitter_email, category, severity, details, status, resolved_at, archived_at, created_at, updated_at`,
+            [feedbackId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Feedback not found or already archived' });
+        }
+
+        res.json({ success: true, feedback: formatFeedbackRow(result.rows[0]) });
+    } catch (e) {
+        console.error('Resolve feedback error:', e);
+        res.status(500).json({ error: 'Failed to resolve feedback' });
+    }
+});
+
+app.put('/api/feedback/:id/archive', requireAuth, async (req, res) => {
+    try {
+        const feedbackId = String(req.params.id).trim();
+        await cleanupArchivedFeedback();
+
+        if (!isDbEnabled) {
+            const item = feedbackEntries.find(entry => String(entry.id) === feedbackId);
+            if (!item) return res.status(404).json({ error: 'Feedback not found' });
+            item.status = 'archived';
+            item.archivedAt = new Date();
+            item.updatedAt = new Date();
+            if (!item.resolvedAt) item.resolvedAt = new Date();
+            return res.json({ success: true, feedback: formatFeedbackEntry(item) });
+        }
+
+        const result = await db.query(
+            `UPDATE app_feedback
+             SET status = 'archived',
+                 resolved_at = COALESCE(resolved_at, NOW()),
+                 archived_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = $1
+             RETURNING id, ticket_number, student_id, submitter_name, submitter_email, category, severity, details, status, resolved_at, archived_at, created_at, updated_at`,
+            [feedbackId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+
+        res.json({ success: true, feedback: formatFeedbackRow(result.rows[0]) });
+    } catch (e) {
+        console.error('Archive feedback error:', e);
+        res.status(500).json({ error: 'Failed to archive feedback' });
+    }
+});
+
+app.delete('/api/feedback/:id', requireAuth, async (req, res) => {
+    try {
+        const feedbackId = String(req.params.id).trim();
+
+        if (!isDbEnabled) {
+            const before = feedbackEntries.length;
+            feedbackEntries = feedbackEntries.filter(entry => String(entry.id) !== feedbackId);
+            if (before === feedbackEntries.length) {
+                return res.status(404).json({ error: 'Feedback not found' });
+            }
+            return res.json({ success: true });
+        }
+
+        const result = await db.query('DELETE FROM app_feedback WHERE id = $1', [feedbackId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Feedback not found' });
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Delete feedback error:', e);
+        res.status(500).json({ error: 'Failed to delete feedback' });
     }
 });
 

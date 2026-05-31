@@ -202,6 +202,57 @@ export const fetchAiLogs = async () => {
     }
 };
 
+export const fetchFeedback = async (status) => {
+    try {
+        const query = status ? `?status=${encodeURIComponent(status)}` : '';
+        const response = await fetch(`${ADMIN_API_URL}/feedback${query}`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch feedback');
+        return await response.json();
+    } catch (error) {
+        console.error('Admin API Error:', error);
+        throw error;
+    }
+};
+
+const updateFeedback = async (feedbackId, action) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/feedback/${feedbackId}/${action}`, {
+            method: 'PUT',
+            headers: getHeaders()
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Failed to ${action} feedback`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Admin API Error:', error);
+        throw error;
+    }
+};
+
+export const resolveFeedback = (feedbackId) => updateFeedback(feedbackId, 'resolve');
+export const archiveFeedback = (feedbackId) => updateFeedback(feedbackId, 'archive');
+
+export const deleteFeedback = async (feedbackId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/feedback/${feedbackId}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to delete feedback');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Admin API Error:', error);
+        throw error;
+    }
+};
+
 export const clearAiCache = async () => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/ai/cache/clear`, {
