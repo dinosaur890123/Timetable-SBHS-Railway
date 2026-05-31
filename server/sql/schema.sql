@@ -84,23 +84,12 @@ CREATE TABLE IF NOT EXISTS app_feedback (
   id TEXT PRIMARY KEY,
   ticket_number TEXT NOT NULL UNIQUE,
   student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'open',
   category TEXT NOT NULL,
   severity INTEGER NOT NULL CHECK (severity BETWEEN 1 AND 5),
   details TEXT NOT NULL,
-  resolved_at TIMESTAMPTZ NULL,
-  resolved_by TEXT NULL,
-  resolved_by_email TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS app_feedback_student_id_idx ON app_feedback (student_id);
 CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_at DESC);
-CREATE INDEX IF NOT EXISTS app_feedback_status_idx ON app_feedback (status);
-CREATE INDEX IF NOT EXISTS app_feedback_resolved_at_idx ON app_feedback (resolved_at DESC);
-
-ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ NULL;
-ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS resolved_by TEXT NULL;
-ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS resolved_by_email TEXT NULL;
