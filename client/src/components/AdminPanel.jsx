@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, Mail, CheckCircle2, Archive } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchFeedback, resolveFeedback, archiveFeedback, deleteFeedback as deleteFeedbackRequest } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -11,7 +11,6 @@ const AdminPanel = ({ user }) => {
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
-    const [feedbackRequests, setFeedbackRequests] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -39,10 +38,6 @@ const AdminPanel = ({ user }) => {
     const [logSearchTerm, setLogSearchTerm] = useState('');
     const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
-    const [feedbackFilter, setFeedbackFilter] = useState('open');
-    const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
-    const [viewingFeedback, setViewingFeedback] = useState(null);
-    const [feedbackBusyId, setFeedbackBusyId] = useState('');
     const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
@@ -62,7 +57,7 @@ const AdminPanel = ({ user }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData] = await Promise.all([
+            const [usersData, statsData, logsData, systemData, aiLogsData] = await Promise.all([
                 fetchUsers(),
                 fetchAdminStats(),
                 fetchLogs(),
@@ -70,17 +65,12 @@ const AdminPanel = ({ user }) => {
                 fetchAiLogs().catch(err => {
                     console.warn("Failed to fetch AI logs:", err);
                     return [];
-                }),
-                fetchFeedback().catch(err => {
-                    console.warn("Failed to fetch feedback:", err);
-                    return [];
                 })
             ]);
             setUsers(usersData);
             setStats(statsData);
             setLogs(logsData);
             setAiLogs(aiLogsData || []);
-            setFeedbackRequests(feedbackData?.feedback || feedbackData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
@@ -351,67 +341,17 @@ const AdminPanel = ({ user }) => {
         );
     });
 
-    const filteredFeedback = feedbackRequests.filter(item => {
-        const term = feedbackSearchTerm.toLowerCase();
-        const statusMatches = feedbackFilter === 'all' || item.status === feedbackFilter;
-        const searchable = [item.ticketNumber, item.studentId, item.submitterName, item.submitterEmail, item.category, item.details].filter(Boolean).join(' ').toLowerCase();
-        return statusMatches && searchable.includes(term);
-    });
-
-    const feedbackSeverityClasses = (severity) => {
-        if (severity >= 5) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-900/40';
-        if (severity >= 4) return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-900/40';
-        if (severity >= 3) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-900/40';
-        if (severity >= 2) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/40';
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40';
-    };
-
-    const feedbackStatusClasses = (status) => {
-        if (status === 'archived') return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700';
-        if (status === 'resolved') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40';
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-900/40';
-    };
-
-    const syncFeedbackChange = (updatedFeedback) => {
-        setFeedbackRequests(prev => prev.map(item => item.id === updatedFeedback.id ? updatedFeedback : item));
-        setViewingFeedback(prev => prev && prev.id === updatedFeedback.id ? updatedFeedback : prev);
-    };
-
-    const handleFeedbackAction = async (feedbackId, action) => {
-        if (!feedbackId || feedbackBusyId) return;
-        setFeedbackBusyId(feedbackId);
-        try {
-            let response;
-            if (action === 'resolve') response = await resolveFeedback(feedbackId);
-            else if (action === 'archive') response = await archiveFeedback(feedbackId);
-            else if (action === 'delete') {
-                await deleteFeedbackRequest(feedbackId);
-                setFeedbackRequests(prev => prev.filter(item => item.id !== feedbackId));
-                if (viewingFeedback?.id === feedbackId) setViewingFeedback(null);
-                return;
-            }
-
-            if (response?.feedback) {
-                syncFeedbackChange(response.feedback);
-            }
-        } catch (err) {
-            alert(err.message || `Failed to ${action} feedback`);
-        } finally {
-            setFeedbackBusyId('');
-        }
-    };
-
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-4 md:py-2 text-[10px] sm:text-[11px] lg:text-xs font-semibold transition-all border whitespace-nowrap shrink-0
+            className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
         ${activeTab === id
                     ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
                 }`}
         >
-            <Icon size={16} className="shrink-0" />
+            <Icon size={18} />
             <span className="hidden sm:inline">{label}</span>
         </button>
     );
@@ -440,22 +380,21 @@ const AdminPanel = ({ user }) => {
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 xl:gap-4 mb-5 xl:mb-6">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-2.5">
-                        <ShieldCheck className="w-7 h-7 text-green-500" />
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                        <ShieldCheck className="w-8 h-8 text-green-500" />
                         Admin Dashboard
                     </h1>
-                    <p className="text-zinc-500 dark:text-zinc-400 mt-1.5">
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-2">
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="flex flex-nowrap gap-1 sm:gap-1.5">
+                <div className="flex flex-wrap sm:flex-nowrap gap-2">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
-                    <TabButton id="feedback" label="Feedback" icon={Mail} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
             </header>
@@ -1033,116 +972,6 @@ const AdminPanel = ({ user }) => {
 }
 
 {
-    activeTab === 'feedback' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-                <div className="space-y-1">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">Feedback Requests</h3>
-                    <p className="text-xs text-zinc-500">Review submitted reports, resolve them, archive completed items, or delete anything invalid.</p>
-                </div>
-                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                    <select
-                        value={feedbackFilter}
-                        onChange={(e) => setFeedbackFilter(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="open">Open</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="archived">Archived</option>
-                        <option value="all">All</option>
-                    </select>
-                    <div className="relative flex-1 md:w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                        <input
-                            type="text"
-                            placeholder="Search tickets, names, email, details..."
-                            value={feedbackSearchTerm}
-                            onChange={(e) => setFeedbackSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4">Feedback ID</th>
-                            <th className="px-6 py-4">User</th>
-                            <th className="px-6 py-4">Email</th>
-                            <th className="px-6 py-4">Severity</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Updated</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                        {loading ? (
-                            <tr>
-                                <td colSpan="7" className="px-6 py-8 text-center text-zinc-550">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <RefreshCw className="animate-spin w-4 h-4" />
-                                        Loading feedback...
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : filteredFeedback.length === 0 ? (
-                            <tr>
-                                <td colSpan="7" className="px-6 py-8 text-center text-zinc-550">
-                                    No feedback requests found.
-                                </td>
-                            </tr>
-                        ) : filteredFeedback.map((item) => (
-                            <tr key={item.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="font-mono text-xs font-bold text-zinc-900 dark:text-white">{item.ticketNumber}</div>
-                                    <div className="text-[11px] text-zinc-500 uppercase tracking-wider mt-1">{item.category}</div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="font-semibold text-zinc-900 dark:text-white">{item.submitterName || 'Unknown'}</div>
-                                    <div className="text-zinc-500 text-xs font-mono">{item.studentId}</div>
-                                </td>
-                                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs break-all">{item.submitterEmail || 'Unknown'}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold rounded-full ${feedbackSeverityClasses(item.severity)}`}>
-                                        {item.severity}/5
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold rounded-full capitalize ${feedbackStatusClasses(item.status)}`}>
-                                        {item.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">
-                                    {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'Unknown'}
-                                </td>
-                                <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    <button
-                                        onClick={() => setViewingFeedback(item)}
-                                        className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                        title="Open Feedback"
-                                    >
-                                        <Eye size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleFeedbackAction(item.id, 'delete')}
-                                        disabled={feedbackBusyId === item.id}
-                                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                                        title="Delete Feedback"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    )
-}
-
-{
     activeTab === 'users' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
             {/* Promote User Card */}
@@ -1497,102 +1326,6 @@ const AdminPanel = ({ user }) => {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
-    )
-}
-
-{/* Feedback Detail Modal */}
-{
-    viewingFeedback && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-blue-100 dark:bg-blue-950/40 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-200/20">
-                            <Mail className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">Feedback Details</h3>
-                            <p className="text-xs text-zinc-500 mt-1 font-mono">
-                                {viewingFeedback.ticketNumber} • {viewingFeedback.category} • {viewingFeedback.studentId}
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={() => setViewingFeedback(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Submitted By</span>
-                            <span className="font-bold text-zinc-900 dark:text-white">{viewingFeedback.submitterName || 'Unknown'}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Email</span>
-                            <span className="font-bold text-zinc-900 dark:text-white break-all">{viewingFeedback.submitterEmail || 'Unknown'}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Severity</span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 border rounded-full text-xs font-semibold ${feedbackSeverityClasses(viewingFeedback.severity)}`}>
-                                {viewingFeedback.severity}/5
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 border rounded-full text-xs font-semibold capitalize ${feedbackStatusClasses(viewingFeedback.status)}`}>
-                                {viewingFeedback.status}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 text-left">
-                        <div className="space-y-1.5">
-                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Feedback</span>
-                            <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm whitespace-pre-wrap">
-                                {viewingFeedback.details}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-2">
-                        {viewingFeedback.status !== 'resolved' && viewingFeedback.status !== 'archived' && (
-                            <button
-                                onClick={async () => {
-                                    await handleFeedbackAction(viewingFeedback.id, 'resolve');
-                                }}
-                                disabled={feedbackBusyId === viewingFeedback.id}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
-                            >
-                                <CheckCircle2 size={16} />
-                                Mark Resolved
-                            </button>
-                        )}
-                        {viewingFeedback.status !== 'archived' && (
-                            <button
-                                onClick={async () => {
-                                    await handleFeedbackAction(viewingFeedback.id, 'archive');
-                                }}
-                                disabled={feedbackBusyId === viewingFeedback.id}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
-                            >
-                                <Archive size={16} />
-                                Archive
-                            </button>
-                        )}
-                        <button
-                            onClick={async () => {
-                                await handleFeedbackAction(viewingFeedback.id, 'delete');
-                            }}
-                            disabled={feedbackBusyId === viewingFeedback.id}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
-                            Delete
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     )
