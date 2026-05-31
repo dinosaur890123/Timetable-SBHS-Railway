@@ -390,7 +390,7 @@ const AdminPanel = ({ user }) => {
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap gap-2">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
