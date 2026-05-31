@@ -229,20 +229,6 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    const handleClearAllTimetables = async () => {
-        if (!window.confirm("Are you sure you want to clear cached timetables? This will reset the cached timetables for all users to NULL. They will be re-synced from the school portal on their next login.")) return;
-        setIsClearingTimetables(true);
-        try {
-            const res = await clearAllTimetables();
-            alert(`Timetable cache cleared for ${res.count} users.`);
-            loadData();
-        } catch (err) {
-            alert("Failed to clear timetables.");
-        } finally {
-            setIsClearingTimetables(false);
-        }
-    };
-
     const [updatingConfig, setUpdatingConfig] = useState(false);
     const [customModelName, setCustomModelName] = useState('');
 
@@ -359,14 +345,14 @@ const AdminPanel = ({ user }) => {
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all border
+            className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
         ${activeTab === id
                     ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
                 }`}
         >
             <Icon size={18} />
-            {label}
+            <span className="hidden sm:inline">{label}</span>
         </button>
     );
 
@@ -394,7 +380,7 @@ const AdminPanel = ({ user }) => {
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <ShieldCheck className="w-8 h-8 text-green-500" />
@@ -404,7 +390,7 @@ const AdminPanel = ({ user }) => {
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
@@ -770,35 +756,6 @@ const AdminPanel = ({ user }) => {
                                 });
                             })()}
                         </div>
-                    </div>
-                </div>
-
-                {/* Popular Synced Courses */}
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                        <Terminal className="text-zinc-950 dark:text-zinc-100" size={16} />
-                        Most Popular Synced Electives & Courses
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {stats?.popularClasses && stats.popularClasses.length > 0 ? (
-                            stats.popularClasses.map((item, idx) => (
-                                <div key={idx} className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <span className="w-6 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center text-xs font-mono font-bold dark:text-white">
-                                            {idx + 1}
-                                        </span>
-                                        <span className="text-sm font-medium text-zinc-900 dark:text-white">{item.title}</span>
-                                    </div>
-                                    <span className="text-xs font-mono bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 rounded font-bold">
-                                        {item.count} students
-                                    </span>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="col-span-2 text-center py-6 text-zinc-500 font-mono text-xs">
-                                [NO TIMETABLE PERIODS FOUND IN DATABASE TO AGGREGATE]
-                            </div>
-                        )}
                     </div>
                 </div>
 
