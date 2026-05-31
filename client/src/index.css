@@ -69,19 +69,19 @@
 
 /* Dark Mode Style Overrides */
 html.dark[data-dark-style="black"] body {
-  @apply bg-[#28282B];
+  @apply bg-[#1C1C1C];
 }
 html.dark[data-dark-style="black"] .dark\:bg-black {
-  @apply bg-[#28282B] !important;
+  @apply bg-[#1C1C1C] !important;
 }
 html.dark[data-dark-style="black"] .dark\:bg-black\/80 {
-  @apply bg-[#28282B]/80 !important;
+  @apply bg-[#1C1C1C]/80 !important;
 }
 html.dark[data-dark-style="black"] .dark\:bg-black\/85 {
-  @apply bg-[#28282B]/85 !important;
+  @apply bg-[#1C1C1C]/85 !important;
 }
 html.dark[data-dark-style="black"] .dark\:bg-black\/50 {
-  @apply bg-[#28282B]/50 !important;
+  @apply bg-[#1C1C1C]/50 !important;
 }
 
 /* Custom Brutalist Scrollbars */
