@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
+import React, { useState, useEffect } from 'react';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, Mail, CheckCircle2 } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, resolveFeedback, deleteFeedback } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -11,6 +11,7 @@ const AdminPanel = ({ user }) => {
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
+    const [feedbackItems, setFeedbackItems] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -38,6 +39,10 @@ const AdminPanel = ({ user }) => {
     const [logSearchTerm, setLogSearchTerm] = useState('');
     const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
+    const [feedbackTab, setFeedbackTab] = useState('open');
+    const [feedbackLoading, setFeedbackLoading] = useState(false);
+    const [feedbackActionId, setFeedbackActionId] = useState(null);
+    const [viewingFeedback, setViewingFeedback] = useState(null);
     const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
@@ -86,6 +91,25 @@ const AdminPanel = ({ user }) => {
         }
     }, [isAuthenticated]);
 
+    const loadFeedback = async (status = feedbackTab) => {
+        setFeedbackLoading(true);
+        try {
+            const feedbackData = await fetchAdminFeedback(status);
+            setFeedbackItems(feedbackData || []);
+        } catch (err) {
+            alert('Failed to load feedback queue');
+            console.error(err);
+        } finally {
+            setFeedbackLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab === 'feedback') {
+            loadFeedback(feedbackTab);
+        }
+    }, [isAuthenticated, activeTab, feedbackTab]);
+
     const handleDeleteUser = async (userId) => {
         if (!window.confirm("Are you sure you want to delete this user?")) return;
 
@@ -99,6 +123,40 @@ const AdminPanel = ({ user }) => {
             });
         } catch (err) {
             alert("Failed to delete user");
+        }
+    };
+
+    const handleResolveFeedback = async (feedbackId) => {
+        if (!window.confirm('Mark this feedback entry as resolved and archive it?')) return;
+
+        setFeedbackActionId(feedbackId);
+        try {
+            await resolveFeedback(feedbackId);
+            if (viewingFeedback && viewingFeedback.id === feedbackId) {
+                setViewingFeedback(prev => prev ? { ...prev, status: 'resolved', resolvedAt: new Date().toISOString() } : null);
+            }
+            await loadFeedback(feedbackTab);
+        } catch (err) {
+            alert('Failed to resolve feedback entry');
+        } finally {
+            setFeedbackActionId(null);
+        }
+    };
+
+    const handleDeleteFeedback = async (feedbackId) => {
+        if (!window.confirm('Delete this feedback entry permanently?')) return;
+
+        setFeedbackActionId(feedbackId);
+        try {
+            await deleteFeedback(feedbackId);
+            if (viewingFeedback && viewingFeedback.id === feedbackId) {
+                setViewingFeedback(null);
+            }
+            await loadFeedback(feedbackTab);
+        } catch (err) {
+            alert('Failed to delete feedback entry');
+        } finally {
+            setFeedbackActionId(null);
         }
     };
 
@@ -341,18 +399,33 @@ const AdminPanel = ({ user }) => {
         );
     });
 
+    const getSeverityMeta = (severityValue) => {
+        const severity = Number(severityValue) || 1;
+        if (severity >= 5) return { label: 'Critical', className: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800/50' };
+        if (severity === 4) return { label: 'High', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800/50' };
+        if (severity === 3) return { label: 'Moderate', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/50' };
+        if (severity === 2) return { label: 'Minor', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800/50' };
+        return { label: 'Low', className: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700' };
+    };
+
+    const formatFeedbackDate = (dateValue) => {
+        if (!dateValue) return '—';
+        return new Date(dateValue).toLocaleString();
+    };
+
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
+            title={label}
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
+            className={`shrink-0 flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 md:px-3 md:py-2 text-xs md:text-sm font-semibold transition-all border whitespace-nowrap
         ${activeTab === id
                     ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
                 }`}
         >
-            <Icon size={18} />
-            <span className="hidden sm:inline">{label}</span>
+            <Icon size={16} className="md:w-[17px] md:h-[17px]" />
+            <span className="hidden lg:inline">{label}</span>
         </button>
     );
 
@@ -380,7 +453,7 @@ const AdminPanel = ({ user }) => {
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <ShieldCheck className="w-8 h-8 text-green-500" />
@@ -390,11 +463,12 @@ const AdminPanel = ({ user }) => {
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="flex flex-wrap sm:flex-nowrap gap-2">
+                <div className="flex flex-nowrap gap-1 sm:gap-1.5 md:gap-2 overflow-x-auto pb-1">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
+                    <TabButton id="feedback" label="Feedback" icon={Mail} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
             </header>
@@ -1152,6 +1226,118 @@ const AdminPanel = ({ user }) => {
 }
 
 {
+    activeTab === 'feedback' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div>
+                    <h3 className="font-semibold text-zinc-900 dark:text-white">Feedback Queue</h3>
+                    <p className="text-xs text-zinc-500 mt-1">Resolved feedback is archived and auto-deleted 90 days after resolution.</p>
+                </div>
+                <div className="inline-flex border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                    <button
+                        onClick={() => setFeedbackTab('open')}
+                        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${feedbackTab === 'open'
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                    >
+                        Open
+                    </button>
+                    <button
+                        onClick={() => setFeedbackTab('resolved')}
+                        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${feedbackTab === 'resolved'
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                    >
+                        Resolved
+                    </button>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
+                        <tr>
+                            <th className="px-6 py-4">Feedback ID</th>
+                            <th className="px-6 py-4">Submitted By</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Severity</th>
+                            <th className="px-6 py-4">Submitted</th>
+                            {feedbackTab === 'resolved' && <th className="px-6 py-4">Resolved</th>}
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        {feedbackLoading ? (
+                            <tr>
+                                <td colSpan={feedbackTab === 'resolved' ? '7' : '6'} className="px-6 py-8 text-center text-zinc-550">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <RefreshCw className="animate-spin w-4 h-4" />
+                                        Loading feedback...
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : feedbackItems.length === 0 ? (
+                            <tr>
+                                <td colSpan={feedbackTab === 'resolved' ? '7' : '6'} className="px-6 py-8 text-center text-zinc-550">
+                                    No {feedbackTab} feedback entries.
+                                </td>
+                            </tr>
+                        ) : feedbackItems.map((item) => {
+                            const severityMeta = getSeverityMeta(item.severity);
+                            return (
+                                <tr key={item.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                    <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300 font-mono text-xs">{item.ticketNumber || item.id}</td>
+                                    <td className="px-6 py-4 text-zinc-900 dark:text-white font-semibold">{item.submitterName || item.studentId || 'Unknown'}</td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">{item.submitterEmail || '—'}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold ${severityMeta.className}`}>
+                                            {severityMeta.label} ({Number(item.severity) || 1}/5)
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">{formatFeedbackDate(item.createdAt)}</td>
+                                    {feedbackTab === 'resolved' && (
+                                        <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">{formatFeedbackDate(item.resolvedAt)}</td>
+                                    )}
+                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                        <button
+                                            onClick={() => setViewingFeedback(item)}
+                                            className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                            title="View Feedback"
+                                        >
+                                            <Eye size={16} />
+                                        </button>
+                                        {feedbackTab === 'open' && (
+                                            <button
+                                                onClick={() => handleResolveFeedback(item.id)}
+                                                disabled={feedbackActionId === item.id}
+                                                className="p-1 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50"
+                                                title="Mark Resolved"
+                                            >
+                                                <CheckCircle2 size={16} />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handleDeleteFeedback(item.id)}
+                                            disabled={feedbackActionId === item.id}
+                                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                                            title="Delete Feedback"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+{
     activeTab === 'settings' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
             <h3 className="text-lg font-semibold dark:text-white mb-4">Admin Controls</h3>
@@ -1293,6 +1479,95 @@ const AdminPanel = ({ user }) => {
     )
 }
 
+
+{/* Edit User Modal */ }
+{
+    viewingFeedback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                    <div>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">Feedback Details</h3>
+                        <p className="text-xs text-zinc-500 mt-1">
+                            {viewingFeedback.ticketNumber || viewingFeedback.id} • {viewingFeedback.category?.toUpperCase() || 'UNKNOWN'}
+                        </p>
+                    </div>
+                    <button onClick={() => setViewingFeedback(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Submitted By</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">{viewingFeedback.submitterName || viewingFeedback.studentId || 'Unknown'}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Email</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">{viewingFeedback.submitterEmail || '—'}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Severity</span>
+                            {(() => {
+                                const severityMeta = getSeverityMeta(viewingFeedback.severity);
+                                return (
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold ${severityMeta.className}`}>
+                                        {severityMeta.label} ({Number(viewingFeedback.severity) || 1}/5)
+                                    </span>
+                                );
+                            })()}
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
+                            <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingFeedback.status || 'open'}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Submitted</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">{formatFeedbackDate(viewingFeedback.createdAt)}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Resolved</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">{formatFeedbackDate(viewingFeedback.resolvedAt)}</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Feedback Content</span>
+                        <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-sm whitespace-pre-wrap leading-relaxed">
+                            {viewingFeedback.details}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
+                    {viewingFeedback.status !== 'resolved' && (
+                        <button
+                            onClick={() => handleResolveFeedback(viewingFeedback.id)}
+                            disabled={feedbackActionId === viewingFeedback.id}
+                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            Mark Resolved
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleDeleteFeedback(viewingFeedback.id)}
+                        disabled={feedbackActionId === viewingFeedback.id}
+                        className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                    >
+                        Delete
+                    </button>
+                    <button
+                        onClick={() => setViewingFeedback(null)}
+                        className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 {/* Edit User Modal */ }
 {

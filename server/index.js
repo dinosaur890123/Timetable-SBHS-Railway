@@ -235,6 +235,7 @@ const addAiLog = async (studentId, question, answer, provider, model) => {
 };
 
 const FEEDBACK_CATEGORIES = new Set(['error', 'suggestion']);
+const FEEDBACK_STATUSES = new Set(['open', 'resolved']);
 
 const generateFeedbackTicket = () => {
     const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -244,14 +245,52 @@ const generateFeedbackTicket = () => {
 
 const formatFeedbackRow = (row) => ({
     id: row.id,
-    ticketNumber: row.ticket_number,
-    studentId: row.student_id,
+    ticketNumber: row.ticket_number ?? row.ticketNumber,
+    studentId: row.student_id ?? row.studentId,
+    submitterName: row.submitter_name ?? row.submitterName ?? null,
+    submitterEmail: row.submitter_email ?? row.submitterEmail ?? null,
+    status: row.status || 'open',
     category: row.category,
-    severity: row.severity,
+    severity: Number(row.severity) || 1,
     details: row.details,
-    createdAt: toIso(row.created_at),
-    updatedAt: toIso(row.updated_at)
+    resolvedAt: toIso(row.resolved_at ?? row.resolvedAt ?? null),
+    resolvedBy: row.resolved_by ?? row.resolvedBy ?? null,
+    resolvedByEmail: row.resolved_by_email ?? row.resolvedByEmail ?? null,
+    createdAt: toIso(row.created_at ?? row.createdAt),
+    updatedAt: toIso(row.updated_at ?? row.updatedAt)
 });
+
+const normalizeMemoryFeedbackEntry = (entry) => {
+    const safe = {
+        ...entry,
+        status: entry.status === 'resolved' ? 'resolved' : 'open',
+        resolvedAt: entry.resolvedAt || null,
+        resolvedBy: entry.resolvedBy || null,
+        resolvedByEmail: entry.resolvedByEmail || null,
+    };
+    return safe;
+};
+
+const pruneResolvedFeedbackOlderThan90Days = async () => {
+    if (!isDbEnabled) {
+        const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+        const before = feedbackEntries.length;
+        feedbackEntries = feedbackEntries.filter((entry) => {
+            const normalized = normalizeMemoryFeedbackEntry(entry);
+            if (normalized.status !== 'resolved') return true;
+            if (!normalized.resolvedAt) return true;
+            const resolvedAtMs = new Date(normalized.resolvedAt).getTime();
+            return Number.isFinite(resolvedAtMs) && resolvedAtMs >= cutoff;
+        });
+        return before - feedbackEntries.length;
+    }
+
+    const result = await db.query(
+        "DELETE FROM app_feedback WHERE status = 'resolved' AND resolved_at IS NOT NULL AND resolved_at < NOW() - INTERVAL '90 days' RETURNING id",
+        []
+    );
+    return result.rows.length;
+};
 
 async function getSystemState() {
     if (!isDbEnabled) {
@@ -853,9 +892,13 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
                 id,
                 ticketNumber,
                 studentId,
+                status: 'open',
                 category,
                 severity,
                 details,
+                resolvedAt: null,
+                resolvedBy: null,
+                resolvedByEmail: null,
                 createdAt: now,
                 updatedAt: now
             };
@@ -863,9 +906,9 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
             if (feedbackEntries.length > 200) feedbackEntries.pop();
         } else {
             const result = await db.query(
-                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-                 RETURNING id, ticket_number, student_id, category, severity, details, created_at, updated_at`,
+                `INSERT INTO app_feedback (id, ticket_number, student_id, status, category, severity, details, resolved_at, resolved_by, resolved_by_email, created_at, updated_at)
+                 VALUES ($1, $2, $3, 'open', $4, $5, $6, NULL, NULL, NULL, NOW(), NOW())
+                 RETURNING id, ticket_number, student_id, status, category, severity, details, resolved_at, resolved_by, resolved_by_email, created_at, updated_at`,
                 [id, ticketNumber, studentId, category, severity, details]
             );
             savedFeedback = formatFeedbackRow(result.rows[0]);
@@ -876,6 +919,148 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Feedback submit error:', e);
         res.status(500).json({ error: 'Failed to submit feedback' });
+    }
+});
+
+// GET /api/feedback/admin - Admin feedback queue by status
+app.get('/api/feedback/admin', requireAuth, async (req, res) => {
+    try {
+        const status = String(req.query?.status || 'open').toLowerCase();
+        if (!FEEDBACK_STATUSES.has(status)) {
+            return res.status(400).json({ error: 'Invalid feedback status filter' });
+        }
+
+        const prunedCount = await pruneResolvedFeedbackOlderThan90Days();
+        if (prunedCount > 0) {
+            await addLog('MAINTENANCE', req.user?.studentId || 'ADMIN', `Auto-pruned ${prunedCount} resolved feedback entries older than 90 days`);
+        }
+
+        if (!isDbEnabled) {
+            const out = feedbackEntries
+                .map(normalizeMemoryFeedbackEntry)
+                .filter((entry) => entry.status === status)
+                .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+                .map((entry) => {
+                    const submitter = users.find((u) => String(u.id) === String(entry.studentId));
+                    return {
+                        ...entry,
+                        submitterName: submitter?.name || entry.studentId,
+                        submitterEmail: submitter?.email || null,
+                    };
+                });
+            return res.json({ success: true, feedback: out });
+        }
+
+        const result = await db.query(
+            `SELECT f.id, f.ticket_number, f.student_id, f.status, f.category, f.severity, f.details,
+                    f.resolved_at, f.resolved_by, f.resolved_by_email, f.created_at, f.updated_at,
+                    u.name AS submitter_name, u.email AS submitter_email
+             FROM app_feedback f
+             LEFT JOIN app_users u ON u.id = f.student_id
+             WHERE f.status = $1
+             ORDER BY f.created_at DESC`,
+            [status]
+        );
+
+        res.json({ success: true, feedback: result.rows.map(formatFeedbackRow) });
+    } catch (e) {
+        console.error('Admin feedback list error:', e);
+        res.status(500).json({ error: 'Failed to fetch feedback queue' });
+    }
+});
+
+// POST /api/feedback/:id/resolve - Mark feedback as resolved/archived
+app.post('/api/feedback/:id/resolve', requireAuth, async (req, res) => {
+    try {
+        const feedbackId = String(req.params.id);
+        const resolvedBy = String(req.user?.studentId || 'ADMIN');
+        const resolvedByEmail = String(req.user?.email || '');
+
+        let resolved;
+        if (!isDbEnabled) {
+            const index = feedbackEntries.findIndex((entry) => String(entry.id) === feedbackId);
+            if (index === -1) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+
+            const current = normalizeMemoryFeedbackEntry(feedbackEntries[index]);
+            const now = new Date().toISOString();
+            const updated = {
+                ...current,
+                status: 'resolved',
+                resolvedAt: current.resolvedAt || now,
+                resolvedBy,
+                resolvedByEmail,
+                updatedAt: now,
+            };
+            feedbackEntries[index] = updated;
+
+            const submitter = users.find((u) => String(u.id) === String(updated.studentId));
+            resolved = {
+                ...updated,
+                submitterName: submitter?.name || updated.studentId,
+                submitterEmail: submitter?.email || null,
+            };
+        } else {
+            const result = await db.query(
+                `UPDATE app_feedback
+                 SET status = 'resolved', resolved_at = COALESCE(resolved_at, NOW()), resolved_by = $1, resolved_by_email = $2, updated_at = NOW()
+                 WHERE id = $3
+                 RETURNING id, ticket_number, student_id, status, category, severity, details,
+                           resolved_at, resolved_by, resolved_by_email, created_at, updated_at`,
+                [resolvedBy, resolvedByEmail || null, feedbackId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+
+            const row = result.rows[0];
+            const submitter = await getUserById(String(row.student_id));
+            resolved = formatFeedbackRow({
+                ...row,
+                submitter_name: submitter?.name || row.student_id,
+                submitter_email: submitter?.email || null,
+            });
+        }
+
+        await addLog('FEEDBACK', resolvedBy, `Resolved feedback ${resolved.ticketNumber || feedbackId}`);
+        res.json({ success: true, feedback: resolved });
+    } catch (e) {
+        console.error('Resolve feedback error:', e);
+        res.status(500).json({ error: 'Failed to resolve feedback entry' });
+    }
+});
+
+// DELETE /api/feedback/:id - Delete feedback manually
+app.delete('/api/feedback/:id', requireAuth, async (req, res) => {
+    try {
+        const feedbackId = String(req.params.id);
+        let deletedTicket = feedbackId;
+
+        if (!isDbEnabled) {
+            const index = feedbackEntries.findIndex((entry) => String(entry.id) === feedbackId);
+            if (index === -1) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+            deletedTicket = feedbackEntries[index].ticketNumber || feedbackId;
+            feedbackEntries.splice(index, 1);
+        } else {
+            const result = await db.query(
+                'DELETE FROM app_feedback WHERE id = $1 RETURNING ticket_number',
+                [feedbackId]
+            );
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+            deletedTicket = result.rows[0].ticket_number || feedbackId;
+        }
+
+        await addLog('FEEDBACK', req.user?.studentId || 'ADMIN', `Deleted feedback ${deletedTicket}`);
+        res.json({ success: true, id: feedbackId });
+    } catch (e) {
+        console.error('Delete feedback error:', e);
+        res.status(500).json({ error: 'Failed to delete feedback entry' });
     }
 });
 
