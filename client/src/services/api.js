@@ -192,6 +192,40 @@ export const fetchTimetableQa = async (question, timetable, currentMinutes, comp
     return response.json();
 };
 
+export const fetchAiNotesSummarise = async (content, title) => {
+    const token = getAccessToken();
+    const response = await fetch(`${SYSTEM_API_URL}/ai/notes-summarise`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ content, title })
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to generate AI note summary: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const fetchAiQuizGenerate = async (payload) => {
+    const token = getAccessToken();
+    const response = await fetch(`${SYSTEM_API_URL}/ai/quiz-generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to generate AI quiz: ${response.status}`);
+    }
+    return response.json();
+};
+
 async function fetchFromBackend(endpoint) {
     const token = getAccessToken();
     const headers = {};

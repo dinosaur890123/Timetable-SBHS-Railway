@@ -7,6 +7,7 @@ import {
     Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2
 } from 'lucide-react';
 import { fetchNotes, saveNote, deleteNote } from '../services/notesApi';
+import { fetchAiNotesSummarise, fetchAiQuizGenerate } from '../services/api';
 
 // Helper to escape HTML to prevent XSS
 const escapeHtml = (text) => {
@@ -640,6 +641,106 @@ const QuickQuizTool = ({ onBack }) => {
     const [newOptions, setNewOptions] = useState(['', '', '', '']);
     const [correctIndex, setCorrectIndex] = useState(0);
 
+    // AI Quiz Generator States
+    const [showAiModal, setShowAiModal] = useState(false);
+    const [aiSource, setAiSource] = useState('note'); // 'note' | 'topic'
+    const [aiNotes, setAiNotes] = useState([]);
+    const [selectedNoteId, setSelectedNoteId] = useState('');
+    const [aiTopic, setAiTopic] = useState('');
+    const [aiQuestionCount, setAiQuestionCount] = useState(5);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiLoadingStage, setAiLoadingStage] = useState('');
+    const [aiError, setAiError] = useState('');
+
+    useEffect(() => {
+        const loadNotesForQuiz = async () => {
+            try {
+                const fetched = await fetchNotes();
+                setAiNotes(fetched);
+                if (fetched.length > 0) {
+                    setSelectedNoteId(fetched[0].id);
+                }
+            } catch (err) {
+                console.error("Failed to load notes for AI quiz:", err);
+            }
+        };
+        loadNotesForQuiz();
+    }, []);
+
+    const handleGenerateAiQuiz = async () => {
+        setAiLoading(true);
+        setAiError('');
+        
+        let payload = {
+            source: aiSource,
+            count: aiQuestionCount
+        };
+
+        if (aiSource === 'note') {
+            const note = aiNotes.find(n => n.id === selectedNoteId);
+            if (!note || !note.content) {
+                setAiError("Please select a valid study note with content.");
+                setAiLoading(false);
+                return;
+            }
+            payload.noteContent = note.content;
+            payload.title = note.title;
+            setAiLoadingStage("Reading study notes...");
+        } else {
+            if (!aiTopic.trim()) {
+                setAiError("Please enter a custom topic/subject.");
+                setAiLoading(false);
+                return;
+            }
+            payload.topic = aiTopic.trim();
+            setAiLoadingStage("Conceptualising topic...");
+        }
+
+        try {
+            // Stage animations
+            const timer1 = setTimeout(() => setAiLoadingStage("Drafting questions..."), 1500);
+            const timer2 = setTimeout(() => setAiLoadingStage("Generating options & solutions..."), 3500);
+
+            const response = await fetchAiQuizGenerate(payload);
+            
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            
+            if (!response.questions || response.questions.length === 0) {
+                throw new Error("No questions returned from AI service.");
+            }
+
+            // Create new quiz item
+            const newQuiz = {
+                id: 'quiz_' + Date.now(),
+                name: aiSource === 'note' 
+                    ? `AI: ${aiNotes.find(n => n.id === selectedNoteId)?.title || 'Note Quiz'}`
+                    : `AI: ${aiTopic.trim()}`,
+                questions: response.questions.map((q, idx) => ({
+                    id: `q_ai_${Date.now()}_${idx}`,
+                    question: q.question,
+                    options: q.options,
+                    correctIndex: parseInt(q.correctIndex) || 0
+                })),
+                createdAt: new Date().toISOString()
+            };
+
+            setQuizzes(prev => [newQuiz, ...prev]);
+            setActiveQuizId(newQuiz.id);
+            setShowAiModal(false);
+            
+            // Reset modal states
+            setAiTopic('');
+            setAiQuestionCount(5);
+        } catch (err) {
+            console.error("AI Quiz generation failed:", err);
+            setAiError(err.message || "Failed to generate AI quiz.");
+        } finally {
+            setAiLoading(false);
+            setAiLoadingStage('');
+        }
+    };
+
     useEffect(() => {
         localStorage.setItem('quick_quizzes', JSON.stringify(quizzes));
     }, [quizzes]);
@@ -952,9 +1053,14 @@ const QuickQuizTool = ({ onBack }) => {
                 <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                     <ArrowLeft size={14} /> Study Hub
                 </button>
-                <button onClick={() => setShowNewQuiz(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
-                    <Plus size={14} /> New Quiz
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setShowAiModal(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-wider border-2 border-purple-200 dark:border-purple-800/40 shadow-[3px_3px_0px_0px_rgba(147,51,234,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                        <Sparkles size={14} className="text-purple-600 dark:text-purple-400 animate-pulse" /> AI Generate Quiz
+                    </button>
+                    <button onClick={() => setShowNewQuiz(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                        <Plus size={14} /> New Quiz
+                    </button>
+                </div>
             </div>
 
             <div>
@@ -1015,6 +1121,146 @@ const QuickQuizTool = ({ onBack }) => {
                     ))}
                 </div>
             )}
+
+            {/* AI Generate Quiz Modal */}
+            {showAiModal && (
+                <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col select-text">
+                        {/* Modal Header */}
+                        <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between">
+                            <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 animate-pulse" />
+                                AI Quiz Generator
+                            </h3>
+                            <button
+                                onClick={() => !aiLoading && setShowAiModal(false)}
+                                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-50"
+                                disabled={aiLoading}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            {aiLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                                    <Loader2 size={36} className="animate-spin text-purple-600 dark:text-purple-400 animate-pulse" />
+                                    <div className="space-y-1">
+                                        <p className="font-mono text-xs uppercase tracking-widest text-zinc-900 dark:text-white">Generating quiz...</p>
+                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 animate-pulse">{aiLoadingStage}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 text-left">
+                                    {aiError && (
+                                        <div className="p-3 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 text-xs font-mono">
+                                            {aiError}
+                                        </div>
+                                    )}
+
+                                    {/* Source Selector */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Quiz Source</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAiSource('note')}
+                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${
+                                                    aiSource === 'note'
+                                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
+                                                        : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
+                                                }`}
+                                            >
+                                                Study Note
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAiSource('topic')}
+                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${
+                                                    aiSource === 'topic'
+                                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
+                                                        : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
+                                                }`}
+                                            >
+                                                Custom Topic
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Source Input */}
+                                    {aiSource === 'note' ? (
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Select Study Note</label>
+                                            {aiNotes.length === 0 ? (
+                                                <div className="p-3 border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-400 italic">
+                                                    No study notes found. Create some notes first or choose Custom Topic.
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    value={selectedNoteId}
+                                                    onChange={(e) => setSelectedNoteId(e.target.value)}
+                                                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                                >
+                                                    {aiNotes.map(n => (
+                                                        <option key={n.id} value={n.id}>{n.title || 'Untitled Note'} ({n.subject})</option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Topic / Subject</label>
+                                            <input
+                                                type="text"
+                                                value={aiTopic}
+                                                onChange={(e) => setAiTopic(e.target.value)}
+                                                placeholder="e.g. Year 11 Chemistry Periodic Table"
+                                                className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Question Count Selector */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Number of Questions</label>
+                                        <select
+                                            value={aiQuestionCount}
+                                            onChange={(e) => setAiQuestionCount(parseInt(e.target.value))}
+                                            className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                        >
+                                            <option value={3}>3 Questions</option>
+                                            <option value={5}>5 Questions</option>
+                                            <option value={10}>10 Questions</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        {!aiLoading && (
+                            <div className="p-4 border-t-2 border-black dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/20 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAiModal(false)}
+                                    className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateAiQuiz}
+                                    disabled={aiSource === 'note' && aiNotes.length === 0}
+                                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                >
+                                    Generate Quiz
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1034,6 +1280,55 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
     
     // Save State: 'idle' | 'saving' | 'saved' | 'offline-saved' | 'error'
     const [saveStatus, setSaveStatus] = useState('idle');
+
+    // AI Summarizer State
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [summaryResult, setSummaryResult] = useState('');
+    const [summaryError, setSummaryError] = useState('');
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+
+    const handleSummariseNote = async () => {
+        if (!activeNote || !activeNote.content) return;
+        setSummaryLoading(true);
+        setSummaryError('');
+        setSummaryResult('');
+        setShowSummaryModal(true);
+        try {
+            const data = await fetchAiNotesSummarise(activeNote.content, activeNote.title);
+            setSummaryResult(data.summary);
+        } catch (err) {
+            console.error("AI Summarise error:", err);
+            setSummaryError(err.message || "Failed to generate note summary.");
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
+
+    const handlePrependSummary = () => {
+        if (!activeNote || !summaryResult) return;
+        const divider = "\n\n---\n\n";
+        const newContent = `## AI Summary\n\n${summaryResult}${divider}${activeNote.content}`;
+        onNoteChange('content', newContent);
+        triggerSave({
+            ...activeNote,
+            content: newContent,
+            updatedAt: new Date().toISOString()
+        });
+        setShowSummaryModal(false);
+    };
+
+    const handleAppendSummary = () => {
+        if (!activeNote || !summaryResult) return;
+        const divider = "\n\n---\n\n";
+        const newContent = `${activeNote.content}${divider}## AI Summary\n\n${summaryResult}`;
+        onNoteChange('content', newContent);
+        triggerSave({
+            ...activeNote,
+            content: newContent,
+            updatedAt: new Date().toISOString()
+        });
+        setShowSummaryModal(false);
+    };
 
     const autoSaveTimerRef = useRef(null);
     const activeNoteRef = useRef(null);
@@ -1427,6 +1722,18 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
                                     {/* Action Buttons */}
                                     <div className="flex items-center gap-2">
+                                        {/* AI Summarise Button */}
+                                        {activeNote && activeNote.content && (
+                                            <button
+                                                onClick={handleSummariseNote}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 text-xs font-bold uppercase tracking-wide active:scale-[0.98] transition-transform"
+                                                title="Summarise note content using AI"
+                                            >
+                                                <Sparkles size={13} className="text-purple-600 dark:text-purple-400 animate-pulse" />
+                                                Summarise AI
+                                            </button>
+                                        )}
+
                                         {/* Edit/Preview Toggle */}
                                         <button
                                             onClick={() => setPreviewMode(!previewMode)}
@@ -1532,6 +1839,81 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-850 dark:hover:bg-zinc-100 transitionactive:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]"
                                 >
                                     Create First Note
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* AI Summary Modal */}
+            {showSummaryModal && (
+                <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 select-text">
+                    <div className="w-full max-w-2xl bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col max-h-[85vh]">
+                        {/* Modal Header */}
+                        <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between">
+                            <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 animate-pulse" />
+                                AI Notes Summariser
+                            </h3>
+                            <button
+                                onClick={() => setShowSummaryModal(false)}
+                                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+                            {summaryLoading ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                                    <Loader2 size={36} className="animate-spin text-purple-600 dark:text-purple-400" />
+                                    <div className="space-y-1">
+                                        <p className="font-mono text-xs uppercase tracking-widest text-zinc-900 dark:text-white">Synthesising study notes...</p>
+                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Extracting key definitions, concepts, and summaries.</p>
+                                    </div>
+                                </div>
+                            ) : summaryError ? (
+                                <div className="p-4 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 space-y-2 text-left">
+                                    <div className="flex items-center gap-2 font-bold uppercase text-xs">
+                                        <AlertCircle size={14} />
+                                        Generation Error
+                                    </div>
+                                    <p className="text-xs font-mono">{summaryError}</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="text-left p-4 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 prose dark:prose-invert max-w-none text-sm select-text">
+                                        <div dangerouslySetInnerHTML={{ __html: parseMarkdown(summaryResult) }} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        {!summaryLoading && !summaryError && summaryResult && (
+                            <div className="p-4 border-t-2 border-black dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/20 flex flex-wrap gap-2 justify-end">
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(summaryResult);
+                                        alert("Summary copied to clipboard!");
+                                    }}
+                                    className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-800 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all duration-150 active:translate-y-[1px]"
+                                >
+                                    Copy to Clipboard
+                                </button>
+                                <button
+                                    onClick={handlePrependSummary}
+                                    className="px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-2 border-black dark:border-zinc-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-xs font-bold uppercase tracking-wider transition-all duration-150"
+                                >
+                                    Insert at Top
+                                </button>
+                                <button
+                                    onClick={handleAppendSummary}
+                                    className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-xs font-bold uppercase tracking-wider transition-all duration-150"
+                                >
+                                    Append to Bottom
                                 </button>
                             </div>
                         )}

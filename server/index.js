@@ -2101,6 +2101,175 @@ Answer the student's question:`;
     }
 });
 
+async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMimeType = 'text/plain') {
+    const activeProvider = systemStateObj.aiProvider || 'hackclub';
+    const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
+
+    let aiText = '';
+
+    if (activeProvider === 'gemini') {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new Error('GEMINI_API_KEY is not set on the server.');
+        }
+
+        const body = {
+            contents: [{
+                parts: [{
+                    text: `${systemPrompt}\n\n${userPrompt}`
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.3
+            }
+        };
+
+        if (responseMimeType === 'application/json') {
+            body.generationConfig.responseMimeType = 'application/json';
+        }
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Gemini API responded with status ${response.status}`);
+        }
+
+        const aiData = await response.json();
+        aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    } else {
+        const apiKey = process.env.HACKCLUB_AI_API_KEY;
+        if (!apiKey) {
+            throw new Error('HACKCLUB_AI_API_KEY is not set on the server.');
+        }
+
+        const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: activeModel,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Hack Club AI responded with status ${response.status}`);
+        }
+
+        const aiData = await response.json();
+        aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
+    }
+
+    return { aiText, activeProvider, activeModel };
+}
+
+// POST /api/ai/notes-summarise
+app.post('/api/ai/notes-summarise', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
+        }
+
+        const { content, title } = req.body || {};
+        if (!content) {
+            return res.status(400).json({ error: 'Missing note content' });
+        }
+
+        const systemStateObj = await getSystemState();
+        const systemPrompt = `You are a helpful school assistant. Summarize the provided study notes into a clear, concise bulleted summary. Focus on key definitions, equations, dates, and core concepts. Keep it formatted nicely in markdown with bullet points.`;
+        const userPrompt = `Title: ${title || 'Untitled Note'}\n\nContent:\n${content}`;
+
+        const { aiText, activeProvider, activeModel } = await runAiPrompt(systemPrompt, userPrompt, systemStateObj, 'text/plain');
+
+        await addAiLog(req.user?.studentId || 'UNKNOWN', `Summarise: ${title || 'Untitled'}`, aiText, activeProvider, activeModel);
+        res.json({ summary: aiText });
+
+    } catch (err) {
+        console.error('[ai-notes-summarise] Failed:', err);
+        res.status(500).json({ error: err.message || 'Failed to generate note summary' });
+    }
+});
+
+// POST /api/ai/quiz-generate
+app.post('/api/ai/quiz-generate', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
+        }
+
+        const { source, noteContent, topic, count } = req.body || {};
+        const qCount = parseInt(count) || 5;
+
+        if (source === 'note' && !noteContent) {
+            return res.status(400).json({ error: 'Missing note content for generating quiz' });
+        }
+        if (source === 'topic' && !topic) {
+            return res.status(400).json({ error: 'Missing topic for generating quiz' });
+        }
+
+        const systemStateObj = await getSystemState();
+        const systemPrompt = `You are a helpful school assistant. Generate a multiple-choice quiz with exactly ${qCount} questions based on the provided ${source === 'note' ? 'study notes' : 'topic'}.
+Return a JSON array of questions, where each question has this exact format:
+{
+  "question": "The question text",
+  "options": ["Option A", "Option B", "Option C", "Option D"],
+  "correctIndex": 0
+}
+Return ONLY the JSON array. Do not include markdown code block wraps.`;
+
+        const userPrompt = source === 'note' 
+            ? `Study Notes:\n${noteContent}`
+            : `Topic:\n${topic}`;
+
+        const { aiText, activeProvider, activeModel } = await runAiPrompt(systemPrompt, userPrompt, systemStateObj, 'application/json');
+
+        // Clean up markdown block wraps if present
+        let jsonText = aiText;
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.substring(7);
+        } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.substring(3);
+        }
+        if (jsonText.endsWith('```')) {
+            jsonText = jsonText.substring(0, jsonText.length - 3);
+        }
+        jsonText = jsonText.trim();
+
+        const questions = JSON.parse(jsonText);
+
+        await addAiLog(req.user?.studentId || 'UNKNOWN', `Quiz: ${source === 'note' ? 'From Note' : topic}`, `Generated ${questions.length} questions`, activeProvider, activeModel);
+        res.json({ questions });
+
+    } catch (err) {
+        console.error('[ai-quiz-generate] Failed:', err);
+        res.status(500).json({ error: err.message || 'Failed to generate quiz' });
+    }
+});
+
 // POST /api/cache/clear
 app.post('/api/cache/clear', requireAuth, async (req, res) => {
     try {
