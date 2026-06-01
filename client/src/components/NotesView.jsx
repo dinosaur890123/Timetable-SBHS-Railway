@@ -2468,6 +2468,10 @@ const NotesView = ({ user, timetableData, setView }) => {
                         Upgrade to Pro ($5.99 Annually)
                     </button>
                 </div>
+
+                <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">
+                    Powered by NoteFlow Infrastructure
+                </div>
             </div>
         );
     }
@@ -2599,6 +2603,10 @@ const NotesView = ({ user, timetableData, setView }) => {
                     Combine 25-minute <strong className="text-zinc-900 dark:text-white">Pomodoro sessions</strong> with short breaks for optimal focus. 
                     Test yourself with <strong className="text-zinc-900 dark:text-white">quick quizzes</strong> to identify weak areas before exams.
                 </p>
+            </div>
+
+            <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">
+                Powered by NoteFlow Infrastructure
             </div>
         </div>
     );
