@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -11,6 +11,7 @@ const AdminPanel = ({ user }) => {
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
+    const [feedback, setFeedback] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -37,8 +38,11 @@ const AdminPanel = ({ user }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [logSearchTerm, setLogSearchTerm] = useState('');
     const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
+    const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
+    const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('open');
     const [roleFilter, setRoleFilter] = useState('All');
     const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
+    const [viewingFeedback, setViewingFeedback] = useState(null); // Feedback object for detail modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
     const [promoteId, setPromoteId] = useState('');
@@ -57,7 +61,7 @@ const AdminPanel = ({ user }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, statsData, logsData, systemData, aiLogsData] = await Promise.all([
+            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData] = await Promise.all([
                 fetchUsers(),
                 fetchAdminStats(),
                 fetchLogs(),
@@ -65,12 +69,17 @@ const AdminPanel = ({ user }) => {
                 fetchAiLogs().catch(err => {
                     console.warn("Failed to fetch AI logs:", err);
                     return [];
+                }),
+                fetchAdminFeedback().catch(err => {
+                    console.warn("Failed to fetch feedback:", err);
+                    return [];
                 })
             ]);
             setUsers(usersData);
             setStats(statsData);
             setLogs(logsData);
             setAiLogs(aiLogsData || []);
+            setFeedback(feedbackData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
@@ -345,7 +354,7 @@ const AdminPanel = ({ user }) => {
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
+            className={`admin-tab-btn flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
         ${activeTab === id
                     ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
@@ -390,11 +399,12 @@ const AdminPanel = ({ user }) => {
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="flex flex-wrap sm:flex-nowrap gap-2">
+                <div className="admin-tabs-container flex flex-wrap sm:flex-nowrap gap-2">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
+                    <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
             </header>
@@ -1294,6 +1304,157 @@ const AdminPanel = ({ user }) => {
 }
 
 
+{
+    activeTab === 'feedback' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-4 w-full md:w-auto justify-between">
+                    <h3 className="font-semibold text-zinc-900 dark:text-white">Feedback Management</h3>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                    <select
+                        value={feedbackStatusFilter}
+                        onChange={(e) => setFeedbackStatusFilter(e.target.value)}
+                        className="px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="open">Open Requests</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="archived">Archived</option>
+                        <option value="All">All Feedback</option>
+                    </select>
+                    <div className="relative flex-1 md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <input
+                            type="text"
+                            placeholder="Search feedback..."
+                            value={feedbackSearchTerm}
+                            onChange={(e) => setFeedbackSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
+                        <tr>
+                            <th className="px-6 py-4">Feedback ID</th>
+                            <th className="px-6 py-4">Submitting User</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Severity</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        {loading ? (
+                            <tr>
+                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-550">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <RefreshCw className="animate-spin w-4 h-4" />
+                                        Loading feedback...
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : (() => {
+                            const filteredFeedback = feedback.filter(fb => {
+                                const matchesSearch = 
+                                    fb.ticketNumber?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.details?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.name?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.email?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.studentId?.toLowerCase().includes(feedbackSearchTerm.toLowerCase());
+                                const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
+                                return matchesSearch && matchesStatus;
+                            });
+
+                            if (filteredFeedback.length === 0) {
+                                return (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-8 text-center text-zinc-550">
+                                            No feedback requests found.
+                                        </td>
+                                    </tr>
+                                );
+                            }
+
+                            return filteredFeedback.map((fb) => (
+                                <tr 
+                                    key={fb.id} 
+                                    onClick={() => setViewingFeedback(fb)}
+                                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                                >
+                                    <td className="px-6 py-4 font-mono text-xs text-zinc-650 dark:text-zinc-400 font-semibold">
+                                        {fb.ticketNumber}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-semibold text-zinc-900 dark:text-white">{fb.name}</div>
+                                        <div className="text-zinc-555 text-xs font-mono">{fb.studentId}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{fb.email}</td>
+                                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                        {(() => {
+                                            let sevClass = '';
+                                            switch (fb.severity) {
+                                                case 5:
+                                                    sevClass = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30';
+                                                    break;
+                                                case 4:
+                                                    sevClass = 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30';
+                                                    break;
+                                                case 3:
+                                                    sevClass = 'bg-yellow-50 text-yellow-750 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30';
+                                                    break;
+                                                case 2:
+                                                    sevClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30';
+                                                    break;
+                                                default:
+                                                    sevClass = 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700';
+                                            }
+                                            return (
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold ${sevClass}`}>
+                                                    Severity {fb.severity}
+                                                </span>
+                                            );
+                                        })()}
+                                    </td>
+                                    <td className="px-6 py-4 text-right flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            onClick={() => setViewingFeedback(fb)}
+                                            className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                            title="View Details"
+                                        >
+                                            <Eye size={16} />
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (window.confirm("Are you sure you want to delete this feedback request manually?")) {
+                                                    try {
+                                                        await deleteFeedback(fb.id);
+                                                        setFeedback(prev => prev.filter(item => item.id !== fb.id));
+                                                        alert("Feedback request deleted successfully.");
+                                                    } catch (err) {
+                                                        alert("Failed to delete feedback request.");
+                                                    }
+                                                }
+                                            }}
+                                            className="p-1 text-red-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                            title="Delete Request"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ));
+                        })()}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+
 {/* Edit User Modal */ }
 {
     editingUser && (
@@ -1385,6 +1546,137 @@ const AdminPanel = ({ user }) => {
                     <button
                         onClick={() => setViewingAiLog(null)}
                         className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+{/* Feedback Detail Modal */}
+{
+    viewingFeedback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-700 dark:text-zinc-300 border border-zinc-200/20">
+                            <MessageCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">Feedback Details</h3>
+                            <p className="text-xs text-zinc-500 mt-1">
+                                {viewingFeedback.ticketNumber} • Submitter: {viewingFeedback.name}
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={() => setViewingFeedback(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
+                            <span className={`font-bold capitalize ${
+                                viewingFeedback.status === 'open' ? 'text-blue-500' :
+                                viewingFeedback.status === 'resolved' ? 'text-green-500' : 'text-zinc-500'
+                            }`}>{viewingFeedback.status}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Severity</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">Severity {viewingFeedback.severity}/5</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Category</span>
+                            <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingFeedback.category}</span>
+                        </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Submitted</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {new Date(viewingFeedback.createdAt).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Submitter details */}
+                    <div className="space-y-1.5">
+                        <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Submitter Details</span>
+                        <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-950/20 rounded-xl space-y-1 text-sm">
+                            <div><strong className="text-zinc-700 dark:text-zinc-300">Name:</strong> {viewingFeedback.name}</div>
+                            <div><strong className="text-zinc-700 dark:text-zinc-300">Student ID:</strong> {viewingFeedback.studentId}</div>
+                            <div><strong className="text-zinc-700 dark:text-zinc-300">Email:</strong> {viewingFeedback.email}</div>
+                        </div>
+                    </div>
+
+                    {/* Feedback Details Text */}
+                    <div className="space-y-1.5">
+                        <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Details</span>
+                        <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm whitespace-pre-wrap">
+                            {viewingFeedback.details}
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-2 justify-between">
+                    <div className="flex gap-2">
+                        {viewingFeedback.status !== 'resolved' && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await updateFeedbackStatus(viewingFeedback.id, 'resolved');
+                                        setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'resolved', updatedAt: new Date().toISOString() } : item));
+                                        setViewingFeedback(null);
+                                        alert("Feedback request marked as resolved successfully.");
+                                    } catch (err) {
+                                        alert("Failed to update status.");
+                                    }
+                                }}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                            >
+                                Mark as Resolved
+                            </button>
+                        )}
+                        {viewingFeedback.status !== 'archived' && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await updateFeedbackStatus(viewingFeedback.id, 'archived');
+                                        setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'archived', updatedAt: new Date().toISOString() } : item));
+                                        setViewingFeedback(null);
+                                        alert("Feedback request archived successfully.");
+                                    } catch (err) {
+                                        alert("Failed to update status.");
+                                    }
+                                }}
+                                className="px-4 py-2 bg-zinc-650 hover:bg-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                            >
+                                Archive
+                            </button>
+                        )}
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("Are you sure you want to delete this feedback request manually?")) {
+                                    try {
+                                        await deleteFeedback(viewingFeedback.id);
+                                        setFeedback(prev => prev.filter(item => item.id !== viewingFeedback.id));
+                                        setViewingFeedback(null);
+                                        alert("Feedback request deleted successfully.");
+                                    } catch (err) {
+                                        alert("Failed to delete feedback request.");
+                                    }
+                                }
+                            }}
+                            className="px-4 py-2 bg-red-650 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                        >
+                            Delete Manually
+                        </button>
+                    </div>
+                    <button
+                        onClick={() => setViewingFeedback(null)}
+                        className="px-5 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-semibold rounded-lg transition-colors"
                     >
                         Close
                     </button>

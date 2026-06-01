@@ -249,6 +249,7 @@ const formatFeedbackRow = (row) => ({
     category: row.category,
     severity: row.severity,
     details: row.details,
+    status: row.status ?? 'open',
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at)
 });
@@ -518,6 +519,51 @@ async function listLogs(limit = 100) {
         details: row.details,
     }));
 }
+
+// Purge archived feedback older than 90 days
+async function purgeArchivedFeedback() {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 90);
+    
+    try {
+        if (!isDbEnabled) {
+            const initialLength = feedbackEntries.length;
+            feedbackEntries = feedbackEntries.filter(f => {
+                const isArchived = f.status === 'archived';
+                const createdTime = f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt);
+                const isOlderThan90Days = createdTime < cutoffDate;
+                return !(isArchived && isOlderThan90Days);
+            });
+            const prunedCount = initialLength - feedbackEntries.length;
+            if (prunedCount > 0) {
+                console.log(`[purge-feedback] Purged ${prunedCount} archived feedback entries from memory fallback.`);
+                await addLog('FEEDBACK_PURGE', 'SYSTEM', `Purged ${prunedCount} archived feedback entries (>90 days)`);
+            }
+        } else {
+            const result = await db.query(
+                `DELETE FROM app_feedback 
+                 WHERE status = 'archived' AND created_at < NOW() - INTERVAL '90 days'`
+            );
+            const prunedCount = result.rowCount || 0;
+            if (prunedCount > 0) {
+                console.log(`[purge-feedback] Purged ${prunedCount} archived feedback entries from database.`);
+                await addLog('FEEDBACK_PURGE', 'SYSTEM', `Purged ${prunedCount} archived feedback entries (>90 days)`);
+            }
+        }
+    } catch (err) {
+        console.error('[purge-feedback] Failed to prune old feedback:', err?.message || err);
+    }
+}
+
+// Run archived feedback purge on boot and then every 12 hours
+purgeArchivedFeedback().catch((err) => {
+    console.error('[purge-feedback] Initial purge failed:', err);
+});
+setInterval(() => {
+    purgeArchivedFeedback().catch((err) => {
+        console.error('[purge-feedback] Interval purge failed:', err);
+    });
+}, 12 * 60 * 60 * 1000);
 
 // Initial log (best-effort)
 addLog('STARTUP', 'SYSTEM', 'Server service started').catch((e) => {
@@ -856,6 +902,7 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
                 category,
                 severity,
                 details,
+                status: 'open',
                 createdAt: now,
                 updatedAt: now
             };
@@ -863,9 +910,9 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
             if (feedbackEntries.length > 200) feedbackEntries.pop();
         } else {
             const result = await db.query(
-                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-                 RETURNING id, ticket_number, student_id, category, severity, details, created_at, updated_at`,
+                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, status, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
+                 RETURNING id, ticket_number, student_id, category, severity, details, status, created_at, updated_at`,
                 [id, ticketNumber, studentId, category, severity, details]
             );
             savedFeedback = formatFeedbackRow(result.rows[0]);
@@ -1592,6 +1639,125 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Delete user error:', e);
         res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// --- Feedback Admin Endpoints ---
+
+// GET /api/admin/feedback - List all feedback entries
+app.get('/api/admin/feedback', requireAuth, async (req, res) => {
+    try {
+        let entries = [];
+        if (!isDbEnabled) {
+            entries = feedbackEntries.map(f => {
+                const u = users.find(user => String(user.id) === String(f.studentId));
+                return {
+                    ...f,
+                    name: u ? u.name : 'Unknown Student',
+                    email: u ? u.email : `${f.studentId}@student.sbhs.nsw.edu.au`
+                };
+            });
+        } else {
+            const result = await db.query(
+                `SELECT f.id, f.ticket_number, f.student_id, f.category, f.severity, f.details, f.status, f.created_at, f.updated_at, u.name, u.email
+                 FROM app_feedback f
+                 LEFT JOIN app_users u ON f.student_id = u.id
+                 ORDER BY f.created_at DESC`
+            );
+            entries = result.rows.map(row => ({
+                id: row.id,
+                ticketNumber: row.ticket_number,
+                studentId: row.student_id,
+                category: row.category,
+                severity: row.severity,
+                details: row.details,
+                status: row.status,
+                createdAt: toIso(row.created_at),
+                updatedAt: toIso(row.updated_at),
+                name: row.name || 'Unknown Student',
+                email: row.email || `${row.student_id}@student.sbhs.nsw.edu.au`
+            }));
+        }
+        res.json(entries);
+    } catch (e) {
+        console.error('Feedback list error:', e);
+        res.status(500).json({ error: 'Failed to fetch feedback entries' });
+    }
+});
+
+// PUT /api/admin/feedback/:id - Update feedback status
+app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body || {};
+
+        if (!status || !['open', 'resolved', 'archived'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status value. Must be open, resolved, or archived.' });
+        }
+
+        let updatedEntry;
+        if (!isDbEnabled) {
+            const index = feedbackEntries.findIndex(f => String(f.id) === String(id));
+            if (index === -1) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+            feedbackEntries[index].status = status;
+            feedbackEntries[index].updatedAt = new Date();
+            updatedEntry = feedbackEntries[index];
+        } else {
+            const result = await db.query(
+                `UPDATE app_feedback 
+                 SET status = $1, updated_at = NOW() 
+                 WHERE id = $2 
+                 RETURNING id, ticket_number, student_id, category, severity, details, status, created_at, updated_at`,
+                [status, String(id)]
+            );
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Feedback entry not found' });
+            }
+            updatedEntry = formatFeedbackRow(result.rows[0]);
+        }
+
+        await addLog('FEEDBACK_UPDATE', req.user?.studentId || 'ADMIN', `Updated feedback ${updatedEntry.ticketNumber || id} status to ${status}`);
+        res.json({ success: true, feedback: updatedEntry });
+    } catch (e) {
+        console.error('Feedback update error:', e);
+        res.status(500).json({ error: 'Failed to update feedback entry' });
+    }
+});
+
+// DELETE /api/admin/feedback/:id - Delete feedback manually
+app.delete('/api/admin/feedback/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        let ok = false;
+        let ticketNumber = id;
+        if (!isDbEnabled) {
+            const index = feedbackEntries.findIndex(f => String(f.id) === String(id));
+            if (index !== -1) {
+                ticketNumber = feedbackEntries[index].ticketNumber;
+                feedbackEntries.splice(index, 1);
+                ok = true;
+            }
+        } else {
+            const getTicket = await db.query('SELECT ticket_number FROM app_feedback WHERE id = $1', [String(id)]);
+            if (getTicket.rows.length > 0) {
+                ticketNumber = getTicket.rows[0].ticket_number;
+            }
+            const result = await db.query('DELETE FROM app_feedback WHERE id = $1 RETURNING id', [String(id)]);
+            ok = result.rows.length > 0;
+        }
+
+        if (!ok) {
+            return res.status(404).json({ error: 'Feedback entry not found' });
+        }
+
+        await addLog('FEEDBACK_DELETE', req.user?.studentId || 'ADMIN', `Deleted feedback entry ${ticketNumber}`);
+        res.json({ success: true, message: 'Feedback entry deleted successfully' });
+    } catch (e) {
+        console.error('Feedback delete error:', e);
+        res.status(500).json({ error: 'Failed to delete feedback entry' });
     }
 });
 

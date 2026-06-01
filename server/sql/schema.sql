@@ -87,9 +87,13 @@ CREATE TABLE IF NOT EXISTS app_feedback (
   category TEXT NOT NULL,
   severity INTEGER NOT NULL CHECK (severity BETWEEN 1 AND 5),
   details TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS app_feedback_student_id_idx ON app_feedback (student_id);
 CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_at DESC);
+
+-- Feedback migrations
+ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';

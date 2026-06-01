@@ -216,6 +216,48 @@ export const clearAiCache = async () => {
     }
 };
 
+export const fetchAdminFeedback = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/feedback`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch feedback entries');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const updateFeedbackStatus = async (feedbackId, status) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify({ status })
+        });
+        if (!response.ok) throw new Error('Failed to update feedback status');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const deleteFeedback = async (feedbackId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to delete feedback');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 
 
 
