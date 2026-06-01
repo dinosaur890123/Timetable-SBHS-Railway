@@ -635,5 +635,40 @@ export const fetchGlobalTeamDetail = (id) => fetchFromBackend(`/clipboard/teams/
 export const fetchTransitDepartures = (stopName) => 
     fetchFromBackend(`/transit/departures?stopName=${encodeURIComponent(stopName || 'Moore Park Light Rail')}`);
 
+export const fetchAssignments = () => fetchFromBackend('/assignments');
+
+export const saveAssignment = async (assignment) => {
+    const token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/assignments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(assignment)
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to save assignment: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const deleteAssignment = async (id) => {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/assignments/${id}`, {
+        method: 'DELETE',
+        headers
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to delete assignment: ${response.status}`);
+    }
+    return response.json();
+};
+
 
 

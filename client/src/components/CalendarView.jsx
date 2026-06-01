@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react';
-import { fetchCalendarEvents, fetchDateInfo } from '../services/api';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles } from 'lucide-react';
+import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
 import { motion } from 'framer-motion';
 
-const CalendarView = () => {
+const CalendarView = ({ user }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,12 +17,84 @@ const CalendarView = () => {
       try {
         const start = startOfWeek(currentDate, { weekStartsOn: 0 });
         const end = addDays(start, 6);
-        const [eventsData, daysData] = await Promise.all([
+        
+        const isPro = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
+        
+        const promises = [
           fetchCalendarEvents(start, end),
           fetchDateInfo(addDays(start, 3)).catch(() => null)
-        ]);
+        ];
         
-        setEvents(eventsData || []);
+        if (isPro) {
+          promises.push(fetchAssignments().catch(() => ({ success: true, assignments: [] })));
+        }
+
+        const [eventsData, daysData, assignmentsData] = await Promise.all(promises);
+        
+        let mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
+        const userAssignments = assignmentsData?.assignments || [];
+
+        if (isPro && userAssignments.length > 0) {
+          userAssignments.forEach(assignment => {
+            const dueDate = new Date(assignment.dueDate);
+            // Bounds check
+            if (dueDate >= start && dueDate <= end) {
+              const assignmentDateStr = format(dueDate, 'yyyy-MM-dd');
+              
+              // Find matching dayGroup
+              let dayGroup = mergedEvents.find(group => group.info?.date === assignmentDateStr);
+              if (!dayGroup) {
+                // Determine day term/week info from calendar data or fallbacks
+                let term = 1;
+                let week = 1;
+                let weekType = 'A';
+                
+                const siblingGroup = mergedEvents.find(g => g.info?.term);
+                if (siblingGroup) {
+                  term = siblingGroup.info.term;
+                  week = siblingGroup.info.week;
+                  weekType = siblingGroup.info.weekType;
+                } else if (daysData) {
+                  const values = Object.values(daysData);
+                  for (const val of values) {
+                    if (val && typeof val === 'object' && val.term && val.week) {
+                      term = val.term;
+                      week = val.week;
+                      break;
+                    }
+                  }
+                }
+
+                dayGroup = {
+                  info: {
+                    date: assignmentDateStr,
+                    term,
+                    week,
+                    weekType
+                  },
+                  items: []
+                };
+                mergedEvents.push(dayGroup);
+              }
+
+              // Append assignment item
+              dayGroup.items.push({
+                title: assignment.title,
+                type: 'assignment',
+                subject: assignment.subject,
+                time: assignment.dueDate ? format(new Date(assignment.dueDate), 'HH:mm') : '',
+                status: assignment.status,
+                priority: assignment.priority,
+                notes: assignment.notes
+              });
+            }
+          });
+
+          // Sort dayGroups chronologically
+          mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
+        }
+        
+        setEvents(mergedEvents);
 
         let currentTerm = null;
         let currentWeek = null;
@@ -54,11 +126,12 @@ const CalendarView = () => {
       }
     };
     loadEvents();
-  }, [currentDate]);
+  }, [currentDate, user]);
 
   const getEventTypeColor = (type) => {
     switch(type) {
       case 'assessment': return 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white';
+      case 'assignment': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/30';
       default: return 'bg-zinc-100 text-zinc-900 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800';
     }
   };
@@ -66,6 +139,7 @@ const CalendarView = () => {
   const getEventTypeAccent = (type) => {
     switch(type) {
       case 'assessment': return 'bg-black dark:bg-white';
+      case 'assignment': return 'bg-purple-600 dark:bg-purple-400';
       default: return 'bg-zinc-400 dark:bg-zinc-600';
     }
   };
@@ -183,7 +257,7 @@ const CalendarView = () => {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3 mb-2">
-                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight">
+                          <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
                             {event.title}
                           </h3>
                           <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>

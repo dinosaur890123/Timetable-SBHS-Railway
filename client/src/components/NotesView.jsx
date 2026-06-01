@@ -4,10 +4,10 @@ import {
     Loader2, BookOpen, ArrowUpDown, Check, AlertCircle,
     GraduationCap, Brain, Timer, HelpCircle, ArrowLeft,
     Layers, Play, Pause, RotateCcw, ChevronLeft, ChevronRight,
-    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2
+    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2, CheckSquare
 } from 'lucide-react';
 import { fetchNotes, saveNote, deleteNote } from '../services/notesApi';
-import { fetchAiNotesSummarise, fetchAiQuizGenerate } from '../services/api';
+import { fetchAiNotesSummarise, fetchAiQuizGenerate, fetchAssignments, saveAssignment, deleteAssignment } from '../services/api';
 
 // Helper to escape HTML to prevent XSS
 const escapeHtml = (text) => {
@@ -1267,6 +1267,498 @@ const QuickQuizTool = ({ onBack }) => {
 
 
 // =============================================
+// HOMEWORK & ASSIGNMENT TRACKER (NEW)
+// =============================================
+const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
+    const [assignments, setAssignments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filterStatus, setFilterStatus] = useState('All'); // 'All' | 'Pending' | 'Completed'
+    const [sortBy, setSortBy] = useState('dueDate-asc'); // 'dueDate-asc' | 'dueDate-desc' | 'priority-desc'
+    const [showForm, setShowForm] = useState(false);
+    const [editingAssignment, setEditingAssignment] = useState(null);
+
+    // Form inputs
+    const [title, setTitle] = useState('');
+    const [subject, setSubject] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [dueTime, setDueTime] = useState('17:00'); // default to 5pm
+    const [priority, setPriority] = useState('Medium'); // 'Low' | 'Medium' | 'High'
+    const [notes, setNotes] = useState('');
+    const [formError, setFormError] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    // Extract subjects from student timetable to offer as quick suggestions
+    const suggestedSubjects = React.useMemo(() => {
+        const subjects = new Set(['Math', 'Science', 'English', 'History', 'Geography', 'Art', 'Computing']);
+        if (timetableData && timetableData.timetable) {
+            const periods = timetableData.timetable.periods || {};
+            Object.values(periods).forEach(p => {
+                if (p.title && p.title.trim()) {
+                    const cleanTitle = p.title.replace(/\d+/g, '').trim();
+                    if (
+                        cleanTitle.length > 2 && 
+                        !cleanTitle.toLowerCase().includes('lunch') && 
+                        !cleanTitle.toLowerCase().includes('recess') && 
+                        !cleanTitle.toLowerCase().includes('roll call') &&
+                        !cleanTitle.toLowerCase().includes('assembly') &&
+                        !cleanTitle.toLowerCase().includes('free period')
+                    ) {
+                        subjects.add(cleanTitle);
+                    }
+                }
+            });
+        }
+        return Array.from(subjects);
+    }, [timetableData]);
+
+    const loadAssignments = async () => {
+        try {
+            setLoading(true);
+            const data = await fetchAssignments();
+            setAssignments(data.assignments || []);
+        } catch (err) {
+            console.error("Failed to load assignments:", err);
+            const fallback = localStorage.getItem('fallback_assignments');
+            if (fallback) {
+                setAssignments(JSON.parse(fallback));
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAssignments();
+    }, []);
+
+    useEffect(() => {
+        if (assignments.length > 0) {
+            localStorage.setItem('fallback_assignments', JSON.stringify(assignments));
+        }
+    }, [assignments]);
+
+    const openCreateForm = () => {
+        setEditingAssignment(null);
+        setTitle('');
+        setSubject(suggestedSubjects[0] || 'General');
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setDueDate(tomorrow.toISOString().substring(0, 10));
+        setDueTime('17:00');
+        setPriority('Medium');
+        setNotes('');
+        setFormError('');
+        setShowForm(true);
+    };
+
+    const openEditForm = (item) => {
+        setEditingAssignment(item);
+        setTitle(item.title);
+        setSubject(item.subject);
+        const itemDate = new Date(item.dueDate);
+        setDueDate(itemDate.toISOString().substring(0, 10));
+        setDueTime(itemDate.toTimeString().substring(0, 5));
+        setPriority(item.priority);
+        setNotes(item.notes);
+        setFormError('');
+        setShowForm(true);
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        if (!title.trim() || !subject.trim() || !dueDate) {
+            setFormError("Please fill out Title, Subject, and Due Date.");
+            return;
+        }
+
+        setSaving(true);
+        setFormError('');
+
+        const isoDateTimeStr = `${dueDate}T${dueTime || '17:00'}:00.005Z`;
+
+        const id = editingAssignment ? editingAssignment.id : 'task_' + Math.random().toString(36).substring(2, 15);
+        const payload = {
+            id,
+            title: title.trim(),
+            subject: subject.trim(),
+            dueDate: isoDateTimeStr,
+            status: editingAssignment ? editingAssignment.status : 'Pending',
+            priority,
+            notes: notes.trim()
+        };
+
+        try {
+            const res = await saveAssignment(payload);
+            if (res.success) {
+                if (editingAssignment) {
+                    setAssignments(prev => prev.map(a => a.id === id ? res.assignment : a));
+                } else {
+                    setAssignments(prev => [res.assignment, ...prev]);
+                }
+                setShowForm(false);
+            }
+        } catch (err) {
+            console.error("Failed to save assignment:", err);
+            setFormError(err.message || "Failed to save assignment. Please try again.");
+            const offlinePayload = {
+                ...payload,
+                createdAt: editingAssignment ? editingAssignment.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            if (editingAssignment) {
+                setAssignments(prev => prev.map(a => a.id === id ? offlinePayload : a));
+            } else {
+                setAssignments(prev => [offlinePayload, ...prev]);
+            }
+            setShowForm(false);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleToggleStatus = async (item) => {
+        const newStatus = item.status === 'Completed' ? 'Pending' : 'Completed';
+        const updatedPayload = { ...item, status: newStatus };
+        
+        setAssignments(prev => prev.map(a => a.id === item.id ? updatedPayload : a));
+
+        try {
+            await saveAssignment(updatedPayload);
+        } catch (err) {
+            console.error("Failed to toggle status on server:", err);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this task?")) return;
+        
+        setAssignments(prev => prev.filter(a => a.id !== id));
+
+        try {
+            await deleteAssignment(id);
+        } catch (err) {
+            console.error("Failed to delete assignment on server:", err);
+        }
+    };
+
+    const processedAssignments = React.useMemo(() => {
+        let items = [...assignments];
+
+        if (filterStatus !== 'All') {
+            items = items.filter(a => a.status === filterStatus);
+        }
+
+        items.sort((a, b) => {
+            if (sortBy === 'dueDate-asc') {
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            }
+            if (sortBy === 'dueDate-desc') {
+                return new Date(b.dueDate) - new Date(a.dueDate);
+            }
+            if (sortBy === 'priority-desc') {
+                const priorityWeight = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                const weightA = priorityWeight[a.priority] || 0;
+                const weightB = priorityWeight[b.priority] || 0;
+                if (weightA !== weightB) return weightB - weightA;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            }
+            return 0;
+        });
+
+        return items;
+    }, [assignments, filterStatus, sortBy]);
+
+    const getPriorityStyle = (prio) => {
+        switch(prio) {
+            case 'High': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/30';
+            case 'Medium': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/30';
+            default: return 'bg-zinc-100 text-zinc-850 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800';
+        }
+    };
+
+    return (
+        <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-zinc-900 dark:text-white select-none">
+            <div className="flex items-center justify-between">
+                <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                    <ArrowLeft size={14} /> Study Hub
+                </button>
+                <button onClick={openCreateForm} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-750 text-white text-xs font-black uppercase tracking-wider border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                    <Plus size={14} /> Add Homework
+                </button>
+            </div>
+
+            <div>
+                <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
+                    <span className="p-2 bg-purple-650 text-white border border-black dark:border-purple-700">
+                        <CheckSquare className="w-7 h-7" />
+                    </span>
+                    Homework Tracker
+                </h1>
+                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">Manage assignments, track deadlines, and sync automatically with your Synchron Calendar.</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-black dark:border-zinc-800 pb-3">
+                <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap">
+                    {['All', 'Pending', 'Completed'].map(status => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-3 py-1 text-xs font-bold uppercase border transition-all ${
+                                filterStatus === status
+                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 hover:border-zinc-400'
+                            }`}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Sort By:</span>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-white dark:bg-zinc-900 border border-zinc-205 dark:border-zinc-800 px-2 py-1 text-xs text-zinc-700 dark:text-zinc-300 focus:outline-none"
+                    >
+                        <option value="dueDate-asc">Due Date (Soonest)</option>
+                        <option value="dueDate-desc">Due Date (Latest)</option>
+                        <option value="priority-desc">Priority (Highest)</option>
+                    </select>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
+                    <Loader2 size={36} className="animate-spin mb-4 text-purple-650 dark:text-purple-400" />
+                    <span className="font-mono text-xs uppercase tracking-widest">Loading task matrix...</span>
+                </div>
+            ) : processedAssignments.length === 0 ? (
+                <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 p-16 text-center bg-white dark:bg-zinc-950">
+                    <CheckSquare size={40} className="mx-auto text-zinc-350 dark:text-zinc-750 mb-4" />
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white uppercase tracking-tight">No Tasks Found</h3>
+                    <p className="text-xs text-zinc-500 mt-1">Add your first task to start tracking your progress.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-3">
+                    {processedAssignments.map(item => {
+                        const isCompleted = item.status === 'Completed';
+                        const dueDateObj = new Date(item.dueDate);
+                        const isOverdue = !isCompleted && dueDateObj < new Date();
+                        return (
+                            <div
+                                key={item.id}
+                                className={`border-2 border-black dark:border-zinc-850 p-4 bg-white dark:bg-zinc-950 flex items-start gap-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.1)] transition-all`}
+                            >
+                                <button
+                                    onClick={() => handleToggleStatus(item)}
+                                    className={`w-6 h-6 border-2 border-black dark:border-zinc-700 shrink-0 flex items-center justify-center transition-all ${
+                                        isCompleted ? 'bg-purple-650 border-purple-650 text-white' : 'hover:border-purple-650'
+                                    }`}
+                                >
+                                    {isCompleted && <Check size={14} />}
+                                </button>
+
+                                <div className="flex-1 min-w-0 text-left select-text">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                        <span className={`px-2 py-0.5 border text-[9px] font-black uppercase tracking-wider bg-zinc-100 border-zinc-300 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400`}>
+                                            {item.subject}
+                                        </span>
+                                        <span className={`px-1.5 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${getPriorityStyle(item.priority)}`}>
+                                            {item.priority}
+                                        </span>
+                                        {isOverdue && (
+                                            <span className="px-1.5 py-0.5 border border-red-300 bg-red-100 text-red-800 text-[9px] font-extrabold uppercase tracking-wider dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/40">
+                                                Overdue
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <h3 className={`font-black text-base leading-tight uppercase tracking-tight text-zinc-900 dark:text-white ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                                        {item.title}
+                                    </h3>
+
+                                    {item.notes && (
+                                        <p className="text-xs text-zinc-550 dark:text-zinc-400 mt-1 whitespace-pre-wrap">{item.notes}</p>
+                                    )}
+
+                                    <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
+                                        <Clock size={11} />
+                                        <span>Due: {dueDateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0 self-center">
+                                    <button
+                                        onClick={() => openEditForm(item)}
+                                        className="p-1.5 text-zinc-400 hover:text-zinc-950 dark:hover:text-white border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+                                        title="Edit homework task"
+                                    >
+                                        <Edit3 size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(item.id)}
+                                        className="p-1.5 text-zinc-400 hover:text-red-500 border border-transparent hover:border-red-200 dark:hover:border-red-950/30"
+                                        title="Delete homework task"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {showForm && (
+                <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 select-text">
+                    <form onSubmit={handleSave} className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col">
+                        <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between select-none">
+                            <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-purple-650 dark:text-purple-400" />
+                                {editingAssignment ? 'Edit Homework' : 'New Homework'}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => !saving && setShowForm(false)}
+                                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                                disabled={saving}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4 text-left">
+                            {formError && (
+                                <div className="p-3 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 text-xs font-mono select-none">
+                                    {formError}
+                                </div>
+                            )}
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">Homework Title</label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="e.g. Chem Chapter 4 Exercise"
+                                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                    autoFocus
+                                    disabled={saving}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-455 dark:text-zinc-550 select-none">Subject / Category</label>
+                                <input
+                                    type="text"
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    placeholder="e.g. Chemistry"
+                                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white mb-2"
+                                    disabled={saving}
+                                />
+                                <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto custom-scrollbar p-0.5 select-none">
+                                    {suggestedSubjects.map(sub => (
+                                        <button
+                                            key={sub}
+                                            type="button"
+                                            onClick={() => setSubject(sub)}
+                                            className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${
+                                                subject === sub
+                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                                    : 'bg-white dark:bg-zinc-900 border-zinc-205 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-450'
+                                            }`}
+                                        >
+                                            {sub}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 select-none">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550">Due Date</label>
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                        disabled={saving}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550">Due Time</label>
+                                    <input
+                                        type="time"
+                                        value={dueTime}
+                                        onChange={(e) => setDueTime(e.target.value)}
+                                        className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                                        disabled={saving}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1 select-none">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555">Priority Level</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['Low', 'Medium', 'High'].map(prio => (
+                                        <button
+                                            key={prio}
+                                            type="button"
+                                            onClick={() => setPriority(prio)}
+                                            className={`py-1.5 text-xs font-bold uppercase border transition-all ${
+                                                priority === prio
+                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                                    : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-655 dark:text-zinc-400'
+                                            }`}
+                                            disabled={saving}
+                                        >
+                                            {prio}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555 select-none">Notes / Details (Optional)</label>
+                                <textarea
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="Enter instructions, page numbers, or notes..."
+                                    rows={3}
+                                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white font-sans placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white resize-none"
+                                    disabled={saving}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t-2 border-black dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/20 flex justify-end gap-2 select-none">
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
+                                disabled={saving}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-5 py-2 bg-purple-650 hover:bg-purple-700 dark:bg-purple-650 dark:hover:bg-purple-500 text-white border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                disabled={saving}
+                            >
+                                {saving ? 'Saving...' : 'Save Task'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+// =============================================
 // NOTES EDITOR (EXISTING, PRESERVED)
 // =============================================
 const NotesEditor = ({ user, timetableData, setView, onBack }) => {
@@ -1987,6 +2479,9 @@ const NotesView = ({ user, timetableData, setView }) => {
     if (activeTool === 'flashcards') {
         return <FlashcardsTool onBack={() => setActiveTool(null)} />;
     }
+    if (activeTool === 'assignments') {
+        return <AssignmentTrackerTool user={user} timetableData={timetableData} onBack={() => setActiveTool(null)} />;
+    }
     if (activeTool === 'pomodoro') {
         return <PomodoroTool onBack={() => setActiveTool(null)} />;
     }
@@ -2015,6 +2510,16 @@ const NotesView = ({ user, timetableData, setView }) => {
             borderColor: 'hover:border-emerald-500 dark:hover:border-emerald-400',
             iconBg: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400',
             tag: 'Active Recall'
+        },
+        {
+            id: 'assignments',
+            icon: CheckSquare,
+            title: 'Homework Tracker',
+            description: 'Track homework, assignments, and tasks. Set due dates, priorities, and sync them to your Synchron Calendar.',
+            color: 'from-purple-500 to-indigo-600',
+            borderColor: 'hover:border-purple-500 dark:hover:border-purple-400',
+            iconBg: 'bg-purple-100 dark:bg-purple-950/40 text-purple-650 dark:text-purple-400',
+            tag: 'Calendar Sync'
         },
         {
             id: 'pomodoro',

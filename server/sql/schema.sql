@@ -97,3 +97,19 @@ CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_
 
 -- Feedback migrations
 ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+
+-- Homework/Assignments migrations
+CREATE TABLE IF NOT EXISTS app_assignments (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  due_date TIMESTAMPTZ NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Pending',
+  priority TEXT NOT NULL DEFAULT 'Medium',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_assignments_student_id_idx ON app_assignments (student_id);

@@ -141,6 +141,7 @@ let logs = []; // System logs
 let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
+let assignments = []; // Homework/assignments memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -1090,6 +1091,224 @@ app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Delete note error:', e);
         res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// GET /api/assignments - Retrieve homework/assignments for authenticated student
+app.get('/api/assignments', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        
+        // Premium/Pro check
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
+        }
+
+        if (!isDbEnabled) {
+            const studentAssignments = assignments.filter(a => String(a.studentId) === studentId);
+            return res.json({ success: true, assignments: studentAssignments });
+        }
+
+        const result = await db.query(
+            'SELECT id, title, subject, due_date, status, priority, notes, created_at, updated_at FROM app_assignments WHERE student_id = $1 ORDER BY due_date ASC',
+            [studentId]
+        );
+
+        const formatted = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            subject: row.subject,
+            dueDate: toIso(row.due_date),
+            status: row.status,
+            priority: row.priority,
+            notes: row.notes,
+            createdAt: toIso(row.created_at),
+            updatedAt: toIso(row.updated_at)
+        }));
+
+        res.json({ success: true, assignments: formatted });
+    } catch (e) {
+        console.error('Fetch assignments error:', e);
+        res.status(500).json({ error: 'Failed to fetch assignments' });
+    }
+});
+
+// POST /api/assignments - Create or update a homework/assignment task
+app.post('/api/assignments', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        
+        // Premium/Pro check
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
+        }
+
+        const { id, title, subject, dueDate, status, priority, notes: taskNotes } = req.body || {};
+
+        if (!id || !title || !subject || !dueDate) {
+            return res.status(400).json({ error: 'Missing required assignment fields (id, title, subject, dueDate)' });
+        }
+
+        const assignmentId = String(id);
+        const taskTitle = String(title);
+        const taskSubject = String(subject);
+        const taskDueDate = String(dueDate);
+        const taskStatus = String(status || 'Pending');
+        const taskPriority = String(priority || 'Medium');
+        const taskNotesStr = String(taskNotes || '');
+        const now = new Date();
+
+        let savedAssignment;
+        if (!isDbEnabled) {
+            const existingIndex = assignments.findIndex(a => String(a.id) === assignmentId);
+            if (existingIndex !== -1) {
+                if (String(assignments[existingIndex].studentId) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot edit another student\'s assignment' });
+                }
+                assignments[existingIndex] = {
+                    ...assignments[existingIndex],
+                    title: taskTitle,
+                    subject: taskSubject,
+                    dueDate: taskDueDate,
+                    status: taskStatus,
+                    priority: taskPriority,
+                    notes: taskNotesStr,
+                    updatedAt: now
+                };
+                savedAssignment = assignments[existingIndex];
+            } else {
+                savedAssignment = {
+                    id: assignmentId,
+                    studentId,
+                    title: taskTitle,
+                    subject: taskSubject,
+                    dueDate: taskDueDate,
+                    status: taskStatus,
+                    priority: taskPriority,
+                    notes: taskNotesStr,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                assignments.push(savedAssignment);
+            }
+        } else {
+            // First check if assignment exists and who it belongs to
+            const existingCheck = await db.query(
+                'SELECT student_id FROM app_assignments WHERE id = $1',
+                [assignmentId]
+            );
+
+            if (existingCheck.rows.length > 0) {
+                if (String(existingCheck.rows[0].student_id) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot edit another student\'s assignment' });
+                }
+
+                const result = await db.query(
+                    'UPDATE app_assignments SET title = $1, subject = $2, due_date = $3, status = $4, priority = $5, notes = $6, updated_at = NOW() WHERE id = $7 RETURNING id, title, subject, due_date, status, priority, notes, created_at, updated_at',
+                    [taskTitle, taskSubject, taskDueDate, taskStatus, taskPriority, taskNotesStr, assignmentId]
+                );
+
+                const row = result.rows[0];
+                savedAssignment = {
+                    id: row.id,
+                    title: row.title,
+                    subject: row.subject,
+                    dueDate: toIso(row.due_date),
+                    status: row.status,
+                    priority: row.priority,
+                    notes: row.notes,
+                    createdAt: toIso(row.created_at),
+                    updatedAt: toIso(row.updated_at)
+                };
+            } else {
+                const result = await db.query(
+                    'INSERT INTO app_assignments (id, student_id, title, subject, due_date, status, priority, notes, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()) RETURNING id, title, subject, due_date, status, priority, notes, created_at, updated_at',
+                    [assignmentId, studentId, taskTitle, taskSubject, taskDueDate, taskStatus, taskPriority, taskNotesStr]
+                );
+
+                const row = result.rows[0];
+                savedAssignment = {
+                    id: row.id,
+                    title: row.title,
+                    subject: row.subject,
+                    dueDate: toIso(row.due_date),
+                    status: row.status,
+                    priority: row.priority,
+                    notes: row.notes,
+                    createdAt: toIso(row.created_at),
+                    updatedAt: toIso(row.updated_at)
+                };
+            }
+        }
+
+        res.json({ success: true, assignment: savedAssignment });
+    } catch (e) {
+        console.error('Save assignment error:', e);
+        res.status(500).json({ error: 'Failed to save assignment' });
+    }
+});
+
+// DELETE /api/assignments/:id - Delete a homework/assignment task
+app.delete('/api/assignments/:id', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ error: 'Missing assignment ID' });
+        }
+
+        // Premium/Pro check
+        const dbUser = await getUserById(studentId);
+        if (!dbUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
+        if (!isPro) {
+            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
+        }
+
+        if (!isDbEnabled) {
+            const assignmentIndex = assignments.findIndex(a => String(a.id) === String(id));
+            if (assignmentIndex !== -1) {
+                if (String(assignments[assignmentIndex].studentId) !== studentId) {
+                    return res.status(403).json({ error: 'Forbidden: Cannot delete another student\'s assignment' });
+                }
+                assignments.splice(assignmentIndex, 1);
+            }
+            return res.json({ success: true });
+        }
+
+        const checkResult = await db.query(
+            'SELECT student_id FROM app_assignments WHERE id = $1',
+            [String(id)]
+        );
+
+        if (checkResult.rows.length > 0) {
+            if (String(checkResult.rows[0].student_id) !== studentId) {
+                return res.status(403).json({ error: 'Forbidden: Cannot delete another student\'s assignment' });
+            }
+
+            await db.query(
+                'DELETE FROM app_assignments WHERE id = $1',
+                [String(id)]
+            );
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Delete assignment error:', e);
+        res.status(500).json({ error: 'Failed to delete assignment' });
     }
 });
 

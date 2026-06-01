@@ -471,7 +471,7 @@ function App() {
             )}
 
             {/* CALENDAR VIEW */}
-            {currentView === 'calendar' && <CalendarView />}
+            {currentView === 'calendar' && <CalendarView user={user} />}
 
             {/* NOTICES VIEW */}
             {currentView === 'notices' && (
