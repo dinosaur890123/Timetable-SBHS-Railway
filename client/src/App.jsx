@@ -1,16 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
-import Timetable from './components/Timetable';
-import CalendarView from './components/CalendarView';
-import DailyNotices from './components/DailyNotices';
-import AdminPanel from './components/AdminPanel';
-import LandingPage from './components/LandingPage';
 import Home from './components/Home';
-import AwardSchemeView from './components/AwardSchemeView';
-import ClipboardView from './components/ClipboardView';
-import NotesView from './components/NotesView';
-import FeedbackView from './components/FeedbackView';
+
+const Timetable = lazy(() => import('./components/Timetable'));
+const CalendarView = lazy(() => import('./components/CalendarView'));
+const DailyNotices = lazy(() => import('./components/DailyNotices'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const AwardSchemeView = lazy(() => import('./components/AwardSchemeView'));
+const ClipboardView = lazy(() => import('./components/ClipboardView'));
+const NotesView = lazy(() => import('./components/NotesView'));
+const FeedbackView = lazy(() => import('./components/FeedbackView'));
 import { 
   fetchDayTimetable, 
   fetchDailyNews, 
@@ -357,7 +358,13 @@ function App() {
   if (!user) {
     return (
         <div className="transition-colors bg-white dark:bg-zinc-950">
-            <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} />
+            <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+                    <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                </div>
+            }>
+                <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} />
+            </Suspense>
         </div>
     );
   }
@@ -420,6 +427,12 @@ function App() {
          )}
 
          <div className="p-4 md:p-8 max-w-7xl mx-auto">
+            <Suspense fallback={
+                <div className="flex flex-col items-center justify-center p-12 gap-4">
+                    <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                    <p className="text-zinc-400 text-xs">Loading view...</p>
+                </div>
+            }>
             
             {/* HOME VIEW */}
             {currentView === 'home' && (
@@ -859,7 +872,8 @@ function App() {
                 );
             })()}
 
-         </div>
+            </Suspense>
+          </div>
       </main>
     </div>
   );
