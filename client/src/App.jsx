@@ -41,14 +41,49 @@ function App() {
     }
   }, []);
   
-  const [timetable, setTimetable] = useState(null);
-  const [completeTimetable, setCompleteTimetable] = useState(null);
+  const [timetable, setTimetable] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_timetable');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [completeTimetable, setCompleteTimetable] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_complete_timetable');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
   const [darkStyle, setDarkStyle] = useState(() => localStorage.getItem('dark_style') || 'true-black');
   const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
-  const [notices, setNotices] = useState(null);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [notices, setNotices] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_notices');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      if (isAuthenticated() && localStorage.getItem('cached_user')) {
+        return false;
+      }
+    } catch {}
+    return true;
+  });
   const [authError, setAuthError] = useState(null);
   const [aiBriefing, setAiBriefing] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -58,39 +93,31 @@ function App() {
   const [billingLoading, setBillingLoading] = useState(false);
   
   // System State
-  const [broadcast, setBroadcast] = useState(null);
-  const [maintenance, setMaintenance] = useState(false);
-  const [supporters, setSupporters] = useState([]);
-  const hasSyncedTimetable = useRef(false);
-
-  // Restore cached states from localStorage on mount
-  useEffect(() => {
-    if (!isAuthenticated()) return;
+  const [broadcast, setBroadcast] = useState(() => {
     try {
-      const cachedUser = localStorage.getItem('cached_user');
-      const cachedNotices = localStorage.getItem('cached_notices');
-      const cachedSystem = localStorage.getItem('cached_system');
-      const cachedTimetable = localStorage.getItem('cached_timetable');
-      const cachedCompleteTimetable = localStorage.getItem('cached_complete_timetable');
-
-      if (cachedUser) setUser(JSON.parse(cachedUser));
-      if (cachedNotices) setNotices(JSON.parse(cachedNotices));
-      if (cachedSystem) {
-          const systemData = JSON.parse(cachedSystem);
-          setBroadcast(systemData.broadcast);
-          setMaintenance(systemData.maintenance);
-          setSupporters(systemData.supporters || []);
-      }
-      if (cachedTimetable) setTimetable(JSON.parse(cachedTimetable));
-      if (cachedCompleteTimetable) setCompleteTimetable(JSON.parse(cachedCompleteTimetable));
-
-      if (cachedUser) {
-          setLoading(false);
-      }
-    } catch (e) {
-      console.warn("Failed to load cached states", e);
+      const cached = localStorage.getItem('cached_system');
+      return cached ? JSON.parse(cached).broadcast : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
+  const [maintenance, setMaintenance] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_system');
+      return cached ? JSON.parse(cached).maintenance : false;
+    } catch {
+      return false;
+    }
+  });
+  const [supporters, setSupporters] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_system');
+      return cached ? (JSON.parse(cached).supporters || []) : [];
+    } catch {
+      return [];
+    }
+  });
+  const hasSyncedTimetable = useRef(false);
 
   // Poll System Status
   useEffect(() => {
