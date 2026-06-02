@@ -63,6 +63,35 @@ function App() {
   const [supporters, setSupporters] = useState([]);
   const hasSyncedTimetable = useRef(false);
 
+  // Restore cached states from localStorage on mount
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    try {
+      const cachedUser = localStorage.getItem('cached_user');
+      const cachedNotices = localStorage.getItem('cached_notices');
+      const cachedSystem = localStorage.getItem('cached_system');
+      const cachedTimetable = localStorage.getItem('cached_timetable');
+      const cachedCompleteTimetable = localStorage.getItem('cached_complete_timetable');
+
+      if (cachedUser) setUser(JSON.parse(cachedUser));
+      if (cachedNotices) setNotices(JSON.parse(cachedNotices));
+      if (cachedSystem) {
+          const systemData = JSON.parse(cachedSystem);
+          setBroadcast(systemData.broadcast);
+          setMaintenance(systemData.maintenance);
+          setSupporters(systemData.supporters || []);
+      }
+      if (cachedTimetable) setTimetable(JSON.parse(cachedTimetable));
+      if (cachedCompleteTimetable) setCompleteTimetable(JSON.parse(cachedCompleteTimetable));
+
+      if (cachedUser) {
+          setLoading(false);
+      }
+    } catch (e) {
+      console.warn("Failed to load cached states", e);
+    }
+  }, []);
+
   // Poll System Status
   useEffect(() => {
     const pollStatus = async () => {
@@ -205,20 +234,19 @@ function App() {
       }
 
       try {
-        const [noticesData, userData, systemData, completeTimetableData] = await Promise.all([
+        const [noticesData, userData, systemData] = await Promise.all([
           fetchDailyNews(),
           fetchUserInfo(),
-          fetchSystemStatus(),
-          fetchCompleteTimetable().catch(e => {
-              console.warn("Failed to fetch complete timetable", e);
-              return null;
-          })
+          fetchSystemStatus()
         ]);
         setNotices(noticesData);
         setUser(userData);
-        setCompleteTimetable(completeTimetableData);
+
+        localStorage.setItem('cached_notices', JSON.stringify(noticesData));
+        localStorage.setItem('cached_user', JSON.stringify(userData));
         
         if (systemData) {
+            localStorage.setItem('cached_system', JSON.stringify(systemData));
             const dismissedId = localStorage.getItem('dismissedUpdateId');
             if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
                 setBroadcast(null);
@@ -239,16 +267,17 @@ function App() {
             }).then(dbSync => {
                 if (dbSync && dbSync.user) {
                     setUser(prev => {
-                        if (prev) {
-                            return { 
-                                ...prev, 
-                                role: dbSync.user.role || prev.role,
-                                subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                                stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                showSupporter: dbSync.user.showSupporter !== false
-                            };
+                        const updated = prev ? { 
+                            ...prev, 
+                            role: dbSync.user.role || prev.role,
+                            subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                            stripeCustomerId: dbSync.user.stripeCustomerId || null,
+                            showSupporter: dbSync.user.showSupporter !== false
+                        } : null;
+                        if (updated) {
+                            localStorage.setItem('cached_user', JSON.stringify(updated));
                         }
-                        return prev;
+                        return updated;
                     });
                 }
             }).catch(e => console.log("Init sync failed silently", e));
@@ -264,6 +293,22 @@ function App() {
     init();
   }, []);
 
+  // Fetch complete timetable in the background once authenticated
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadCompleteTimetable = async () => {
+        try {
+            const completeTimetableData = await fetchCompleteTimetable();
+            setCompleteTimetable(completeTimetableData);
+            localStorage.setItem('cached_complete_timetable', JSON.stringify(completeTimetableData));
+        } catch (err) {
+            console.warn("Failed to fetch complete timetable in background", err);
+        }
+    };
+    loadCompleteTimetable();
+  }, [user]);
+
   // Fetch Timetable when date changes
   useEffect(() => {
     if (!isAuthenticated()) return;
@@ -274,6 +319,9 @@ function App() {
         try {
             const data = await fetchDayTimetable(viewDate);
             setTimetable(data);
+            if (isSameDay(viewDate, new Date())) {
+                localStorage.setItem('cached_timetable', JSON.stringify(data));
+            }
         } catch (err) {
             console.error("Failed to fetch timetable", err);
         }
