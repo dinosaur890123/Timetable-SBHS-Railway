@@ -169,13 +169,19 @@ function App() {
                 year: user.yearGroup
             }).then(dbSync => {
                 if (dbSync && dbSync.user) {
-                    setUser(prev => prev ? {
-                        ...prev,
-                        role: dbSync.user.role || prev.role,
-                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                        stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                        showSupporter: dbSync.user.showSupporter !== false
-                    } : null);
+                    setUser(prev => {
+                        const merged = prev ? {
+                            ...prev,
+                            role: dbSync.user.role || prev.role,
+                            subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                            stripeCustomerId: dbSync.user.stripeCustomerId || null,
+                            showSupporter: dbSync.user.showSupporter !== false
+                        } : null;
+                        if (merged) {
+                            localStorage.setItem('cached_user', JSON.stringify(merged));
+                        }
+                        return merged;
+                    });
                 }
             }).catch(e => console.error("Billing sync failed", e));
         }
@@ -267,10 +273,19 @@ function App() {
           fetchSystemStatus()
         ]);
         setNotices(noticesData);
-        setUser(userData);
+        setUser(prev => {
+            const merged = prev ? {
+                ...userData,
+                role: prev.role || userData.role || 'Student',
+                subscriptionStatus: prev.subscriptionStatus || userData.subscriptionStatus || null,
+                stripeCustomerId: prev.stripeCustomerId || userData.stripeCustomerId || null,
+                showSupporter: prev.showSupporter !== undefined ? prev.showSupporter : (userData.showSupporter !== false)
+            } : userData;
+            localStorage.setItem('cached_user', JSON.stringify(merged));
+            return merged;
+        });
 
         localStorage.setItem('cached_notices', JSON.stringify(noticesData));
-        localStorage.setItem('cached_user', JSON.stringify(userData));
         
         if (systemData) {
             localStorage.setItem('cached_system', JSON.stringify(systemData));
@@ -386,10 +401,16 @@ function App() {
     try {
         const updated = await updateProfileSettings(checked);
         const updatedUser = updated.user || updated;
-        setUser(prev => prev ? {
-            ...prev,
-            showSupporter: updatedUser.showSupporter !== false
-        } : null);
+        setUser(prev => {
+            const merged = prev ? {
+                ...prev,
+                showSupporter: updatedUser.showSupporter !== false
+            } : null;
+            if (merged) {
+                localStorage.setItem('cached_user', JSON.stringify(merged));
+            }
+            return merged;
+        });
         
         // Refresh system status to get updated supporters list
         const status = await fetchSystemStatus();
