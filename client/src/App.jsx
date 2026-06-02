@@ -613,7 +613,7 @@ function App() {
                                 <div className="max-w-5xl mx-auto w-full px-4 flex flex-col md:flex-row gap-6 mt-6 pb-12">
 
                                     {/* Left Third (Sticky Sidebar) */}
-                                    <div className="w-full md:w-1/3 flex flex-col gap-6 shrink-0 md:sticky md:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto">
+                                    <div className="w-full md:w-1/3 flex flex-col gap-6 shrink-0 md:sticky md:top-[88px] self-start">
                                         <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm flex flex-col">
                                             <div>
                                                 <div className="relative w-24 h-24 mx-auto">
