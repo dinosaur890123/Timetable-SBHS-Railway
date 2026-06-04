@@ -76,28 +76,4 @@ export const updateProfileSettings = async (showSupporter) => {
     }
 };
 
-/**
- * Saves the user's dashboard layout to the server
- * @param {Array} layout - Array of widgets with their positioning properties
- * @returns {Promise<any>}
- */
-export const saveDashboardLayout = async (layout) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/users/dashboard-layout`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ layout })
-        });
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'Failed to save dashboard layout');
-        }
-        return await response.json();
-    } catch (error) {
-        console.error("Dashboard API Error (saveDashboardLayout):", error);
-        throw error;
-    }
-};
-
-
 

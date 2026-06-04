@@ -334,7 +334,7 @@ async function listUsers() {
         return users;
     }
     const result = await db.query(
-        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, dashboard_layout FROM app_users ORDER BY last_seen DESC, joined DESC',
+        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
     );
     return result.rows.map((row) => ({
@@ -350,7 +350,6 @@ async function listUsers() {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
-        dashboardLayout: row.dashboard_layout ?? null,
     }));
 }
 
@@ -386,8 +385,7 @@ async function upsertUser(newUser) {
             stripeCustomerId: null,
             stripeSubscriptionId: null,
             subscriptionStatus: null,
-            showSupporter: true,
-            dashboardLayout: null
+            showSupporter: true
         };
         users.push(created);
         return created;
@@ -405,7 +403,7 @@ async function upsertUser(newUser) {
            name = COALESCE(EXCLUDED.name, app_users.name),
            year = COALESCE(EXCLUDED.year, app_users.year),
            last_seen = NOW()
-         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, dashboard_layout`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
         [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null]
     );
 
@@ -424,7 +422,6 @@ async function upsertUser(newUser) {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
-        dashboardLayout: row.dashboard_layout ?? null,
     };
 }
 
@@ -437,7 +434,7 @@ async function updateUserById(id, updates) {
         const userIndex = users.findIndex(u => String(u.id) === String(id));
         if (userIndex === -1) return null;
 
-        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus', 'showSupporter', 'dashboardLayout'];
+        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus', 'showSupporter'];
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) users[userIndex][field] = updates[field];
         });
@@ -451,8 +448,7 @@ async function updateUserById(id, updates) {
         stripeCustomerId: 'stripe_customer_id',
         stripeSubscriptionId: 'stripe_subscription_id',
         subscriptionStatus: 'subscription_status',
-        showSupporter: 'show_supporter',
-        dashboardLayout: 'dashboard_layout'
+        showSupporter: 'show_supporter'
     };
 
     const sets = [];
@@ -473,7 +469,7 @@ async function updateUserById(id, updates) {
     values.push(String(id));
     const result = await db.query(
         `UPDATE app_users SET ${sets.join(', ')} WHERE id = $${paramIndex}
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, dashboard_layout`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
         values
     );
 
@@ -493,7 +489,6 @@ async function updateUserById(id, updates) {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
-        dashboardLayout: row.dashboard_layout ?? null,
     };
 }
 
@@ -630,12 +625,11 @@ async function getUserById(id) {
             stripeCustomerId: u.stripeCustomerId ?? null,
             stripeSubscriptionId: u.stripeSubscriptionId ?? null,
             subscriptionStatus: u.subscriptionStatus ?? null,
-            showSupporter: u.showSupporter !== false,
-            dashboardLayout: u.dashboardLayout ?? null
+            showSupporter: u.showSupporter !== false
         };
     }
     const result = await db.query(
-        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, dashboard_layout FROM app_users WHERE id = $1',
+        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users WHERE id = $1',
         [String(id)]
     );
     if (result.rows.length === 0) return null;
@@ -649,8 +643,7 @@ async function getUserById(id) {
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
-        showSupporter: row.show_supporter !== false,
-        dashboardLayout: row.dashboard_layout ?? null
+        showSupporter: row.show_supporter !== false
     };
 }
 
@@ -873,55 +866,6 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
         console.error('Update profile error:', e);
         res.status(500).json({ error: 'Failed to update settings' });
     }
-});
-
-// POST /api/users/dashboard-layout - Update user custom dashboard layout
-app.post('/api/users/dashboard-layout', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = req.user.studentId;
-        const { layout } = req.body || {};
-        
-        let updated;
-        if (!isDbEnabled) {
-            const userIndex = users.findIndex(u => String(u.id) === String(studentId));
-            if (userIndex !== -1) {
-                users[userIndex].dashboardLayout = layout;
-                updated = users[userIndex];
-            }
-        } else {
-            const result = await db.query(
-                `UPDATE app_users SET dashboard_layout = $1 WHERE id = $2
-                 RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, dashboard_layout`,
-                [layout ? JSON.stringify(layout) : null, String(studentId)]
-            );
-            if (result.rows.length > 0) {
-                const row = result.rows[0];
-                updated = {
-                    id: row.id,
-                    name: row.name,
-                    email: row.email,
-                    role: row.role,
-                    year: row.year,
-                    status: row.status,
-                    joined: toIso(row.joined),
-                    lastSeen: toIso(row.last_seen),
-                    stripeCustomerId: row.stripe_customer_id ?? null,
-                    stripeSubscriptionId: row.stripe_subscription_id ?? null,
-                    subscriptionStatus: row.subscription_status ?? null,
-                    showSupporter: row.show_supporter !== false,
-                    dashboardLayout: row.dashboard_layout ?? null
-                };
-            }
-        }
-        
-        if (!updated) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        
-        res.json({ success: true, user: updated });
-    } catch (e) {
-        console.error('Update dashboard layout error:', e);
-        res.status(500).json({ error: 'Failed to update dashboard layout' });
 });
 
 // --- Study Notes Endpoints (CRUD) ---
