@@ -6,16 +6,17 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
+import { saveDashboardLayout } from '../services/billingApi';
 
-// Default layout configuration (removed greeting tile as it is now fixed at the top)
+// Default layout configuration with freeform grid positions (x, y, w, h)
 const DEFAULT_LAYOUT = [
-    { id: 'ai_briefing', w: 3, h: 1 },
-    { id: 'current_class', w: 2, h: 2 },
-    { id: 'notices', w: 1, h: 2 },
-    { id: 'transit_departures', w: 1, h: 1 },
-    { id: 'next_class', w: 1, h: 1 },
-    { id: 'stats', w: 1, h: 1 },
-    { id: 'clock', w: 1, h: 1 }
+    { id: 'ai_briefing', w: 3, h: 1, x: 0, y: 0 },
+    { id: 'current_class', w: 2, h: 2, x: 0, y: 1 },
+    { id: 'notices', w: 1, h: 2, x: 2, y: 1 },
+    { id: 'transit_departures', w: 1, h: 1, x: 0, y: 3 },
+    { id: 'next_class', w: 1, h: 1, x: 1, y: 3 },
+    { id: 'stats', w: 1, h: 1, x: 2, y: 3 },
+    { id: 'clock', w: 1, h: 1, x: 0, y: 4 }
 ];
 
 // Available tiles and their resizing constraints
@@ -146,7 +147,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                 <BookOpen size={14} />
                 Today's Timeline
             </h2>
-            <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[220px]">
+            <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                 {routine.length > 0 ? (
                     routine.map((bellId, idx) => {
                         const bell = bells.find(b => b.bell === bellId);
@@ -499,10 +500,133 @@ const TransitWidget = ({ user, setView }) => {
     );
 };
 
+// Computes grid positions for tiles on a 3-column layout, assigning x and y coordinates if missing.
+const computeGridPositions = (tiles, cols = 3) => {
+    const grid = []; // 2D array representation of occupied spaces
+    const positioned = [];
+
+    const isAreaFree = (x, y, w, h) => {
+        if (x + w > cols) return false;
+        for (let r = y; r < y + h; r++) {
+            for (let c = x; c < x + w; c++) {
+                if (grid[r] && grid[r][c]) return false;
+            }
+        }
+        return true;
+    };
+
+    const occupyArea = (x, y, w, h, id) => {
+        for (let r = y; r < y + h; r++) {
+            if (!grid[r]) grid[r] = new Array(cols).fill(null);
+            for (let c = x; c < x + w; c++) {
+                grid[r][c] = id;
+            }
+        }
+    };
+
+    // First position tiles that already have valid x and y
+    tiles.forEach(tile => {
+        if (tile.x !== undefined && tile.y !== undefined) {
+            let x = Math.max(0, Math.min(cols - 1, tile.x));
+            let w = Math.max(1, Math.min(cols - x, tile.w));
+            let y = Math.max(0, tile.y);
+            let h = Math.max(1, tile.h);
+            
+            if (isAreaFree(x, y, w, h)) {
+                occupyArea(x, y, w, h, tile.id);
+                positioned.push({ ...tile, x, y, w, h });
+            } else {
+                tile._needsPosition = true;
+            }
+        } else {
+            tile._needsPosition = true;
+        }
+    });
+
+    // Now place unpositioned tiles
+    tiles.forEach(tile => {
+        if (!tile._needsPosition && tile.x !== undefined && tile.y !== undefined) return;
+        
+        let w = Math.max(1, Math.min(cols, tile.w));
+        let h = Math.max(1, tile.h);
+        
+        let placed = false;
+        let y = 0;
+        while (!placed) {
+            for (let x = 0; x <= cols - w; x++) {
+                if (isAreaFree(x, y, w, h)) {
+                    occupyArea(x, y, w, h, tile.id);
+                    positioned.push({ ...tile, x, y, w, h });
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) y++;
+        }
+    });
+
+    return positioned;
+};
+
+// Resolves overlaps by pushing overlapping tiles down vertically.
+const resolveOverlaps = (tiles, movedIndex) => {
+    const sorted = [...tiles].map((t, idx) => ({ ...t, _origIndex: idx }));
+    const movedTile = sorted.find(t => t._origIndex === movedIndex);
+    if (!movedTile) return tiles;
+
+    const overlap = (t1, t2) => {
+        return (
+            t1.id !== t2.id &&
+            t1.x < t2.x + t2.w &&
+            t1.x + t1.w > t2.x &&
+            t1.y < t2.y + t2.h &&
+            t1.y + t1.h > t2.y
+        );
+    };
+
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (let i = 0; i < sorted.length; i++) {
+            for (let j = 0; j < sorted.length; j++) {
+                if (i === j) continue;
+                const t1 = sorted[i];
+                const t2 = sorted[j];
+                
+                if (overlap(t1, t2)) {
+                    if (t1._origIndex === movedIndex) {
+                        t2.y = t1.y + t1.h;
+                        changed = true;
+                    } else if (t2._origIndex === movedIndex) {
+                        t1.y = t2.y + t2.h;
+                        changed = true;
+                    } else {
+                        if (t1.y >= t2.y) {
+                            t1.y = t2.y + t2.h;
+                        } else {
+                            t2.y = t1.y + t1.h;
+                        }
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    const result = new Array(tiles.length);
+    sorted.forEach(t => {
+        const { _origIndex, ...rest } = t;
+        result[_origIndex] = rest;
+    });
+    return result;
+};
+
 // Main Home Component
 const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState(null);
+    const [dragOverCell, setDragOverCell] = useState(null); // { x, y }
 
     // Fetch Award Scheme & Clipboard stats inside Home for the widgets
     const [awardPoints, setAwardPoints] = useState(0);
@@ -528,26 +652,49 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         }).catch(() => { });
     }, [user]);
 
-
-    // Load active dashboard layout configuration from local storage
+    // Load active dashboard layout configuration
     const [activeTiles, setActiveTiles] = useState(() => {
+        if (user?.dashboardLayout) {
+            return computeGridPositions(user.dashboardLayout);
+        }
         const saved = localStorage.getItem('dashboard_layout');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Filter out the greeting tile if it exists in their saved layout
-                return parsed.filter(t => t.id !== 'greeting');
+                const filtered = parsed.filter(t => t.id !== 'greeting');
+                return computeGridPositions(filtered);
             } catch (e) {
                 console.error("Failed to parse saved layout:", e);
             }
         }
-        return DEFAULT_LAYOUT;
+        return computeGridPositions(DEFAULT_LAYOUT);
     });
 
-    // Save dashboard layout on modification
+    // Synchronize layout when user is loaded from server
+    useEffect(() => {
+        if (user?.dashboardLayout) {
+            setActiveTiles(computeGridPositions(user.dashboardLayout));
+        }
+    }, [user?.dashboardLayout]);
+
+    // Save dashboard layout on modification with debounced server sync
     useEffect(() => {
         localStorage.setItem('dashboard_layout', JSON.stringify(activeTiles));
-    }, [activeTiles]);
+        
+        const timer = setTimeout(() => {
+            if (user?.studentId) {
+                saveDashboardLayout(activeTiles)
+                    .then(res => {
+                        if (res?.success) {
+                            console.log("Dashboard layout saved to server");
+                        }
+                    })
+                    .catch(err => console.error("Failed to save layout to server", err));
+            }
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [activeTiles, user?.studentId]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -704,33 +851,59 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         return null;
     };
 
-    // HTML5 Drag-and-Drop Reorder functions
+    // Grid-based Snapping Drag-and-Drop handlers
     const handleDragStart = (e, index) => {
-        e.dataTransfer.setData('text/plain', index);
+        setDraggedIndex(index);
         e.dataTransfer.effectAllowed = 'move';
         e.currentTarget.classList.add('opacity-40');
     };
 
     const handleDragEnd = (e) => {
+        setDraggedIndex(null);
+        setDragOverCell(null);
         e.currentTarget.classList.remove('opacity-40');
     };
 
-    const handleDragOver = (e) => {
-        e.preventDefault(); // Required to allow dropping
+    const handleCellDragOver = (e, x, y) => {
+        e.preventDefault();
+        if (draggedIndex === null) return;
+        const draggedTile = activeTiles[draggedIndex];
+        if (!draggedTile) return;
+
+        const cols = 3;
+        let targetX = x;
+        if (targetX + draggedTile.w > cols) {
+            targetX = cols - draggedTile.w;
+        }
+        setDragOverCell({ x: targetX, y, w: draggedTile.w, h: draggedTile.h });
     };
 
-    const handleDrop = (e, targetIndex) => {
+    const handleCellDrop = (e, x, y) => {
         e.preventDefault();
-        const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        if (isNaN(sourceIndex) || sourceIndex === targetIndex) return;
+        if (draggedIndex === null) return;
+        const draggedTile = activeTiles[draggedIndex];
+        if (!draggedTile) return;
+
+        const cols = 3;
+        let targetX = x;
+        if (targetX + draggedTile.w > cols) {
+            targetX = cols - draggedTile.w;
+        }
 
         const newTiles = [...activeTiles];
-        const [draggedTile] = newTiles.splice(sourceIndex, 1);
-        newTiles.splice(targetIndex, 0, draggedTile);
-        setActiveTiles(newTiles);
+        newTiles[draggedIndex] = {
+            ...draggedTile,
+            x: targetX,
+            y: y
+        };
+
+        const resolved = resolveOverlaps(newTiles, draggedIndex);
+        setActiveTiles(resolved);
+        setDraggedIndex(null);
+        setDragOverCell(null);
     };
 
-    // Edge Drag-to-Resize functions (Mouse/Desktop)
+    // Grid Snapping Edge Resize functions (Mouse/Desktop)
     const startResize = (e, tileIndex) => {
         e.preventDefault();
         e.stopPropagation();
@@ -763,7 +936,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 if (prev[tileIndex].w === newW && prev[tileIndex].h === newH) return prev;
                 const updated = [...prev];
                 updated[tileIndex] = { ...updated[tileIndex], w: newW, h: newH };
-                return updated;
+                return resolveOverlaps(updated, tileIndex);
             });
         };
 
@@ -776,7 +949,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         document.addEventListener('mouseup', handleMouseUp);
     };
 
-    // Edge Drag-to-Resize functions (Touch/Mobile)
+    // Grid Snapping Edge Resize functions (Touch/Mobile)
     const startResizeTouch = (e, tileIndex) => {
         e.stopPropagation();
 
@@ -810,7 +983,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 if (prev[tileIndex].w === newW && prev[tileIndex].h === newH) return prev;
                 const updated = [...prev];
                 updated[tileIndex] = { ...updated[tileIndex], w: newW, h: newH };
-                return updated;
+                return resolveOverlaps(updated, tileIndex);
             });
         };
 
@@ -835,7 +1008,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             w: config.minW,
             h: config.minH
         };
-        setActiveTiles(prev => [...prev, newTile]);
+        setActiveTiles(prev => computeGridPositions([...prev, newTile]));
     };
 
     // Filter layout based on global AI setting
@@ -1112,6 +1285,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         }
     };
 
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-20">
             {/* Header controls & Greeting (Fixed, non-editable greeting at the top) */}
@@ -1170,7 +1351,49 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     ? 'bg-grid dark:bg-grid-glow-bw border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/10'
                     : ''
                 }`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative" style={{ gridAutoRows: isMobile ? 'auto' : '160px' }}>
+                    
+                    {/* Visual snap helper grid cells backdrop in edit mode */}
+                    {isEditing && !isMobile && (() => {
+                        const cols = 3;
+                        const maxTileY = activeTiles.reduce((max, t) => Math.max(max, (t.y || 0) + (t.h || 1)), 0);
+                        const gridRowsCount = Math.max(maxTileY + 2, 6);
+                        const backdropCells = [];
+                        for (let r = 0; r < gridRowsCount; r++) {
+                            for (let c = 0; c < cols; c++) {
+                                backdropCells.push({ x: c, y: r });
+                            }
+                        }
+                        return (
+                            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-3 gap-6 pointer-events-none z-0">
+                                {backdropCells.map((cell, idx) => {
+                                    const isHovered = dragOverCell && 
+                                        cell.x >= dragOverCell.x && 
+                                        cell.x < dragOverCell.x + dragOverCell.w && 
+                                        cell.y >= dragOverCell.y && 
+                                        cell.y < dragOverCell.y + dragOverCell.h;
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={`border border-dashed transition-all duration-150 ${
+                                                isHovered 
+                                                    ? 'border-accent bg-accent/10 scale-[0.99] shadow-inner' 
+                                                    : 'border-zinc-200 dark:border-zinc-800/80 bg-zinc-100/5 dark:bg-zinc-900/5'
+                                            } h-[160px] pointer-events-auto`}
+                                            onDragOver={(e) => handleCellDragOver(e, cell.x, cell.y)}
+                                            onDrop={(e) => handleCellDrop(e, cell.x, cell.y)}
+                                            style={{
+                                                gridColumn: `${cell.x + 1}`,
+                                                gridRow: `${cell.y + 1}`
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
+
                     {filteredActiveTiles.map((tile, index) => {
                         const tileConfig = ALL_TILES[tile.id];
                         if (!tileConfig) return null;
@@ -1180,19 +1403,29 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             return null;
                         }
 
-                        const spanClass = `${colSpanClasses[tile.w] || 'col-span-1'} ${rowSpanClasses[tile.h] || 'row-span-1'}`;
+                        const style = {
+                            gridColumn: `span ${tile.w}`,
+                            gridRow: `span ${tile.h}`,
+                            zIndex: draggedIndex === index ? 30 : 10
+                        };
+
+                        if (!isMobile && tile.x !== undefined && tile.y !== undefined) {
+                            style.gridColumn = `${tile.x + 1} / span ${tile.w}`;
+                            style.gridRow = `${tile.y + 1} / span ${tile.h}`;
+                        }
 
                         return (
                             <div
                                 key={tile.id}
-                                className={`${spanClass} relative-tile-wrapper relative group transition-all duration-300`}
+                                className={`relative-tile-wrapper relative group transition-all duration-300`}
+                                style={style}
                                 draggable={isEditing}
                                 onDragStart={(e) => handleDragStart(e, index)}
                                 onDragEnd={handleDragEnd}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, index)}
                             >
-                                {renderTileContent(tile.id)}
+                                <div className="h-full w-full">
+                                    {renderTileContent(tile.id)}
+                                </div>
 
                                 {/* Edit Mode Overlay Screen */}
                                 {isEditing && (
@@ -1216,28 +1449,30 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         {/* Drag instructions / info */}
                                         <div className="text-center text-zinc-400 dark:text-zinc-500 pointer-events-none select-none my-auto">
                                             <p className="text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5">
-                                                <LayoutGrid size={12} /> Drag Card to Reorder
+                                                <LayoutGrid size={12} /> Drag Card to Position
                                             </p>
                                         </div>
 
                                         {/* Size Details */}
                                         <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 text-left pointer-events-none select-none">
-                                            Size {tile.w}x{tile.h}
+                                            Size {tile.w}x{tile.h} {!isMobile && `(at ${tile.x}, ${tile.y})`}
                                         </div>
 
                                         {/* Edge Resize Handle (Bottom-Right) */}
-                                        <div
-                                            onMouseDown={(e) => startResize(e, index)}
-                                            onTouchStart={(e) => startResizeTouch(e, index)}
-                                            className="absolute bottom-0 right-0 w-7 h-7 cursor-se-resize flex items-end justify-end p-1.5 z-30 select-none pointer-events-auto"
-                                            draggable={false}
-                                            title="Grab and drag edge to Resize"
-                                        >
-                                            <svg width="12" height="12" viewBox="0 0 12 12" className="text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors">
-                                                <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
-                                                <line x1="10" y1="6" x2="6" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
-                                            </svg>
-                                        </div>
+                                        {!isMobile && (
+                                            <div
+                                                onMouseDown={(e) => startResize(e, index)}
+                                                onTouchStart={(e) => startResizeTouch(e, index)}
+                                                className="absolute bottom-0 right-0 w-7 h-7 cursor-se-resize flex items-end justify-end p-1.5 z-30 select-none pointer-events-auto"
+                                                draggable={false}
+                                                title="Grab and drag edge to Resize"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 12 12" className="text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors">
+                                                    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+                                                    <line x1="10" y1="6" x2="6" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

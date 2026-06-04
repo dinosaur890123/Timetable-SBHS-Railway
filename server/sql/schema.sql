@@ -66,6 +66,8 @@ ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS subscription_status TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS show_supporter BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS dashboard_layout JSONB NULL;
+
 
 -- Study Notes migrations
 CREATE TABLE IF NOT EXISTS app_notes (
