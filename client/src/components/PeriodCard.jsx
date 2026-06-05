@@ -80,7 +80,9 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
           flex-1 flex flex-col justify-center relative p-4 border transition-all duration-300 overflow-hidden
           ${isCurrent 
             ? "bg-white dark:bg-zinc-900 border-2 border-accent scale-[1.01] z-20" 
-            : "bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80" 
+            : period.isSubstituted
+              ? "bg-blue-50/20 dark:bg-blue-950/10 border-zinc-200 dark:border-zinc-800/80 border-l-4 border-l-blue-600 dark:border-l-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20"
+              : "bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80" 
           }
         `}>
            
@@ -110,13 +112,21 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                          {(room || fullTeacher) && (
                              <>
                                   {room && (
-                                       <span className={`flex items-center gap-1 text-xs font-semibold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-500'}`}>
-                                           <MapPin size={12} /> {room}
+                                       <span className={`flex items-center gap-1.5 text-xs font-semibold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-500'}`}>
+                                           <MapPin size={12} /> 
+                                           <span>{room}</span>
+                                           {period.oldRoom && (
+                                               <span className="text-[10px] text-zinc-400 dark:text-zinc-500 line-through">({period.oldRoom})</span>
+                                           )}
                                        </span>
                                   )}
                                   {fullTeacher && (
-                                       <span className="flex items-center gap-1 text-xs font-medium text-zinc-500">
-                                           <UserIcon size={12} /> {fullTeacher}
+                                       <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                           <UserIcon size={12} /> 
+                                           <span>{fullTeacher}</span>
+                                           {period.oldTeacher && (
+                                               <span className="text-[10px] text-zinc-400 dark:text-zinc-500 line-through">({period.oldTeacher})</span>
+                                           )}
                                        </span>
                                   )}
                              </>
@@ -136,6 +146,16 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                         <span className="text-xs font-bold text-accent flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-2 py-1 border border-zinc-300 dark:border-zinc-700">
                             <Clock size={12} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
                         </span>
+                   )}
+                   {period.isSubstituted && (
+                       <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900 shadow-sm animate-pulse-subtle">
+                           Substitution
+                       </span>
+                   )}
+                   {period.hasRoomChange && (
+                       <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-955/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm">
+                           Room Change
+                       </span>
                    )}
                </div>
            </div>

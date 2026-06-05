@@ -28,6 +28,58 @@ import { createCheckoutSession, createPortalSession, updateProfileSettings } fro
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail } from 'lucide-react';
 
+function enrichTimetableWithVariations(timetableData) {
+  if (!timetableData) return timetableData;
+  const enriched = JSON.parse(JSON.stringify(timetableData));
+  const innerTimetable = enriched.timetable?.timetable || enriched.timetable;
+  if (!innerTimetable || !innerTimetable.periods) return enriched;
+
+  const periods = innerTimetable.periods;
+  const roomVariations = enriched.roomVariations || {};
+  const classVariations = enriched.classVariations || {};
+
+  for (const bellId in periods) {
+    const period = periods[bellId];
+
+    // Room variation mapping
+    const roomVar = Array.isArray(roomVariations)
+      ? roomVariations.find(v => String(v.period) === String(bellId) && (!v.title || v.title === period.title))
+      : roomVariations[bellId];
+      
+    if (roomVar && roomVar.roomTo) {
+      if (period.room !== roomVar.roomTo) {
+        period.oldRoom = period.room;
+        period.room = roomVar.roomTo;
+      }
+      period.hasRoomChange = true;
+    }
+
+    // Class / substitution variation mapping
+    const classVar = Array.isArray(classVariations)
+      ? classVariations.find(v => String(v.period) === String(bellId) && (!v.title || v.title === period.title))
+      : classVariations[bellId];
+
+    if (classVar) {
+      period.classVariationType = classVar.type; // nocover, replacement, novariation
+      period.casualTeacherCode = classVar.casual;
+      period.casualTeacherSurname = classVar.casualSurname;
+
+      const newTeacher = classVar.type === 'replacement'
+        ? (classVar.casualSurname ? `Mr/Ms ${classVar.casualSurname}` : classVar.casual)
+        : (classVar.type === 'nocover' ? 'No Cover (Supervised)' : null);
+
+      if (newTeacher && period.fullTeacher !== newTeacher) {
+        period.oldTeacher = period.fullTeacher || period.teacher;
+        period.fullTeacher = newTeacher;
+        period.isSubstituted = true;
+      } else if (classVar.type === 'nocover' || classVar.type === 'replacement') {
+        period.isSubstituted = true;
+      }
+    }
+  }
+  return enriched;
+}
+
 function App() {
   // State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -44,7 +96,7 @@ function App() {
   const [timetable, setTimetable] = useState(() => {
     try {
       const cached = localStorage.getItem('cached_timetable');
-      return cached ? JSON.parse(cached) : null;
+      return cached ? enrichTimetableWithVariations(JSON.parse(cached)) : null;
     } catch {
       return null;
     }
@@ -360,9 +412,10 @@ function App() {
     const loadTimetable = async () => {
         try {
             const data = await fetchDayTimetable(viewDate);
-            setTimetable(data);
+            const enriched = enrichTimetableWithVariations(data);
+            setTimetable(enriched);
             if (isSameDay(viewDate, new Date())) {
-                localStorage.setItem('cached_timetable', JSON.stringify(data));
+                localStorage.setItem('cached_timetable', JSON.stringify(enriched));
             }
         } catch (err) {
             console.error("Failed to fetch timetable", err);

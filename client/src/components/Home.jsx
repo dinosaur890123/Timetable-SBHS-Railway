@@ -168,7 +168,9 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                         ? 'bg-accent text-accent-contrast border-accent animate-pulse-subtle' 
                                         : isBreak
                                             ? 'bg-zinc-50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-500'
-                                            : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
+                                            : periodInfo.isSubstituted
+                                                ? 'bg-blue-50/20 dark:bg-blue-950/10 border-zinc-200 dark:border-zinc-850 border-l-4 border-l-blue-600 dark:border-l-blue-500 text-zinc-850 dark:text-zinc-200'
+                                                : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
                                 }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -180,10 +182,24 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                         {bellId}
                                     </div>
                                     <div>
-                                        <h4 className="font-extrabold text-sm leading-none">{title}</h4>
+                                        <h4 className="font-extrabold text-sm leading-none flex items-center gap-1.5">
+                                            {title}
+                                            {periodInfo.isSubstituted && (
+                                                <span className="px-1 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[8px] font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800">
+                                                    Sub
+                                                </span>
+                                            )}
+                                        </h4>
                                         <p className={`text-[10px] mt-1.5 font-semibold ${isCurrent ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-555'}`}>
                                             {bell.time} - {bell.endTime || '??'}
-                                            {!isBreak && periodInfo.room && ` | ${periodInfo.room}`}
+                                            {!isBreak && periodInfo.room && (
+                                                <>
+                                                    {` | ${periodInfo.room}`}
+                                                    {periodInfo.oldRoom && (
+                                                        <span className="text-[9px] opacity-65 line-through ml-1">({periodInfo.oldRoom})</span>
+                                                    )}
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 </div>
@@ -916,11 +932,13 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             }
             case 'current_class':
                 return (
-                    <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center">
+                    <div className={`bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center ${
+                        currentClass?.isSubstituted ? 'border-l-4 border-l-blue-600 dark:border-l-blue-500 bg-blue-50/10 dark:bg-blue-955/5' : ''
+                    }`}>
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
                         </div>
-                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
+                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400 mb-6 flex items-center gap-2">
                             <div className="w-2 h-2 bg-accent animate-pulse" />
                             Right Now
                         </h2>
@@ -942,16 +960,44 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     </div>
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest mb-3">
-                                        Period {currentClass.bell}
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
+                                        <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest">
+                                            Period {currentClass.bell}
+                                        </div>
+                                        {currentClass.isSubstituted && (
+                                            <div className="inline-block px-3 py-1 bg-blue-50 dark:bg-blue-955 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 text-xs font-black uppercase tracking-widest animate-pulse-subtle">
+                                                Substitution
+                                            </div>
+                                        )}
+                                        {currentClass.hasRoomChange && (
+                                            <div className="inline-block px-3 py-1 bg-amber-50 dark:bg-amber-955 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 text-xs font-black uppercase tracking-widest">
+                                                Room Change
+                                            </div>
+                                        )}
                                     </div>
                                     <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-2 leading-tight">
                                         {currentClass.title || "Free Period"}
                                     </h3>
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-650 dark:text-zinc-455">
                                         <span className="flex items-center gap-1.5"><Clock size={16} /> {currentClass.time} - {currentClass.endTime || '??'}</span>
-                                        {currentClass.room && <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200"><MapPin size={16} /> {currentClass.room}</span>}
-                                        {currentClass.fullTeacher && <span className="flex items-center gap-1.5"><UserIcon size={16} /> {currentClass.fullTeacher}</span>}
+                                        {currentClass.room && (
+                                            <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-855 dark:text-zinc-200">
+                                                <MapPin size={16} /> 
+                                                <span>{currentClass.room}</span>
+                                                {currentClass.oldRoom && (
+                                                    <span className="text-xs opacity-65 line-through ml-1">({currentClass.oldRoom})</span>
+                                                )}
+                                            </span>
+                                        )}
+                                        {currentClass.fullTeacher && (
+                                            <span className="flex items-center gap-1.5">
+                                                <UserIcon size={16} /> 
+                                                <span>{currentClass.fullTeacher}</span>
+                                                {currentClass.oldTeacher && (
+                                                    <span className="text-xs opacity-65 line-through ml-1">({currentClass.oldTeacher})</span>
+                                                )}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -966,7 +1012,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 );
             case 'next_class':
                 return (
-                    <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
+                    <div className={`bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between ${
+                        nextClass?.isSubstituted ? 'border-l-4 border-l-blue-600 dark:border-l-blue-500 bg-blue-50/10 dark:bg-blue-950/5' : ''
+                    }`}>
                          <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-2">
                             <ArrowRight size={14} />
                             Up Next
@@ -977,11 +1025,25 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     {nextClass.bell}
                                  </div>
                                  <div>
-                                     <h3 className="font-extrabold text-lg text-zinc-900 dark:text-white leading-tight">{nextClass.title}</h3>
-                                     <p className="text-sm text-zinc-500 flex items-center gap-2 mt-1">
+                                     <h3 className="font-extrabold text-lg text-zinc-900 dark:text-white leading-tight flex flex-wrap items-center gap-1.5">
+                                         {nextClass.title}
+                                         {nextClass.isSubstituted && (
+                                             <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-955 dark:text-blue-300 text-[8px] font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800">
+                                                 Sub
+                                             </span>
+                                         )}
+                                     </h3>
+                                     <p className="text-sm text-zinc-500 flex flex-wrap items-center gap-2 mt-1">
                                          <Clock size={14} /> {nextClass.time}
                                          {nextClass.room && <span className="opacity-50">|</span>}
-                                         {nextClass.room && <span>{nextClass.room}</span>}
+                                         {nextClass.room && (
+                                             <span className="flex items-center gap-1">
+                                                 <span>{nextClass.room}</span>
+                                                 {nextClass.oldRoom && (
+                                                     <span className="text-[10px] opacity-65 line-through">({nextClass.oldRoom})</span>
+                                                 )}
+                                             </span>
+                                         )}
                                      </p>
                                  </div>
                             </div>

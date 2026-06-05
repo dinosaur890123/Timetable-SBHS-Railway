@@ -28,6 +28,26 @@ export const mockDayTimetable = {
         "12Eco": { "title": "Economics", "color": "yellow" }
       }
     }
+  },
+  "roomVariations": {
+    "2": {
+      "period": "2",
+      "year": 12,
+      "title": "Physics",
+      "roomFrom": "Lab 3",
+      "roomTo": "Room 501"
+    }
+  },
+  "classVariations": {
+    "3": {
+      "period": "3",
+      "year": 12,
+      "title": "English Advanced",
+      "teacher": "EF",
+      "type": "replacement",
+      "casual": "CX",
+      "casualSurname": "Craddock"
+    }
   }
 };
 
