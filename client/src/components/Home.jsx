@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
     Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap, Sparkles,
     LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight, Award, Clipboard
 } from 'lucide-react';
@@ -84,7 +84,7 @@ const ClockWidget = () => {
                     <Clock size={14} />
                     Time
                 </h2>
-                <button 
+                <button
                     onClick={toggleFormat}
                     className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition"
                     title="Change clock view"
@@ -97,7 +97,7 @@ const ClockWidget = () => {
                 {(formatType === 'analogue' || formatType === 'both') && (
                     <svg className="w-20 h-20 shrink-0" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="46" className="fill-zinc-50 dark:fill-zinc-900/60 stroke-black dark:stroke-white stroke-[3]" />
-                        
+
                         {/* Hour ticks */}
                         <line x1="50" y1="8" x2="50" y2="12" className="stroke-black dark:stroke-white stroke-[2]" />
                         <line x1="50" y1="92" x2="50" y2="88" className="stroke-black dark:stroke-white stroke-[2]" />
@@ -133,7 +133,7 @@ const ClockWidget = () => {
 // Timetable Preview Widget to show daily timeline of classes
 const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
     const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    
+
     const getMinutes = (timeStr) => {
         if (!timeStr) return 0;
         const [h, m] = timeStr.split(':').map(Number);
@@ -151,55 +151,37 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                     routine.map((bellId, idx) => {
                         const bell = bells.find(b => b.bell === bellId);
                         if (!bell) return null;
-                        
+
                         const startMin = getMinutes(bell.time);
                         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
                         const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-                        
+
                         const periodInfo = periods[bellId] || { title: bell.bellDisplay };
                         const isBreak = bellId === "R" || bellId === "L" || bellId === "RC";
                         const title = isBreak ? bell.bellDisplay : (periodInfo.title || "Free Period");
 
                         return (
-                            <div 
-                                key={idx} 
-                                className={`p-2.5 border transition-all duration-300 flex items-center justify-between ${
-                                    isCurrent 
-                                        ? 'bg-accent text-accent-contrast border-accent animate-pulse-subtle' 
+                            <div
+                                key={idx}
+                                className={`p-2.5 border transition-all duration-300 flex items-center justify-between ${isCurrent
+                                        ? 'bg-accent text-accent-contrast border-accent animate-pulse-subtle'
                                         : isBreak
                                             ? 'bg-zinc-50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-500'
-                                            : periodInfo.isSubstituted
-                                                ? 'bg-blue-50/20 dark:bg-blue-950/10 border-zinc-200 dark:border-zinc-850 border-l-4 border-l-blue-600 dark:border-l-blue-500 text-zinc-850 dark:text-zinc-200'
-                                                : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
-                                }`}
+                                            : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 flex items-center justify-center font-bold text-xs border ${
-                                        isCurrent 
-                                            ? 'border-white dark:border-black text-white dark:text-black' 
+                                    <div className={`w-8 h-8 flex items-center justify-center font-bold text-xs border ${isCurrent
+                                            ? 'border-white dark:border-black text-white dark:text-black'
                                             : 'border-zinc-300 dark:border-zinc-700 text-zinc-555 dark:text-zinc-455'
-                                    }`}>
+                                        }`}>
                                         {bellId}
                                     </div>
                                     <div>
-                                        <h4 className="font-extrabold text-sm leading-none flex items-center gap-1.5">
-                                            {title}
-                                            {periodInfo.isSubstituted && (
-                                                <span className="px-1 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[8px] font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800">
-                                                    Sub
-                                                </span>
-                                            )}
-                                        </h4>
+                                        <h4 className="font-extrabold text-sm leading-none">{title}</h4>
                                         <p className={`text-[10px] mt-1.5 font-semibold ${isCurrent ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-555'}`}>
                                             {bell.time} - {bell.endTime || '??'}
-                                            {!isBreak && periodInfo.room && (
-                                                <>
-                                                    {` | ${periodInfo.room}`}
-                                                    {periodInfo.oldRoom && (
-                                                        <span className="text-[9px] opacity-65 line-through ml-1">({periodInfo.oldRoom})</span>
-                                                    )}
-                                                </>
-                                            )}
+                                            {!isBreak && periodInfo.room && ` | ${periodInfo.room}`}
                                         </p>
                                     </div>
                                 </div>
@@ -229,7 +211,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                 Quick Panel
             </h2>
             <div className="grid grid-cols-4 gap-2 flex-1 items-center">
-                <button 
+                <button
                     onClick={() => setView('timetable')}
                     className="flex flex-col items-center justify-center p-2.5 border border-zinc-200 dark:border-zinc-850 bg-zinc-50 hover:bg-black hover:text-white dark:bg-zinc-900/40 dark:hover:bg-white dark:hover:text-black transition-all group"
                     title="Open Timetable View"
@@ -237,7 +219,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     <BookOpen size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
                     <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Ttable</span>
                 </button>
-                <button 
+                <button
                     onClick={() => setView('calendar')}
                     className="flex flex-col items-center justify-center p-2.5 border border-zinc-200 dark:border-zinc-850 bg-zinc-50 hover:bg-black hover:text-white dark:bg-zinc-900/40 dark:hover:bg-white dark:hover:text-black transition-all group"
                     title="Open Calendar View"
@@ -245,7 +227,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     <CalendarIcon size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
                     <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Cal</span>
                 </button>
-                <button 
+                <button
                     onClick={() => setView('notices')}
                     className="flex flex-col items-center justify-center p-2.5 border border-zinc-200 dark:border-zinc-850 bg-zinc-50 hover:bg-black hover:text-white dark:bg-zinc-900/40 dark:hover:bg-white dark:hover:text-black transition-all group"
                     title="Open Notices View"
@@ -253,15 +235,15 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     <Bell size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
                     <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Notices</span>
                 </button>
-                <button 
+                <button
                     onClick={toggleTheme}
                     className="flex flex-col items-center justify-center p-2.5 border border-zinc-200 dark:border-zinc-850 bg-zinc-50 hover:bg-black hover:text-white dark:bg-zinc-900/40 dark:hover:bg-white dark:hover:text-black transition-all group"
                     title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
                 >
                     {theme === 'dark' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-current"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-current"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></svg>
                     ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-700 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-700 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
                     )}
                     <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Theme</span>
                 </button>
@@ -283,12 +265,12 @@ const ScratchpadWidget = () => {
         <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between select-none">
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                     Scratchpad
                 </h2>
                 <span className="text-[9px] font-black uppercase text-zinc-400">Persisted</span>
             </div>
-            <textarea 
+            <textarea
                 value={text}
                 onChange={handleChange}
                 placeholder="Type reminders, room changes, or study tasks here..."
@@ -346,7 +328,7 @@ const TransitWidget = ({ user, setView }) => {
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <div className="p-1 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="16" x="3" y="4" rx="2"/><path d="M7 22v-2"/><path d="M17 22v-2"/><path d="M8 12h8"/><path d="M12 4v8"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="16" x="3" y="4" rx="2" /><path d="M7 22v-2" /><path d="M17 22v-2" /><path d="M8 12h8" /><path d="M12 4v8" /></svg>
                     </div>
                     <div className="text-left">
                         <h2 className="text-xs font-extrabold uppercase tracking-widest text-zinc-900 dark:text-white leading-none">
@@ -368,7 +350,7 @@ const TransitWidget = ({ user, setView }) => {
                             className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition"
                             title="Configure Stop"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
                         </button>
                     ) : (
                         <div className="px-1.5 py-0.5 bg-red-100 dark:bg-red-955/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider border border-red-200/30">
@@ -381,7 +363,7 @@ const TransitWidget = ({ user, setView }) => {
                         className={`p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 text-zinc-550 transition ${loading ? 'animate-spin' : ''}`}
                         title="Refresh"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></svg>
                     </button>
                 </div>
             </div>
@@ -438,17 +420,17 @@ const TransitWidget = ({ user, setView }) => {
                         {departures.map((dep, idx) => {
                             const isLightRail = dep.type === 'Light Rail';
                             const isTrain = dep.type === 'Train';
-                            const typeColor = isLightRail 
-                                ? 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/50' 
+                            const typeColor = isLightRail
+                                ? 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/50'
                                 : isTrain
                                     ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-900/50'
                                     : 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50';
-                            
+
                             const isBlurred = !isProUser && idx >= 3;
-                            
+
                             return (
-                                <div 
-                                    key={idx} 
+                                <div
+                                    key={idx}
                                     className={`flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 py-2 last:border-b-0 animate-in fade-in slide-in-from-bottom-1 duration-200 ${isBlurred ? 'blur-[3px] select-none pointer-events-none' : ''}`}
                                     aria-hidden={isBlurred}
                                 >
@@ -485,7 +467,7 @@ const TransitWidget = ({ user, setView }) => {
                         {!isProUser && departures.length > 3 && (
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-zinc-950 dark:via-zinc-950/95 dark:to-transparent pt-10 pb-1 px-3 flex flex-col items-center justify-end z-10">
                                 <div className="flex items-center gap-1.5 mb-1.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                                     <span className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">Synchron Pro</span>
                                 </div>
                                 <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium text-center leading-tight mb-2">
@@ -495,7 +477,7 @@ const TransitWidget = ({ user, setView }) => {
                                     onClick={() => setView && setView('profile')}
                                     className="px-3 py-1 bg-gradient-to-r from-red-600 to-amber-600 text-white text-[8px] font-black uppercase tracking-wider hover:opacity-90 transition active:scale-95 rounded-md shadow-sm"
                                 >
-                                    Upgrade — $5/year
+                                    Upgrade — $4.99/year
                                 </button>
                             </div>
                         )}
@@ -529,21 +511,21 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
     useEffect(() => {
         if (!user?.studentId) return;
-        
+
         fetchStudentAwards(user.studentId).then(data => {
             const total = data.reduce((sum, a) => sum + (a.points || 0), 0);
             setAwardPoints(total);
-        }).catch(() => {});
+        }).catch(() => { });
 
         fetchStudentBadges(user.studentId).then(data => {
             setBadgesCount(data.length);
-        }).catch(() => {});
+        }).catch(() => { });
 
         fetchStudentClipboardSessions(user.studentId).then(data => {
             if (data && data.length > 0) {
                 setNextSession(data[0]);
             }
-        }).catch(() => {});
+        }).catch(() => { });
     }, [user]);
 
 
@@ -626,7 +608,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             if (currentMinutes >= startMin && currentMinutes < endMin) {
                 currentClass = { ...periodInfo, ...bell, startMin, endMin };
                 progress = ((currentMinutes - startMin) / (endMin - startMin)) * 100;
-                
+
                 // Find next valid class
                 for (let j = i + 1; j < routine.length; j++) {
                     const nextBellId = routine[j];
@@ -634,8 +616,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     if (nextBell) {
                         const nextPeriodInfo = periods[nextBellId] || { title: nextBell.bellDisplay };
                         if (nextBellId === "R" || nextBellId === "L" || nextBellId === "RC") {
-                             nextPeriodInfo.title = nextBell.bellDisplay;
-                             nextPeriodInfo.isBreak = true;
+                            nextPeriodInfo.title = nextBell.bellDisplay;
+                            nextPeriodInfo.isBreak = true;
                         }
                         nextClass = { ...nextPeriodInfo, ...nextBell };
                         break;
@@ -643,9 +625,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 }
                 break;
             } else if (currentMinutes < startMin && !currentClass && !nextClass) {
-                 // We haven't reached the first class of the day, or we are between classes
-                 nextClass = { ...periodInfo, ...bell, isBreak: (bellId === "R" || bellId === "L" || bellId === "RC") };
-                 break;
+                // We haven't reached the first class of the day, or we are between classes
+                nextClass = { ...periodInfo, ...bell, isBreak: (bellId === "R" || bellId === "L" || bellId === "RC") };
+                break;
             }
         }
     }
@@ -658,7 +640,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const isAcademicPeriod = (bellId) => {
         if (!bellId) return false;
         const id = bellId.toUpperCase().trim();
-        
+
         // Filter standard break IDs
         if (id === "R" || id === "L" || id === "RC" || id === "REC" || id === "LUN" || id === "ROLL" || id === "MC") {
             return false;
@@ -709,11 +691,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         if (!schoolEndTimeStr) return null;
         const endMin = getMinutes(schoolEndTimeStr);
         const diff = endMin - currentMinutes;
-        
+
         // Only show if the school day is currently active and hasn't ended
         const firstBell = bells.find(b => b.bell === routine[0]);
         const startMin = firstBell ? getMinutes(firstBell.time) : 540; // 9:00 AM default
-        
+
         if (diff > 0 && currentMinutes >= startMin) {
             const hrs = Math.floor(diff / 60);
             const mins = diff % 60;
@@ -883,14 +865,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
                                         </h2>
                                         <h3 className="text-base font-bold text-white mt-1">Unlock Personalized Morning Briefings</h3>
-                                        <p className="text-xs text-zinc-400">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $6.99 lifetime.</p>
+                                        <p className="text-xs text-zinc-400">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $4.99 annually.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setView && setView('profile')}
                                     className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
                                 >
-                                    Upgrade ($6.99)
+                                    Upgrade ($4.99 Annually)
                                 </button>
                             </div>
                         </div>
@@ -932,13 +914,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             }
             case 'current_class':
                 return (
-                    <div className={`bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center ${
-                        currentClass?.isSubstituted ? 'border-l-4 border-l-blue-600 dark:border-l-blue-500 bg-blue-50/10 dark:bg-blue-955/5' : ''
-                    }`}>
+                    <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center">
                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
                         </div>
-                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400 mb-6 flex items-center gap-2">
+                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
                             <div className="w-2 h-2 bg-accent animate-pulse" />
                             Right Now
                         </h2>
@@ -947,12 +927,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 <div className="relative shrink-0">
                                     <svg className="w-32 h-32 transform -rotate-90">
                                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-zinc-100 dark:text-zinc-900" />
-                                        <motion.circle 
+                                        <motion.circle
                                             initial={{ strokeDasharray: '0 351.86' }}
                                             animate={{ strokeDasharray: `${(progress / 100) * 351.86} 351.86` }}
                                             transition={{ duration: 1, ease: "easeOut" }}
-                                            cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                                            className="text-accent"                                         />
+                                            cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent"
+                                            className="text-accent" />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <span className="text-2xl font-bold text-zinc-900 dark:text-white">{Math.max(0, currentClass.endMin - currentMinutes)}</span>
@@ -960,44 +940,16 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     </div>
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-                                        <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest">
-                                            Period {currentClass.bell}
-                                        </div>
-                                        {currentClass.isSubstituted && (
-                                            <div className="inline-block px-3 py-1 bg-blue-50 dark:bg-blue-955 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 text-xs font-black uppercase tracking-widest animate-pulse-subtle">
-                                                Substitution
-                                            </div>
-                                        )}
-                                        {currentClass.hasRoomChange && (
-                                            <div className="inline-block px-3 py-1 bg-amber-50 dark:bg-amber-955 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 text-xs font-black uppercase tracking-widest">
-                                                Room Change
-                                            </div>
-                                        )}
+                                    <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest mb-3">
+                                        Period {currentClass.bell}
                                     </div>
                                     <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-2 leading-tight">
                                         {currentClass.title || "Free Period"}
                                     </h3>
-                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-650 dark:text-zinc-455">
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
                                         <span className="flex items-center gap-1.5"><Clock size={16} /> {currentClass.time} - {currentClass.endTime || '??'}</span>
-                                        {currentClass.room && (
-                                            <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-855 dark:text-zinc-200">
-                                                <MapPin size={16} /> 
-                                                <span>{currentClass.room}</span>
-                                                {currentClass.oldRoom && (
-                                                    <span className="text-xs opacity-65 line-through ml-1">({currentClass.oldRoom})</span>
-                                                )}
-                                            </span>
-                                        )}
-                                        {currentClass.fullTeacher && (
-                                            <span className="flex items-center gap-1.5">
-                                                <UserIcon size={16} /> 
-                                                <span>{currentClass.fullTeacher}</span>
-                                                {currentClass.oldTeacher && (
-                                                    <span className="text-xs opacity-65 line-through ml-1">({currentClass.oldTeacher})</span>
-                                                )}
-                                            </span>
-                                        )}
+                                        {currentClass.room && <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200"><MapPin size={16} /> {currentClass.room}</span>}
+                                        {currentClass.fullTeacher && <span className="flex items-center gap-1.5"><UserIcon size={16} /> {currentClass.fullTeacher}</span>}
                                     </div>
                                 </div>
                             </div>
@@ -1012,40 +964,24 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 );
             case 'next_class':
                 return (
-                    <div className={`bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between ${
-                        nextClass?.isSubstituted ? 'border-l-4 border-l-blue-600 dark:border-l-blue-500 bg-blue-50/10 dark:bg-blue-950/5' : ''
-                    }`}>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-2">
+                    <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-2">
                             <ArrowRight size={14} />
                             Up Next
                         </h2>
                         {nextClass ? (
                             <div className="flex items-center gap-4 flex-1">
-                                 <div className={`w-14 h-14 flex items-center justify-center font-bold text-xl border ${getSubjectGradient(nextClass.title)}`}>
+                                <div className={`w-14 h-14 flex items-center justify-center font-bold text-xl border ${getSubjectGradient(nextClass.title)}`}>
                                     {nextClass.bell}
-                                 </div>
-                                 <div>
-                                     <h3 className="font-extrabold text-lg text-zinc-900 dark:text-white leading-tight flex flex-wrap items-center gap-1.5">
-                                         {nextClass.title}
-                                         {nextClass.isSubstituted && (
-                                             <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-955 dark:text-blue-300 text-[8px] font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800">
-                                                 Sub
-                                             </span>
-                                         )}
-                                     </h3>
-                                     <p className="text-sm text-zinc-500 flex flex-wrap items-center gap-2 mt-1">
-                                         <Clock size={14} /> {nextClass.time}
-                                         {nextClass.room && <span className="opacity-50">|</span>}
-                                         {nextClass.room && (
-                                             <span className="flex items-center gap-1">
-                                                 <span>{nextClass.room}</span>
-                                                 {nextClass.oldRoom && (
-                                                     <span className="text-[10px] opacity-65 line-through">({nextClass.oldRoom})</span>
-                                                 )}
-                                             </span>
-                                         )}
-                                     </p>
-                                 </div>
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-lg text-zinc-900 dark:text-white leading-tight">{nextClass.title}</h3>
+                                    <p className="text-sm text-zinc-500 flex items-center gap-2 mt-1">
+                                        <Clock size={14} /> {nextClass.time}
+                                        {nextClass.room && <span className="opacity-50">|</span>}
+                                        {nextClass.room && <span>{nextClass.room}</span>}
+                                    </p>
+                                </div>
                             </div>
                         ) : (
                             <div className="py-4 text-zinc-500 text-sm flex-1 flex items-center">No more classes today.</div>
@@ -1056,10 +992,10 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 const countdownStr = getSchoolCountdown();
                 return (
                     <div className="bg-accent text-accent-contrast p-6 border border-accent relative overflow-hidden h-full flex flex-col justify-between select-none">
-                         <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                             <Zap size={80} />
-                         </div>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                            <Zap size={80} />
+                        </div>
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
                             Daily Summary
                         </h2>
                         <div className="flex gap-6 mt-2 relative z-10 flex-1 items-center">
@@ -1090,7 +1026,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             </h2>
                             <button onClick={() => setView && setView('notices')} className="text-xs font-bold text-zinc-900 dark:text-white underline decoration-zinc-400 hover:text-black dark:hover:text-white">View All</button>
                         </div>
-                        
+
                         <div className="space-y-4 flex-1 overflow-y-auto pr-1 max-h-[220px] custom-scrollbar">
                             {todayNotices.length > 0 ? todayNotices.map((notice, idx) => (
                                 <div key={idx} className="group cursor-pointer">
@@ -1110,19 +1046,19 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 return <ClockWidget />;
             case 'timetable_preview':
                 return (
-                    <TimetablePreviewWidget 
-                        bells={bells} 
-                        periods={periods} 
-                        routine={routine} 
-                        currentTime={currentTime} 
+                    <TimetablePreviewWidget
+                        bells={bells}
+                        periods={periods}
+                        routine={routine}
+                        currentTime={currentTime}
                     />
                 );
             case 'quick_links':
                 return (
-                    <QuickLinksWidget 
-                        setView={setView} 
-                        theme={theme} 
-                        toggleTheme={toggleTheme} 
+                    <QuickLinksWidget
+                        setView={setView}
+                        theme={theme}
+                        toggleTheme={toggleTheme}
                     />
                 );
             case 'scratchpad':
@@ -1130,7 +1066,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'award_scheme_summary':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('awards')}>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
                             <Award size={14} className="text-accent" />
                             Award Scheme Summary
                         </h2>
@@ -1149,7 +1085,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'clipboard_schedule':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('clipboard')}>
-                         <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
                             <Clipboard size={14} className="text-accent" />
                             Next Training Session
                         </h2>
@@ -1157,9 +1093,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <div className="space-y-1 mt-2">
                                 <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white line-clamp-1 leading-tight">{nextSession.activity}</h4>
                                 <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-2 mt-1">
-                                     <span>{nextSession.time}</span>
-                                     <span>|</span>
-                                     <span className="text-accent">{nextSession.location}</span>
+                                    <span>{nextSession.time}</span>
+                                    <span>|</span>
+                                    <span className="text-accent">{nextSession.location}</span>
                                 </div>
                             </div>
                         ) : (
@@ -1194,12 +1130,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         )}
                     </p>
                 </div>
-                
+
                 {/* Customize Dashboard Controls */}
                 <div className="flex items-center gap-2 shrink-0 select-none pb-0.5">
                     {isEditing ? (
                         <>
-                            <button 
+                            <button
                                 onClick={() => setActiveTiles(DEFAULT_LAYOUT)}
                                 className="px-4 py-2 text-xs font-extrabold uppercase bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-800 transition flex items-center gap-1.5"
                                 title="Reset dashboard to default widgets"
@@ -1207,7 +1143,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 <RotateCcw size={14} />
                                 Reset
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setIsEditing(false)}
                                 className="px-4 py-2 text-xs font-extrabold uppercase bg-accent text-accent-contrast hover:opacity-90 border border-accent transition flex items-center gap-1.5 shadow-md"
                                 title="Finish customization"
@@ -1217,7 +1153,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             </button>
                         </>
                     ) : (
-                        <button 
+                        <button
                             onClick={() => setIsEditing(true)}
                             className="px-4 py-2 text-xs font-extrabold uppercase bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 transition flex items-center gap-1.5 shadow-sm"
                             title="Customize your dashboard layout"
@@ -1230,11 +1166,10 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             </div>
 
             {/* Interactive Grid Container */}
-            <div className={`p-4 transition-all duration-300 ${
-                isEditing 
-                    ? 'bg-grid dark:bg-grid-glow-bw border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/10' 
+            <div className={`p-4 transition-all duration-300 ${isEditing
+                    ? 'bg-grid dark:bg-grid-glow-bw border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/10'
                     : ''
-            }`}>
+                }`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
                     {filteredActiveTiles.map((tile, index) => {
                         const tileConfig = ALL_TILES[tile.id];
@@ -1248,8 +1183,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         const spanClass = `${colSpanClasses[tile.w] || 'col-span-1'} ${rowSpanClasses[tile.h] || 'row-span-1'}`;
 
                         return (
-                            <div 
-                                key={tile.id} 
+                            <div
+                                key={tile.id}
                                 className={`${spanClass} relative-tile-wrapper relative group transition-all duration-300`}
                                 draggable={isEditing}
                                 onDragStart={(e) => handleDragStart(e, index)}
@@ -1258,17 +1193,17 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 onDrop={(e) => handleDrop(e, index)}
                             >
                                 {renderTileContent(tile.id)}
-                                
+
                                 {/* Edit Mode Overlay Screen */}
                                 {isEditing && (
                                     <div className="absolute inset-0 bg-zinc-950/70 dark:bg-black/85 backdrop-blur-[1.5px] border-2 border-dashed border-zinc-400 dark:border-zinc-700 flex flex-col justify-between p-3.5 z-20 animate-in fade-in duration-200 select-none cursor-move">
-                                        
+
                                         {/* Header Controls */}
                                         <div className="flex items-center justify-between pointer-events-auto">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-white bg-black px-2 py-0.5 border border-zinc-700">
                                                 {tileConfig.title}
                                             </span>
-                                            <button 
+                                            <button
                                                 onClick={() => removeTile(tile.id)}
                                                 className="bg-red-600 hover:bg-red-700 text-white p-1 border border-red-700 hover:scale-105 active:scale-95 transition"
                                                 title="Remove Widget"
@@ -1284,14 +1219,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                                 <LayoutGrid size={12} /> Drag Card to Reorder
                                             </p>
                                         </div>
-                                        
+
                                         {/* Size Details */}
                                         <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 text-left pointer-events-none select-none">
                                             Size {tile.w}x{tile.h}
                                         </div>
 
                                         {/* Edge Resize Handle (Bottom-Right) */}
-                                        <div 
+                                        <div
                                             onMouseDown={(e) => startResize(e, index)}
                                             onTouchStart={(e) => startResizeTouch(e, index)}
                                             className="absolute bottom-0 right-0 w-7 h-7 cursor-se-resize flex items-end justify-end p-1.5 z-30 select-none pointer-events-auto"
@@ -1323,14 +1258,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             {availableTiles.length} Hidden
                         </span>
                     </div>
-                    
+
                     {availableTiles.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {availableTiles.map(id => {
                                 const config = ALL_TILES[id];
                                 return (
-                                    <div 
-                                        key={id} 
+                                    <div
+                                        key={id}
                                         className="p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 hover:border-black dark:hover:border-white flex items-center justify-between transition group select-none"
                                     >
                                         <div>
@@ -1339,7 +1274,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                                 Size: {config.minW}x{config.minH}
                                             </p>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => addTile(id)}
                                             className="p-1.5 bg-accent text-accent-contrast hover:opacity-90 border border-accent transition flex items-center justify-center hover:scale-105 active:scale-95"
                                             title="Add Widget"

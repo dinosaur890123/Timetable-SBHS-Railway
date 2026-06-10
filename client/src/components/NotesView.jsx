@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-    FileText, Plus, Search, Trash2, Eye, Edit3, Save, 
+import {
+    FileText, Plus, Search, Trash2, Eye, Edit3, Save,
     Loader2, BookOpen, ArrowUpDown, Check, AlertCircle,
     GraduationCap, Brain, Timer, HelpCircle, ArrowLeft,
     Layers, Play, Pause, RotateCcw, ChevronLeft, ChevronRight,
@@ -52,7 +52,7 @@ const parseMarkdown = (rawText) => {
         // Heading 1 (# title)
         if (line.startsWith('# ')) {
             html.push(`<h1 class="text-2xl font-black mt-6 mb-3 border-b-2 border-zinc-200 dark:border-zinc-800 pb-1 uppercase tracking-tight">${parseInlineMarkdown(line.substring(2))}</h1>`);
-        } 
+        }
         // Heading 2 (## title)
         else if (line.startsWith('## ')) {
             html.push(`<h2 class="text-xl font-bold mt-5 mb-2 uppercase tracking-tight">${parseInlineMarkdown(line.substring(3))}</h2>`);
@@ -98,7 +98,7 @@ const parseInlineMarkdown = (text) => {
 const getSubjectBgColor = (subject) => {
     if (!subject) return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200';
     const sub = subject.toLowerCase().trim();
-    
+
     // Default matching for school subjects
     if (sub.includes('math') || sub.includes('algebra') || sub.includes('calc')) {
         return 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-900/50';
@@ -118,13 +118,13 @@ const getSubjectBgColor = (subject) => {
     if (sub.includes('comp') || sub.includes('software') || sub.includes('code') || sub.includes('tech')) {
         return 'bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 border-violet-200 dark:border-violet-900/50';
     }
-    
+
     // Hash function for random but deterministic coloring
     let hash = 0;
     for (let i = 0; i < sub.length; i++) {
         hash = sub.charCodeAt(i) + ((hash << 5) - hash);
     }
-    
+
     const index = Math.abs(hash) % 5;
     const colors = [
         'bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-900/50',
@@ -133,7 +133,7 @@ const getSubjectBgColor = (subject) => {
         'bg-sky-100 text-sky-850 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-900/50',
         'bg-lime-100 text-lime-850 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-900/50'
     ];
-    
+
     return colors[index];
 };
 
@@ -229,15 +229,14 @@ const FlashcardsTool = ({ onBack }) => {
                 </div>
 
                 {/* Card */}
-                <div 
+                <div
                     onClick={() => setIsFlipped(!isFlipped)}
                     className="cursor-pointer select-none"
                 >
-                    <div className={`min-h-[280px] border-2 border-black dark:border-zinc-700 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${
-                        isFlipped 
-                            ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-600 dark:border-emerald-700' 
+                    <div className={`min-h-[280px] border-2 border-black dark:border-zinc-700 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${isFlipped
+                            ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-600 dark:border-emerald-700'
                             : 'bg-white dark:bg-zinc-950'
-                    } shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]`}>
+                        } shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]`}>
                         <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-4">
                             {isFlipped ? '✓ Answer' : '? Question'}
                         </span>
@@ -252,7 +251,7 @@ const FlashcardsTool = ({ onBack }) => {
 
                 {/* Navigation */}
                 <div className="flex items-center justify-between gap-4">
-                    <button 
+                    <button
                         onClick={() => { setCurrentCardIndex(prev => Math.max(0, prev - 1)); setIsFlipped(false); }}
                         disabled={currentCardIndex === 0}
                         className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
@@ -260,14 +259,14 @@ const FlashcardsTool = ({ onBack }) => {
                         <ChevronLeft size={14} /> Prev
                     </button>
 
-                    <button 
+                    <button
                         onClick={() => { setIsFlipped(false); }}
                         className="px-3 py-2 text-xs font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
                     >
                         <RotateCcw size={14} />
                     </button>
 
-                    <button 
+                    <button
                         onClick={() => { setCurrentCardIndex(prev => Math.min(activeDeck.cards.length - 1, prev + 1)); setIsFlipped(false); }}
                         disabled={currentCardIndex === activeDeck.cards.length - 1}
                         className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 bg-black dark:bg-white text-white dark:text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
@@ -278,7 +277,7 @@ const FlashcardsTool = ({ onBack }) => {
 
                 {/* Progress bar */}
                 <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800">
-                    <div 
+                    <div
                         className="h-full bg-black dark:bg-white transition-all duration-300"
                         style={{ width: `${((currentCardIndex + 1) / activeDeck.cards.length) * 100}%` }}
                     />
@@ -422,7 +421,7 @@ const FlashcardsTool = ({ onBack }) => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {decks.map(deck => (
-                        <div 
+                        <div
                             key={deck.id}
                             onClick={() => setActiveDeckId(deck.id)}
                             className="border-2 border-black dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.1)]"
@@ -432,7 +431,7 @@ const FlashcardsTool = ({ onBack }) => {
                                     <h3 className="font-black text-zinc-900 dark:text-white uppercase tracking-tight">{deck.name}</h3>
                                     <p className="text-xs text-zinc-500 mt-1 font-mono">{deck.cards.length} card{deck.cards.length !== 1 ? 's' : ''}</p>
                                 </div>
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); deleteDeck(deck.id); }}
                                     className="text-zinc-300 dark:text-zinc-700 hover:text-red-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                                 >
@@ -485,7 +484,7 @@ const PomodoroTool = ({ onBack }) => {
                             gain.gain.value = 0.3;
                             osc.start();
                             osc.stop(audio.currentTime + 0.3);
-                        } catch(e) {}
+                        } catch (e) { }
                         return 0;
                     }
                     return prev - 1;
@@ -545,11 +544,10 @@ const PomodoroTool = ({ onBack }) => {
                     <button
                         key={m.id}
                         onClick={() => switchMode(m.id)}
-                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-all ${
-                            mode === m.id
+                        className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-all ${mode === m.id
                                 ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)]'
                                 : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-zinc-500'
-                        }`}
+                            }`}
                     >
                         <m.icon size={13} /> {m.label}
                     </button>
@@ -560,12 +558,11 @@ const PomodoroTool = ({ onBack }) => {
             <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-950 p-12 text-center relative overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
                 {/* Progress bar at top */}
                 <div className="absolute top-0 left-0 h-1.5 bg-zinc-200 dark:bg-zinc-800 w-full">
-                    <div 
-                        className={`h-full transition-all duration-1000 ${
-                            mode === 'focus' 
-                                ? 'bg-black dark:bg-white' 
+                    <div
+                        className={`h-full transition-all duration-1000 ${mode === 'focus'
+                                ? 'bg-black dark:bg-white'
                                 : 'bg-emerald-500'
-                        }`}
+                            }`}
                         style={{ width: `${progress * 100}%` }}
                     />
                 </div>
@@ -582,11 +579,10 @@ const PomodoroTool = ({ onBack }) => {
                 <div className="flex items-center justify-center gap-3 mt-8">
                     <button
                         onClick={toggleTimer}
-                        className={`flex items-center gap-2 px-8 py-3 text-sm font-black uppercase tracking-wider border-2 transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
-                            isRunning
+                        className={`flex items-center gap-2 px-8 py-3 text-sm font-black uppercase tracking-wider border-2 transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${isRunning
                                 ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-black dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)]'
                                 : 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)]'
-                        }`}
+                            }`}
                     >
                         {isRunning ? <><Pause size={16} /> Pause</> : <><Play size={16} /> {timeLeft === 0 ? 'Restart' : 'Start'}</>}
                     </button>
@@ -606,11 +602,10 @@ const PomodoroTool = ({ onBack }) => {
                     {Array.from({ length: Math.max(4, sessionsCompleted) }).map((_, i) => (
                         <div
                             key={i}
-                            className={`w-4 h-4 border-2 transition-all ${
-                                i < sessionsCompleted
+                            className={`w-4 h-4 border-2 transition-all ${i < sessionsCompleted
                                     ? 'bg-black dark:bg-white border-black dark:border-white'
                                     : 'border-zinc-300 dark:border-zinc-800'
-                            }`}
+                                }`}
                         />
                     ))}
                 </div>
@@ -670,7 +665,7 @@ const QuickQuizTool = ({ onBack }) => {
     const handleGenerateAiQuiz = async () => {
         setAiLoading(true);
         setAiError('');
-        
+
         let payload = {
             source: aiSource,
             count: aiQuestionCount
@@ -702,10 +697,10 @@ const QuickQuizTool = ({ onBack }) => {
             const timer2 = setTimeout(() => setAiLoadingStage("Generating options & solutions..."), 3500);
 
             const response = await fetchAiQuizGenerate(payload);
-            
+
             clearTimeout(timer1);
             clearTimeout(timer2);
-            
+
             if (!response.questions || response.questions.length === 0) {
                 throw new Error("No questions returned from AI service.");
             }
@@ -713,7 +708,7 @@ const QuickQuizTool = ({ onBack }) => {
             // Create new quiz item
             const newQuiz = {
                 id: 'quiz_' + Date.now(),
-                name: aiSource === 'note' 
+                name: aiSource === 'note'
                     ? `AI: ${aiNotes.find(n => n.id === selectedNoteId)?.title || 'Note Quiz'}`
                     : `AI: ${aiTopic.trim()}`,
                 questions: response.questions.map((q, idx) => ({
@@ -728,7 +723,7 @@ const QuickQuizTool = ({ onBack }) => {
             setQuizzes(prev => [newQuiz, ...prev]);
             setActiveQuizId(newQuiz.id);
             setShowAiModal(false);
-            
+
             // Reset modal states
             setAiTopic('');
             setAiQuestionCount(5);
@@ -819,16 +814,15 @@ const QuickQuizTool = ({ onBack }) => {
             return (
                 <div className="p-6 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="border-2 border-black dark:border-zinc-700 p-8 bg-white dark:bg-zinc-950 text-center shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
-                        <div className={`w-20 h-20 mx-auto flex items-center justify-center border-2 mb-4 ${
-                            percentage >= 80 ? 'border-emerald-500 text-emerald-500' : percentage >= 50 ? 'border-amber-500 text-amber-500' : 'border-red-500 text-red-500'
-                        }`}>
+                        <div className={`w-20 h-20 mx-auto flex items-center justify-center border-2 mb-4 ${percentage >= 80 ? 'border-emerald-500 text-emerald-500' : percentage >= 50 ? 'border-amber-500 text-amber-500' : 'border-red-500 text-red-500'
+                            }`}>
                             <span className="text-2xl font-black">{percentage}%</span>
                         </div>
                         <h2 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">
                             {percentage >= 80 ? 'Excellent!' : percentage >= 50 ? 'Good Effort!' : 'Keep Studying!'}
                         </h2>
                         <p className="text-sm text-zinc-500 mt-1">{score} out of {total} correct</p>
-                        
+
                         <div className="flex items-center justify-center gap-3 mt-6">
                             <button onClick={startQuiz} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
                                 Retry Quiz
@@ -885,11 +879,10 @@ const QuickQuizTool = ({ onBack }) => {
                             <button
                                 key={idx}
                                 onClick={() => selectAnswer(currentQ.id, idx)}
-                                className={`w-full text-left px-4 py-3 text-sm font-medium border-2 transition-all ${
-                                    selectedAnswers[currentQ.id] === idx
+                                className={`w-full text-left px-4 py-3 text-sm font-medium border-2 transition-all ${selectedAnswers[currentQ.id] === idx
                                         ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                         : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                                }`}
+                                    }`}
                             >
                                 <span className="font-black mr-2 text-[10px] uppercase">{String.fromCharCode(65 + idx)}.</span>
                                 {opt}
@@ -973,11 +966,10 @@ const QuickQuizTool = ({ onBack }) => {
                                 <div key={idx} className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCorrectIndex(idx)}
-                                        className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-all ${
-                                            correctIndex === idx
+                                        className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-all ${correctIndex === idx
                                                 ? 'bg-emerald-500 border-emerald-500 text-white'
                                                 : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400'
-                                        }`}
+                                            }`}
                                     >
                                         {correctIndex === idx && <Check size={12} />}
                                     </button>
@@ -1166,22 +1158,20 @@ const QuickQuizTool = ({ onBack }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => setAiSource('note')}
-                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${
-                                                    aiSource === 'note'
+                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${aiSource === 'note'
                                                         ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
                                                         : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
-                                                }`}
+                                                    }`}
                                             >
                                                 Study Note
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setAiSource('topic')}
-                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${
-                                                    aiSource === 'topic'
+                                                className={`py-2 text-xs font-bold uppercase border-2 transition-all ${aiSource === 'topic'
                                                         ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
                                                         : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
-                                                }`}
+                                                    }`}
                                             >
                                                 Custom Topic
                                             </button>
@@ -1296,9 +1286,9 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                 if (p.title && p.title.trim()) {
                     const cleanTitle = p.title.replace(/\d+/g, '').trim();
                     if (
-                        cleanTitle.length > 2 && 
-                        !cleanTitle.toLowerCase().includes('lunch') && 
-                        !cleanTitle.toLowerCase().includes('recess') && 
+                        cleanTitle.length > 2 &&
+                        !cleanTitle.toLowerCase().includes('lunch') &&
+                        !cleanTitle.toLowerCase().includes('recess') &&
                         !cleanTitle.toLowerCase().includes('roll call') &&
                         !cleanTitle.toLowerCase().includes('assembly') &&
                         !cleanTitle.toLowerCase().includes('free period')
@@ -1419,7 +1409,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
     const handleToggleStatus = async (item) => {
         const newStatus = item.status === 'Completed' ? 'Pending' : 'Completed';
         const updatedPayload = { ...item, status: newStatus };
-        
+
         setAssignments(prev => prev.map(a => a.id === item.id ? updatedPayload : a));
 
         try {
@@ -1431,7 +1421,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this task?")) return;
-        
+
         setAssignments(prev => prev.filter(a => a.id !== id));
 
         try {
@@ -1469,7 +1459,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
     }, [assignments, filterStatus, sortBy]);
 
     const getPriorityStyle = (prio) => {
-        switch(prio) {
+        switch (prio) {
             case 'High': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/30';
             case 'Medium': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/30';
             default: return 'bg-zinc-100 text-zinc-850 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800';
@@ -1503,11 +1493,10 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
-                            className={`px-3 py-1 text-xs font-bold uppercase border transition-all ${
-                                filterStatus === status
+                            className={`px-3 py-1 text-xs font-bold uppercase border transition-all ${filterStatus === status
                                     ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                     : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 hover:border-zinc-400'
-                            }`}
+                                }`}
                         >
                             {status}
                         </button>
@@ -1552,9 +1541,8 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             >
                                 <button
                                     onClick={() => handleToggleStatus(item)}
-                                    className={`w-6 h-6 border-2 border-black dark:border-zinc-700 shrink-0 flex items-center justify-center transition-all ${
-                                        isCompleted ? 'bg-purple-650 border-purple-650 text-white' : 'hover:border-purple-650'
-                                    }`}
+                                    className={`w-6 h-6 border-2 border-black dark:border-zinc-700 shrink-0 flex items-center justify-center transition-all ${isCompleted ? 'bg-purple-650 border-purple-650 text-white' : 'hover:border-purple-650'
+                                        }`}
                                 >
                                     {isCompleted && <Check size={14} />}
                                 </button>
@@ -1664,11 +1652,10 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                             key={sub}
                                             type="button"
                                             onClick={() => setSubject(sub)}
-                                            className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${
-                                                subject === sub
+                                            className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${subject === sub
                                                     ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                                     : 'bg-white dark:bg-zinc-900 border-zinc-205 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-450'
-                                            }`}
+                                                }`}
                                         >
                                             {sub}
                                         </button>
@@ -1707,11 +1694,10 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                             key={prio}
                                             type="button"
                                             onClick={() => setPriority(prio)}
-                                            className={`py-1.5 text-xs font-bold uppercase border transition-all ${
-                                                priority === prio
+                                            className={`py-1.5 text-xs font-bold uppercase border transition-all ${priority === prio
                                                     ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                                     : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-655 dark:text-zinc-400'
-                                            }`}
+                                                }`}
                                             disabled={saving}
                                         >
                                             {prio}
@@ -1769,7 +1755,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
     const [sortBy, setSortBy] = useState('updatedAt-desc');
     const [previewMode, setPreviewMode] = useState(false);
     const [loading, setLoading] = useState(true);
-    
+
     // Save State: 'idle' | 'saving' | 'saved' | 'offline-saved' | 'error'
     const [saveStatus, setSaveStatus] = useState('idle');
 
@@ -1860,16 +1846,16 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
     // Extract subjects from student timetable to offer as quick suggestions
     const suggestedSubjects = React.useMemo(() => {
         const subjects = new Set(['Math', 'Science', 'English', 'History', 'Geography', 'Art', 'Computing']);
-        
+
         if (timetableData && timetableData.timetable) {
             const periods = timetableData.timetable.periods || {};
             Object.values(periods).forEach(p => {
                 if (p.title && p.title.trim()) {
                     const cleanTitle = p.title.replace(/\d+/g, '').trim(); // Remove course numbers (e.g. Mathematics 10 -> Mathematics)
                     if (
-                        cleanTitle.length > 2 && 
-                        !cleanTitle.toLowerCase().includes('lunch') && 
-                        !cleanTitle.toLowerCase().includes('recess') && 
+                        cleanTitle.length > 2 &&
+                        !cleanTitle.toLowerCase().includes('lunch') &&
+                        !cleanTitle.toLowerCase().includes('recess') &&
                         !cleanTitle.toLowerCase().includes('roll call') &&
                         !cleanTitle.toLowerCase().includes('assembly') &&
                         !cleanTitle.toLowerCase().includes('free period')
@@ -1889,17 +1875,17 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
     const triggerSave = async (noteToSave) => {
         if (!noteToSave) return;
         setSaveStatus('saving');
-        
+
         try {
             const saved = await saveNote(noteToSave);
             setSaveStatus('saved');
-            
+
             // Update local state with official timestamp from server
             setNotes(prev => prev.map(n => n.id === saved.id ? saved : n));
         } catch (err) {
             console.error("Save note error, fallback to local:", err);
             setSaveStatus('offline-saved');
-            
+
             // Offline update local timestamps in state
             const nowIso = new Date().toISOString();
             setNotes(prev => prev.map(n => n.id === noteToSave.id ? { ...n, updatedAt: nowIso } : n));
@@ -1916,7 +1902,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
     // 4. Auto-save triggers
     const onNoteChange = (field, value) => {
         if (!activeNote) return;
-        
+
         // Immediate State Update
         const updatedNote = {
             ...activeNote,
@@ -1968,7 +1954,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
     const handleDeleteNote = async (id) => {
         if (!window.confirm("Are you sure you want to delete this study note?")) return;
-        
+
         // Cancel timer if deleting active note
         if (id === activeNoteId && autoSaveTimerRef.current) {
             clearTimeout(autoSaveTimerRef.current);
@@ -1976,7 +1962,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
         const remainingNotes = notes.filter(n => n.id !== id);
         setNotes(remainingNotes);
-        
+
         if (activeNoteId === id) {
             setActiveNoteId(remainingNotes.length > 0 ? remainingNotes[0].id : null);
         }
@@ -1995,8 +1981,8 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
         // Apply Search
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim();
-            result = result.filter(n => 
-                (n.title || '').toLowerCase().includes(query) || 
+            result = result.filter(n =>
+                (n.title || '').toLowerCase().includes(query) ||
                 (n.content || '').toLowerCase().includes(query) ||
                 (n.subject || '').toLowerCase().includes(query)
             );
@@ -2055,7 +2041,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                         Keep track of your classes, study briefs, and summaries. All changes sync automatically.
                     </p>
                 </div>
-                
+
                 <button
                     onClick={handleNewNote}
                     className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 text-sm font-black uppercase tracking-wider transition-all duration-150 border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
@@ -2071,7 +2057,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-12 border-2 border-black dark:border-zinc-800 min-h-[60vh] bg-white dark:bg-zinc-950">
-                    
+
                     {/* Left Sidebar (Lg cols 4) */}
                     <div className="lg:col-span-4 border-b-2 lg:border-b-0 lg:border-r-2 border-black dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-950">
                         {/* Search & Sort Panel */}
@@ -2109,11 +2095,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                             <div className="px-4 py-2 bg-zinc-100 dark:bg-zinc-900/30 border-b border-zinc-200 dark:border-zinc-800 flex gap-1.5 overflow-x-auto custom-scrollbar whitespace-nowrap">
                                 <button
                                     onClick={() => setSelectedSubjectFilter('All')}
-                                    className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${
-                                        selectedSubjectFilter === 'All'
+                                    className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === 'All'
                                             ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                             : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
-                                    }`}
+                                        }`}
                                 >
                                     All
                                 </button>
@@ -2121,11 +2106,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     <button
                                         key={sub}
                                         onClick={() => setSelectedSubjectFilter(sub)}
-                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${
-                                            selectedSubjectFilter === sub
+                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === sub
                                                 ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                                 : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
-                                        }`}
+                                            }`}
                                     >
                                         {sub}
                                     </button>
@@ -2145,7 +2129,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     const cleanSnippet = (note.content || '')
                                         .replace(/[#*`>_\-]/g, '') // Strip basic markdown tags for snippet
                                         .substring(0, 80);
-                                    
+
                                     return (
                                         <div
                                             key={note.id}
@@ -2153,11 +2137,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                                 setActiveNoteId(note.id);
                                                 setPreviewMode(false);
                                             }}
-                                            className={`p-4 cursor-pointer text-left transition-all ${
-                                                isActive 
-                                                    ? 'bg-zinc-200 dark:bg-zinc-900 border-l-4 border-black dark:border-white' 
+                                            className={`p-4 cursor-pointer text-left transition-all ${isActive
+                                                    ? 'bg-zinc-200 dark:bg-zinc-900 border-l-4 border-black dark:border-white'
                                                     : 'hover:bg-zinc-100 dark:hover:bg-zinc-900/50'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center justify-between gap-2 mb-1.5">
                                                 <span className={`px-2 py-0.5 border text-[9px] font-black uppercase tracking-wider ${getSubjectBgColor(note.subject)}`}>
@@ -2286,11 +2269,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                                 <button
                                                     key={sub}
                                                     onClick={() => onNoteChange('subject', sub)}
-                                                    className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${
-                                                        activeNote.subject === sub
+                                                    className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${activeNote.subject === sub
                                                             ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
                                                             : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 hover:text-zinc-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {sub}
                                                 </button>
@@ -2302,7 +2284,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     <div className="flex-1 flex flex-col min-h-[30vh]">
                                         {previewMode ? (
                                             /* Markdown Render Area */
-                                            <div 
+                                            <div
                                                 className="flex-1 text-left p-4 bg-zinc-50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-850 overflow-y-auto max-h-[50vh] lg:max-h-[60vh] select-text prose dark:prose-invert max-w-none custom-scrollbar"
                                                 dangerouslySetInnerHTML={{ __html: parseMarkdown(activeNote.content) }}
                                             />
@@ -2431,7 +2413,7 @@ const NotesView = ({ user, timetableData, setView }) => {
             <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="bg-white dark:bg-zinc-950 p-12 border-2 border-black dark:border-zinc-800 text-center relative overflow-hidden select-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-                    
+
                     <div className="w-20 h-20 bg-purple-100 dark:bg-purple-950/40 rounded-2xl flex items-center justify-center mx-auto mb-6 text-purple-600 dark:text-purple-400 border border-purple-200/20">
                         <GraduationCap size={36} className="animate-pulse" />
                     </div>
@@ -2441,7 +2423,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                     </div>
 
                     <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-2">Unlock Study Platform</h2>
-                    
+
                     <p className="text-zinc-550 dark:text-zinc-450 text-sm max-w-md mx-auto mb-8 leading-relaxed">
                         Supercharge your study sessions. Take notes, create flashcards, time your focus with Pomodoro, and quiz yourself — all in one hub.
                     </p>
@@ -2465,7 +2447,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                         onClick={() => setView && setView('profile')}
                         className="px-6 py-3 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
                     >
-                        Upgrade to Pro ($5.99 Annually)
+                        Upgrade to Pro ($4.99 Annually)
                     </button>
                 </div>
 
@@ -2599,8 +2581,8 @@ const NotesView = ({ user, timetableData, setView }) => {
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Study Tip</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                    Use <strong className="text-zinc-900 dark:text-white">active recall</strong> with flashcards, then reinforce with <strong className="text-zinc-900 dark:text-white">spaced repetition</strong>. 
-                    Combine 25-minute <strong className="text-zinc-900 dark:text-white">Pomodoro sessions</strong> with short breaks for optimal focus. 
+                    Use <strong className="text-zinc-900 dark:text-white">active recall</strong> with flashcards, then reinforce with <strong className="text-zinc-900 dark:text-white">spaced repetition</strong>.
+                    Combine 25-minute <strong className="text-zinc-900 dark:text-white">Pomodoro sessions</strong> with short breaks for optimal focus.
                     Test yourself with <strong className="text-zinc-900 dark:text-white">quick quizzes</strong> to identify weak areas before exams.
                 </p>
             </div>

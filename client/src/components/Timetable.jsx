@@ -39,13 +39,13 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
 
     const { periods } = innerTimetable;
     const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
-    
+
     const getMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
         return h * 60 + m;
     };
 
-    const currentMinutes = showNow 
+    const currentMinutes = showNow
         ? currentTime.getHours() * 60 + currentTime.getMinutes()
         : -1;
 
@@ -57,19 +57,19 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
         const bell = bells.find(b => b.bell === bellId);
         if (!bell) return null;
 
-        const periodInfo = periods[bellId] || { title: bell.bellDisplay }; 
+        const periodInfo = periods[bellId] || { title: bell.bellDisplay };
         if (bellId === "R" || bellId === "L" || bellId === "RC") {
-            periodInfo.title = bell.bellDisplay; 
+            periodInfo.title = bell.bellDisplay;
         }
 
         const startMin = getMinutes(bell.time);
-        const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60; 
+        const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
 
         if (startMin < firstMin) firstMin = startMin;
         if (endMin > lastMin) lastMin = endMin;
 
         const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-        const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index-1] ? bells.find(b=>b.bell===routine[index-1])?.time || "00:00" : "00:00"));
+        const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
         return {
             bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext
@@ -91,7 +91,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
     const handleAskQuestion = async (e) => {
         e.preventDefault();
         if (!question.trim() || qaLoading) return;
-        
+
         setQaLoading(true);
         setAnswer('');
         try {
@@ -107,7 +107,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
 
     return (
         <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full mt-4">
-            
+
             {/* Timetable AI Q&A Search Box */}
             {!aiDisabled && (
                 <div className="bg-white dark:bg-zinc-950 p-5 border border-zinc-200 dark:border-zinc-850 space-y-3 relative overflow-hidden">
@@ -124,13 +124,13 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
                                         <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-violet-100 dark:bg-violet-950/60 text-violet-750 dark:text-violet-300">PRO FEATURE</span>
                                     </div>
                                     <h3 className="text-sm font-bold text-zinc-900 dark:text-white mt-1">Unlock AI Schedule Assistant</h3>
-                                    <p className="text-xs text-zinc-500">Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $6.99 lifetime.</p>
+                                    <p className="text-xs text-zinc-500">Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $4.99 annually.</p>
                                 </div>
                                 <button
                                     onClick={() => setView && setView('profile')}
                                     className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
                                 >
-                                    Upgrade ($6.99)
+                                    Upgrade ($4.99 Annually)
                                 </button>
                             </div>
                         </>
@@ -144,15 +144,15 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
                                 <span className="text-xs text-zinc-550 font-semibold">Ask questions about classes, rooms, teachers, or times</span>
                             </div>
                             <form onSubmit={handleAskQuestion} className="flex gap-2">
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={question}
                                     onChange={(e) => setQuestion(e.target.value)}
                                     disabled={qaLoading}
                                     placeholder={qaLoading ? "AI is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
                                     className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
                                 />
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={qaLoading || !question.trim()}
                                     className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -179,15 +179,15 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
             </div>
 
             <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative">
-                
+
                 {/* Vertical Timeline Axis Container */}
                 <div className="relative">
                     {/* Background Axis Line */}
                     <div className="absolute left-[96px] md:left-[126px] top-4 bottom-4 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
-                    
+
                     {/* Active Axis Line */}
                     {showNow && currentMinutes >= firstMin && (
-                        <motion.div 
+                        <motion.div
                             className="absolute left-[96px] md:left-[126px] top-4 w-0.5 bg-accent z-10 origin-top"
                             initial={{ scaleY: 0 }}
                             animate={{ scaleY: timelineProgressPos / 100 }}
@@ -198,7 +198,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
 
                     <div className="space-y-4">
                         {routineData.map((data) => (
-                            <PeriodCard 
+                            <PeriodCard
                                 key={`${data.bellId}-${data.index}`}
                                 period={data.periodInfo}
                                 bell={data.bell}
@@ -212,7 +212,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
                         ))}
                     </div>
                 </div>
-                
+
             </div>
         </div>
     );
