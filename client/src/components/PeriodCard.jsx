@@ -35,14 +35,14 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
            initial={{ opacity: 0, y: 10 }}
            animate={{ opacity: 1, y: 0 }}
            transition={{ delay: routineIndex * 0.05 }}
-           className={`relative flex items-center gap-6 py-2 ${isPast ? 'opacity-40' : 'opacity-100'}`}
+           className={`relative flex items-center gap-3 md:gap-6 py-2 ${isPast ? 'opacity-40' : 'opacity-100'}`}
         >
             <div className="w-[60px] md:w-[90px] text-right shrink-0">
                 <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-400">{time}</span>
             </div>
             
             {/* Timeline Dot */}
-            <div className="relative z-10 flex items-center justify-center shrink-0 w-6">
+            <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-6">
                 <div className={`transition-all duration-300 rounded-full ${dotSize} ${dotClass}`} />
             </div>
 
@@ -62,7 +62,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: routineIndex * 0.05 }}
-      className={`relative flex items-center gap-6 py-1 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
+      className={`relative flex items-center gap-3 md:gap-6 py-1 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
     >
         {/* Time Column */}
         <div className="w-[60px] md:w-[90px] text-right shrink-0 flex flex-col justify-center">
@@ -71,7 +71,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
         </div>
         
         {/* Timeline Dot */}
-        <div className="relative z-10 flex items-center justify-center shrink-0 w-6">
+        <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-6">
             <div className={`transition-all duration-300 rounded-full ${dotSize} ${dotClass}`} />
         </div>
 

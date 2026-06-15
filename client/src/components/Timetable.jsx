@@ -95,12 +95,12 @@ const Timetable = ({ timetableData, showNow = true }) => {
                 {/* Vertical Timeline Axis Container */}
                 <div className="relative">
                     {/* Background Axis Line */}
-                    <div className="absolute left-[96px] md:left-[126px] top-4 bottom-4 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="hidden md:block absolute left-[96px] md:left-[126px] top-4 bottom-4 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
 
                     {/* Active Axis Line */}
                     {showNow && currentMinutes >= firstMin && (
                         <motion.div
-                            className="absolute left-[96px] md:left-[126px] top-4 w-0.5 bg-accent z-10 origin-top"
+                            className="hidden md:block absolute left-[96px] md:left-[126px] top-4 w-0.5 bg-accent z-10 origin-top"
                             initial={{ scaleY: 0 }}
                             animate={{ scaleY: timelineProgressPos / 100 }}
                             transition={{ duration: 1, ease: "easeOut" }}

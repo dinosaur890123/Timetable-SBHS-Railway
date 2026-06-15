@@ -381,6 +381,57 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated()) return;
 
+        const checkAndAdvanceToNextSchoolDay = async (todayData) => {
+            if (!isSameDay(viewDate, new Date())) return;
+
+            let shouldAdvance = false;
+            const inner = todayData?.timetable?.timetable || todayData?.timetable;
+            if (!inner || !inner.periods || !inner.routine) {
+                shouldAdvance = true;
+            } else {
+                const bells = todayData.bells || [];
+                const routine = inner.routine ? inner.routine.split(',') : [];
+                if (routine.length === 0) {
+                    shouldAdvance = true;
+                } else {
+                    const lastBellId = routine[routine.length - 1];
+                    const lastBell = bells.find(b => b.bell === lastBellId);
+                    if (lastBell) {
+                        const getMinutes = (timeStr) => {
+                            const [h, m] = timeStr.split(':').map(Number);
+                            return h * 60 + m;
+                        };
+                        const schoolEndMinutes = lastBell.endTime ? getMinutes(lastBell.endTime) : getMinutes(lastBell.time) + 60;
+                        const now = new Date();
+                        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                        if (currentMinutes >= schoolEndMinutes) {
+                            shouldAdvance = true;
+                        }
+                    } else {
+                        shouldAdvance = true;
+                    }
+                }
+            }
+
+            if (shouldAdvance) {
+                let nextDay = addDays(new Date(), 1);
+                for (let i = 0; i < 42; i++) {
+                    try {
+                        const data = await fetchDayTimetable(nextDay);
+                        const nextInner = data?.timetable?.timetable || data?.timetable;
+                        if (nextInner && nextInner.periods && Object.keys(nextInner.periods).length > 0 && nextInner.routine) {
+                            setViewDate(nextDay);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("Error checking next school day", e);
+                    }
+                    nextDay = addDays(nextDay, 1);
+                }
+                setViewDate(addDays(new Date(), 1));
+            }
+        };
+
         // Reset timetable while loading to show feedback if needed
         // or just let it update smoothly. 
         const loadTimetable = async () => {
@@ -389,6 +440,7 @@ function App() {
                 setTimetable(data);
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
+                    await checkAndAdvanceToNextSchoolDay(data);
                 }
             } catch (err) {
                 console.error("Failed to fetch timetable", err);
@@ -1005,88 +1057,88 @@ function App() {
                     </Suspense>
                 </div>
 
-            {/* AI Assistant Popout Modal */}
-            {showAiModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl max-w-md w-full relative overflow-hidden rounded-2xl animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-zinc-150 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/20">
-                            <div className="flex items-center gap-2">
-                                <Sparkles size={14} className="text-violet-600 dark:text-violet-400 animate-pulse" />
-                                <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-                                    Timetable AI Assistant
-                                </h3>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setShowAiModal(false);
-                                    setAiQuestion('');
-                                    setAiAnswer('');
-                                }}
-                                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-white transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* Body / Form */}
-                        <div className="p-5 space-y-4">
-                            {!(user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro') ? (
-                                <div className="space-y-4 py-2 text-center">
-                                    <div className="w-12 h-12 bg-violet-100 dark:bg-violet-955/40 text-violet-600 dark:text-violet-400 flex items-center justify-center rounded-full mx-auto animate-pulse">
-                                        <Sparkles size={24} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Unlock AI Schedule Assistant</h4>
-                                        <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                                            Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $4.99 annually.
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setShowAiModal(false);
-                                            setCurrentView('profile');
-                                        }}
-                                        className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 rounded-xl font-semibold"
-                                    >
-                                        Upgrade to Pro ($4.99)
-                                    </button>
+                {/* AI Assistant Popout Modal */}
+                {showAiModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl max-w-md w-full relative overflow-hidden rounded-2xl animate-in zoom-in-95 duration-200">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-zinc-150 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/20">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles size={14} className="text-violet-600 dark:text-violet-400 animate-pulse" />
+                                    <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white">
+                                        Timetable AI Assistant
+                                    </h3>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="text-xs text-zinc-500 font-semibold mb-1">
-                                        Ask questions about classes, rooms, teachers, or times
-                                    </div>
-                                    <form onSubmit={handleAskAiQuestion} className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={aiQuestion}
-                                            onChange={(e) => setAiQuestion(e.target.value)}
-                                            disabled={aiQaLoading}
-                                            placeholder={aiQaLoading ? "AI is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
-                                            className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={aiQaLoading || !aiQuestion.trim()}
-                                            className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            {aiQaLoading ? "Asking..." : "Ask"}
-                                        </button>
-                                    </form>
-                                    {aiAnswer && (
-                                        <div className="p-3 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-top-1 duration-200">
-                                            <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200 leading-relaxed">
-                                                💡 {aiAnswer}
+                                <button
+                                    onClick={() => {
+                                        setShowAiModal(false);
+                                        setAiQuestion('');
+                                        setAiAnswer('');
+                                    }}
+                                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-white transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* Body / Form */}
+                            <div className="p-5 space-y-4">
+                                {!(user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro') ? (
+                                    <div className="space-y-4 py-2 text-center">
+                                        <div className="w-12 h-12 bg-violet-100 dark:bg-violet-955/40 text-violet-600 dark:text-violet-400 flex items-center justify-center rounded-full mx-auto animate-pulse">
+                                            <Sparkles size={24} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Unlock AI Schedule Assistant</h4>
+                                            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                                                Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $4.99 annually.
                                             </p>
                                         </div>
-                                    )}
-                                </>
-                            )}
+                                        <button
+                                            onClick={() => {
+                                                setShowAiModal(false);
+                                                setCurrentView('profile');
+                                            }}
+                                            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 rounded-xl font-semibold"
+                                        >
+                                            Upgrade to Pro ($4.99)
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-xs text-zinc-500 font-semibold mb-1">
+                                            Ask questions about classes, rooms, teachers, or times
+                                        </div>
+                                        <form onSubmit={handleAskAiQuestion} className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={aiQuestion}
+                                                onChange={(e) => setAiQuestion(e.target.value)}
+                                                disabled={aiQaLoading}
+                                                placeholder={aiQaLoading ? "AI is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
+                                                className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={aiQaLoading || !aiQuestion.trim()}
+                                                className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                {aiQaLoading ? "Asking..." : "Ask"}
+                                            </button>
+                                        </form>
+                                        {aiAnswer && (
+                                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200 leading-relaxed">
+                                                    💡 {aiAnswer}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
             </main>
         </div>
     );
