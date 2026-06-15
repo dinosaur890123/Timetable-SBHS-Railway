@@ -34,6 +34,7 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
+    const [defaultDate, setDefaultDate] = useState(new Date());
 
     useEffect(() => {
         // Check if user is navigating exactly to /admin
@@ -421,6 +422,7 @@ function App() {
                         const nextInner = data?.timetable?.timetable || data?.timetable;
                         if (nextInner && nextInner.periods && Object.keys(nextInner.periods).length > 0 && nextInner.routine) {
                             setViewDate(nextDay);
+                            setDefaultDate(nextDay);
                             return;
                         }
                     } catch (e) {
@@ -428,7 +430,11 @@ function App() {
                     }
                     nextDay = addDays(nextDay, 1);
                 }
-                setViewDate(addDays(new Date(), 1));
+                const fallbackDate = addDays(new Date(), 1);
+                setViewDate(fallbackDate);
+                setDefaultDate(fallbackDate);
+            } else {
+                setDefaultDate(new Date());
             }
         };
 
@@ -473,7 +479,7 @@ function App() {
     // Date Navigation Helpers
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
-    const resetToday = () => setViewDate(new Date());
+    const resetToday = () => setViewDate(defaultDate);
 
     const handleToggleSupporter = async (checked) => {
         try {
@@ -647,7 +653,7 @@ function App() {
                                             </button>
                                         </div>
 
-                                        {!isSameDay(viewDate, new Date()) && (
+                                        {!isSameDay(viewDate, defaultDate) && (
                                             <button onClick={resetToday} className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors ml-2 shrink-0">
                                                 <CalendarIcon size={11} />
                                                 Today
