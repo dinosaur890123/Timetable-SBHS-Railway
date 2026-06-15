@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import PeriodCard from './PeriodCard';
 import { motion } from 'framer-motion';
-import { fetchTimetableQa } from '../services/api';
-import { Sparkles } from 'lucide-react';
 
-const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetable, user, setView }) => {
+const Timetable = ({ timetableData, showNow = true }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [question, setQuestion] = useState('');
-    const [answer, setAnswer] = useState('');
-    const [qaLoading, setQaLoading] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -86,91 +81,8 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
         timelineProgressPos = 0;
     }
 
-    const isPro = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-
-    const handleAskQuestion = async (e) => {
-        e.preventDefault();
-        if (!question.trim() || qaLoading) return;
-
-        setQaLoading(true);
-        setAnswer('');
-        try {
-            const data = await fetchTimetableQa(question, timetableData, currentMinutes, completeTimetable);
-            setAnswer(data.answer || "I couldn't generate an answer. Please try again.");
-        } catch (err) {
-            console.error("Q&A failed:", err);
-            setAnswer("Failed to connect to the AI assistant. Please check your network and try again.");
-        } finally {
-            setQaLoading(false);
-        }
-    };
-
     return (
-        <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full mt-4">
-
-            {/* Timetable AI Q&A Search Box */}
-            {!aiDisabled && (
-                <div className="bg-white dark:bg-zinc-950 p-5 border border-zinc-200 dark:border-zinc-850 space-y-3 relative overflow-hidden">
-                    {!isPro ? (
-                        <>
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl -z-10 animate-pulse" />
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 select-none">
-                                        <div className="px-2 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-855 dark:text-zinc-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                                            <Sparkles size={10} className="text-violet-600 dark:text-violet-400" />
-                                            Timetable AI
-                                        </div>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-violet-100 dark:bg-violet-950/60 text-violet-750 dark:text-violet-300">PRO FEATURE</span>
-                                    </div>
-                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white mt-1">Unlock AI Schedule Assistant</h3>
-                                    <p className="text-xs text-zinc-500">Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $4.99 annually.</p>
-                                </div>
-                                <button
-                                    onClick={() => setView && setView('profile')}
-                                    className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
-                                >
-                                    Upgrade ($4.99 Annually)
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="flex items-center gap-2 select-none">
-                                <div className="px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                                    <Sparkles size={10} className={qaLoading ? "animate-pulse" : ""} />
-                                    Timetable AI
-                                </div>
-                                <span className="text-xs text-zinc-550 font-semibold">Ask questions about classes, rooms, teachers, or times</span>
-                            </div>
-                            <form onSubmit={handleAskQuestion} className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={question}
-                                    onChange={(e) => setQuestion(e.target.value)}
-                                    disabled={qaLoading}
-                                    placeholder={qaLoading ? "AI is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
-                                    className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={qaLoading || !question.trim()}
-                                    className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    {qaLoading ? "Asking..." : "Ask"}
-                                </button>
-                            </form>
-                            {answer && (
-                                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <p className="text-sm font-semibold text-zinc-850 dark:text-zinc-200 leading-relaxed">
-                                        💡 {answer}
-                                    </p>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-            )}
+        <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full mt-4">
 
             <div className="flex items-center justify-between px-2">
                 <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-455">
