@@ -120,6 +120,7 @@ function App() {
         }
     });
     const hasSyncedTimetable = useRef(false);
+    const hasAutoAdvanced = useRef(false);
 
     // Timetable AI Modal States
     const [showAiModal, setShowAiModal] = useState(false);
@@ -446,7 +447,10 @@ function App() {
                 setTimetable(data);
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
-                    await checkAndAdvanceToNextSchoolDay(data);
+                    if (!hasAutoAdvanced.current) {
+                        hasAutoAdvanced.current = true;
+                        await checkAndAdvanceToNextSchoolDay(data);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch timetable", err);
