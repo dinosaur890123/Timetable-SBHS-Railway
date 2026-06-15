@@ -62,22 +62,22 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: routineIndex * 0.05 }}
-      className={`relative flex items-stretch gap-6 py-1 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
+      className={`relative flex items-center gap-6 py-1 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
     >
         {/* Time Column */}
-        <div className="w-[60px] md:w-[90px] text-right shrink-0 flex flex-col justify-center pt-3">
-            <span className={`text-sm font-bold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-600 dark:text-zinc-400'}`}>{time}</span>
+        <div className="w-[60px] md:w-[90px] text-right shrink-0 flex flex-col justify-center">
+            <span className={`text-sm font-bold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-650 dark:text-zinc-300'}`}>{time}</span>
             <span className="text-[10px] font-medium text-zinc-400 mt-0.5">{endTime}</span>
         </div>
         
         {/* Timeline Dot */}
-        <div className="relative z-10 flex flex-col items-center shrink-0 w-6 pt-4">
+        <div className="relative z-10 flex items-center justify-center shrink-0 w-6">
             <div className={`transition-all duration-300 rounded-full ${dotSize} ${dotClass}`} />
         </div>
 
         {/* Card Content */}
         <div className={`
-          flex-1 flex flex-col justify-center relative p-4 border transition-all duration-300 overflow-hidden
+          flex-1 flex flex-col justify-center relative py-2 px-4 border transition-all duration-300 overflow-hidden
           ${isCurrent 
             ? "bg-white dark:bg-zinc-900 border-2 border-accent scale-[1.01] z-20" 
             : period.isSubstituted
@@ -91,71 +91,70 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
               <div className="absolute top-0 left-0 bottom-0 bg-zinc-100 dark:bg-zinc-800/30 pointer-events-none transition-all duration-1000 ease-linear" style={{ width: `${progress}%` }} />
            )}
 
-           <div className="flex items-center justify-between relative z-10">
-               <div className="flex items-center gap-4">
+           <div className="flex items-center justify-between relative z-10 w-full gap-4">
+               {/* Left side: Period Bubble & Class Name */}
+               <div className="flex items-center gap-3 min-w-0 flex-1">
                    {/* Subject Icon / Period Bubble */}
                    <div className={`
-                      flex items-center justify-center w-10 h-10 font-bold shrink-0
+                      flex items-center justify-center w-8 h-8 text-xs font-bold shrink-0
                       ${subjectStyle}
                       ${!isCurrent && isPast ? 'opacity-60' : ''}
                    `}>
                       {bell.bell}
                    </div>
 
-                   <div className="flex flex-col min-w-0">
-                      <h3 className={`text-base font-bold truncate ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                   <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <h3 className={`text-sm font-bold truncate ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
                          {title || "Free Period"}
                       </h3>
-                      
-                      {/* Details Row */}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                         {(room || fullTeacher) && (
-                             <>
-                                  {room && (
-                                       <span className={`flex items-center gap-1.5 text-xs font-semibold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-500'}`}>
-                                           <MapPin size={12} /> 
-                                           <span>{room}</span>
-                                           {period.oldRoom && (
-                                               <span className="text-[10px] text-zinc-400 dark:text-zinc-500 line-through">({period.oldRoom})</span>
-                                           )}
-                                       </span>
-                                  )}
-                                  {fullTeacher && (
-                                       <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-                                           <UserIcon size={12} /> 
-                                           <span>{fullTeacher}</span>
-                                           {period.oldTeacher && (
-                                               <span className="text-[10px] text-zinc-400 dark:text-zinc-500 line-through">({period.oldTeacher})</span>
-                                           )}
-                                       </span>
-                                  )}
-                             </>
-                         )}
+
+                      {/* inline status badges next to the title */}
+                      <div className="flex items-center gap-1 shrink-0">
+                          {isNext && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-850 dark:bg-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 animate-pulse">
+                                  Up Next
+                              </span>
+                          )}
+                          {period.isSubstituted && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900 shadow-sm animate-pulse-subtle">
+                                  Substitution
+                              </span>
+                          )}
+                          {period.hasRoomChange && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-955/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm">
+                                  Room Change
+                              </span>
+                          )}
                       </div>
                    </div>
                </div>
 
-               {/* Right Indicators */}
-               <div className="flex flex-col items-end gap-2 shrink-0">
-                   {isNext && (
-                       <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-850 dark:bg-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 animate-pulse">
-                           Up Next
-                       </span>
-                   )}
+               {/* Right side: Teacher & Room, with time remaining if current */}
+               <div className="flex items-center gap-3 shrink-0 text-xs">
                    {isCurrent && (
-                        <span className="text-xs font-bold text-accent flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-2 py-1 border border-zinc-300 dark:border-zinc-700">
-                            <Clock size={12} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
+                        <span className="text-[10px] font-bold text-accent flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-1.5 py-0.5 border border-zinc-300 dark:border-zinc-700 shrink-0">
+                            <Clock size={11} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
                         </span>
                    )}
-                   {period.isSubstituted && (
-                       <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900 shadow-sm animate-pulse-subtle">
-                           Substitution
-                       </span>
+
+                   {fullTeacher && (
+                        <span className="flex items-center gap-1 text-zinc-550 dark:text-zinc-400 shrink-0">
+                            <UserIcon size={12} className="text-zinc-400" />
+                            <span>{fullTeacher}</span>
+                            {period.oldTeacher && (
+                                <span className="text-[10px] text-zinc-400 line-through">({period.oldTeacher})</span>
+                            )}
+                        </span>
                    )}
-                   {period.hasRoomChange && (
-                       <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-955/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm">
-                           Room Change
-                       </span>
+
+                   {room && (
+                        <span className={`flex items-center gap-1 font-semibold shrink-0 ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                            <MapPin size={12} className="text-zinc-400" />
+                            <span>{room}</span>
+                            {period.oldRoom && (
+                                <span className="text-[10px] text-zinc-400 line-through">({period.oldRoom})</span>
+                            )}
+                        </span>
                    )}
                </div>
            </div>

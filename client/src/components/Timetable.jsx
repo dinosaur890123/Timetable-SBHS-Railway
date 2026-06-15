@@ -178,7 +178,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
                 </h2>
             </div>
 
-            <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative">
+            <div className="bg-white dark:bg-zinc-950 p-4 md:p-6 border border-zinc-200 dark:border-zinc-850 relative">
 
                 {/* Vertical Timeline Axis Container */}
                 <div className="relative">
@@ -196,7 +196,7 @@ const Timetable = ({ timetableData, showNow = true, aiDisabled, completeTimetabl
                         />
                     )}
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {routineData.map((data) => (
                             <PeriodCard
                                 key={`${data.bellId}-${data.index}`}
