@@ -383,73 +383,54 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated()) return;
 
-        const checkAndAdvanceToNextSchoolDay = async (todayData) => {
-            if (!isSameDay(viewDate, new Date())) return;
-
-            let shouldAdvance = false;
-            const inner = todayData?.timetable?.timetable || todayData?.timetable;
-            if (!inner || !inner.periods || !inner.routine) {
-                shouldAdvance = true;
-            } else {
-                const bells = todayData.bells || [];
-                const routine = inner.routine ? inner.routine.split(',') : [];
-                if (routine.length === 0) {
-                    shouldAdvance = true;
-                } else {
-                    const lastBellId = routine[routine.length - 1];
-                    const lastBell = bells.find(b => b.bell === lastBellId);
-                    if (lastBell) {
-                        const getMinutes = (timeStr) => {
-                            const [h, m] = timeStr.split(':').map(Number);
-                            return h * 60 + m;
-                        };
-                        const schoolEndMinutes = lastBell.endTime ? getMinutes(lastBell.endTime) : getMinutes(lastBell.time) + 60;
-                        const now = new Date();
-                        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                        if (currentMinutes >= schoolEndMinutes) {
-                            shouldAdvance = true;
-                        }
-                    } else {
-                        shouldAdvance = true;
+        const advanceToNextSchoolDay = async () => {
+            let nextDay = addDays(new Date(), 1);
+            for (let i = 0; i < 42; i++) {
+                try {
+                    const data = await fetchDayTimetable(nextDay);
+                    const inner = data?.timetable?.timetable || data?.timetable;
+                    if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
+                        setViewDate(nextDay);
+                        return;
                     }
+                } catch (e) {
+                    console.error("Error checking next school day", e);
                 }
+                nextDay = addDays(nextDay, 1);
             }
-
-            if (shouldAdvance) {
-                let nextDay = addDays(new Date(), 1);
-                for (let i = 0; i < 42; i++) {
-                    try {
-                        const data = await fetchDayTimetable(nextDay);
-                        const nextInner = data?.timetable?.timetable || data?.timetable;
-                        if (nextInner && nextInner.periods && Object.keys(nextInner.periods).length > 0 && nextInner.routine) {
-                            setViewDate(nextDay);
-                            setDefaultDate(nextDay);
-                            return;
-                        }
-                    } catch (e) {
-                        console.error("Error checking next school day", e);
-                    }
-                    nextDay = addDays(nextDay, 1);
-                }
-                const fallbackDate = addDays(new Date(), 1);
-                setViewDate(fallbackDate);
-                setDefaultDate(fallbackDate);
-            } else {
-                setDefaultDate(new Date());
-            }
+            setViewDate(addDays(new Date(), 1));
         };
 
-        // Reset timetable while loading to show feedback if needed
-        // or just let it update smoothly. 
         const loadTimetable = async () => {
             try {
                 const data = await fetchDayTimetable(viewDate);
                 setTimetable(data);
+
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
+
                     if (!hasAutoAdvanced.current) {
                         hasAutoAdvanced.current = true;
-                        await checkAndAdvanceToNextSchoolDay(data);
+
+                        const inner = data?.timetable?.timetable || data?.timetable;
+                        const bells = data?.bells || [];
+                        const routine = inner?.routine ? inner.routine.split(',') : [];
+
+                        const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+                        const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+                        // Find the latest end time across all bells in the routine
+                        const latestEnd = routine.reduce((max, bellId) => {
+                            const bell = bells.find(b => b.bell === bellId);
+                            if (!bell) return max;
+                            const end = bell.endTime ? toMinutes(bell.endTime) : null;
+                            return end !== null ? Math.max(max, end) : max;
+                        }, -1);
+
+                        // School ended = all scheduled classes are past; no classes → treat as ended
+                        const schoolEnded = latestEnd === -1 || nowMinutes >= latestEnd;
+
+                        if (schoolEnded) await advanceToNextSchoolDay();
                     }
                 }
             } catch (err) {
