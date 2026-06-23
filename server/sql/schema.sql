@@ -97,6 +97,7 @@ CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_
 
 -- Feedback migrations
 ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS resolved_notified BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Homework/Assignments migrations
 CREATE TABLE IF NOT EXISTS app_assignments (

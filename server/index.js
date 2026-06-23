@@ -251,6 +251,7 @@ const formatFeedbackRow = (row) => ({
     severity: row.severity,
     details: row.details,
     status: row.status ?? 'open',
+    resolvedNotified: row.resolved_notified ?? false,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at)
 });
@@ -809,8 +810,45 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
         const dbUser = await upsertUser(safeUser);
         await addLog('REGISTER', `${safeUser.name} (${userId})`, 'User sync/login');
 
-        console.log(`User registered/updated: ${safeUser.name} (${userId})`);
-        res.json({ success: true, user: dbUser });
+        // Fetch pending feedback notifications where status is 'resolved' and user hasn't been notified
+        let resolvedFeedbacks = [];
+        if (!isDbEnabled) {
+            const pending = feedbackEntries.filter(f => String(f.studentId) === userId && f.status === 'resolved' && f.resolvedNotified === false);
+            resolvedFeedbacks = pending.map(f => ({
+                id: f.id,
+                ticketNumber: f.ticketNumber,
+                category: f.category,
+                details: f.details
+            }));
+            // Mark them as notified
+            pending.forEach(f => {
+                f.resolvedNotified = true;
+            });
+        } else {
+            const result = await db.query(
+                `SELECT id, ticket_number, category, details 
+                 FROM app_feedback 
+                 WHERE student_id = $1 AND status = 'resolved' AND resolved_notified = FALSE`,
+                [userId]
+            );
+            resolvedFeedbacks = result.rows.map(row => ({
+                id: row.id,
+                ticketNumber: row.ticket_number,
+                category: row.category,
+                details: row.details
+            }));
+            if (resolvedFeedbacks.length > 0) {
+                await db.query(
+                    `UPDATE app_feedback 
+                     SET resolved_notified = TRUE 
+                     WHERE student_id = $1 AND status = 'resolved' AND resolved_notified = FALSE`,
+                    [userId]
+                );
+            }
+        }
+
+        console.log(`User registered/updated: ${safeUser.name} (${userId}). Found ${resolvedFeedbacks.length} pending feedback notifications.`);
+        res.json({ success: true, user: dbUser, resolvedFeedbacks });
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });
@@ -1921,14 +1959,17 @@ app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
                 return res.status(404).json({ error: 'Feedback entry not found' });
             }
             feedbackEntries[index].status = status;
+            if (status === 'resolved') {
+                feedbackEntries[index].resolvedNotified = false;
+            }
             feedbackEntries[index].updatedAt = new Date();
             updatedEntry = feedbackEntries[index];
         } else {
             const result = await db.query(
                 `UPDATE app_feedback 
-                 SET status = $1, updated_at = NOW() 
+                 SET status = $1, resolved_notified = CASE WHEN $1 = 'resolved' THEN FALSE ELSE resolved_notified END, updated_at = NOW() 
                  WHERE id = $2 
-                 RETURNING id, ticket_number, student_id, category, severity, details, status, created_at, updated_at`,
+                 RETURNING id, ticket_number, student_id, category, severity, details, status, resolved_notified, created_at, updated_at`,
                 [status, String(id)]
             );
             if (result.rows.length === 0) {
@@ -1977,6 +2018,72 @@ app.delete('/api/admin/feedback/:id', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Feedback delete error:', e);
         res.status(500).json({ error: 'Failed to delete feedback entry' });
+    }
+});
+
+// PUT /api/admin/feedback/bulk - Bulk update feedback status
+app.put('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
+    try {
+        const { ids, status } = req.body || {};
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Missing or invalid feedback IDs array' });
+        }
+        if (!status || !['open', 'resolved', 'archived'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status value. Must be open, resolved, or archived.' });
+        }
+
+        const idsStrings = ids.map(id => String(id));
+        if (!isDbEnabled) {
+            idsStrings.forEach(id => {
+                const index = feedbackEntries.findIndex(f => String(f.id) === id);
+                if (index !== -1) {
+                    feedbackEntries[index].status = status;
+                    if (status === 'resolved') {
+                        feedbackEntries[index].resolvedNotified = false;
+                    }
+                    feedbackEntries[index].updatedAt = new Date();
+                }
+            });
+        } else {
+            await db.query(
+                `UPDATE app_feedback 
+                 SET status = $1, resolved_notified = CASE WHEN $1 = 'resolved' THEN FALSE ELSE resolved_notified END, updated_at = NOW() 
+                 WHERE id = ANY($2)`,
+                [status, idsStrings]
+            );
+        }
+
+        await addLog('FEEDBACK_BULK_UPDATE', req.user?.studentId || 'ADMIN', `Updated status to ${status} for ${ids.length} feedbacks`);
+        res.json({ success: true, message: `Successfully updated ${ids.length} feedback entries` });
+    } catch (e) {
+        console.error('Feedback bulk update error:', e);
+        res.status(500).json({ error: 'Failed to bulk update feedback entries' });
+    }
+});
+
+// DELETE /api/admin/feedback/bulk - Bulk delete feedback entries
+app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
+    try {
+        const { ids } = req.body || {};
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Missing or invalid feedback IDs array' });
+        }
+
+        const idsStrings = ids.map(id => String(id));
+        if (!isDbEnabled) {
+            feedbackEntries = feedbackEntries.filter(f => !idsStrings.includes(String(f.id)));
+        } else {
+            await db.query(
+                `DELETE FROM app_feedback WHERE id = ANY($1)`,
+                [idsStrings]
+            );
+        }
+
+        await addLog('FEEDBACK_BULK_DELETE', req.user?.studentId || 'ADMIN', `Bulk deleted ${ids.length} feedbacks`);
+        res.json({ success: true, message: `Successfully deleted ${ids.length} feedback entries` });
+    } catch (e) {
+        console.error('Feedback bulk delete error:', e);
+        res.status(500).json({ error: 'Failed to bulk delete feedback entries' });
     }
 });
 

@@ -128,6 +128,39 @@ function App() {
     const [aiAnswer, setAiAnswer] = useState('');
     const [aiQaLoading, setAiQaLoading] = useState(false);
 
+    // Toast Notification States
+    const [toasts, setToasts] = useState([]);
+
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    const triggerNativeNotification = (title, body) => {
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                new Notification(title, { body });
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification(title, { body });
+                    }
+                });
+            }
+        }
+    };
+
+    const addToast = (title, message, type = 'success') => {
+        const id = Date.now() + Math.random().toString(36).substr(2, 9);
+        setToasts(prev => [...prev, { id, title, message, type }]);
+        triggerNativeNotification(title, message);
+
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 8000); // Display toast for 8 seconds
+    };
+
     const handleAskAiQuestion = async (e) => {
         e.preventDefault();
         if (!aiQuestion.trim() || aiQaLoading) return;
@@ -196,20 +229,31 @@ function App() {
                         email: user.email,
                         year: user.yearGroup
                     }).then(dbSync => {
-                        if (dbSync && dbSync.user) {
-                            setUser(prev => {
-                                const merged = prev ? {
-                                    ...prev,
-                                    role: dbSync.user.role || prev.role,
-                                    subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                                    stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                    showSupporter: dbSync.user.showSupporter !== false
-                                } : null;
-                                if (merged) {
-                                    localStorage.setItem('cached_user', JSON.stringify(merged));
-                                }
-                                return merged;
-                            });
+                        if (dbSync) {
+                            if (dbSync.user) {
+                                setUser(prev => {
+                                    const merged = prev ? {
+                                        ...prev,
+                                        role: dbSync.user.role || prev.role,
+                                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                                        stripeCustomerId: dbSync.user.stripeCustomerId || null,
+                                        showSupporter: dbSync.user.showSupporter !== false
+                                    } : null;
+                                    if (merged) {
+                                        localStorage.setItem('cached_user', JSON.stringify(merged));
+                                    }
+                                    return merged;
+                                });
+                            }
+                            if (dbSync.resolvedFeedbacks && dbSync.resolvedFeedbacks.length > 0) {
+                                dbSync.resolvedFeedbacks.forEach(fb => {
+                                    addToast(
+                                        "Feedback Resolved",
+                                        `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
+                                        'success'
+                                    );
+                                });
+                            }
                         }
                     }).catch(e => console.error("Billing sync failed", e));
                 }
@@ -335,20 +379,31 @@ function App() {
                         email: userData.email, // SBHS API usually provides this in ID token, checking availability helps
                         year: userData.yearGroup
                     }).then(dbSync => {
-                        if (dbSync && dbSync.user) {
-                            setUser(prev => {
-                                const updated = prev ? {
-                                    ...prev,
-                                    role: dbSync.user.role || prev.role,
-                                    subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                                    stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                    showSupporter: dbSync.user.showSupporter !== false
-                                } : null;
-                                if (updated) {
-                                    localStorage.setItem('cached_user', JSON.stringify(updated));
-                                }
-                                return updated;
-                            });
+                        if (dbSync) {
+                            if (dbSync.user) {
+                                setUser(prev => {
+                                    const updated = prev ? {
+                                        ...prev,
+                                        role: dbSync.user.role || prev.role,
+                                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
+                                        stripeCustomerId: dbSync.user.stripeCustomerId || null,
+                                        showSupporter: dbSync.user.showSupporter !== false
+                                    } : null;
+                                    if (updated) {
+                                        localStorage.setItem('cached_user', JSON.stringify(updated));
+                                    }
+                                    return updated;
+                                });
+                            }
+                            if (dbSync.resolvedFeedbacks && dbSync.resolvedFeedbacks.length > 0) {
+                                dbSync.resolvedFeedbacks.forEach(fb => {
+                                    addToast(
+                                        "Feedback Resolved",
+                                        `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
+                                        'success'
+                                    );
+                                });
+                            }
                         }
                     }).catch(e => console.log("Init sync failed silently", e));
                 }
@@ -1131,6 +1186,30 @@ function App() {
                     </div>
                 )}
             </main>
+
+            {/* Toast Notifications */}
+            {toasts.length > 0 && (
+                <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
+                    {toasts.map(toast => (
+                        <div
+                            key={toast.id}
+                            className="pointer-events-auto flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-lg text-sm"
+                        >
+                            <Info size={15} className="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <span className="flex-1 text-zinc-800 dark:text-zinc-200">
+                                <span className="font-bold">{toast.title}:</span>{' '}
+                                <span className="font-medium">{toast.message}</span>
+                            </span>
+                            <button
+                                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                                className="shrink-0 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

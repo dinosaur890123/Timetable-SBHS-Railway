@@ -258,6 +258,36 @@ export const deleteFeedback = async (feedbackId) => {
     }
 };
 
+export const bulkUpdateFeedbackStatus = async (feedbackIds, status) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify({ ids: feedbackIds, status })
+        });
+        if (!response.ok) throw new Error('Failed to bulk update feedback status');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const bulkDeleteFeedback = async (feedbackIds) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+            body: JSON.stringify({ ids: feedbackIds })
+        });
+        if (!response.ok) throw new Error('Failed to bulk delete feedback');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 
 
 

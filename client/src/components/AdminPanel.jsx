@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -45,6 +45,7 @@ const AdminPanel = ({ user }) => {
     const [viewingFeedback, setViewingFeedback] = useState(null); // Feedback object for detail modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
+    const [selectedFeedback, setSelectedFeedback] = useState(new Set()); // For bulk feedback actions
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
@@ -235,6 +236,63 @@ const AdminPanel = ({ user }) => {
             alert("Failed to prune old logs.");
         } finally {
             setIsPruningLogs(false);
+        }
+    };
+
+    const toggleSelectFeedback = (fbId) => {
+        setSelectedFeedback(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(fbId)) newSet.delete(fbId);
+            else newSet.add(fbId);
+            return newSet;
+        });
+    };
+
+    const toggleSelectAllFeedback = (filteredFb) => {
+        const allFilteredIds = filteredFb.map(f => f.id);
+        const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedFeedback.has(id));
+        if (allSelected) {
+            setSelectedFeedback(prev => {
+                const newSet = new Set(prev);
+                allFilteredIds.forEach(id => newSet.delete(id));
+                return newSet;
+            });
+        } else {
+            setSelectedFeedback(prev => {
+                const newSet = new Set(prev);
+                allFilteredIds.forEach(id => newSet.add(id));
+                return newSet;
+            });
+        }
+    };
+
+    const handleBulkUpdateFeedbackStatus = async (status) => {
+        if (selectedFeedback.size === 0) return;
+        setLoading(true);
+        try {
+            const idsArray = Array.from(selectedFeedback);
+            await bulkUpdateFeedbackStatus(idsArray, status);
+            setFeedback(prev => prev.map(item => idsArray.includes(item.id) ? { ...item, status, updatedAt: new Date().toISOString() } : item));
+            setSelectedFeedback(new Set());
+        } catch (err) {
+            alert("Failed to update status for selected feedback");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBulkDeleteFeedback = async () => {
+        if (selectedFeedback.size === 0) return;
+        setLoading(true);
+        try {
+            const idsArray = Array.from(selectedFeedback);
+            await bulkDeleteFeedback(idsArray);
+            setFeedback(prev => prev.filter(item => !idsArray.includes(item.id)));
+            setSelectedFeedback(new Set());
+        } catch (err) {
+            alert("Failed to delete selected feedback");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1310,6 +1368,31 @@ const AdminPanel = ({ user }) => {
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between">
                     <h3 className="font-semibold text-zinc-900 dark:text-white">Feedback Management</h3>
+                    <div className="flex gap-2">
+                        {selectedFeedback.size > 0 && (
+                            <>
+                                <button 
+                                    onClick={() => handleBulkUpdateFeedbackStatus('resolved')}
+                                    className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 dark:text-emerald-450 rounded-lg transition-colors flex items-center gap-1 border border-emerald-250/20"
+                                >
+                                    Resolve ({selectedFeedback.size})
+                                </button>
+                                <button 
+                                    onClick={() => handleBulkUpdateFeedbackStatus('archived')}
+                                    className="text-xs font-semibold px-3 py-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors flex items-center gap-1 border border-zinc-200/20"
+                                >
+                                    Archive ({selectedFeedback.size})
+                                </button>
+                                <button 
+                                    onClick={handleBulkDeleteFeedback}
+                                    className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-950/60 dark:text-red-450 rounded-lg transition-colors flex items-center gap-1 border border-red-250/20"
+                                >
+                                    <Trash2 size={14} />
+                                    Delete ({selectedFeedback.size})
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
                 <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                     <select
@@ -1338,13 +1421,35 @@ const AdminPanel = ({ user }) => {
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4">Feedback ID</th>
-                            <th className="px-6 py-4">Submitting User</th>
-                            <th className="px-6 py-4">Email</th>
-                            <th className="px-6 py-4">Severity</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
+                        {(() => {
+                            const filteredFeedback = feedback.filter(fb => {
+                                const matchesSearch = 
+                                    fb.ticketNumber?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.details?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.name?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.email?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
+                                    fb.studentId?.toLowerCase().includes(feedbackSearchTerm.toLowerCase());
+                                const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
+                                return matchesSearch && matchesStatus;
+                            });
+
+                            return (
+                                <tr>
+                                    <th className="px-6 py-4 w-12 text-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="rounded border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-blue-500"
+                                            checked={filteredFeedback.length > 0 && filteredFeedback.every(f => selectedFeedback.has(f.id))}
+                                            onChange={() => toggleSelectAllFeedback(filteredFeedback)}
+                                        />
+                                    </th>
+                                    <th className="px-6 py-4">Feedback ID</th>
+                                    <th className="px-6 py-4">Submitting User</th>
+                                    <th className="px-6 py-4">Email</th>
+                                    <th className="px-6 py-4">Severity</th>
+                                </tr>
+                            );
+                        })()}
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                         {loading ? (
@@ -1382,8 +1487,16 @@ const AdminPanel = ({ user }) => {
                                 <tr 
                                     key={fb.id} 
                                     onClick={() => setViewingFeedback(fb)}
-                                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                                    className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors ${selectedFeedback.has(fb.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''}`}
                                 >
+                                    <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-black"
+                                            checked={selectedFeedback.has(fb.id)}
+                                            onChange={() => toggleSelectFeedback(fb.id)}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4 font-mono text-xs text-zinc-650 dark:text-zinc-400 font-semibold">
                                         {fb.ticketNumber}
                                     </td>
@@ -1392,7 +1505,7 @@ const AdminPanel = ({ user }) => {
                                         <div className="text-zinc-555 text-xs font-mono">{fb.studentId}</div>
                                     </td>
                                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{fb.email}</td>
-                                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-6 py-4">
                                         {(() => {
                                             let sevClass = '';
                                             switch (fb.severity) {
@@ -1417,32 +1530,6 @@ const AdminPanel = ({ user }) => {
                                                 </span>
                                             );
                                         })()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                        <button
-                                            onClick={() => setViewingFeedback(fb)}
-                                            className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                            title="View Details"
-                                        >
-                                            <Eye size={16} />
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                if (window.confirm("Are you sure you want to delete this feedback request manually?")) {
-                                                    try {
-                                                        await deleteFeedback(fb.id);
-                                                        setFeedback(prev => prev.filter(item => item.id !== fb.id));
-                                                        alert("Feedback request deleted successfully.");
-                                                    } catch (err) {
-                                                        alert("Failed to delete feedback request.");
-                                                    }
-                                                }
-                                            }}
-                                            className="p-1 text-red-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                            title="Delete Request"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
                                     </td>
                                 </tr>
                             ));
@@ -1629,7 +1716,6 @@ const AdminPanel = ({ user }) => {
                                         await updateFeedbackStatus(viewingFeedback.id, 'resolved');
                                         setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'resolved', updatedAt: new Date().toISOString() } : item));
                                         setViewingFeedback(null);
-                                        alert("Feedback request marked as resolved successfully.");
                                     } catch (err) {
                                         alert("Failed to update status.");
                                     }
@@ -1646,7 +1732,6 @@ const AdminPanel = ({ user }) => {
                                         await updateFeedbackStatus(viewingFeedback.id, 'archived');
                                         setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'archived', updatedAt: new Date().toISOString() } : item));
                                         setViewingFeedback(null);
-                                        alert("Feedback request archived successfully.");
                                     } catch (err) {
                                         alert("Failed to update status.");
                                     }
@@ -1658,15 +1743,12 @@ const AdminPanel = ({ user }) => {
                         )}
                         <button
                             onClick={async () => {
-                                if (window.confirm("Are you sure you want to delete this feedback request manually?")) {
-                                    try {
-                                        await deleteFeedback(viewingFeedback.id);
-                                        setFeedback(prev => prev.filter(item => item.id !== viewingFeedback.id));
-                                        setViewingFeedback(null);
-                                        alert("Feedback request deleted successfully.");
-                                    } catch (err) {
-                                        alert("Failed to delete feedback request.");
-                                    }
+                                try {
+                                    await deleteFeedback(viewingFeedback.id);
+                                    setFeedback(prev => prev.filter(item => item.id !== viewingFeedback.id));
+                                    setViewingFeedback(null);
+                                } catch (err) {
+                                    alert("Failed to delete feedback request.");
                                 }
                             }}
                             className="px-4 py-2 bg-red-650 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
