@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   broadcast_type TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'hackclub',
   ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
-  version TEXT NOT NULL DEFAULT '2.0.0',
+  version TEXT NOT NULL DEFAULT '1.0.0',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -117,4 +117,4 @@ CREATE TABLE IF NOT EXISTS app_assignments (
 CREATE INDEX IF NOT EXISTS app_assignments_student_id_idx ON app_assignments (student_id);
 
 -- Version management migration
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '2.0.0';
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '1.0.0';

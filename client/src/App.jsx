@@ -1131,6 +1131,12 @@ function App() {
                                                     Open Feedback Form
                                                 </button>
                                             </div>
+
+                                            <div className="text-center pt-4">
+                                                <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
+                                                    Synchron v{currentVersion}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
