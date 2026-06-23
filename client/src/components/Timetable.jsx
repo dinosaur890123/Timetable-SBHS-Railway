@@ -88,33 +88,26 @@ const Timetable = ({ timetableData, showNow = true }) => {
     }
 
     return (
-        <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full mt-4">
-
-            <div className="flex items-center justify-between px-2">
-                <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-455">
-                    Daily Schedule
-                </h2>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-950 p-4 md:p-6 border border-zinc-200 dark:border-zinc-850 relative">
+        <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
+            <div className="bg-white dark:bg-zinc-950 p-3 md:p-4 border border-zinc-200 dark:border-zinc-850 relative">
 
                 {/* Vertical Timeline Axis Container */}
                 <div className="relative">
                     {/* Background Axis Line */}
-                    <div className="hidden md:block absolute left-[96px] md:left-[126px] top-4 bottom-4 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="hidden md:block absolute left-[80px] md:left-[110px] top-3 bottom-3 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
 
                     {/* Active Axis Line */}
                     {showNow && currentMinutes >= firstMin && (
                         <motion.div
-                            className="hidden md:block absolute left-[96px] md:left-[126px] top-4 w-0.5 bg-accent z-10 origin-top"
+                            className="hidden md:block absolute left-[80px] md:left-[110px] top-3 w-0.5 bg-accent z-10 origin-top"
                             initial={{ scaleY: 0 }}
                             animate={{ scaleY: timelineProgressPos / 100 }}
                             transition={{ duration: 1, ease: "easeOut" }}
-                            style={{ bottom: '1rem' }}
+                            style={{ bottom: '0.75rem' }}
                         />
                     )}
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         {routineData.map((data) => (
                             <PeriodCard
                                 key={`${data.bellId}-${data.index}`}

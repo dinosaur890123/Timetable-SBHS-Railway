@@ -690,48 +690,48 @@ function App() {
 
                         {/* TIMETABLE VIEW */}
                         {currentView === 'timetable' && (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {/* Date Controls & AI Button Row */}
-                                <div className="flex items-center justify-between gap-3 w-full bg-white dark:bg-zinc-900 py-2 px-4 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={prevDay} className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronLeft size={18} />
+                                <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 py-1.5 px-3 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={prevDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronLeft size={16} />
                                         </button>
                                         <button
                                             onClick={() => setShowDatePicker(!showDatePicker)}
-                                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-[140px] justify-center"
+                                            className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-[120px] justify-center"
                                         >
-                                            <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                                            <span className="text-xs font-bold text-zinc-900 dark:text-white">
                                                 {format(viewDate, 'EEEE')}
                                             </span>
-                                            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
                                                 {format(viewDate, 'd MMM')}
                                             </span>
                                         </button>
-                                        <button onClick={nextDay} className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronRight size={18} />
+                                        <button onClick={nextDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronRight size={16} />
                                         </button>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
                                         <button
                                             onClick={resetToday}
                                             disabled={isSameDay(viewDate, defaultDate)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-all ${
                                                 isSameDay(viewDate, defaultDate)
                                                     ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed'
                                                     : 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
                                             }`}
                                         >
-                                            <CalendarIcon size={13} />
+                                            <CalendarIcon size={11} />
                                             Today
                                         </button>
                                         {!aiDisabled && (
                                             <button
                                                 onClick={() => setShowAiModal(true)}
-                                                className="h-9 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition active:scale-95 flex items-center gap-1.5"
+                                                className="h-7 px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1"
                                             >
-                                                <Sparkles size={14} className="animate-pulse" />
+                                                <Sparkles size={12} className="animate-pulse" />
                                                 Ask AI
                                             </button>
                                         )}
@@ -739,8 +739,8 @@ function App() {
                                 </div>
 
                                 {showDatePicker && (
-                                    <div className="flex justify-center">
-                                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800">
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowDatePicker(false)}>
+                                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="date"
                                                 value={format(viewDate, 'yyyy-MM-dd')}

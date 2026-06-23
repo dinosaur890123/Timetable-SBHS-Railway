@@ -13,7 +13,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
     const { title, room, fullTeacher, isSubstituted, hasRoomChange } = period;
     const { time, endTime } = bell;
 
-    const isBreak = bell.bell === 'R' || bell.bell === 'L' || bell.bell === 'RC';
+    const isBreak = bell.bell === 'R' || bell.bell === 'L' || bell.bell === 'RC' || (title && title.toLowerCase().includes('lunch'));
     const isPast  = currentMinutes !== -1 && currentMinutes >= endMinutes;
 
     const progress = isCurrent && startMinutes && endMinutes
@@ -44,16 +44,16 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: routineIndex * 0.05 }}
-                className={`relative flex items-center gap-3 md:gap-6 py-2 ${isPast ? 'opacity-40' : ''}`}
+                className={`relative flex items-center gap-2 md:gap-4 py-1 ${isPast ? 'opacity-40' : ''}`}
             >
-                <div className="w-[60px] md:w-[90px] text-right shrink-0">
-                    <span className="text-xs font-semibold text-zinc-400">{time}</span>
+                <div className="w-[50px] md:w-[80px] text-right shrink-0">
+                    <span className="text-[10px] font-semibold text-zinc-400">{time}</span>
                 </div>
-                <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-6">
+                <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-5">
                     <div className={`transition-all duration-300 rounded-full ${dotSize} ${dotClass}`} />
                 </div>
-                <div className="flex-1 bg-zinc-100 dark:bg-zinc-900 px-4 py-2 border border-zinc-200 dark:border-zinc-800">
-                    <span className={`text-xs font-bold uppercase tracking-widest ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-500'}`}>
+                <div className="flex-1 bg-zinc-100 dark:bg-zinc-900 px-3 py-1 border border-zinc-200 dark:border-zinc-800">
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-500'}`}>
                         {bell.bellDisplay}
                     </span>
                 </div>
@@ -67,21 +67,21 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: routineIndex * 0.05 }}
-            className={`relative flex items-center gap-3 md:gap-6 py-1 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
+            className={`relative flex items-center gap-2 md:gap-4 py-0.5 group ${isPast ? 'opacity-65 hover:opacity-100 transition-opacity' : ''}`}
         >
             {/* Time column */}
-            <div className="w-[60px] md:w-[90px] text-right shrink-0 flex flex-col justify-center">
-                <span className={`text-sm font-bold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-650 dark:text-zinc-300'}`}>{time}</span>
-                <span className="text-[10px] font-medium text-zinc-400 mt-0.5">{endTime}</span>
+            <div className="w-[50px] md:w-[80px] text-right shrink-0 flex flex-col justify-center">
+                <span className={`text-xs font-bold ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-650 dark:text-zinc-300'}`}>{time}</span>
+                <span className="text-[9px] font-medium text-zinc-400 mt-0.5">{endTime}</span>
             </div>
 
             {/* Timeline dot */}
-            <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-6">
+            <div className="hidden md:flex relative z-10 items-center justify-center shrink-0 w-5">
                 <div className={`transition-all duration-300 rounded-full ${dotSize} ${dotClass}`} />
             </div>
 
             {/* Card */}
-            <div className={`flex-1 flex flex-col justify-center relative py-2 px-4 border transition-all duration-300 overflow-hidden ${cardStyle}`}>
+            <div className={`flex-1 flex flex-col justify-center relative py-1.5 px-3 border transition-all duration-300 overflow-hidden ${cardStyle}`}>
 
                 {/* Progress bar (current period only) */}
                 {isCurrent && (
@@ -91,15 +91,15 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                     />
                 )}
 
-                <div className="flex items-center justify-between relative z-10 w-full gap-4">
+                <div className="flex items-center justify-between relative z-10 w-full gap-3">
 
                     {/* Left: period bubble + title + Up Next badge */}
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`flex items-center justify-center w-8 h-8 text-xs font-bold shrink-0 ${subjectBubble} ${!isCurrent && isPast ? 'opacity-60' : ''}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className={`flex items-center justify-center w-7 h-7 text-[10px] font-bold shrink-0 ${subjectBubble} ${!isCurrent && isPast ? 'opacity-60' : ''}`}>
                             {bell.bell}
                         </div>
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <h3 className={`text-sm font-bold truncate ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <h3 className={`text-xs font-bold truncate ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
                                 {title || 'Free Period'}
                             </h3>
                             {isNext && (
@@ -111,31 +111,31 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                     </div>
 
                     {/* Right: time remaining, teacher, room */}
-                    <div className="flex items-center gap-3 shrink-0 text-xs">
+                    <div className="flex items-center gap-2 shrink-0 text-[10px]">
                         {isCurrent && (
-                            <span className="text-[10px] font-bold text-accent flex items-center gap-1 bg-zinc-100 dark:bg-black/50 px-1.5 py-0.5 border border-zinc-300 dark:border-zinc-700 shrink-0">
-                                <Clock size={11} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
+                            <span className="text-[9px] font-bold text-accent flex items-center gap-0.5 bg-zinc-100 dark:bg-black/50 px-1 py-0.5 border border-zinc-300 dark:border-zinc-700 shrink-0">
+                                <Clock size={10} className="animate-pulse" /> {Math.max(0, endMinutes - currentMinutes)}m left
                             </span>
                         )}
 
                         {fullTeacher && (
-                            <span className={`flex items-center gap-1 shrink-0 ${
+                            <span className={`flex items-center gap-0.5 shrink-0 ${
                                 isSubstituted
-                                    ? 'px-1.5 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900 shadow-sm'
+                                    ? 'px-1 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900 shadow-sm'
                                     : 'text-zinc-550 dark:text-zinc-400'
                             }`}>
-                                <UserIcon size={12} className={isSubstituted ? 'text-blue-500 dark:text-blue-400' : 'text-zinc-400'} />
+                                <UserIcon size={10} className={isSubstituted ? 'text-blue-500 dark:text-blue-400' : 'text-zinc-400'} />
                                 <span>{fullTeacher}</span>
                             </span>
                         )}
 
                         {room && (
-                            <span className={`flex items-center gap-1 font-semibold shrink-0 ${
+                            <span className={`flex items-center gap-0.5 font-semibold shrink-0 ${
                                 hasRoomChange
-                                    ? 'px-1.5 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm'
+                                    ? 'px-1 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm'
                                     : isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'
                             }`}>
-                                <MapPin size={12} className={hasRoomChange ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-400'} />
+                                <MapPin size={10} className={hasRoomChange ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-400'} />
                                 <span>{room}</span>
                             </span>
                         )}
