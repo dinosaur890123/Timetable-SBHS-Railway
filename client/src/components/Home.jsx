@@ -6,6 +6,7 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
+import { applyPeriodVariations } from '../utils/timetable';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
@@ -568,6 +569,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     let bells = [];
     let periods = {};
     let routine = [];
+    let classVariations = {};
+    let roomVariations = {};
 
     if (timetableData && timetableData.bells) {
         bells = timetableData.bells;
@@ -576,6 +579,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             periods = innerTimetable.periods;
             routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
         }
+        classVariations = timetableData.classVariations || {};
+        roomVariations = timetableData.roomVariations || {};
     }
 
     const getMinutes = (timeStr) => {
@@ -599,10 +604,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             const startMin = getMinutes(bell.time);
             const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60; // Approximate if no end time
 
-            const periodInfo = periods[bellId] || { title: bell.bellDisplay };
-            if (bellId === "R" || bellId === "L" || bellId === "RC") {
-                periodInfo.title = bell.bellDisplay;
-                periodInfo.isBreak = true;
+            const isBreakBell = bellId === "R" || bellId === "L" || bellId === "RC";
+            let periodInfo = periods[bellId] || { title: bell.bellDisplay };
+            if (isBreakBell) {
+                periodInfo = { ...periodInfo, title: bell.bellDisplay, isBreak: true };
+            } else {
+                periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
             }
 
             if (currentMinutes >= startMin && currentMinutes < endMin) {
@@ -614,10 +621,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     const nextBellId = routine[j];
                     const nextBell = bells.find(b => b.bell === nextBellId);
                     if (nextBell) {
-                        const nextPeriodInfo = periods[nextBellId] || { title: nextBell.bellDisplay };
-                        if (nextBellId === "R" || nextBellId === "L" || nextBellId === "RC") {
-                            nextPeriodInfo.title = nextBell.bellDisplay;
-                            nextPeriodInfo.isBreak = true;
+                        const isNextBreakBell = nextBellId === "R" || nextBellId === "L" || nextBellId === "RC";
+                        let nextPeriodInfo = periods[nextBellId] || { title: nextBell.bellDisplay };
+                        if (isNextBreakBell) {
+                            nextPeriodInfo = { ...nextPeriodInfo, title: nextBell.bellDisplay, isBreak: true };
+                        } else {
+                            nextPeriodInfo = applyPeriodVariations(nextPeriodInfo, nextBellId, classVariations, roomVariations);
                         }
                         nextClass = { ...nextPeriodInfo, ...nextBell };
                         break;
@@ -943,13 +952,35 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     <div className="inline-block px-3 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold uppercase tracking-widest mb-3">
                                         Period {currentClass.bell}
                                     </div>
-                                    <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-2 leading-tight">
-                                        {currentClass.title || "Free Period"}
-                                    </h3>
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
+                                        <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white leading-tight">
+                                            {currentClass.title || "Free Period"}
+                                        </h3>
+                                        {currentClass.isSubstituted && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                                                Substitution
+                                            </span>
+                                        )}
+                                        {currentClass.hasRoomChange && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-950/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
+                                                Room Change
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
                                         <span className="flex items-center gap-1.5"><Clock size={16} /> {currentClass.time} - {currentClass.endTime || '??'}</span>
-                                        {currentClass.room && <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200"><MapPin size={16} /> {currentClass.room}</span>}
-                                        {currentClass.fullTeacher && <span className="flex items-center gap-1.5"><UserIcon size={16} /> {currentClass.fullTeacher}</span>}
+                                        {currentClass.room && (
+                                            <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200">
+                                                <MapPin size={16} /> {currentClass.room}
+                                                {currentClass.oldRoom && <span className="text-[10px] text-zinc-400 line-through">({currentClass.oldRoom})</span>}
+                                            </span>
+                                        )}
+                                        {currentClass.fullTeacher && (
+                                            <span className="flex items-center gap-1.5">
+                                                <UserIcon size={16} /> {currentClass.fullTeacher}
+                                                {currentClass.oldTeacher && <span className="text-[10px] text-zinc-400 line-through">({currentClass.oldTeacher})</span>}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
