@@ -151,14 +151,16 @@ function App() {
         }
     };
 
-    const addToast = (title, message, type = 'success') => {
+    const addToast = (title, message, type = 'success', persistent = false) => {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
         setToasts(prev => [...prev, { id, title, message, type }]);
         triggerNativeNotification(title, message);
 
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-        }, 8000); // Display toast for 8 seconds
+        if (!persistent) {
+            setTimeout(() => {
+                setToasts(prev => prev.filter(t => t.id !== id));
+            }, 8000);
+        }
     };
 
     const handleAskAiQuestion = async (e) => {
@@ -250,7 +252,8 @@ function App() {
                                     addToast(
                                         "Feedback Resolved",
                                         `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
-                                        'success'
+                                        'resolved',
+                                        true
                                     );
                                 });
                             }
@@ -400,7 +403,8 @@ function App() {
                                     addToast(
                                         "Feedback Resolved",
                                         `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
-                                        'success'
+                                        'resolved',
+                                        true
                                     );
                                 });
                             }
@@ -1193,16 +1197,28 @@ function App() {
                     {toasts.map(toast => (
                         <div
                             key={toast.id}
-                            className="pointer-events-auto flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-lg text-sm"
+                            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 shadow-lg text-sm border ${
+                                toast.type === 'resolved'
+                                    ? 'bg-green-500/10 border-green-500/20 dark:bg-green-500/20'
+                                    : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800'
+                            }`}
                         >
-                            <Info size={15} className="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            <span className="flex-1 text-zinc-800 dark:text-zinc-200">
+                            <Info size={15} className={`shrink-0 ${
+                                toast.type === 'resolved' ? 'text-green-600 dark:text-green-400' : 'text-zinc-500 dark:text-zinc-400'
+                            }`} />
+                            <span className={`flex-1 ${
+                                toast.type === 'resolved' ? 'text-green-700 dark:text-green-400' : 'text-zinc-800 dark:text-zinc-200'
+                            }`}>
                                 <span className="font-bold">{toast.title}:</span>{' '}
                                 <span className="font-medium">{toast.message}</span>
                             </span>
                             <button
                                 onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                                className="shrink-0 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                                className={`shrink-0 transition-colors ${
+                                    toast.type === 'resolved'
+                                        ? 'text-green-500 hover:text-green-800 dark:hover:text-green-200'
+                                        : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                                }`}
                             >
                                 <X size={14} />
                             </button>

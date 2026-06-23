@@ -141,9 +141,6 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                         <span className="flex items-center gap-1 text-zinc-550 dark:text-zinc-400 shrink-0">
                             <UserIcon size={12} className="text-zinc-400" />
                             <span>{fullTeacher}</span>
-                            {period.oldTeacher && (
-                                <span className="text-[10px] text-zinc-400 line-through">({period.oldTeacher})</span>
-                            )}
                         </span>
                    )}
 
@@ -151,9 +148,6 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                         <span className={`flex items-center gap-1 font-semibold shrink-0 ${isCurrent ? 'text-black dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
                             <MapPin size={12} className="text-zinc-400" />
                             <span>{room}</span>
-                            {period.oldRoom && (
-                                <span className="text-[10px] text-zinc-400 line-through">({period.oldRoom})</span>
-                            )}
                         </span>
                    )}
                </div>
