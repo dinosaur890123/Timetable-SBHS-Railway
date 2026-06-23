@@ -88,42 +88,23 @@ const Timetable = ({ timetableData, showNow = true }) => {
     }
 
     return (
-        <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
-            <div className="bg-white dark:bg-zinc-950 p-3 md:p-4 border border-zinc-200 dark:border-zinc-850 relative">
-
-                {/* Vertical Timeline Axis Container */}
-                <div className="relative">
-                    {/* Background Axis Line */}
-                    <div className="hidden md:block absolute left-[80px] md:left-[110px] top-3 bottom-3 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
-
-                    {/* Active Axis Line */}
-                    {showNow && currentMinutes >= firstMin && (
-                        <motion.div
-                            className="hidden md:block absolute left-[80px] md:left-[110px] top-3 w-0.5 bg-accent z-10 origin-top"
-                            initial={{ scaleY: 0 }}
-                            animate={{ scaleY: timelineProgressPos / 100 }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            style={{ bottom: '0.75rem' }}
+        <div className="flex flex-col gap-2 max-w-6xl mx-auto w-full">
+            <div className="bg-white dark:bg-zinc-950 p-2 md:p-3 border border-zinc-200 dark:border-zinc-850">
+                <div className="space-y-1">
+                    {routineData.map((data) => (
+                        <PeriodCard
+                            key={`${data.bellId}-${data.index}`}
+                            period={data.periodInfo}
+                            bell={data.bell}
+                            isCurrent={data.isCurrent}
+                            isNext={data.isNext}
+                            routineIndex={data.index}
+                            currentMinutes={currentMinutes}
+                            startMinutes={data.startMin}
+                            endMinutes={data.endMin}
                         />
-                    )}
-
-                    <div className="space-y-1.5">
-                        {routineData.map((data) => (
-                            <PeriodCard
-                                key={`${data.bellId}-${data.index}`}
-                                period={data.periodInfo}
-                                bell={data.bell}
-                                isCurrent={data.isCurrent}
-                                isNext={data.isNext}
-                                routineIndex={data.index}
-                                currentMinutes={currentMinutes}
-                                startMinutes={data.startMin}
-                                endMinutes={data.endMin}
-                            />
-                        ))}
-                    </div>
+                    ))}
                 </div>
-
             </div>
         </div>
     );
