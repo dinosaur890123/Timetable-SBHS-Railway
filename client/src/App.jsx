@@ -1194,36 +1194,27 @@ function App() {
             {/* Toast Notifications */}
             {toasts.length > 0 && (
                 <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
-                    {toasts.map(toast => (
-                        <div
-                            key={toast.id}
-                            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 shadow-lg text-sm border ${
-                                toast.type === 'resolved'
-                                    ? 'bg-green-500/10 border-green-500/20 dark:bg-green-500/20'
-                                    : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800'
-                            }`}
-                        >
-                            <Info size={15} className={`shrink-0 ${
-                                toast.type === 'resolved' ? 'text-green-600 dark:text-green-400' : 'text-zinc-500 dark:text-zinc-400'
-                            }`} />
-                            <span className={`flex-1 ${
-                                toast.type === 'resolved' ? 'text-green-700 dark:text-green-400' : 'text-zinc-800 dark:text-zinc-200'
-                            }`}>
-                                <span className="font-bold">{toast.title}:</span>{' '}
-                                <span className="font-medium">{toast.message}</span>
-                            </span>
-                            <button
-                                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                                className={`shrink-0 transition-colors ${
-                                    toast.type === 'resolved'
-                                        ? 'text-green-500 hover:text-green-800 dark:hover:text-green-200'
-                                        : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-                                }`}
-                            >
-                                <X size={14} />
-                            </button>
-                        </div>
-                    ))}
+                    {toasts.map(toast => {
+                        const isResolved = toast.type === 'resolved';
+                        const styles = isResolved
+                            ? { wrap: 'bg-green-50 border-green-300 dark:bg-green-950 dark:border-green-700', icon: 'text-green-600 dark:text-green-400', text: 'text-green-800 dark:text-green-200', btn: 'text-green-500 hover:text-green-900 dark:hover:text-green-100' }
+                            : { wrap: 'bg-white border-zinc-200 dark:bg-zinc-900 dark:border-zinc-700', icon: 'text-zinc-500 dark:text-zinc-400', text: 'text-zinc-800 dark:text-zinc-200', btn: 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white' };
+                        return (
+                            <div key={toast.id} className={`pointer-events-auto flex items-start gap-3 px-4 py-3 w-72 shadow-lg text-sm border ${styles.wrap}`}>
+                                <Info size={15} className={`shrink-0 mt-0.5 ${styles.icon}`} />
+                                <span className={`flex-1 leading-snug ${styles.text}`}>
+                                    <span className="font-bold">{toast.title}:</span>{' '}
+                                    <span className="font-medium">{toast.message}</span>
+                                </span>
+                                <button
+                                    onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                                    className={`shrink-0 transition-colors mt-0.5 ${styles.btn}`}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
