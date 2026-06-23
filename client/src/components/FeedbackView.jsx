@@ -76,7 +76,7 @@ const FeedbackView = ({ onBack }) => {
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Submitted</p>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mt-2">Thanks for the feedback</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-3 max-w-2xl">
-              Your report has been received. Use the ticket number below if you need to follow up by email or reference this submission later.
+              Your report has been received. Use the ticket number below if you need to follow up by email or reference this submission later. Thanks!
             </p>
           </div>
 
