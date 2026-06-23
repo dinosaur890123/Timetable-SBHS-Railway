@@ -119,6 +119,13 @@ function App() {
             return [];
         }
     });
+    const [currentVersion, setCurrentVersion] = useState(() => {
+        try {
+            return localStorage.getItem('app_version') || '1.0.0';
+        } catch {
+            return '1.0.0';
+        }
+    });
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
@@ -188,12 +195,24 @@ function App() {
             try {
                 const systemData = await fetchSystemStatus();
                 if (systemData) {
-                    const dismissedId = localStorage.getItem('dismissedUpdateId');
-                    if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
-                        setBroadcast(null);
+                    // Version-based update check
+                    if (systemData.version && systemData.version !== currentVersion) {
+                        localStorage.setItem('app_version', systemData.version);
+                        setCurrentVersion(systemData.version);
+                    }
+
+                    // Show broadcast if it's an update and version is newer
+                    if (systemData.broadcast?.type === 'update') {
+                        const serverVersion = systemData.broadcast.version || systemData.version;
+                        if (serverVersion && serverVersion > currentVersion) {
+                            setBroadcast(systemData.broadcast);
+                        } else {
+                            setBroadcast(null);
+                        }
                     } else {
                         setBroadcast(systemData.broadcast);
                     }
+
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -364,12 +383,25 @@ function App() {
 
                 if (systemData) {
                     localStorage.setItem('cached_system', JSON.stringify(systemData));
-                    const dismissedId = localStorage.getItem('dismissedUpdateId');
-                    if (systemData.broadcast?.type === 'update' && String(systemData.broadcast.id) === dismissedId) {
-                        setBroadcast(null);
+
+                    // Version-based update check
+                    if (systemData.version && systemData.version !== currentVersion) {
+                        localStorage.setItem('app_version', systemData.version);
+                        setCurrentVersion(systemData.version);
+                    }
+
+                    // Show broadcast if it's an update and version is newer
+                    if (systemData.broadcast?.type === 'update') {
+                        const serverVersion = systemData.broadcast.version || systemData.version;
+                        if (serverVersion && serverVersion > currentVersion) {
+                            setBroadcast(systemData.broadcast);
+                        } else {
+                            setBroadcast(null);
+                        }
                     } else {
                         setBroadcast(systemData.broadcast);
                     }
+
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -637,9 +669,10 @@ function App() {
                         {broadcast.type === 'update' && (
                             <button
                                 onClick={() => {
-                                    if (broadcast.id) {
-                                        localStorage.setItem('dismissedUpdateId', String(broadcast.id));
-                                    }
+                                    const newVersion = broadcast.version || currentVersion;
+                                    localStorage.setItem('app_version', newVersion);
+                                    setCurrentVersion(newVersion);
+                                    setBroadcast(null);
                                     logout(true);
                                 }}
                                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"

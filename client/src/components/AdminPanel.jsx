@@ -19,6 +19,7 @@ const AdminPanel = ({ user }) => {
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
+    const [targetVersion, setTargetVersion] = useState('');
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -373,9 +374,10 @@ const AdminPanel = ({ user }) => {
     const handleBroadcast = async (e) => {
         e.preventDefault();
         try {
-            await setBroadcast(broadcastMsg, broadcastType);
+            await setBroadcast(broadcastMsg, broadcastType, targetVersion || null);
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
+            setTargetVersion('');
             loadData(); // Refresh logs
         } catch (err) {
             alert("Failed to set broadcast");
@@ -1007,6 +1009,21 @@ const AdminPanel = ({ user }) => {
                         ))}
                     </div>
                 </div>
+
+                {broadcastType === 'update' && (
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
+                        <input
+                            type="text"
+                            value={targetVersion}
+                            onChange={(e) => setTargetVersion(e.target.value)}
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
+                            placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
+                            pattern="\d+\.\d+\.\d+"
+                        />
+                        <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
+                    </div>
+                )}
 
                 <div className="pt-4 flex gap-4">
                     {currentBroadcast && (

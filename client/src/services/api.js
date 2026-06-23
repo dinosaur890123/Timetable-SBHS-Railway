@@ -78,10 +78,10 @@ const getAccessToken = () => localStorage.getItem('sbhs_access_token');
 
 export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
-    const dismissedUpdateId = localStorage.getItem('dismissedUpdateId');
+    const appVersion = localStorage.getItem('app_version');
     localStorage.clear();
     if (theme) localStorage.setItem('theme', theme);
-    if (dismissedUpdateId) localStorage.setItem('dismissedUpdateId', dismissedUpdateId);
+    if (appVersion) localStorage.setItem('app_version', appVersion);
     if (redirectToLogin === true) {
         performLogin();
     } else {
