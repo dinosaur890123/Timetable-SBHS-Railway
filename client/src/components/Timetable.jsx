@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PeriodCard from './PeriodCard';
 import { motion } from 'framer-motion';
+import { applyPeriodVariations } from '../utils/timetable';
 
 const Timetable = ({ timetableData, showNow = true }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -34,6 +35,8 @@ const Timetable = ({ timetableData, showNow = true }) => {
 
     const { periods } = innerTimetable;
     const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
+    const classVariations = timetableData.classVariations || {};
+    const roomVariations = timetableData.roomVariations || {};
 
     const getMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
@@ -52,9 +55,12 @@ const Timetable = ({ timetableData, showNow = true }) => {
         const bell = bells.find(b => b.bell === bellId);
         if (!bell) return null;
 
-        const periodInfo = periods[bellId] || { title: bell.bellDisplay };
-        if (bellId === "R" || bellId === "L" || bellId === "RC") {
-            periodInfo.title = bell.bellDisplay;
+        const isBreakBell = bellId === "R" || bellId === "L" || bellId === "RC";
+        let periodInfo = periods[bellId] || { title: bell.bellDisplay };
+        if (isBreakBell) {
+            periodInfo = { ...periodInfo, title: bell.bellDisplay };
+        } else {
+            periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
         }
 
         const startMin = getMinutes(bell.time);
