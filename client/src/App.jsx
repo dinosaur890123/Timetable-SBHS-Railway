@@ -135,33 +135,15 @@ function App() {
     const [aiAnswer, setAiAnswer] = useState('');
     const [aiQaLoading, setAiQaLoading] = useState(false);
 
+    // Date Picker State
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
     // Toast Notification States
     const [toasts, setToasts] = useState([]);
-
-    useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
-    }, []);
-
-    const triggerNativeNotification = (title, body) => {
-        if ('Notification' in window) {
-            if (Notification.permission === 'granted') {
-                new Notification(title, { body });
-            } else if (Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        new Notification(title, { body });
-                    }
-                });
-            }
-        }
-    };
 
     const addToast = (title, message, type = 'success', persistent = false) => {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
         setToasts(prev => [...prev, { id, title, message, type }]);
-        triggerNativeNotification(title, message);
 
         if (!persistent) {
             setTimeout(() => {
@@ -710,45 +692,69 @@ function App() {
                         {currentView === 'timetable' && (
                             <div className="space-y-4">
                                 {/* Date Controls & AI Button Row */}
-                                <div className="flex items-center justify-between gap-3 w-full">
-                                    {/* Date Controls (Shortened) */}
-                                    <div className="flex items-center justify-between bg-white dark:bg-zinc-900 py-1.5 px-3 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 max-w-md flex-1">
-                                        <div className="flex items-center gap-2 justify-between sm:justify-start flex-1 sm:flex-initial">
-                                            <button onClick={prevDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-650 dark:text-zinc-400">
-                                                <ChevronLeft size={16} />
-                                            </button>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                                                    {format(viewDate, 'EEEE')}
-                                                </span>
-                                                <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">
-                                                    {format(viewDate, 'd MMM')}
-                                                </span>
-                                            </div>
-                                            <button onClick={nextDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-650 dark:text-zinc-400">
-                                                <ChevronRight size={16} />
-                                            </button>
-                                        </div>
+                                <div className="flex items-center justify-between gap-3 w-full bg-white dark:bg-zinc-900 py-2 px-4 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={prevDay} className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDatePicker(!showDatePicker)}
+                                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-[140px] justify-center"
+                                        >
+                                            <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                                                {format(viewDate, 'EEEE')}
+                                            </span>
+                                            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                                                {format(viewDate, 'd MMM')}
+                                            </span>
+                                        </button>
+                                        <button onClick={nextDay} className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronRight size={18} />
+                                        </button>
+                                    </div>
 
-                                        {!isSameDay(viewDate, defaultDate) && (
-                                            <button onClick={resetToday} className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors ml-2 shrink-0">
-                                                <CalendarIcon size={11} />
-                                                Today
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={resetToday}
+                                            disabled={isSameDay(viewDate, defaultDate)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                                                isSameDay(viewDate, defaultDate)
+                                                    ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed'
+                                                    : 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                                            }`}
+                                        >
+                                            <CalendarIcon size={13} />
+                                            Today
+                                        </button>
+                                        {!aiDisabled && (
+                                            <button
+                                                onClick={() => setShowAiModal(true)}
+                                                className="h-9 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition active:scale-95 flex items-center gap-1.5"
+                                            >
+                                                <Sparkles size={14} className="animate-pulse" />
+                                                Ask AI
                                             </button>
                                         )}
                                     </div>
-
-                                    {/* AI Assistant Button */}
-                                    {!aiDisabled && (
-                                        <button
-                                            onClick={() => setShowAiModal(true)}
-                                            className="h-[34px] px-3.5 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-700 hover:to-indigo-750 text-white text-[11px] font-bold uppercase tracking-wider rounded-2xl shadow-sm transition active:scale-95 flex items-center gap-1.5 shrink-0"
-                                        >
-                                            <Sparkles size={13} className="animate-pulse" />
-                                            <span>Ask AI</span>
-                                        </button>
-                                    )}
                                 </div>
+
+                                {showDatePicker && (
+                                    <div className="flex justify-center">
+                                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800">
+                                            <input
+                                                type="date"
+                                                value={format(viewDate, 'yyyy-MM-dd')}
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        setViewDate(new Date(e.target.value));
+                                                        setShowDatePicker(false);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <Timetable timetableData={timetable} completeTimetable={completeTimetable} />
                             </div>
