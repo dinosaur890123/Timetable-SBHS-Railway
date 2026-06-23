@@ -88,9 +88,9 @@ const Timetable = ({ timetableData, showNow = true }) => {
     }
 
     return (
-        <div className="flex flex-col gap-2 max-w-6xl mx-auto w-full">
-            <div className="bg-white dark:bg-zinc-950 p-2 md:p-3 border border-zinc-200 dark:border-zinc-850">
-                <div className="space-y-1">
+        <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full">
+            <div className="bg-white dark:bg-zinc-950 p-3 md:p-4 border border-zinc-200 dark:border-zinc-850">
+                <div className="space-y-1.5">
                     {routineData.map((data) => (
                         <PeriodCard
                             key={`${data.bellId}-${data.index}`}
