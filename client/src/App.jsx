@@ -22,7 +22,9 @@ import {
     fetchSystemStatus,
     fetchCompleteTimetable,
     fetchAiBriefing,
-    fetchTimetableQa
+    fetchTimetableQa,
+    fetchUserPreferences,
+    saveUserPreferences
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -153,6 +155,41 @@ function App() {
 
     // Toast Notification States
     const [toasts, setToasts] = useState([]);
+
+    // Debounced preference save
+    const savePreferencesTimeout = useRef(null);
+    const syncPreferencesToServer = useRef(false);
+
+    const savePreferences = () => {
+        if (!user?.studentId || !syncPreferencesToServer.current) return;
+
+        if (savePreferencesTimeout.current) {
+            clearTimeout(savePreferencesTimeout.current);
+        }
+
+        savePreferencesTimeout.current = setTimeout(() => {
+            const preferences = {
+                theme,
+                colorTheme,
+                darkStyle,
+                aiDisabled,
+                dashboardLayout: JSON.parse(localStorage.getItem('dashboard_layout') || 'null'),
+                clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
+                scratchpadContent: localStorage.getItem('scratchpad_content') || '',
+                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
+            };
+
+            saveUserPreferences(user.studentId, preferences).catch(e => {
+                console.log("Failed to save preferences to server:", e);
+            });
+        }, 1000); // Debounce for 1 second
+    };
+
+    const handleLayoutChange = (layout) => {
+        // Layout is already saved to localStorage by Home component
+        // Just trigger the debounced server sync
+        savePreferences();
+    };
 
     const addToast = (title, message, type = 'success', persistent = false) => {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
@@ -297,6 +334,7 @@ function App() {
             root.classList.remove('dark');
         }
         localStorage.setItem('theme', theme);
+        savePreferences();
     }, [theme]);
 
     // Dark Style Config
@@ -304,10 +342,12 @@ function App() {
         const root = window.document.documentElement;
         root.setAttribute('data-dark-style', darkStyle);
         localStorage.setItem('dark_style', darkStyle);
+        savePreferences();
     }, [darkStyle]);
 
     useEffect(() => {
         localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
+        savePreferences();
     }, [aiDisabled]);
 
     // Color Theme Config
@@ -328,6 +368,7 @@ function App() {
             root.classList.add(`theme-${colorTheme}`);
         }
         localStorage.setItem('color_theme', colorTheme);
+        savePreferences();
     }, [colorTheme]);
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -437,6 +478,53 @@ function App() {
                             }
                         }
                     }).catch(e => console.log("Init sync failed silently", e));
+
+                    // Load user preferences from server
+                    fetchUserPreferences(userData.studentId).then(prefData => {
+                        if (prefData && prefData.preferences) {
+                            const prefs = prefData.preferences;
+                            
+                            // Apply theme preferences
+                            if (prefs.theme) {
+                                setTheme(prefs.theme);
+                                localStorage.setItem('theme', prefs.theme);
+                            }
+                            if (prefs.colorTheme) {
+                                setColorTheme(prefs.colorTheme);
+                                localStorage.setItem('color_theme', prefs.colorTheme);
+                            }
+                            if (prefs.darkStyle) {
+                                setDarkStyle(prefs.darkStyle);
+                                localStorage.setItem('dark_style', prefs.darkStyle);
+                            }
+                            if (prefs.aiDisabled !== undefined) {
+                                setAiDisabled(prefs.aiDisabled);
+                                localStorage.setItem('ai_disabled', prefs.aiDisabled ? 'true' : 'false');
+                            }
+                            
+                            // Apply dashboard layout
+                            if (prefs.dashboardLayout) {
+                                localStorage.setItem('dashboard_layout', JSON.stringify(prefs.dashboardLayout));
+                            }
+                            
+                            // Apply other widget-specific preferences
+                            if (prefs.clockWidgetFormat) {
+                                localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
+                            }
+                            if (prefs.scratchpadContent !== undefined) {
+                                localStorage.setItem('scratchpad_content', prefs.scratchpadContent);
+                            }
+                            if (prefs.transitWidgetStop) {
+                                localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
+                            }
+                        }
+                        // Enable server sync after initial load
+                        syncPreferencesToServer.current = true;
+                    }).catch(e => {
+                        console.log("Failed to load user preferences", e);
+                        // Still enable sync even if load failed
+                        syncPreferencesToServer.current = true;
+                    });
                 }
 
             } catch (error) {
@@ -698,6 +786,7 @@ function App() {
                                 theme={theme}
                                 toggleTheme={toggleTheme}
                                 aiDisabled={aiDisabled}
+                                onLayoutChange={handleLayoutChange}
                             />
                         )}
 

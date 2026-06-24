@@ -422,7 +422,8 @@ async function upsertUser(newUser) {
             stripeCustomerId: null,
             stripeSubscriptionId: null,
             subscriptionStatus: null,
-            showSupporter: true
+            showSupporter: true,
+            preferences: {}
         };
         users.push(created);
         return created;
@@ -939,6 +940,73 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Update profile error:', e);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+// GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
+app.get('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
+    try {
+        const requestedId = String(req.params.id);
+        const studentId = String(req.user.studentId);
+
+        if (requestedId !== studentId) {
+            return res.status(403).json({ error: 'Forbidden: Cannot access another user\'s preferences' });
+        }
+
+        let preferences = {};
+        if (!isDbEnabled) {
+            const userIndex = users.findIndex(u => String(u.id) === studentId);
+            if (userIndex !== -1) {
+                preferences = users[userIndex].preferences || {};
+            }
+        } else {
+            const result = await db.query(
+                'SELECT user_preferences FROM app_users WHERE id = $1',
+                [studentId]
+            );
+            if (result.rows.length > 0) {
+                preferences = result.rows[0].user_preferences || {};
+            }
+        }
+
+        res.json({ success: true, preferences });
+    } catch (e) {
+        console.error('Fetch preferences error:', e);
+        res.status(500).json({ error: 'Failed to fetch preferences' });
+    }
+});
+
+// PUT /api/users/:id/preferences - Update user preferences
+app.put('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
+    try {
+        const requestedId = String(req.params.id);
+        const studentId = String(req.user.studentId);
+        const { preferences } = req.body || {};
+
+        if (requestedId !== studentId) {
+            return res.status(403).json({ error: 'Forbidden: Cannot modify another user\'s preferences' });
+        }
+
+        if (!preferences || typeof preferences !== 'object') {
+            return res.status(400).json({ error: 'Invalid preferences object' });
+        }
+
+        if (!isDbEnabled) {
+            const userIndex = users.findIndex(u => String(u.id) === studentId);
+            if (userIndex !== -1) {
+                users[userIndex].preferences = preferences;
+            }
+        } else {
+            await db.query(
+                'UPDATE app_users SET user_preferences = $1 WHERE id = $2',
+                [JSON.stringify(preferences), studentId]
+            );
+        }
+
+        res.json({ success: true, preferences });
+    } catch (e) {
+        console.error('Update preferences error:', e);
+        res.status(500).json({ error: 'Failed to update preferences' });
     }
 });
 

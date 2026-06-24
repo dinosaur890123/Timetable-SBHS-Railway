@@ -49,7 +49,7 @@ const rowSpanClasses = {
 };
 
 // Live Digital & Analogue Clock Widget
-const ClockWidget = () => {
+const ClockWidget = ({ onPreferenceChange }) => {
     const [time, setTime] = useState(new Date());
     const [formatType, setFormatType] = useState(() => localStorage.getItem('clock_widget_format') || 'both');
 
@@ -63,6 +63,7 @@ const ClockWidget = () => {
         setFormatType(prev => {
             const next = prev === 'digital' ? 'analogue' : prev === 'analogue' ? 'both' : 'digital';
             localStorage.setItem('clock_widget_format', next);
+            if (onPreferenceChange) onPreferenceChange();
             return next;
         });
     };
@@ -258,12 +259,13 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
 };
 
 // Persistent Scratchpad Widget
-const ScratchpadWidget = () => {
+const ScratchpadWidget = ({ onPreferenceChange }) => {
     const [text, setText] = useState(() => localStorage.getItem('scratchpad_content') || '');
 
     const handleChange = (e) => {
         setText(e.target.value);
         localStorage.setItem('scratchpad_content', e.target.value);
+        if (onPreferenceChange) onPreferenceChange();
     };
 
     return (
@@ -286,7 +288,7 @@ const ScratchpadWidget = () => {
 };
 
 // Live Transit departures Widget (Synchron Pro Feature)
-const TransitWidget = ({ user, setView }) => {
+const TransitWidget = ({ user, setView, onPreferenceChange }) => {
     const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
     const [stopName, setStopName] = useState(() => localStorage.getItem('transit_widget_stop') || 'Moore Park Light Rail');
     const [tempStopName, setTempStopName] = useState(stopName);
@@ -324,6 +326,7 @@ const TransitWidget = ({ user, setView }) => {
         if (!cleanName) return;
         setStopName(cleanName);
         localStorage.setItem('transit_widget_stop', cleanName);
+        if (onPreferenceChange) onPreferenceChange();
         setIsConfiguring(false);
     };
 
@@ -505,7 +508,7 @@ const TransitWidget = ({ user, setView }) => {
 };
 
 // Main Home Component
-const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled }) => {
+const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled, onLayoutChange }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
 
@@ -513,6 +516,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const [awardPoints, setAwardPoints] = useState(0);
     const [badgesCount, setBadgesCount] = useState(0);
     const [nextSession, setNextSession] = useState(null);
+
+    // Callback to notify parent of preference changes
+    const handlePreferenceChange = () => {
+        if (onLayoutChange) onLayoutChange();
+    };
 
     useEffect(() => {
         if (!user?.studentId) return;
@@ -552,7 +560,10 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     // Save dashboard layout on modification
     useEffect(() => {
         localStorage.setItem('dashboard_layout', JSON.stringify(activeTiles));
-    }, [activeTiles]);
+        if (onLayoutChange) {
+            onLayoutChange(activeTiles);
+        }
+    }, [activeTiles, onLayoutChange]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -1079,7 +1090,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     </div>
                 );
             case 'clock':
-                return <ClockWidget />;
+                return <ClockWidget onPreferenceChange={handlePreferenceChange} />;
             case 'timetable_preview':
                 return (
                     <TimetablePreviewWidget
@@ -1098,7 +1109,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     />
                 );
             case 'scratchpad':
-                return <ScratchpadWidget />;
+                return <ScratchpadWidget onPreferenceChange={handlePreferenceChange} />;
             case 'award_scheme_summary':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between cursor-pointer select-none" onClick={() => setView && setView('awards')}>
@@ -1141,7 +1152,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 );
             case 'transit_departures':
                 return (
-                    <TransitWidget user={user} setView={setView} />
+                    <TransitWidget user={user} setView={setView} onPreferenceChange={handlePreferenceChange} />
                 );
             default:
                 return null;

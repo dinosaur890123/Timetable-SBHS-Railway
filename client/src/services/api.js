@@ -670,5 +670,36 @@ export const deleteAssignment = async (id) => {
     return response.json();
 };
 
+// User Preferences API
+export const fetchUserPreferences = async (studentId) => {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch preferences: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const saveUserPreferences = async (studentId, preferences) => {
+    const token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ preferences })
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to save preferences: ${response.status}`);
+    }
+    return response.json();
+};
+
 
 

@@ -118,3 +118,6 @@ CREATE INDEX IF NOT EXISTS app_assignments_student_id_idx ON app_assignments (st
 
 -- Version management migration
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '1.0.0';
+
+-- User preferences migration
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
