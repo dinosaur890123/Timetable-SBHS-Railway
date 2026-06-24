@@ -22,6 +22,19 @@ const variationMatchesPeriod = (variation, periodInfo) => {
     return true;
 };
 
+// Check if a bell ID represents a break period (recess, lunch, roll call, or period 0 with no class)
+export const isBreakBell = (bellId, periodInfo = null) => {
+    if (!bellId) return false;
+    const id = String(bellId).toUpperCase().trim();
+    if (id === "R" || id === "L" || id === "RC") return true;
+    if (periodInfo && periodInfo.title) {
+        const title = periodInfo.title.toLowerCase();
+        if (title.includes('lunch') || title.includes('recess')) return true;
+        if (id === "0" && title === "period 0") return true;
+    }
+    return false;
+};
+
 // Returns a new period object enriched with substitution / room-change fields.
 // Never mutates the source period.
 export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, roomVariations = {}) => {

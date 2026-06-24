@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, User as UserIcon, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isBreakBell } from '../utils/timetable';
 
 const CARD_STYLES = {
     current:  'bg-white dark:bg-zinc-900 border-2 border-accent scale-[1.01] z-20',
@@ -13,7 +14,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
     const { title, room, fullTeacher, isSubstituted, hasRoomChange } = period;
     const { time, endTime } = bell;
 
-    const isBreak = bell.bell === 'R' || bell.bell === 'L' || bell.bell === 'RC' || (title && title.toLowerCase().includes('lunch'));
+    const isBreak = isBreakBell(bell.bell, period);
     const isPast  = currentMinutes !== -1 && currentMinutes >= endMinutes;
 
     const progress = isCurrent && startMinutes && endMinutes

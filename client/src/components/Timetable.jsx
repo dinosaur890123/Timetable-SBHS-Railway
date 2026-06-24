@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PeriodCard from './PeriodCard';
 import { motion } from 'framer-motion';
-import { applyPeriodVariations } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 
 const Timetable = ({ timetableData, showNow = true }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -55,12 +55,16 @@ const Timetable = ({ timetableData, showNow = true }) => {
         const bell = bells.find(b => b.bell === bellId);
         if (!bell) return null;
 
-        const isBreakBell = bellId === "R" || bellId === "L" || bellId === "RC";
         let periodInfo = periods[bellId] || { title: bell.bellDisplay };
-        if (isBreakBell) {
+        if (isBreakBell(bellId, periodInfo)) {
             periodInfo = { ...periodInfo, title: bell.bellDisplay };
         } else {
             periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
+        }
+
+        // Filter out roll call from timetable view
+        if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
+            return null;
         }
 
         const startMin = getMinutes(bell.time);

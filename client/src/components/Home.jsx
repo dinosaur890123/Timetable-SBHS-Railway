@@ -6,7 +6,7 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
-import { applyPeriodVariations } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
@@ -158,8 +158,12 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                         const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
 
                         const periodInfo = periods[bellId] || { title: bell.bellDisplay };
-                        const isBreak = bellId === "R" || bellId === "L" || bellId === "RC";
+                        const isBreak = isBreakBell(bellId, periodInfo);
                         const title = isBreak ? bell.bellDisplay : (periodInfo.title || "Free Period");
+
+                        if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
+                            return null;
+                        }
 
                         return (
                             <div
@@ -604,9 +608,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             const startMin = getMinutes(bell.time);
             const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60; // Approximate if no end time
 
-            const isBreakBell = bellId === "R" || bellId === "L" || bellId === "RC";
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
-            if (isBreakBell) {
+            const isBreak = isBreakBell(bellId, periodInfo);
+            if (isBreak) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay, isBreak: true };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
@@ -621,13 +625,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     const nextBellId = routine[j];
                     const nextBell = bells.find(b => b.bell === nextBellId);
                     if (nextBell) {
-                        const isNextBreakBell = nextBellId === "R" || nextBellId === "L" || nextBellId === "RC";
                         let nextPeriodInfo = periods[nextBellId] || { title: nextBell.bellDisplay };
-                        if (isNextBreakBell) {
+                        const isNextBreak = isBreakBell(nextBellId, nextPeriodInfo);
+                        if (isNextBreak) {
                             nextPeriodInfo = { ...nextPeriodInfo, title: nextBell.bellDisplay, isBreak: true };
                         } else {
                             nextPeriodInfo = applyPeriodVariations(nextPeriodInfo, nextBellId, classVariations, roomVariations);
                         }
+                        // Allow roll call to show in next class card
                         nextClass = { ...nextPeriodInfo, ...nextBell };
                         break;
                     }
@@ -635,7 +640,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 break;
             } else if (currentMinutes < startMin && !currentClass && !nextClass) {
                 // We haven't reached the first class of the day, or we are between classes
-                nextClass = { ...periodInfo, ...bell, isBreak: (bellId === "R" || bellId === "L" || bellId === "RC") };
+                nextClass = { ...periodInfo, ...bell, isBreak };
                 break;
             }
         }
