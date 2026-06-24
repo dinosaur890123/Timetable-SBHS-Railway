@@ -186,9 +186,28 @@ function App() {
     };
 
     const handleLayoutChange = (layout) => {
-        // Layout is already saved to localStorage by Home component
-        // Just trigger the debounced server sync
-        savePreferences();
+        if (!user?.studentId || !syncPreferencesToServer.current) return;
+
+        if (savePreferencesTimeout.current) {
+            clearTimeout(savePreferencesTimeout.current);
+        }
+
+        savePreferencesTimeout.current = setTimeout(() => {
+            const preferences = {
+                theme,
+                colorTheme,
+                darkStyle,
+                aiDisabled,
+                dashboardLayout: layout,
+                clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
+                scratchpadContent: localStorage.getItem('scratchpad_content') || '',
+                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
+            };
+
+            saveUserPreferences(user.studentId, preferences).catch(e => {
+                console.log("Failed to save preferences to server:", e);
+            });
+        }, 1000);
     };
 
     const addToast = (title, message, type = 'success', persistent = false) => {
