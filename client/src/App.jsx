@@ -841,8 +841,10 @@ function App() {
                         {/* TIMETABLE VIEW */}
                         {currentView === 'timetable' && (
                             <div className="space-y-3">
-                                {/* Date Controls & AI Button Row */}
-                                <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 py-1.5 px-3 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+                                {/* Date Controls & AI Button Row - only show in daily view */}
+                                {timetableViewMode === 'daily' && (
+                                    <>
+                                    <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 py-1.5 px-3 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
                                     <div className="flex items-center gap-1">
                                         <button onClick={prevDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
                                             <ChevronLeft size={16} />
@@ -904,6 +906,8 @@ function App() {
                                             />
                                         </div>
                                     </div>
+                                )}
+                                </>
                                 )}
 
                                 <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />

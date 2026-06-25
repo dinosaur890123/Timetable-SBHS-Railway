@@ -48,52 +48,55 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         ? currentTime.getHours() * 60 + currentTime.getMinutes()
         : -1;
 
-    // Calculate timeline boundaries
+    // Calculate timeline boundaries and routine data (only for daily view)
     let firstMin = 24 * 60;
     let lastMin = 0;
-
-    const routineData = routine.map((bellId, index) => {
-        const bell = bells.find(b => b.bell === bellId);
-        if (!bell) return null;
-
-        let periodInfo = periods[bellId] || { title: bell.bellDisplay };
-        if (isBreakBell(bellId, periodInfo)) {
-            periodInfo = { ...periodInfo, title: bell.bellDisplay };
-        } else {
-            periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
-        }
-
-        // Filter out roll call from timetable view
-        if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
-            return null;
-        }
-
-        const startMin = getMinutes(bell.time);
-        const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
-
-        if (startMin < firstMin) firstMin = startMin;
-        if (endMin > lastMin) lastMin = endMin;
-
-        const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-        const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
-
-        return {
-            bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext
-        };
-    }).filter(Boolean);
-
-    // Timeline Progress Line Position
+    let routineData = [];
     let timelineProgressPos = 0;
-    if (currentMinutes >= firstMin && currentMinutes <= lastMin) {
-        timelineProgressPos = ((currentMinutes - firstMin) / (lastMin - firstMin)) * 100;
-    } else if (currentMinutes > lastMin) {
-        timelineProgressPos = 100;
-    } else {
-        timelineProgressPos = 0;
+
+    if (viewMode === 'daily') {
+        routineData = routine.map((bellId, index) => {
+            const bell = bells.find(b => b.bell === bellId);
+            if (!bell) return null;
+
+            let periodInfo = periods[bellId] || { title: bell.bellDisplay };
+            if (isBreakBell(bellId, periodInfo)) {
+                periodInfo = { ...periodInfo, title: bell.bellDisplay };
+            } else {
+                periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
+            }
+
+            // Filter out roll call from timetable view
+            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
+                return null;
+            }
+
+            const startMin = getMinutes(bell.time);
+            const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
+
+            if (startMin < firstMin) firstMin = startMin;
+            if (endMin > lastMin) lastMin = endMin;
+
+            const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
+            const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
+
+            return {
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext
+            };
+        }).filter(Boolean);
+
+        // Timeline Progress Line Position
+        if (currentMinutes >= firstMin && currentMinutes <= lastMin) {
+            timelineProgressPos = ((currentMinutes - firstMin) / (lastMin - firstMin)) * 100;
+        } else if (currentMinutes > lastMin) {
+            timelineProgressPos = 100;
+        } else {
+            timelineProgressPos = 0;
+        }
     }
 
     const renderCycleView = () => {
-        if (!completeTimetable || !completeTimetable.bells) {
+        if (!completeTimetable) {
             return (
                 <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
                     <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">📅</div>
@@ -104,12 +107,15 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         }
 
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        const { bells } = completeTimetable;
+        
+        // Handle different possible data structures
+        const bells = completeTimetable.bells || timetableData?.bells || [];
+        const timetableStructure = completeTimetable.timetable || completeTimetable;
         
         // Get all unique period slots across all days
         const allPeriodSlots = new Set();
         days.forEach((_, dayIndex) => {
-            const dayData = completeTimetable.timetable?.timetable?.[dayIndex] || completeTimetable.timetable?.[dayIndex];
+            const dayData = timetableStructure?.timetable?.[dayIndex] || timetableStructure?.[dayIndex];
             if (dayData?.routine) {
                 dayData.routine.split(',').forEach(bellId => {
                     const bell = bells.find(b => b.bell === bellId);
@@ -127,7 +133,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
         // Get class info for a specific day and period
         const getClassInfo = (dayIndex, bellId) => {
-            const dayData = completeTimetable.timetable?.timetable?.[dayIndex] || completeTimetable.timetable?.[dayIndex];
+            const dayData = timetableStructure?.timetable?.[dayIndex] || timetableStructure?.[dayIndex];
             if (!dayData) return null;
             
             const periods = dayData.periods || {};
@@ -150,6 +156,16 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 isSelected
             };
         };
+
+        if (periodSlots.length === 0) {
+            return (
+                <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
+                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">📅</div>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No Cycle Data</h3>
+                    <p className="text-zinc-500">No periods found in complete timetable.</p>
+                </div>
+            );
+        }
 
         return (
             <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl overflow-hidden">
