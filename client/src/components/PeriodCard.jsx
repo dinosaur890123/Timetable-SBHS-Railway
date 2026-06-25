@@ -10,7 +10,7 @@ const CARD_STYLES = {
     default:  'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80',
 };
 
-const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes }) => {
+const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isHighlighted }) => {
     const { title, room, fullTeacher, isSubstituted, hasRoomChange } = period;
     const { time, endTime } = bell;
 
@@ -24,9 +24,12 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
 
     const subjectBubble = isCurrent
         ? 'bg-accent text-accent-contrast border border-accent'
+        : isHighlighted
+        ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-300 dark:border-violet-700'
         : 'bg-zinc-100 text-zinc-850 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800';
 
     const cardStyle = isCurrent ? CARD_STYLES.current
+        : isHighlighted ? 'bg-violet-50/20 dark:bg-violet-950/10 border-2 border-violet-400 dark:border-violet-500 hover:bg-violet-50/30 dark:hover:bg-violet-950/20'
         : isSubstituted          ? CARD_STYLES.sub
         : hasRoomChange          ? CARD_STYLES.room
         : CARD_STYLES.default;
