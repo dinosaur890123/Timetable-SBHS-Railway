@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -51,6 +51,7 @@ const AdminPanel = ({ user }) => {
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
     const [clearingAiCache, setClearingAiCache] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(null);
 
     useEffect(() => {
         if (user && user.role === 'Admin') {
@@ -294,6 +295,18 @@ const AdminPanel = ({ user }) => {
             alert("Failed to delete selected feedback");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleToggleBlacklist = async (userId, currentBlacklisted) => {
+        const action = currentBlacklisted ? 'unblacklist' : 'blacklist';
+        if (!window.confirm(`Are you sure you want to ${action} this user? This will ${currentBlacklisted ? 'restore their access' : 'block their access to the application'}.`)) return;
+
+        try {
+            await toggleUserBlacklist(userId, !currentBlacklisted);
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, blacklisted: !currentBlacklisted } : u));
+        } catch (err) {
+            alert(`Failed to ${action} user`);
         }
     };
 
@@ -1164,10 +1177,10 @@ const AdminPanel = ({ user }) => {
                                 </td>
                             </tr>
                         ) : filteredUsers.map((user) => (
-                            <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''}`}>
+                            <tr key={user.id} className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-zinc-100/50 dark:bg-zinc-900/10' : ''} ${user.blacklisted ? 'opacity-60' : ''}`}>
                                 <td className="px-6 py-4 text-center">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         className="border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-black"
                                         checked={selectedUsers.has(user.id)}
                                         onChange={() => toggleSelectUser(user.id)}
@@ -1175,7 +1188,7 @@ const AdminPanel = ({ user }) => {
                                 </td>
                                 <td className="px-6 py-4">
                                     <div>
-                                        <div className="font-semibold text-zinc-900 dark:text-white">{user.name}</div>
+                                        <div className={`font-semibold text-zinc-900 dark:text-white ${user.blacklisted ? 'line-through' : ''}`}>{user.name}</div>
                                         <div className="text-zinc-500 text-xs">{user.email}</div>
                                     </div>
                                 </td>
@@ -1195,21 +1208,48 @@ const AdminPanel = ({ user }) => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{user.year}</td>
-                                <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    <button
-                                        onClick={() => setEditingUser(user)}
-                                        className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                        title="Edit User"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteUser(user.id)}
-                                        className="p-1 text-red-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                        title="Delete User"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                <td className="px-6 py-4 text-right relative">
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => setEditingUser(user)}
+                                            className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                            title="Edit User"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setUserMenuOpen(userMenuOpen === user.id ? null : user.id)}
+                                                className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                                title="More Options"
+                                            >
+                                                <MoreVertical size={16} />
+                                            </button>
+                                            {userMenuOpen === user.id && (
+                                                <div className="absolute right-0 top-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                                                    <button
+                                                        onClick={() => {
+                                                            setUserMenuOpen(null);
+                                                            handleToggleBlacklist(user.id, user.blacklisted);
+                                                        }}
+                                                        className="w-full px-3 py-2 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors flex items-center gap-2"
+                                                    >
+                                                        {user.blacklisted ? '🔓 Unblacklist' : '🚫 Blacklist'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setUserMenuOpen(null);
+                                                            handleDeleteUser(user.id);
+                                                        }}
+                                                        className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

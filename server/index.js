@@ -371,7 +371,7 @@ async function listUsers() {
         return users;
     }
     const result = await db.query(
-        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users ORDER BY last_seen DESC, joined DESC',
+        'SELECT id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, blacklisted FROM app_users ORDER BY last_seen DESC, joined DESC',
         []
     );
     return result.rows.map((row) => ({
@@ -387,6 +387,7 @@ async function listUsers() {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
+        blacklisted: row.blacklisted ?? false,
     }));
 }
 
@@ -423,7 +424,8 @@ async function upsertUser(newUser) {
             stripeSubscriptionId: null,
             subscriptionStatus: null,
             showSupporter: true,
-            preferences: {}
+            preferences: {},
+            blacklisted: false
         };
         users.push(created);
         return created;
@@ -441,7 +443,7 @@ async function upsertUser(newUser) {
            name = COALESCE(EXCLUDED.name, app_users.name),
            year = COALESCE(EXCLUDED.year, app_users.year),
            last_seen = NOW()
-         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, blacklisted`,
         [userId, newUser.email, newUser.name || null, initialRole, newUser.year || null]
     );
 
@@ -460,6 +462,7 @@ async function upsertUser(newUser) {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
+        blacklisted: row.blacklisted ?? false,
     };
 }
 
@@ -472,7 +475,7 @@ async function updateUserById(id, updates) {
         const userIndex = users.findIndex(u => String(u.id) === String(id));
         if (userIndex === -1) return null;
 
-        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus', 'showSupporter'];
+        const allowedUpdates = ['role', 'name', 'year', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus', 'showSupporter', 'blacklisted'];
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) users[userIndex][field] = updates[field];
         });
@@ -486,7 +489,8 @@ async function updateUserById(id, updates) {
         stripeCustomerId: 'stripe_customer_id',
         stripeSubscriptionId: 'stripe_subscription_id',
         subscriptionStatus: 'subscription_status',
-        showSupporter: 'show_supporter'
+        showSupporter: 'show_supporter',
+        blacklisted: 'blacklisted'
     };
 
     const sets = [];
@@ -507,7 +511,7 @@ async function updateUserById(id, updates) {
     values.push(String(id));
     const result = await db.query(
         `UPDATE app_users SET ${sets.join(', ')} WHERE id = $${paramIndex}
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
+         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, blacklisted`,
         values
     );
 
@@ -527,6 +531,7 @@ async function updateUserById(id, updates) {
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
         showSupporter: row.show_supporter !== false,
+        blacklisted: row.blacklisted ?? false,
     };
 }
 
@@ -663,11 +668,12 @@ async function getUserById(id) {
             stripeCustomerId: u.stripeCustomerId ?? null,
             stripeSubscriptionId: u.stripeSubscriptionId ?? null,
             subscriptionStatus: u.subscriptionStatus ?? null,
-            showSupporter: u.showSupporter !== false
+            showSupporter: u.showSupporter !== false,
+            blacklisted: u.blacklisted ?? false
         };
     }
     const result = await db.query(
-        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter FROM app_users WHERE id = $1',
+        'SELECT id, name, email, role, status, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter, blacklisted FROM app_users WHERE id = $1',
         [String(id)]
     );
     if (result.rows.length === 0) return null;
@@ -681,7 +687,8 @@ async function getUserById(id) {
         stripeCustomerId: row.stripe_customer_id ?? null,
         stripeSubscriptionId: row.stripe_subscription_id ?? null,
         subscriptionStatus: row.subscription_status ?? null,
-        showSupporter: row.show_supporter !== false
+        showSupporter: row.show_supporter !== false,
+        blacklisted: row.blacklisted ?? false
     };
 }
 

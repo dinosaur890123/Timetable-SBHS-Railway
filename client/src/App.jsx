@@ -309,7 +309,8 @@ function App() {
                                         role: dbSync.user.role || prev.role,
                                         subscriptionStatus: dbSync.user.subscriptionStatus || null,
                                         stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                        showSupporter: dbSync.user.showSupporter !== false
+                                        showSupporter: dbSync.user.showSupporter !== false,
+                                        blacklisted: dbSync.user.blacklisted || false
                                     } : null;
                                     if (merged) {
                                         localStorage.setItem('cached_user', JSON.stringify(merged));
@@ -477,7 +478,8 @@ function App() {
                                         role: dbSync.user.role || prev.role,
                                         subscriptionStatus: dbSync.user.subscriptionStatus || null,
                                         stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                        showSupporter: dbSync.user.showSupporter !== false
+                                        showSupporter: dbSync.user.showSupporter !== false,
+                                        blacklisted: dbSync.user.blacklisted || false
                                     } : null;
                                     if (updated) {
                                         localStorage.setItem('cached_user', JSON.stringify(updated));
@@ -685,7 +687,7 @@ function App() {
         }
     };
 
-    if (maintenance && currentView !== 'admin') {
+    if ((maintenance || user?.blacklisted) && currentView !== 'admin') {
         return (
             <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-8 text-center">
                 <div className="bg-red-900/20 p-6 rounded-full border border-red-500/20 mb-6 animate-pulse">

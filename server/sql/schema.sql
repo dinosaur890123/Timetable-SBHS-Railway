@@ -121,3 +121,6 @@ ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT 
 
 -- User preferences migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
+
+-- Blacklist migration
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blacklisted BOOLEAN NOT NULL DEFAULT FALSE;

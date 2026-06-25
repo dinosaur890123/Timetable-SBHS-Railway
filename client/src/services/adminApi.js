@@ -288,6 +288,18 @@ export const bulkDeleteFeedback = async (feedbackIds) => {
     }
 };
 
-
-
+export const toggleUserBlacklist = async (userId, blacklisted) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify({ blacklisted })
+        });
+        if (!response.ok) throw new Error('Failed to update user blacklist status');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
 
