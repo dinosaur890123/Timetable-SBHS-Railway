@@ -37,6 +37,7 @@ function App() {
     const [currentView, setCurrentView] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(new Date());
+    const [timetableViewMode, setTimetableViewMode] = useState('daily');
 
     useEffect(() => {
         // Check if user is navigating exactly to /admin
@@ -736,9 +737,35 @@ function App() {
             <main className="flex-1 overflow-x-hidden overflow-y-auto">
                 {/* Top Header */}
                 <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-900">
-                    <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
-                        {currentView}
-                    </h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
+                            {currentView}
+                        </h1>
+                        {currentView === 'timetable' && (
+                            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
+                                <button
+                                    onClick={() => setTimetableViewMode('daily')}
+                                    className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
+                                        timetableViewMode === 'daily'
+                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
+                                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                                >
+                                    Daily
+                                </button>
+                                <button
+                                    onClick={() => setTimetableViewMode('cycle')}
+                                    className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
+                                        timetableViewMode === 'cycle'
+                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
+                                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                                >
+                                    Cycle
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-4">
@@ -879,7 +906,7 @@ function App() {
                                     </div>
                                 )}
 
-                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} />
+                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
                             </div>
                         )}
 

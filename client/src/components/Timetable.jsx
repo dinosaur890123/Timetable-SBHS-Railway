@@ -3,9 +3,8 @@ import PeriodCard from './PeriodCard';
 import { motion } from 'framer-motion';
 import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 
-const Timetable = ({ timetableData, completeTimetable, showNow = true }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [viewMode, setViewMode] = useState('daily');
     const [selectedClass, setSelectedClass] = useState(null);
 
     useEffect(() => {
@@ -107,107 +106,126 @@ const Timetable = ({ timetableData, completeTimetable, showNow = true }) => {
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         const { bells } = completeTimetable;
         
-        // Get all unique bell IDs from the complete timetable structure
-        const getDayTimetable = (dayIndex) => {
+        // Get all unique period slots across all days
+        const allPeriodSlots = new Set();
+        days.forEach((_, dayIndex) => {
+            const dayData = completeTimetable.timetable?.timetable?.[dayIndex] || completeTimetable.timetable?.[dayIndex];
+            if (dayData?.routine) {
+                dayData.routine.split(',').forEach(bellId => {
+                    const bell = bells.find(b => b.bell === bellId);
+                    if (bell) allPeriodSlots.add(bellId);
+                });
+            }
+        });
+        
+        const periodSlots = Array.from(allPeriodSlots).sort((a, b) => {
+            const bellA = bells.find(b => b.bell === a);
+            const bellB = bells.find(b => b.bell === b);
+            if (!bellA || !bellB) return 0;
+            return bellA.time.localeCompare(bellB.time);
+        });
+
+        // Get class info for a specific day and period
+        const getClassInfo = (dayIndex, bellId) => {
             const dayData = completeTimetable.timetable?.timetable?.[dayIndex] || completeTimetable.timetable?.[dayIndex];
             if (!dayData) return null;
             
             const periods = dayData.periods || {};
-            const routine = dayData.routine ? dayData.routine.split(',') : [];
+            let periodInfo = periods[bellId] || null;
             
-            return routine.map((bellId, index) => {
-                const bell = bells.find(b => b.bell === bellId);
-                if (!bell) return null;
-                
-                let periodInfo = periods[bellId] || { title: bell.bellDisplay };
-                if (isBreakBell(bellId, periodInfo)) {
-                    periodInfo = { ...periodInfo, title: bell.bellDisplay };
-                }
-                
-                // Filter out roll call
-                if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
-                    return null;
-                }
-                
-                const isSelected = selectedClass && periodInfo.title === selectedClass;
-                
-                return {
-                    bellId,
-                    index,
-                    bell,
-                    periodInfo,
-                    isSelected
-                };
-            }).filter(Boolean);
+            // Filter out breaks, roll call, and free periods
+            if (!periodInfo) return null;
+            if (isBreakBell(bellId, periodInfo)) return null;
+            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return null;
+            if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return null;
+            
+            const bell = bells.find(b => b.bell === bellId);
+            const isSelected = selectedClass && periodInfo.title === selectedClass;
+            
+            return {
+                title: periodInfo.title,
+                room: periodInfo.room,
+                teacher: periodInfo.fullTeacher || periodInfo.teacher,
+                bell: bell?.bellDisplay || bellId,
+                isSelected
+            };
         };
 
         return (
-            <div className="space-y-4">
-                {days.map((day, dayIndex) => {
-                    const dayPeriods = getDayTimetable(dayIndex);
-                    if (!dayPeriods || dayPeriods.length === 0) return null;
-                    
-                    return (
-                        <div key={day} className="bg-white dark:bg-zinc-950 p-3 md:p-4 border border-zinc-200 dark:border-zinc-850">
-                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-2 px-1">{day}</h3>
-                            <div className="space-y-1.5">
-                                {dayPeriods.map((data) => (
-                                    <div
-                                        key={`${data.bellId}-${data.index}`}
-                                        onClick={() => {
-                                            if (data.periodInfo.title && data.periodInfo.title !== 'Free Period') {
-                                                setSelectedClass(prev => prev === data.periodInfo.title ? null : data.periodInfo.title);
-                                            }
-                                        }}
-                                        className="cursor-pointer"
-                                    >
-                                        <PeriodCard
-                                            period={data.periodInfo}
-                                            bell={data.bell}
-                                            isCurrent={false}
-                                            isNext={false}
-                                            routineIndex={data.index}
-                                            currentMinutes={-1}
-                                            startMinutes={0}
-                                            endMinutes={0}
-                                            isHighlighted={data.isSelected}
-                                        />
-                                    </div>
+            <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                                <th className="px-4 py-3 text-left text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-24">Period</th>
+                                {days.map(day => (
+                                    <th key={day} className="px-4 py-3 text-left text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                        {day.slice(0, 3)}
+                                    </th>
                                 ))}
-                            </div>
-                        </div>
-                    );
-                })}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {periodSlots.map(bellId => {
+                                const bell = bells.find(b => b.bell === bellId);
+                                if (!bell) return null;
+                                
+                                return (
+                                    <tr key={bellId} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                        <td className="px-4 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                            {bell.bellDisplay}
+                                        </td>
+                                        {days.map((_, dayIndex) => {
+                                            const classInfo = getClassInfo(dayIndex, bellId);
+                                            
+                                            if (!classInfo) {
+                                                return (
+                                                    <td key={dayIndex} className="px-2 py-2">
+                                                        <div className="h-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg"></div>
+                                                    </td>
+                                                );
+                                            }
+                                            
+                                            return (
+                                                <td key={dayIndex} className="px-2 py-2">
+                                                    <div
+                                                        onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
+                                                        className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+                                                            classInfo.isSelected
+                                                                ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
+                                                                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                                                        }`}
+                                                    >
+                                                        <span className={`text-xs font-bold truncate ${
+                                                            classInfo.isSelected
+                                                                ? 'text-violet-700 dark:text-violet-300'
+                                                                : 'text-zinc-900 dark:text-white'
+                                                        }`}>
+                                                            {classInfo.title}
+                                                        </span>
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            {classInfo.room && (
+                                                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                                                                    {classInfo.room}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         );
     };
 
     return (
         <div className="flex flex-col gap-3 max-w-5xl mx-auto w-full">
-            {/* View Toggle Slider */}
-            <div className="bg-white dark:bg-zinc-950 p-2 border border-zinc-200 dark:border-zinc-850 rounded-xl flex items-center gap-2">
-                <button
-                    onClick={() => setViewMode('daily')}
-                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                        viewMode === 'daily'
-                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                >
-                    Daily
-                </button>
-                <button
-                    onClick={() => setViewMode('cycle')}
-                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                        viewMode === 'cycle'
-                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                >
-                    Cycle
-                </button>
-            </div>
-
             {viewMode === 'daily' ? (
                 <div className="bg-white dark:bg-zinc-950 p-3 md:p-4 border border-zinc-200 dark:border-zinc-850">
                     <div className="space-y-1.5">
