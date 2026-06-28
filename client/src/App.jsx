@@ -12,6 +12,7 @@ const AwardSchemeView = lazy(() => import('./components/AwardSchemeView'));
 const ClipboardView = lazy(() => import('./components/ClipboardView'));
 const NotesView = lazy(() => import('./components/NotesView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
+const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
 import {
     fetchDayTimetable,
     fetchDailyNews,
@@ -100,9 +101,51 @@ function App() {
     const [billingMessage, setBillingMessage] = useState(null);
     const [billingLoading, setBillingLoading] = useState(false);
 
-    // Canvas Links State
+    // Canvas Links State (for timetable clickable links)
     const [canvasLinks, setCanvasLinks] = useState({});
-    const [savingCanvasLinks, setSavingCanvasLinks] = useState(false);
+    const [sharedLinks, setSharedLinks] = useState({});
+
+    // Load canvas links on mount
+    useEffect(() => {
+        if (!user?.studentId) return;
+
+        const loadCanvasLinks = async () => {
+            const data = await fetchCanvasLinks();
+            if (data && data.links) {
+                const linksMap = {};
+                data.links.forEach(link => {
+                    linksMap[link.className] = link.canvasUrl;
+                });
+                setCanvasLinks(linksMap);
+            }
+        };
+
+        loadCanvasLinks();
+    }, [user?.studentId]);
+
+    // Fetch shared canvas links for classes that don't have user's link
+    useEffect(() => {
+        if (!completeTimetable?.timetable?.[0]?.periods) return;
+
+        const fetchSharedLinks = async () => {
+            const shared = {};
+            const periods = completeTimetable.timetable[0].periods;
+
+            for (const [bellId, period] of Object.entries(periods)) {
+                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
+                if (canvasLinks[period.title]) continue;
+
+                const data = await fetchSharedCanvasLink(period.title);
+                if (data && data.link && data.link.canvasUrl) {
+                    shared[period.title] = data.link.canvasUrl;
+                }
+            }
+
+            setSharedLinks(shared);
+        };
+
+        fetchSharedLinks();
+    }, [completeTimetable, canvasLinks]);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -695,69 +738,6 @@ function App() {
         }
     };
 
-    const handleCanvasLinkChange = (className, url) => {
-        setCanvasLinks(prev => ({
-            ...prev,
-            [className]: url
-        }));
-    };
-
-    const saveCanvasLinks = async () => {
-        if (!user?.studentId) return;
-        setSavingCanvasLinks(true);
-        try {
-            await saveCanvasLinksApi(canvasLinks);
-        } catch (e) {
-            console.error("Failed to save canvas links:", e);
-            alert("Failed to save canvas links. Please try again.");
-        } finally {
-            setSavingCanvasLinks(false);
-        }
-    };
-
-    // Load canvas links on mount and when user changes
-    useEffect(() => {
-        if (!user?.studentId) return;
-
-        const loadCanvasLinks = async () => {
-            const data = await fetchCanvasLinks();
-            if (data && data.links) {
-                const linksMap = {};
-                data.links.forEach(link => {
-                    linksMap[link.className] = link.canvasUrl;
-                });
-                setCanvasLinks(linksMap);
-            }
-        };
-
-        loadCanvasLinks();
-    }, [user?.studentId]);
-
-    // Fetch shared canvas links for classes that don't have user's link
-    const [sharedLinks, setSharedLinks] = useState({});
-
-    useEffect(() => {
-        if (!completeTimetable?.timetable?.[0]?.periods) return;
-
-        const fetchSharedLinks = async () => {
-            const shared = {};
-            const periods = completeTimetable.timetable[0].periods;
-
-            for (const [bellId, period] of Object.entries(periods)) {
-                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
-                if (canvasLinks[period.title]) continue;
-
-                const data = await fetchSharedCanvasLink(period.title);
-                if (data && data.link && data.link.canvasUrl) {
-                    shared[period.title] = data.link.canvasUrl;
-                }
-            }
-
-            setSharedLinks(shared);
-        };
-
-        fetchSharedLinks();
-    }, [completeTimetable, canvasLinks]);
 
     if ((maintenance || user?.blacklisted) && currentView !== 'admin') {
         return (
@@ -1007,6 +987,11 @@ function App() {
                         {/* FEEDBACK VIEW */}
                         {currentView === 'feedback' && (
                             <FeedbackView user={user} onBack={() => setCurrentView('profile')} />
+                        )}
+
+                        {/* CANVAS LINKS VIEW */}
+                        {currentView === 'canvas-links' && (
+                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={completeTimetable} />
                         )}
 
                         {/* ADMIN VIEW */}
@@ -1353,29 +1338,11 @@ function App() {
                                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                                                     Add Canvas links for your classes. Click on any class in your timetable to open its Canvas page. Links are shared with classmates who have the same class.
                                                 </p>
-                                                <div className="space-y-2 pt-1">
-                                                    {completeTimetable?.timetable?.[0]?.periods && Object.entries(completeTimetable.timetable[0].periods).map(([bellId, period]) => {
-                                                        if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) return null;
-                                                        return (
-                                                            <div key={bellId} className="flex items-center gap-2">
-                                                                <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 w-16 shrink-0 truncate">{period.title}</span>
-                                                                <input
-                                                                    type="url"
-                                                                    placeholder="https://canvas.instructure.com/courses/..."
-                                                                    className="flex-1 px-2 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 placeholder-zinc-400 dark:text-zinc-200"
-                                                                    onChange={(e) => handleCanvasLinkChange(period.title, e.target.value)}
-                                                                    value={canvasLinks[period.title] || ''}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
                                                 <button
-                                                    onClick={saveCanvasLinks}
-                                                    disabled={savingCanvasLinks}
-                                                    className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    onClick={() => setCurrentView('canvas-links')}
+                                                    className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
                                                 >
-                                                    {savingCanvasLinks ? 'Saving...' : 'Save Canvas Links'}
+                                                    Manage Canvas Links
                                                 </button>
                                             </div>
 
