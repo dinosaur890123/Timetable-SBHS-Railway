@@ -904,7 +904,7 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
     try {
         const studentId = req.user.studentId;
         const { showSupporter } = req.body || {};
-        
+
         let updated;
         if (!isDbEnabled) {
             const userIndex = users.findIndex(u => String(u.id) === String(studentId));
@@ -938,15 +938,134 @@ app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
                 };
             }
         }
-        
+
         if (!updated) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         res.json({ success: true, user: updated });
     } catch (e) {
         console.error('Update profile error:', e);
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+// GET /api/canvas-links - Get canvas links for current user
+app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        let links = [];
+
+        if (!isDbEnabled) {
+            return res.json({ success: true, links: [] });
+        }
+
+        const result = await db.query(
+            `SELECT class_name, canvas_url, created_at, updated_at
+             FROM canvas_links
+             WHERE student_id = $1
+             ORDER BY class_name ASC`,
+            [studentId]
+        );
+
+        links = result.rows.map(row => ({
+            className: row.class_name,
+            canvasUrl: row.canvas_url,
+            createdAt: toIso(row.created_at),
+            updatedAt: toIso(row.updated_at)
+        }));
+
+        res.json({ success: true, links });
+    } catch (e) {
+        console.error('Get canvas links error:', e);
+        // Zero-failure: return empty array on any error
+        res.json({ success: true, links: [] });
+    }
+});
+
+// POST /api/canvas-links - Save canvas links for current user
+app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { links } = req.body || {};
+
+        if (!links || typeof links !== 'object') {
+            return res.status(400).json({ error: 'Invalid links data' });
+        }
+
+        if (!isDbEnabled) {
+            // Memory fallback - not implemented for canvas links
+            return res.json({ success: true, message: 'Canvas links saved (memory fallback)' });
+        }
+
+        // Delete existing links for this user
+        await db.query(
+            `DELETE FROM canvas_links WHERE student_id = $1`,
+            [studentId]
+        );
+
+        // Insert new links
+        const entries = Object.entries(links);
+        for (const [className, canvasUrl] of entries) {
+            if (!canvasUrl || typeof canvasUrl !== 'string') continue;
+
+            const id = crypto.randomUUID();
+            await db.query(
+                `INSERT INTO canvas_links (id, class_name, canvas_url, student_id, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, NOW(), NOW())
+                 ON CONFLICT (class_name, student_id) 
+                 DO UPDATE SET canvas_url = $3, updated_at = NOW()`,
+                [id, String(className), String(canvasUrl), studentId]
+            );
+        }
+
+        await addLog('CANVAS_LINKS_UPDATE', studentId, `Updated ${entries.length} canvas links`);
+        res.json({ success: true, message: 'Canvas links saved successfully' });
+    } catch (e) {
+        console.error('Save canvas links error:', e);
+        res.status(500).json({ error: 'Failed to save canvas links' });
+    }
+});
+
+// GET /api/canvas-links/shared/:className - Get shared canvas link for a class (from any student)
+app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, res) => {
+    try {
+        const { className } = req.params;
+
+        if (!className) {
+            return res.json({ success: true, link: null });
+        }
+
+        if (!isDbEnabled) {
+            return res.json({ success: true, link: null });
+        }
+
+        const result = await db.query(
+            `SELECT canvas_url, student_id, updated_at
+             FROM canvas_links
+             WHERE class_name = $1
+             ORDER BY updated_at DESC
+             LIMIT 1`,
+            [String(className)]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({ success: true, link: null });
+        }
+
+        const row = result.rows[0];
+        res.json({
+            success: true,
+            link: {
+                canvasUrl: row.canvas_url,
+                studentId: row.student_id,
+                updatedAt: toIso(row.updated_at)
+            }
+        });
+    } catch (e) {
+        console.error('Get shared canvas link error:', e);
+        // Zero-failure: return null link on any error
+        res.json({ success: true, link: null });
     }
 });
 

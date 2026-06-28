@@ -3,7 +3,7 @@ import PeriodCard from './PeriodCard';
 import { motion } from 'framer-motion';
 import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, canvasLinks = {}, sharedLinks = {} }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
 
@@ -256,6 +256,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 currentMinutes={currentMinutes}
                                 startMinutes={data.startMin}
                                 endMinutes={data.endMin}
+                                canvasLink={canvasLinks[data.periodInfo.title] || sharedLinks[data.periodInfo.title] || null}
                             />
                         ))}
                     </div>

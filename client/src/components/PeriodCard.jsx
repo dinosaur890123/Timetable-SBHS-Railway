@@ -10,12 +10,14 @@ const CARD_STYLES = {
     default:  'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80',
 };
 
-const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isHighlighted }) => {
+const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isHighlighted, canvasLink }) => {
     const { title, room, fullTeacher, isSubstituted, hasRoomChange } = period;
     const { time, endTime } = bell;
 
     const isBreak = isBreakBell(bell.bell, period);
     const isPast  = currentMinutes !== -1 && currentMinutes >= endMinutes;
+
+    const hasCanvasLink = canvasLink && title && title !== 'Free Period' && !title.toLowerCase().includes('roll call');
 
     const progress = isCurrent && startMinutes && endMinutes
         ? Math.min(100, Math.max(0, ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100))
@@ -56,7 +58,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
     }
 
     // ── Period row ─────────────────────────────────────────────────────────
-    return (
+    const cardContent = (
         <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -69,7 +71,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
             </div>
 
             {/* Card */}
-            <div className={`flex-1 flex flex-col justify-center relative py-2 px-3 border transition-all duration-300 overflow-hidden ${cardStyle}`}>
+            <div className={`flex-1 flex flex-col justify-center relative py-2 px-3 border transition-all duration-300 overflow-hidden ${cardStyle} ${hasCanvasLink ? 'cursor-pointer hover:shadow-md' : ''}`}>
 
                 {/* Progress bar (current period only) */}
                 {isCurrent && (
@@ -133,6 +135,22 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
             </div>
         </motion.div>
     );
+
+    // Wrap in anchor tag if canvas link exists
+    if (hasCanvasLink) {
+        return (
+            <a
+                href={canvasLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+            >
+                {cardContent}
+            </a>
+        );
+    }
+
+    return cardContent;
 };
 
 export default PeriodCard;

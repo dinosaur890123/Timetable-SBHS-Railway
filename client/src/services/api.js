@@ -701,5 +701,49 @@ export const saveUserPreferences = async (studentId, preferences) => {
     return response.json();
 };
 
+// Canvas Links API
+export const fetchCanvasLinks = async () => {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch canvas links: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const saveCanvasLinks = async (links) => {
+    const token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ links })
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to save canvas links: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const fetchSharedCanvasLink = async (className) => {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-links/shared/${encodeURIComponent(className)}`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch shared canvas link: ${response.status}`);
+    }
+    return response.json();
+};
+
 
 

@@ -24,7 +24,10 @@ import {
     fetchAiBriefing,
     fetchTimetableQa,
     fetchUserPreferences,
-    saveUserPreferences
+    saveUserPreferences,
+    fetchCanvasLinks,
+    saveCanvasLinks as saveCanvasLinksApi,
+    fetchSharedCanvasLink
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -96,6 +99,10 @@ function App() {
     // Billing State
     const [billingMessage, setBillingMessage] = useState(null);
     const [billingLoading, setBillingLoading] = useState(false);
+
+    // Canvas Links State
+    const [canvasLinks, setCanvasLinks] = useState({});
+    const [savingCanvasLinks, setSavingCanvasLinks] = useState(false);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -688,6 +695,70 @@ function App() {
         }
     };
 
+    const handleCanvasLinkChange = (className, url) => {
+        setCanvasLinks(prev => ({
+            ...prev,
+            [className]: url
+        }));
+    };
+
+    const saveCanvasLinks = async () => {
+        if (!user?.studentId) return;
+        setSavingCanvasLinks(true);
+        try {
+            await saveCanvasLinksApi(canvasLinks);
+        } catch (e) {
+            console.error("Failed to save canvas links:", e);
+            alert("Failed to save canvas links. Please try again.");
+        } finally {
+            setSavingCanvasLinks(false);
+        }
+    };
+
+    // Load canvas links on mount and when user changes
+    useEffect(() => {
+        if (!user?.studentId) return;
+
+        const loadCanvasLinks = async () => {
+            const data = await fetchCanvasLinks();
+            if (data && data.links) {
+                const linksMap = {};
+                data.links.forEach(link => {
+                    linksMap[link.className] = link.canvasUrl;
+                });
+                setCanvasLinks(linksMap);
+            }
+        };
+
+        loadCanvasLinks();
+    }, [user?.studentId]);
+
+    // Fetch shared canvas links for classes that don't have user's link
+    const [sharedLinks, setSharedLinks] = useState({});
+
+    useEffect(() => {
+        if (!completeTimetable?.timetable?.[0]?.periods) return;
+
+        const fetchSharedLinks = async () => {
+            const shared = {};
+            const periods = completeTimetable.timetable[0].periods;
+
+            for (const [bellId, period] of Object.entries(periods)) {
+                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
+                if (canvasLinks[period.title]) continue;
+
+                const data = await fetchSharedCanvasLink(period.title);
+                if (data && data.link && data.link.canvasUrl) {
+                    shared[period.title] = data.link.canvasUrl;
+                }
+            }
+
+            setSharedLinks(shared);
+        };
+
+        fetchSharedLinks();
+    }, [completeTimetable, canvasLinks]);
+
     if ((maintenance || user?.blacklisted) && currentView !== 'admin') {
         return (
             <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-8 text-center">
@@ -910,7 +981,7 @@ function App() {
                                 </>
                                 )}
 
-                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
+                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} canvasLinks={canvasLinks} sharedLinks={sharedLinks} />
                             </div>
                         )}
 
@@ -979,6 +1050,23 @@ function App() {
                                                     Sign Out
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        {/* Feedback Card */}
+                                        <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-white dark:bg-zinc-900 select-none space-y-3 shadow-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Mail size={16} className="text-blue-500 shrink-0" />
+                                                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Feedback</h3>
+                                            </div>
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                                Report an error or suggest an improvement. Please include as much detail as possible so it can be investigated quickly.
+                                            </p>
+                                            <button
+                                                onClick={() => setCurrentView('feedback')}
+                                                className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
+                                            >
+                                                Open Feedback Form
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1256,6 +1344,41 @@ function App() {
                                                 </div>
                                             </div>
 
+                                            {/* Canvas Links Section */}
+                                            <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500 shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Canvas Links</h3>
+                                                </div>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                                    Add Canvas links for your classes. Click on any class in your timetable to open its Canvas page. Links are shared with classmates who have the same class.
+                                                </p>
+                                                <div className="space-y-2 pt-1">
+                                                    {completeTimetable?.timetable?.[0]?.periods && Object.entries(completeTimetable.timetable[0].periods).map(([bellId, period]) => {
+                                                        if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) return null;
+                                                        return (
+                                                            <div key={bellId} className="flex items-center gap-2">
+                                                                <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 w-16 shrink-0 truncate">{period.title}</span>
+                                                                <input
+                                                                    type="url"
+                                                                    placeholder="https://canvas.instructure.com/courses/..."
+                                                                    className="flex-1 px-2 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 placeholder-zinc-400 dark:text-zinc-200"
+                                                                    onChange={(e) => handleCanvasLinkChange(period.title, e.target.value)}
+                                                                    value={canvasLinks[period.title] || ''}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <button
+                                                    onClick={saveCanvasLinks}
+                                                    disabled={savingCanvasLinks}
+                                                    className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {savingCanvasLinks ? 'Saving...' : 'Save Canvas Links'}
+                                                </button>
+                                            </div>
+
                                             {/* Public Supporters Section */}
                                             {supporters && supporters.length > 0 && (
                                                 <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
@@ -1275,22 +1398,6 @@ function App() {
                                                     </div>
                                                 </div>
                                             )}
-
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Mail size={16} className="text-blue-500 shrink-0" />
-                                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Feedback</h3>
-                                                </div>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                                    Report an error or suggest an improvement. Please include as much detail as possible so it can be investigated quickly.
-                                                </p>
-                                                <button
-                                                    onClick={() => setCurrentView('feedback')}
-                                                    className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
-                                                >
-                                                    Open Feedback Form
-                                                </button>
-                                            </div>
 
                                             <div className="text-center pt-4">
                                                 <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
