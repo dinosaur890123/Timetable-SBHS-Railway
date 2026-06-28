@@ -28,7 +28,8 @@ import {
     saveUserPreferences,
     fetchCanvasLinks,
     saveCanvasLinks as saveCanvasLinksApi,
-    fetchSharedCanvasLink
+    fetchSharedCanvasLink,
+    uploadClassTags
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -654,6 +655,18 @@ function App() {
 
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
+
+                    const inner = data?.timetable?.timetable || data?.timetable;
+                    const periods = inner?.periods || {};
+                    const classes = new Set();
+                    Object.values(periods).forEach(period => {
+                        if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
+                            classes.add(period.title);
+                        }
+                    });
+                    if (classes.size > 0) {
+                        uploadClassTags(Array.from(classes));
+                    }
 
                     if (!hasAutoAdvanced.current) {
                         hasAutoAdvanced.current = true;
