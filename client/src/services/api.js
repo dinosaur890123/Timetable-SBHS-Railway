@@ -745,19 +745,5 @@ export const fetchSharedCanvasLink = async (className) => {
     return response.json();
 };
 
-export const uploadClassTags = async (classes) => {
-    const token = getAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/class-tags`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ classes })
-    });
-    return response.json();
-};
-
 
 

@@ -125,26 +125,16 @@ ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
 -- Blacklist migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blacklisted BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Class Tags migration
-CREATE TABLE IF NOT EXISTS class_tags (
-  id TEXT PRIMARY KEY,
-  class_name TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS class_tags_class_name_idx ON class_tags (class_name);
-
--- Canvas Links migration (updated to reference class_tags)
+-- Canvas Links migration
 CREATE TABLE IF NOT EXISTS canvas_links (
   id TEXT PRIMARY KEY,
-  class_tag_id TEXT NOT NULL REFERENCES class_tags(id) ON DELETE CASCADE,
+  class_name TEXT NOT NULL,
   canvas_url TEXT NOT NULL,
   student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(class_tag_id, student_id)
+  UNIQUE(class_name, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS canvas_links_class_tag_id_idx ON canvas_links (class_tag_id);
+CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
