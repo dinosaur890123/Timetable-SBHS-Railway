@@ -8,8 +8,8 @@ const CanvasLinksView = ({ onBack, timetableData }) => {
   const [saved, setSaved] = useState(false);
 
   const getClasses = () => {
-    if (!timetableData?.timetable?.timetable?.[0]?.periods) return [];
-    const periods = timetableData.timetable.timetable[0].periods;
+    if (!timetableData?.timetable?.periods) return [];
+    const periods = timetableData.timetable.periods;
     const classes = new Set();
     Object.values(periods).forEach(period => {
       if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {

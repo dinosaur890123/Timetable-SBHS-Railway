@@ -991,7 +991,7 @@ function App() {
 
                         {/* CANVAS LINKS VIEW */}
                         {currentView === 'canvas-links' && (
-                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={completeTimetable} />
+                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} />
                         )}
 
                         {/* ADMIN VIEW */}
