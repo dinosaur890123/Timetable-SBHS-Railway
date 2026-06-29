@@ -512,6 +512,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
     // Fetch Award Scheme & Clipboard stats inside Home for the widgets
     const [awardPoints, setAwardPoints] = useState(0);
@@ -569,6 +570,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // Get time-based greeting
@@ -1256,7 +1263,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         }
 
                         // Hide current class tile on mobile unless class is within 2 hours
-                        if (tile.id === 'current_class' && !shouldShowCurrentClassOnMobile && !isEditing) {
+                        if (tile.id === 'current_class' && isMobile && !shouldShowCurrentClassOnMobile && !isEditing) {
                             return null;
                         }
 
