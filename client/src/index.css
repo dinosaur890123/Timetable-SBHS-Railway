@@ -132,6 +132,11 @@ html.dark[data-dark-style="black"] .dark\:bg-black\/50 {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (orientation: landscape) {
   .admin-tabs-container {
     display: flex !important;
