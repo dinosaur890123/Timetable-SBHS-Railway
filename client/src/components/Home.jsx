@@ -511,6 +511,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
 const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled, onLayoutChange }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
+    const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
 
     // Fetch Award Scheme & Clipboard stats inside Home for the widgets
     const [awardPoints, setAwardPoints] = useState(0);
@@ -566,7 +567,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     }, [activeTiles, onLayoutChange]);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -604,11 +605,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         return h * 60 + m;
     };
 
-    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes() + currentTime.getSeconds() / 60;
 
     let currentClass = null;
     let nextClass = null;
     let progress = 0;
+    let remainingTimeStr = '';
 
     if (routine.length > 0) {
         for (let i = 0; i < routine.length; i++) {
@@ -630,6 +632,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             if (currentMinutes >= startMin && currentMinutes < endMin) {
                 currentClass = { ...periodInfo, ...bell, startMin, endMin };
                 progress = ((currentMinutes - startMin) / (endMin - startMin)) * 100;
+
+                const remainingSeconds = Math.max(0, Math.round((endMin - currentMinutes) * 60));
+                const mins = Math.floor(remainingSeconds / 60);
+                const secs = remainingSeconds % 60;
+                remainingTimeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
 
                 // Find next valid class
                 for (let j = i + 1; j < routine.length; j++) {
@@ -697,6 +704,9 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
     // Calculate dynamic academic period count (exactly 5 periods for standard days)
     const academicPeriodsCount = routine.filter(bellId => isAcademicPeriod(bellId)).length;
+
+    // Determine if current class tile should be shown on mobile (only if class within 2 hours)
+    const shouldShowCurrentClassOnMobile = currentClass || (nextClass && (nextClass.startMin - currentMinutes) <= 120);
 
     const getSubjectGradient = (title) => {
         return 'bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white border-zinc-300 dark:border-zinc-700';
@@ -877,27 +887,27 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
                 if (!isProUser) {
                     return (
-                        <div className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 md:p-8 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-center select-none">
+                        <div className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-4 md:p-8 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-center select-none">
                             <div className="absolute -right-16 -top-16 w-44 h-44 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
-                                <div className="flex items-center gap-4">
-                                    <div className="shrink-0 flex items-center justify-center w-12 h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
-                                        <Sparkles size={24} className="text-violet-400" />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6 relative z-10">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="shrink-0 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
+                                        <Sparkles size={20} md:size={24} className="text-violet-400" />
                                     </div>
-                                    <div className="space-y-1">
-                                        <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                    <div className="space-y-0.5 md:space-y-1">
+                                        <h2 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                             Daily AI Briefing
-                                            <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
+                                            <span className="text-[8px] md:text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
                                         </h2>
-                                        <h3 className="text-base font-bold text-white mt-1">Unlock Personalized Morning Briefings</h3>
-                                        <p className="text-xs text-zinc-400">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $4.99 annually.</p>
+                                        <h3 className="text-sm md:text-base font-bold text-white mt-1">Unlock Personalized Morning Briefings</h3>
+                                        <p className="text-[10px] md:text-xs text-zinc-400 hidden sm:block">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $4.99 annually.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setView && setView('profile')}
-                                    className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
+                                    className="px-3 py-2 md:px-4 md:py-2.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
                                 >
-                                    Upgrade ($4.99 Annually)
+                                    Upgrade ($4.99/yr)
                                 </button>
                             </div>
                         </div>
@@ -905,34 +915,52 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 }
                 if (!aiLoading && !aiBriefing) {
                     return (
-                        <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex items-center justify-center text-center text-zinc-500 text-sm">
+                        <div className="bg-white dark:bg-zinc-950 p-4 md:p-6 border border-zinc-200 dark:border-zinc-850 h-full flex items-center justify-center text-center text-zinc-500 text-xs md:text-sm">
                             No Daily AI Briefing available today.
                         </div>
                     );
                 }
                 return (
-                    <div className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 p-6 md:p-8 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col justify-center select-none">
+                    <div className="relative overflow-hidden bg-gradient-to-r from-zinc-900 to-black text-white dark:from-zinc-950 dark:to-zinc-900 border border-zinc-800 dark:border-zinc-800/60 shadow-lg group h-full flex flex-col select-none">
                         <div className="absolute -right-16 -top-16 w-44 h-44 bg-zinc-700/10 rounded-full blur-3xl pointer-events-none group-hover:bg-zinc-700/20 transition-all duration-700" />
-                        <div className="flex flex-col md:flex-row md:items-center gap-6 relative z-10">
-                            <div className="shrink-0 flex items-center justify-center w-12 h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
-                                <Sparkles size={24} className={aiLoading ? "animate-pulse" : "animate-bounce duration-1000"} />
+                        <button
+                            onClick={() => setIsAiBriefingExpanded(!isAiBriefingExpanded)}
+                            className="w-full p-3 md:p-6 md:pb-8 flex items-center gap-3 md:gap-6 relative z-10"
+                        >
+                            <div className="shrink-0 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/10 border border-white/20 text-white rounded-xl shadow-inner">
+                                <Sparkles size={20} md:size={24} className={aiLoading ? "animate-pulse" : "animate-bounce duration-1000"} />
                             </div>
-                            <div className="flex-1 space-y-2">
-                                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                            <div className="flex-1 text-left">
+                                <h2 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                     Daily AI Briefing
                                     {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
                                 </h2>
                                 {aiLoading ? (
-                                    <div className="space-y-2 animate-pulse">
-                                        <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
-                                        <div className="h-4 bg-zinc-800 rounded w-1/2"></div>
+                                    <div className="space-y-1 md:space-y-2 animate-pulse mt-1 md:mt-2">
+                                        <div className="h-3 md:h-4 bg-zinc-800 rounded w-3/4"></div>
+                                        <div className="h-3 md:h-4 bg-zinc-800 rounded w-1/2 hidden sm:block"></div>
                                     </div>
                                 ) : (
-                                    <p className="text-zinc-300 text-base md:text-lg font-medium leading-relaxed font-sans">
+                                    <p className="text-zinc-300 text-sm md:text-base md:text-lg font-medium leading-relaxed font-sans mt-1 md:mt-2 line-clamp-1 md:line-clamp-none">
                                         {aiBriefing?.briefing}
                                     </p>
                                 )}
                             </div>
+                            <div className={`transform transition-transform duration-200 ${isAiBriefingExpanded ? 'rotate-180' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:hidden"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </button>
+                        <div className={`px-4 pb-4 md:px-6 md:pb-8 md:pt-0 ${isAiBriefingExpanded ? 'block' : 'hidden md:block'}`}>
+                            {aiLoading ? (
+                                <div className="space-y-2 animate-pulse hidden md:block">
+                                    <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
+                                    <div className="h-4 bg-zinc-800 rounded w-1/2"></div>
+                                </div>
+                            ) : (
+                                <p className="text-zinc-300 text-sm md:text-lg font-medium leading-relaxed font-sans md:hidden">
+                                    {aiBriefing?.briefing}
+                                </p>
+                            )}
                         </div>
                     </div>
                 );
@@ -960,8 +988,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             className="text-accent" />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-2xl font-bold text-zinc-900 dark:text-white">{Math.max(0, currentClass.endMin - currentMinutes)}</span>
-                                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">min left</span>
+                                        <span className="text-2xl font-bold text-zinc-900 dark:text-white">{remainingTimeStr}</span>
+                                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">left</span>
                                     </div>
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
@@ -1224,6 +1252,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
                         // Check if it's the AI Briefing and should be hidden (when not editing, not loading, and no briefing)
                         if (tile.id === 'ai_briefing' && !isEditing && !aiLoading && !aiBriefing) {
+                            return null;
+                        }
+
+                        // Hide current class tile on mobile unless class is within 2 hours
+                        if (tile.id === 'current_class' && !shouldShowCurrentClassOnMobile && !isEditing) {
                             return null;
                         }
 
