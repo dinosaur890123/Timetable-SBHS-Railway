@@ -957,7 +957,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             </div>
                         </button>
                         <div 
-                            className={`px-4 pb-2 md:px-6 md:pb-8 md:pt-0 overflow-hidden transition-all duration-300 ease-in-out ${isAiBriefingExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'}`}
+                            className={`px-4 md:px-6 md:pb-8 md:pt-0 overflow-hidden transition-all duration-300 ease-in-out ${isAiBriefingExpanded ? 'pb-4 max-h-96 opacity-100' : 'pb-0 max-h-0 opacity-0 md:max-h-none md:opacity-100'}`}
                         >
                             {aiLoading ? (
                                 <div className="space-y-2 animate-pulse hidden md:block">
@@ -966,18 +966,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 </div>
                             ) : (
                                 <p className="text-zinc-300 text-sm md:text-lg font-medium leading-relaxed font-sans md:hidden">
-                                    {aiBriefing?.briefing?.split('').map((char, i) => (
-                                        <span
-                                            key={i}
-                                            className="inline-block"
-                                            style={{
-                                                opacity: isAiBriefingExpanded ? 1 : 0,
-                                                animation: isAiBriefingExpanded ? `fadeIn 0.3s ease-in-out ${i * 0.01}s forwards` : 'none'
-                                            }}
-                                        >
-                                            {char}
-                                        </span>
-                                    ))}
+                                    {aiBriefing?.briefing}
                                 </p>
                             )}
                         </div>
