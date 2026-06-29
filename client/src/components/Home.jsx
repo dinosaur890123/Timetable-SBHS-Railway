@@ -938,26 +938,44 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                 <Sparkles size={20} md:size={24} className={aiLoading ? "animate-pulse" : "animate-bounce duration-1000"} />
                             </div>
                             <div className="flex-1 text-left">
-                                <h2 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                                    Daily AI Briefing
-                                    {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
-                                </h2>
-                                {aiLoading ? (
-                                    <div className="space-y-1 md:space-y-2 animate-pulse mt-1 md:mt-2">
-                                        <div className="h-3 md:h-4 bg-zinc-800 rounded w-3/4"></div>
-                                        <div className="h-3 md:h-4 bg-zinc-800 rounded w-1/2 hidden sm:block"></div>
-                                    </div>
+                                {isAiBriefingExpanded ? (
+                                    <>
+                                        <h2 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                            Daily AI Briefing
+                                            {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
+                                        </h2>
+                                        {aiLoading ? (
+                                            <div className="space-y-1 md:space-y-2 animate-pulse mt-1 md:mt-2">
+                                                <div className="h-3 md:h-4 bg-zinc-800 rounded w-3/4"></div>
+                                                <div className="h-3 md:h-4 bg-zinc-800 rounded w-1/2 hidden sm:block"></div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-zinc-300 text-sm md:text-base md:text-lg font-medium leading-relaxed font-sans mt-1 md:mt-2 line-clamp-1 md:line-clamp-none">
+                                                {aiBriefing?.briefing}
+                                            </p>
+                                        )}
+                                    </>
                                 ) : (
-                                    <p className="text-zinc-300 text-sm md:text-base md:text-lg font-medium leading-relaxed font-sans mt-1 md:mt-2 line-clamp-1 md:line-clamp-none">
-                                        {aiBriefing?.briefing}
-                                    </p>
+                                    <>
+                                        <h2 className="text-lg md:text-xs font-bold uppercase tracking-widest text-white md:text-zinc-400 flex items-center gap-2 md:hidden">
+                                            Your AI Briefing
+                                            {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
+                                        </h2>
+                                        <h2 className="hidden md:block text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                            Daily AI Briefing
+                                            {aiLoading && <span className="inline-block w-1.5 h-1.5 bg-zinc-400 rounded-full animate-ping" />}
+                                        </h2>
+                                        <p className="hidden md:block text-zinc-300 text-base md:text-lg font-medium leading-relaxed font-sans mt-2 line-clamp-1">
+                                            {aiBriefing?.briefing}
+                                        </p>
+                                    </>
                                 )}
                             </div>
                             <div className={`transform transition-transform duration-200 ${isAiBriefingExpanded ? 'rotate-180' : ''}`}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:hidden"><path d="m6 9 6 6 6-6"/></svg>
                             </div>
                         </button>
-                        <div className={`px-4 pb-4 md:px-6 md:pb-8 md:pt-0 ${isAiBriefingExpanded ? 'block' : 'hidden md:block'}`}>
+                        <div className={`px-4 pb-4 md:px-6 md:pb-8 md:pt-0 transition-all duration-300 ${isAiBriefingExpanded ? 'block' : 'hidden md:block'}`}>
                             {aiLoading ? (
                                 <div className="space-y-2 animate-pulse hidden md:block">
                                     <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
