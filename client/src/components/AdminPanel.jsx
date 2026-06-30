@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, Link as LinkIcon, Check, ExternalLink } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, fetchCanvasReports, applyCanvasReport, rejectCanvasReport } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setUpdate, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -12,16 +12,19 @@ const AdminPanel = ({ user }) => {
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
-    const [canvasReports, setCanvasReports] = useState([]);
-    const [canvasActionId, setCanvasActionId] = useState(null); // report id currently being applied/rejected
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
+    const [currentUpdate, setCurrentUpdate] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
-    const [targetVersion, setTargetVersion] = useState('');
+
+    // Update State
+    const [updateMsg, setUpdateMsg] = useState('');
+    const [updateTargetVersion, setUpdateTargetVersion] = useState('');
+    const [broadcastSubTab, setBroadcastSubTab] = useState('broadcast');
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -66,7 +69,7 @@ const AdminPanel = ({ user }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData, canvasReportsData] = await Promise.all([
+            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData] = await Promise.all([
                 fetchUsers(),
                 fetchAdminStats(),
                 fetchLogs(),
@@ -78,10 +81,6 @@ const AdminPanel = ({ user }) => {
                 fetchAdminFeedback().catch(err => {
                     console.warn("Failed to fetch feedback:", err);
                     return [];
-                }),
-                fetchCanvasReports().catch(err => {
-                    console.warn("Failed to fetch Canvas reports:", err);
-                    return [];
                 })
             ]);
             setUsers(usersData);
@@ -89,8 +88,8 @@ const AdminPanel = ({ user }) => {
             setLogs(logsData);
             setAiLogs(aiLogsData || []);
             setFeedback(feedbackData || []);
-            setCanvasReports(canvasReportsData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
+            setCurrentUpdate(systemData?.update || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
             console.error(err);
@@ -305,35 +304,6 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    const handleApplyCanvasReport = async (report) => {
-        if (!window.confirm(`Apply correction for "${report.className}"?\n\n${report.currentCourseId || 'none'} → ${report.suggestedCourseId}`)) return;
-        setCanvasActionId(report.id);
-        try {
-            await applyCanvasReport(report.id);
-            setCanvasReports(prev => prev.map(r => r.id === report.id
-                ? { ...r, status: 'applied', updatedAt: new Date().toISOString() }
-                : (r.className === report.className && r.status === 'open'
-                    ? { ...r, currentCourseId: report.suggestedCourseId }
-                    : r)));
-        } catch (err) {
-            alert('Failed to apply correction');
-        } finally {
-            setCanvasActionId(null);
-        }
-    };
-
-    const handleRejectCanvasReport = async (report) => {
-        setCanvasActionId(report.id);
-        try {
-            await rejectCanvasReport(report.id);
-            setCanvasReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'rejected', updatedAt: new Date().toISOString() } : r));
-        } catch (err) {
-            alert('Failed to reject report');
-        } finally {
-            setCanvasActionId(null);
-        }
-    };
-
     const handleToggleBlacklist = async (userId, currentBlacklisted) => {
         const action = currentBlacklisted ? 'unblacklist' : 'blacklist';
         if (!window.confirm(`Are you sure you want to ${action} this user? This will ${currentBlacklisted ? 'restore their access' : 'block their access to the application'}.`)) return;
@@ -423,13 +393,25 @@ const AdminPanel = ({ user }) => {
     const handleBroadcast = async (e) => {
         e.preventDefault();
         try {
-            await setBroadcast(broadcastMsg, broadcastType, targetVersion || null);
+            await setBroadcast(broadcastMsg, broadcastType);
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
-            setTargetVersion('');
-            loadData(); // Refresh logs
+            loadData();
         } catch (err) {
             alert("Failed to set broadcast");
+        }
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            await setUpdate(updateMsg, updateTargetVersion || null);
+            alert("Update notification set successfully!");
+            setUpdateMsg('');
+            setUpdateTargetVersion('');
+            loadData();
+        } catch (err) {
+            alert("Failed to set update notification");
         }
     };
 
@@ -514,7 +496,6 @@ const AdminPanel = ({ user }) => {
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
-                    <TabButton id="canvas" label="Canvas" icon={LinkIcon} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
             </header>
@@ -1002,106 +983,180 @@ const AdminPanel = ({ user }) => {
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-600">
                     <Radio size={32} />
                 </div>
-                <h2 className="text-2xl font-bold dark:text-white">System Broadcast</h2>
-                <p className="text-zinc-500 mt-2">Send a global alert message to all active users</p>
+                <h2 className="text-2xl font-bold dark:text-white">System Notifications</h2>
+                <p className="text-zinc-500 mt-2">Manage broadcast messages and update notifications</p>
             </div>
 
-            {currentBroadcast && (
-                <div className={`mb-6 p-4 border rounded-xl ${
-                    currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
-                    currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
-                    currentBroadcast.type === 'update' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
-                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
-                }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Info size={16} />
-                        <h3 className="font-bold text-sm uppercase tracking-wider">Current Active Broadcast</h3>
-                    </div>
-                    <p className="text-sm">{currentBroadcast.message}</p>
+            <div className="flex gap-2 mb-6 border-b border-zinc-200 dark:border-zinc-800">
+                <button
+                    onClick={() => setBroadcastSubTab('broadcast')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        broadcastSubTab === 'broadcast'
+                            ? 'border-black dark:border-white text-zinc-900 dark:text-white'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    }`}
+                >
+                    Broadcast
+                </button>
+                <button
+                    onClick={() => setBroadcastSubTab('update')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        broadcastSubTab === 'update'
+                            ? 'border-black dark:border-white text-zinc-900 dark:text-white'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    }`}
+                >
+                    Update
+                </button>
+            </div>
+
+            {broadcastSubTab === 'broadcast' && (
+                <div className="space-y-6">
+                    {currentBroadcast && (
+                        <div className={`p-4 border rounded-xl ${
+                            currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
+                            currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
+                            'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
+                        }`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Info size={16} />
+                                <h3 className="font-bold text-sm uppercase tracking-wider">Current Active Broadcast</h3>
+                            </div>
+                            <p className="text-sm">{currentBroadcast.message}</p>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleBroadcast} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Announcement Message</label>
+                            <textarea
+                                value={broadcastMsg}
+                                onChange={(e) => setBroadcastMsg(e.target.value)}
+                                className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white resize-none"
+                                placeholder="Type your message here..."
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
+                            <div className="grid grid-cols-3 gap-4">
+                                {['info', 'warning', 'error'].map((type) => (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        onClick={() => setBroadcastType(type)}
+                                        className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
+                                            ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                                                : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
+                                                    : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
+                                            : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                                            }`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="pt-4 flex gap-4">
+                            {currentBroadcast && (
+                                <button
+                                    type="button"
+                                    onClick={async () => { 
+                                        try {
+                                            await setBroadcast('', 'info');
+                                            alert("Broadcast cleared successfully!");
+                                            setBroadcastMsg('');
+                                            loadData();
+                                        } catch (err) {
+                                            alert("Failed to clear broadcast");
+                                        }
+                                    }}
+                                    className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
+                                >
+                                    Clear Broadcast
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className="flex-[2] py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
+                            >
+                                Send Announcement
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
 
-            <form onSubmit={handleBroadcast} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Announcement Message</label>
-                    <textarea
-                        value={broadcastMsg}
-                        onChange={(e) => setBroadcastMsg(e.target.value)}
-                        className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white resize-none"
-                        placeholder="Type your message here..."
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {['info', 'warning', 'error', 'update'].map((type) => (
-                            <button
-                                key={type}
-                                type="button"
-                                onClick={() => {
-                                    setBroadcastType(type);
-                                    if (type === 'update' && (!broadcastMsg || broadcastMsg.trim() === '')) {
-                                        setBroadcastMsg('A new version of Synchron is available!');
-                                    }
-                                }}
-                                className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
-                                    ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                                        : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                                        : type === 'update' ? 'bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                            : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
-                                    : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
-                                    }`}
-                            >
-                                {type}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {broadcastType === 'update' && (
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
-                        <input
-                            type="text"
-                            value={targetVersion}
-                            onChange={(e) => setTargetVersion(e.target.value)}
-                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
-                            placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
-                            pattern="\d+\.\d+\.\d+"
-                        />
-                        <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
-                    </div>
-                )}
-
-                <div className="pt-4 flex gap-4">
-                    {currentBroadcast && (
-                        <button
-                            type="button"
-                            onClick={async () => { 
-                                try {
-                                    await setBroadcast('', 'info');
-                                    alert("Broadcast cleared successfully!");
-                                    setBroadcastMsg('');
-                                    loadData();
-                                } catch (err) {
-                                    alert("Failed to clear broadcast");
-                                }
-                            }}
-                            className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
-                        >
-                            Clear Broadcast
-                        </button>
+            {broadcastSubTab === 'update' && (
+                <div className="space-y-6">
+                    {currentUpdate && (
+                        <div className="p-4 border rounded-xl bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Info size={16} />
+                                <h3 className="font-bold text-sm uppercase tracking-wider">Current Update Notification</h3>
+                            </div>
+                            <p className="text-sm">{currentUpdate.message}</p>
+                            <p className="text-xs mt-1 font-medium">Version: {currentUpdate.version}</p>
+                        </div>
                     )}
-                    <button
-                        type="submit"
-                        className="flex-[2] py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
-                    >
-                        Send Announcement
-                    </button>
+
+                    <form onSubmit={handleUpdate} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Update Message</label>
+                            <textarea
+                                value={updateMsg}
+                                onChange={(e) => setUpdateMsg(e.target.value)}
+                                className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white resize-none"
+                                placeholder="e.g., A new version of Synchron is available with improved performance and bug fixes!"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
+                            <input
+                                type="text"
+                                value={updateTargetVersion}
+                                onChange={(e) => setUpdateTargetVersion(e.target.value)}
+                                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
+                                placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
+                                pattern="\d+\.\d+\.\d+"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
+                        </div>
+
+                        <div className="pt-4 flex gap-4">
+                            {currentUpdate && (
+                                <button
+                                    type="button"
+                                    onClick={async () => { 
+                                        try {
+                                            await setUpdate('', null);
+                                            alert("Update notification cleared successfully!");
+                                            setUpdateMsg('');
+                                            setUpdateTargetVersion('');
+                                            loadData();
+                                        } catch (err) {
+                                            alert("Failed to clear update notification");
+                                        }
+                                    }}
+                                    className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
+                                >
+                                    Clear Update
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+                            >
+                                Set Update Notification
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            )}
         </div>
     )
 }
@@ -1631,74 +1686,6 @@ const AdminPanel = ({ user }) => {
                     </tbody>
                 </table>
             </div>
-        </div>
-    )
-}
-
-{
-    activeTab === 'canvas' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-                <div>
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">Canvas link corrections</h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Students report wrong shared Canvas IDs here. Applying a correction updates the link for everyone.</p>
-                </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                    {canvasReports.filter(r => r.status === 'open').length} open
-                </span>
-            </div>
-
-            {canvasReports.length === 0 ? (
-                <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">No Canvas reports yet.</div>
-            ) : (
-                <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {canvasReports.map(report => (
-                        <div key={report.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="flex-1 min-w-0 space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-semibold text-zinc-900 dark:text-white">{report.className}</span>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                        report.status === 'open' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
-                                        : report.status === 'applied' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                        : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                    }`}>{report.status}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm font-mono text-zinc-600 dark:text-zinc-300">
-                                    <span className="text-zinc-400 line-through">{report.currentCourseId || 'none'}</span>
-                                    <span>→</span>
-                                    <a
-                                        href={`https://sydneyboyshigh.instructure.com/courses/${report.suggestedCourseId}`}
-                                        target="_blank" rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:underline"
-                                    >
-                                        {report.suggestedCourseId} <ExternalLink size={12} />
-                                    </a>
-                                </div>
-                                <p className="text-sm text-zinc-600 dark:text-zinc-400">{report.justification}</p>
-                                <p className="text-xs text-zinc-400">Reported by {report.reporterName}</p>
-                            </div>
-                            {report.status === 'open' && (
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        onClick={() => handleApplyCanvasReport(report)}
-                                        disabled={canvasActionId === report.id}
-                                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-                                    >
-                                        <Check size={14} /> Apply
-                                    </button>
-                                    <button
-                                        onClick={() => handleRejectCanvasReport(report)}
-                                        disabled={canvasActionId === report.id}
-                                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold transition-colors disabled:opacity-50"
-                                    >
-                                        <X size={14} /> Reject
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
         </div>
     )
 }

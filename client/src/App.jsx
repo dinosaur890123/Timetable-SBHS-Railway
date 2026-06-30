@@ -26,7 +26,9 @@ import {
     fetchTimetableQa,
     fetchUserPreferences,
     saveUserPreferences,
-    fetchCanvasCourses
+    fetchCanvasLinks,
+    saveCanvasLinks as saveCanvasLinksApi,
+    fetchSharedCanvasLink
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -99,38 +101,65 @@ function App() {
     const [billingMessage, setBillingMessage] = useState(null);
     const [billingLoading, setBillingLoading] = useState(false);
 
-    // Canvas Links State (for timetable clickable links).
-    // canvasLinks maps className -> full Canvas URL, built from the shared
-    // canonical course IDs (one per class, school-wide).
+    // Canvas Links State (for timetable clickable links)
     const [canvasLinks, setCanvasLinks] = useState({});
+    const [sharedLinks, setSharedLinks] = useState({});
 
-    // Load shared canvas course links on mount (single request for all classes)
+    // Load canvas links on mount
     useEffect(() => {
         if (!user?.studentId) return;
 
-        const loadCanvasCourses = async () => {
-            try {
-                const data = await fetchCanvasCourses();
+        const loadCanvasLinks = async () => {
+            const data = await fetchCanvasLinks();
+            if (data && data.links) {
                 const linksMap = {};
-                Object.values(data?.courses || {}).forEach(course => {
-                    if (course?.className && course?.url) {
-                        linksMap[course.className] = course.url;
-                    }
+                data.links.forEach(link => {
+                    linksMap[link.className] = link.canvasUrl;
                 });
                 setCanvasLinks(linksMap);
-            } catch (e) {
-                console.warn('Failed to load Canvas course links:', e);
             }
         };
 
-        loadCanvasCourses();
+        loadCanvasLinks();
     }, [user?.studentId]);
+
+    // Fetch shared canvas links for classes that don't have user's link
+    useEffect(() => {
+        if (!completeTimetable?.timetable?.[0]?.periods) return;
+
+        const fetchSharedLinks = async () => {
+            const shared = {};
+            const periods = completeTimetable.timetable[0].periods;
+
+            for (const [bellId, period] of Object.entries(periods)) {
+                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
+                if (canvasLinks[period.title]) continue;
+
+                const data = await fetchSharedCanvasLink(period.title);
+                if (data && data.link && data.link.canvasUrl) {
+                    shared[period.title] = data.link.canvasUrl;
+                }
+            }
+
+            setSharedLinks(shared);
+        };
+
+        fetchSharedLinks();
+    }, [completeTimetable, canvasLinks]);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_system');
             return cached ? JSON.parse(cached).broadcast : null;
+        } catch {
+            return null;
+        }
+    });
+    const [update, setUpdate] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_system');
+            return cached ? JSON.parse(cached).update : null;
         } catch {
             return null;
         }
@@ -278,22 +307,29 @@ function App() {
                 if (systemData) {
                     // Version-based update check
                     if (systemData.version && systemData.version !== currentVersion) {
-                        localStorage.setItem('app_version', systemData.version);
-                        setCurrentVersion(systemData.version);
+                        // Only update version if user has acknowledged the update
+                        // (stored in localStorage as acknowledged_version)
+                        const acknowledgedVersion = localStorage.getItem('acknowledged_version');
+                        if (acknowledgedVersion === systemData.version) {
+                            localStorage.setItem('app_version', systemData.version);
+                            setCurrentVersion(systemData.version);
+                        }
                     }
 
-                    // Show broadcast if it's an update and version is newer
-                    if (systemData.broadcast?.type === 'update') {
-                        const serverVersion = systemData.broadcast.version || systemData.version;
-                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
-                            setBroadcast(systemData.broadcast);
+                    // Handle update notification - show if server version > acknowledged version
+                    if (systemData.update?.version) {
+                        const acknowledgedVersion = localStorage.getItem('acknowledged_version') || currentVersion;
+                        if (compareVersions(systemData.update.version, acknowledgedVersion) > 0) {
+                            setUpdate(systemData.update);
                         } else {
-                            setBroadcast(null);
+                            setUpdate(null);
                         }
                     } else {
-                        setBroadcast(systemData.broadcast);
+                        setUpdate(null);
                     }
 
+                    // Handle broadcast (non-update messages)
+                    setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -305,7 +341,7 @@ function App() {
         // Poll every 30 seconds
         const interval = setInterval(pollStatus, 30000);
         return () => clearInterval(interval);
-    }, []);
+    }, [currentVersion]);
 
     // Handle billing query parameters and notifications
     useEffect(() => {
@@ -472,22 +508,28 @@ function App() {
 
                     // Version-based update check
                     if (systemData.version && systemData.version !== currentVersion) {
-                        localStorage.setItem('app_version', systemData.version);
-                        setCurrentVersion(systemData.version);
+                        // Only update version if user has acknowledged the update
+                        const acknowledgedVersion = localStorage.getItem('acknowledged_version');
+                        if (acknowledgedVersion === systemData.version) {
+                            localStorage.setItem('app_version', systemData.version);
+                            setCurrentVersion(systemData.version);
+                        }
                     }
 
-                    // Show broadcast if it's an update and version is newer
-                    if (systemData.broadcast?.type === 'update') {
-                        const serverVersion = systemData.broadcast.version || systemData.version;
-                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
-                            setBroadcast(systemData.broadcast);
+                    // Handle update notification - show if server version > acknowledged version
+                    if (systemData.update?.version) {
+                        const acknowledgedVersion = localStorage.getItem('acknowledged_version') || currentVersion;
+                        if (compareVersions(systemData.update.version, acknowledgedVersion) > 0) {
+                            setUpdate(systemData.update);
                         } else {
-                            setBroadcast(null);
+                            setUpdate(null);
                         }
                     } else {
-                        setBroadcast(systemData.broadcast);
+                        setUpdate(null);
                     }
 
+                    // Handle broadcast (non-update messages)
+                    setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -818,29 +860,29 @@ function App() {
                     </div>
                 </header>
 
+                {update && (
+                    <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400`}>
+                        <Info size={18} className="shrink-0" />
+                        <span className="flex-1">{update.message}</span>
+                        <button
+                            onClick={() => {
+                                localStorage.setItem('acknowledged_version', update.version);
+                                setUpdate(null);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
+                        >
+                            Acknowledge
+                        </button>
+                    </div>
+                )}
+
                 {broadcast && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' :
                             broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' :
-                                broadcast.type === 'update' ? 'bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400' :
                                     'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                         <Info size={18} className="shrink-0" />
                         <span className="flex-1">{broadcast.message}</span>
-
-                        {broadcast.type === 'update' && (
-                            <button
-                                onClick={() => {
-                                    const newVersion = broadcast.version || currentVersion;
-                                    localStorage.setItem('app_version', newVersion);
-                                    setCurrentVersion(newVersion);
-                                    setBroadcast(null);
-                                    logout(true);
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
-                            >
-                                Update
-                            </button>
-                        )}
                     </div>
                 )}
 
@@ -940,7 +982,7 @@ function App() {
                                 </>
                                 )}
 
-                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} canvasLinks={canvasLinks} />
+                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} canvasLinks={canvasLinks} sharedLinks={sharedLinks} />
                             </div>
                         )}
 

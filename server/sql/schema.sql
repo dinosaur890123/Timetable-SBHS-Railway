@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS system_state (
   maintenance BOOLEAN NOT NULL DEFAULT FALSE,
   broadcast_message TEXT NULL,
   broadcast_type TEXT NULL,
+  update_message TEXT NULL,
+  update_type TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'hackclub',
   ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
   version TEXT NOT NULL DEFAULT '1.0.0',
@@ -139,42 +141,6 @@ CREATE TABLE IF NOT EXISTS canvas_links (
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
 
--- Shared Canvas Courses migration
--- One canonical Canvas course ID per class name, shared across the whole school.
--- Set once by the first person; corrections go through canvas_course_reports.
-CREATE TABLE IF NOT EXISTS canvas_courses (
-  class_name TEXT PRIMARY KEY,
-  course_id TEXT NOT NULL,
-  set_by TEXT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Reports of incorrect shared Canvas course IDs, reviewed by developers/admins.
-CREATE TABLE IF NOT EXISTS canvas_course_reports (
-  id TEXT PRIMARY KEY,
-  class_name TEXT NOT NULL,
-  current_course_id TEXT NULL,
-  suggested_course_id TEXT NOT NULL,
-  justification TEXT NOT NULL,
-  reported_by TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'open', -- open | applied | rejected
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS canvas_course_reports_status_idx ON canvas_course_reports (status, created_at DESC);
-
--- Seed the shared table from the legacy per-student links so existing data is preserved.
--- Picks the most recently updated link per class and extracts the numeric course id.
-INSERT INTO canvas_courses (class_name, course_id, set_by, created_at, updated_at)
-SELECT DISTINCT ON (class_name)
-  class_name,
-  substring(canvas_url from 'courses/([0-9]+)') AS course_id,
-  student_id,
-  created_at,
-  NOW()
-FROM canvas_links
-WHERE canvas_url ~ 'courses/[0-9]+'
-ORDER BY class_name, updated_at DESC
-ON CONFLICT (class_name) DO NOTHING;
+-- Update/Broadcast separation migration
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_message TEXT NULL;
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_type TEXT NULL;

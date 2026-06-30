@@ -90,14 +90,29 @@ export const fetchLogs = async () => {
     }
 };
 
-export const setBroadcast = async (message, type = 'info', targetVersion = null) => {
+export const setBroadcast = async (message, type = 'info') => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/broadcast`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ message, type, targetVersion })
+            body: JSON.stringify({ message, type })
         });
         if (!response.ok) throw new Error('Failed to set broadcast');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const setUpdate = async (message, targetVersion = null) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/update`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ message, targetVersion })
+        });
+        if (!response.ok) throw new Error('Failed to set update');
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -296,48 +311,6 @@ export const toggleUserBlacklist = async (userId, blacklisted) => {
             body: JSON.stringify({ blacklisted })
         });
         if (!response.ok) throw new Error('Failed to update user blacklist status');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-// Canvas course correction reports
-export const fetchCanvasReports = async () => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to fetch Canvas reports');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const applyCanvasReport = async (reportId) => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports/${reportId}/apply`, {
-            method: 'POST',
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to apply Canvas correction');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const rejectCanvasReport = async (reportId) => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports/${reportId}/reject`, {
-            method: 'POST',
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to reject Canvas report');
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
