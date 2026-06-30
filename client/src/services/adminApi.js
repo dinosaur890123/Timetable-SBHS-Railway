@@ -303,3 +303,45 @@ export const toggleUserBlacklist = async (userId, blacklisted) => {
     }
 };
 
+// Canvas course correction reports
+export const fetchCanvasReports = async () => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports`, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch Canvas reports');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const applyCanvasReport = async (reportId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports/${reportId}/apply`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to apply Canvas correction');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const rejectCanvasReport = async (reportId) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/admin/canvas-reports/${reportId}/reject`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to reject Canvas report');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+

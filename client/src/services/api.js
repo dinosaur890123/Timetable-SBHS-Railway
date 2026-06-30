@@ -745,5 +745,57 @@ export const fetchSharedCanvasLink = async (className) => {
     return response.json();
 };
 
+// Shared Canvas Courses API (one canonical course ID per class, school-wide)
+export const fetchCanvasCourses = async () => {
+    const token = getAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch canvas courses: ${response.status}`);
+    }
+    return response.json();
+};
+
+// Set the shared Canvas ID for a class. Resolves with { ok, alreadySet, course, error }.
+export const setCanvasCourse = async (className, courseId) => {
+    const token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ className, courseId })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+        return { ok: true, course: data.course };
+    }
+    return { ok: false, alreadySet: data.error === 'already_set', error: data.message || data.error || 'Failed to save Canvas link' };
+};
+
+// Report an incorrect shared Canvas ID. Resolves with { ok, message, error }.
+export const reportCanvasCourse = async (className, suggestedCourseId, justification) => {
+    const token = getAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses/report`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ className, suggestedCourseId, justification })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+        return { ok: true, message: data.message };
+    }
+    return { ok: false, error: data.error || 'Failed to submit report' };
+};
+
 
 

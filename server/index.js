@@ -141,6 +141,8 @@ let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
+let canvasCourses = {}; // Shared Canvas course IDs memory fallback: { [className]: { courseId, setBy, createdAt, updatedAt } }
+let canvasReports = []; // Canvas course correction reports memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -236,6 +238,20 @@ const addAiLog = async (studentId, question, answer, provider, model) => {
 };
 
 const FEEDBACK_CATEGORIES = new Set(['error', 'suggestion']);
+
+// Shared Canvas course IDs all point at the SBHS Canvas instance.
+const CANVAS_BASE_URL = 'https://sydneyboyshigh.instructure.com/courses';
+
+// Accept a raw numeric course id, or pull the number out of a pasted Canvas URL.
+const normaliseCanvasCourseId = (input) => {
+    const str = String(input ?? '').trim();
+    if (!str) return null;
+    const match = str.match(/(\d{1,12})/);
+    if (!match) return null;
+    return match[1];
+};
+
+const buildCanvasUrl = (courseId) => `${CANVAS_BASE_URL}/${courseId}`;
 
 const generateFeedbackTicket = () => {
     const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -1066,6 +1082,145 @@ app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, r
         console.error('Get shared canvas link error:', e);
         // Zero-failure: return null link on any error
         res.json({ success: true, link: null });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Shared Canvas courses (canonical, school-wide).
+// One Canvas course ID per class name. Set once by the first person; wrong IDs
+// are corrected via the report -> admin "apply" flow rather than free overwrite.
+// ---------------------------------------------------------------------------
+
+const formatCanvasCourse = (className, courseId, setBy, updatedAt) => ({
+    className,
+    courseId,
+    url: buildCanvasUrl(courseId),
+    setBy: setBy ?? null,
+    updatedAt: updatedAt ? toIso(updatedAt) : null
+});
+
+// GET /api/canvas-courses - All shared Canvas course IDs in one shot
+app.get('/api/canvas-courses', requireStudentAuth, async (req, res) => {
+    try {
+        const courses = {};
+
+        if (!isDbEnabled) {
+            for (const [className, entry] of Object.entries(canvasCourses)) {
+                courses[className] = formatCanvasCourse(className, entry.courseId, entry.setBy, entry.updatedAt);
+            }
+            return res.json({ success: true, courses });
+        }
+
+        const result = await db.query(
+            `SELECT class_name, course_id, set_by, updated_at FROM canvas_courses ORDER BY class_name ASC`
+        );
+        result.rows.forEach(row => {
+            courses[row.class_name] = formatCanvasCourse(row.class_name, row.course_id, row.set_by, row.updated_at);
+        });
+
+        res.json({ success: true, courses });
+    } catch (e) {
+        console.error('Get canvas courses error:', e);
+        // Zero-failure: return empty map on any error
+        res.json({ success: true, courses: {} });
+    }
+});
+
+// POST /api/canvas-courses - Set the shared Canvas ID for a class (only if unset)
+app.post('/api/canvas-courses', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const className = String(req.body?.className || '').trim();
+        const courseId = normaliseCanvasCourseId(req.body?.courseId);
+
+        if (!className) {
+            return res.status(400).json({ error: 'Missing class name' });
+        }
+        if (!courseId) {
+            return res.status(400).json({ error: 'Enter a valid Canvas course number (e.g. 12345)' });
+        }
+
+        if (!isDbEnabled) {
+            if (canvasCourses[className]) {
+                return res.status(409).json({ error: 'already_set', message: 'This class already has a Canvas link. Report it if it is wrong.' });
+            }
+            const now = new Date();
+            canvasCourses[className] = { courseId, setBy: studentId, createdAt: now, updatedAt: now };
+            return res.status(201).json({ success: true, course: formatCanvasCourse(className, courseId, studentId, now) });
+        }
+
+        // Insert only if it doesn't already exist. ON CONFLICT DO NOTHING means a
+        // 0-row result tells us someone already set it.
+        const result = await db.query(
+            `INSERT INTO canvas_courses (class_name, course_id, set_by, created_at, updated_at)
+             VALUES ($1, $2, $3, NOW(), NOW())
+             ON CONFLICT (class_name) DO NOTHING
+             RETURNING class_name, course_id, set_by, updated_at`,
+            [className, courseId, studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(409).json({ error: 'already_set', message: 'This class already has a Canvas link. Report it if it is wrong.' });
+        }
+
+        const row = result.rows[0];
+        await addLog('CANVAS_COURSE_SET', studentId, `Set Canvas ID for "${className}" to ${courseId}`);
+        res.status(201).json({ success: true, course: formatCanvasCourse(row.class_name, row.course_id, row.set_by, row.updated_at) });
+    } catch (e) {
+        console.error('Set canvas course error:', e);
+        res.status(500).json({ error: 'Failed to save Canvas link' });
+    }
+});
+
+// POST /api/canvas-courses/report - Report an incorrect shared Canvas ID
+app.post('/api/canvas-courses/report', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const className = String(req.body?.className || '').trim();
+        const suggestedCourseId = normaliseCanvasCourseId(req.body?.suggestedCourseId);
+        const justification = String(req.body?.justification || '').trim();
+
+        if (!className) {
+            return res.status(400).json({ error: 'Missing class name' });
+        }
+        if (!suggestedCourseId) {
+            return res.status(400).json({ error: 'Enter the correct Canvas course number (e.g. 12345)' });
+        }
+        if (justification.length < 10) {
+            return res.status(400).json({ error: 'Please explain why the current link is wrong (at least 10 characters)' });
+        }
+
+        const id = crypto.randomUUID();
+
+        // Look up the current id so the admin can see what is being changed.
+        let currentCourseId = null;
+        if (!isDbEnabled) {
+            currentCourseId = canvasCourses[className]?.courseId ?? null;
+        } else {
+            const existing = await db.query('SELECT course_id FROM canvas_courses WHERE class_name = $1', [className]);
+            currentCourseId = existing.rows[0]?.course_id ?? null;
+        }
+
+        if (!isDbEnabled) {
+            const now = new Date();
+            const report = { id, className, currentCourseId, suggestedCourseId, justification, reportedBy: studentId, status: 'open', createdAt: now, updatedAt: now };
+            canvasReports.unshift(report);
+            if (canvasReports.length > 200) canvasReports.pop();
+            await addLog('CANVAS_REPORT', studentId, `Reported wrong Canvas ID for "${className}" -> ${suggestedCourseId}`);
+            return res.status(201).json({ success: true, report });
+        }
+
+        await db.query(
+            `INSERT INTO canvas_course_reports (id, class_name, current_course_id, suggested_course_id, justification, reported_by, status, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())`,
+            [id, className, currentCourseId, suggestedCourseId, justification, studentId]
+        );
+
+        await addLog('CANVAS_REPORT', studentId, `Reported wrong Canvas ID for "${className}" -> ${suggestedCourseId}`);
+        res.status(201).json({ success: true, message: 'Report submitted. Thanks — the developers will review it.' });
+    } catch (e) {
+        console.error('Canvas report error:', e);
+        res.status(500).json({ error: 'Failed to submit report' });
     }
 });
 
@@ -2314,6 +2469,131 @@ app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Feedback bulk delete error:', e);
         res.status(500).json({ error: 'Failed to bulk delete feedback entries' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Admin: Canvas course correction reports
+// ---------------------------------------------------------------------------
+
+// GET /api/admin/canvas-reports - List Canvas correction reports
+app.get('/api/admin/canvas-reports', requireAuth, async (req, res) => {
+    try {
+        let reports = [];
+        if (!isDbEnabled) {
+            reports = canvasReports.map(r => {
+                const u = users.find(user => String(user.id) === String(r.reportedBy));
+                return {
+                    ...r,
+                    createdAt: toIso(r.createdAt),
+                    updatedAt: toIso(r.updatedAt),
+                    reporterName: u ? u.name : 'Unknown Student'
+                };
+            });
+        } else {
+            const result = await db.query(
+                `SELECT r.id, r.class_name, r.current_course_id, r.suggested_course_id, r.justification,
+                        r.reported_by, r.status, r.created_at, r.updated_at, u.name AS reporter_name
+                 FROM canvas_course_reports r
+                 LEFT JOIN app_users u ON r.reported_by = u.id
+                 ORDER BY (r.status = 'open') DESC, r.created_at DESC`
+            );
+            reports = result.rows.map(row => ({
+                id: row.id,
+                className: row.class_name,
+                currentCourseId: row.current_course_id,
+                suggestedCourseId: row.suggested_course_id,
+                justification: row.justification,
+                reportedBy: row.reported_by,
+                reporterName: row.reporter_name || 'Unknown Student',
+                status: row.status,
+                createdAt: toIso(row.created_at),
+                updatedAt: toIso(row.updated_at)
+            }));
+        }
+        res.json(reports);
+    } catch (e) {
+        console.error('Canvas reports list error:', e);
+        res.status(500).json({ error: 'Failed to fetch Canvas reports' });
+    }
+});
+
+// POST /api/admin/canvas-reports/:id/apply - Accept a report and update the shared ID
+app.post('/api/admin/canvas-reports/:id/apply', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actor = req.user?.studentId || 'ADMIN';
+
+        if (!isDbEnabled) {
+            const report = canvasReports.find(r => String(r.id) === String(id));
+            if (!report) return res.status(404).json({ error: 'Report not found' });
+            const now = new Date();
+            const existing = canvasCourses[report.className];
+            canvasCourses[report.className] = {
+                courseId: report.suggestedCourseId,
+                setBy: actor,
+                createdAt: existing?.createdAt || now,
+                updatedAt: now
+            };
+            report.status = 'applied';
+            report.updatedAt = now;
+            await addLog('CANVAS_REPORT_APPLY', actor, `Applied Canvas correction for "${report.className}" -> ${report.suggestedCourseId}`);
+            return res.json({ success: true, message: 'Correction applied' });
+        }
+
+        const reportResult = await db.query(
+            `SELECT class_name, suggested_course_id, status FROM canvas_course_reports WHERE id = $1`,
+            [String(id)]
+        );
+        if (reportResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+        const { class_name: className, suggested_course_id: suggestedCourseId } = reportResult.rows[0];
+
+        // Upsert the canonical course id (this is the one place a set value is overwritten).
+        await db.query(
+            `INSERT INTO canvas_courses (class_name, course_id, set_by, created_at, updated_at)
+             VALUES ($1, $2, $3, NOW(), NOW())
+             ON CONFLICT (class_name) DO UPDATE SET course_id = $2, set_by = $3, updated_at = NOW()`,
+            [className, suggestedCourseId, String(actor)]
+        );
+        await db.query(
+            `UPDATE canvas_course_reports SET status = 'applied', updated_at = NOW() WHERE id = $1`,
+            [String(id)]
+        );
+
+        await addLog('CANVAS_REPORT_APPLY', actor, `Applied Canvas correction for "${className}" -> ${suggestedCourseId}`);
+        res.json({ success: true, message: 'Correction applied' });
+    } catch (e) {
+        console.error('Canvas report apply error:', e);
+        res.status(500).json({ error: 'Failed to apply correction' });
+    }
+});
+
+// POST /api/admin/canvas-reports/:id/reject - Dismiss a report without changing the ID
+app.post('/api/admin/canvas-reports/:id/reject', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const actor = req.user?.studentId || 'ADMIN';
+
+        if (!isDbEnabled) {
+            const report = canvasReports.find(r => String(r.id) === String(id));
+            if (!report) return res.status(404).json({ error: 'Report not found' });
+            report.status = 'rejected';
+            report.updatedAt = new Date();
+        } else {
+            const result = await db.query(
+                `UPDATE canvas_course_reports SET status = 'rejected', updated_at = NOW() WHERE id = $1 RETURNING id`,
+                [String(id)]
+            );
+            if (result.rows.length === 0) return res.status(404).json({ error: 'Report not found' });
+        }
+
+        await addLog('CANVAS_REPORT_REJECT', actor, `Rejected Canvas report ${id}`);
+        res.json({ success: true, message: 'Report rejected' });
+    } catch (e) {
+        console.error('Canvas report reject error:', e);
+        res.status(500).json({ error: 'Failed to reject report' });
     }
 });
 

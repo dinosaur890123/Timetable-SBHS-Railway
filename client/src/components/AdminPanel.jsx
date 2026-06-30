@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, Link as LinkIcon, Check, ExternalLink } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, fetchCanvasReports, applyCanvasReport, rejectCanvasReport } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -12,6 +12,8 @@ const AdminPanel = ({ user }) => {
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
+    const [canvasReports, setCanvasReports] = useState([]);
+    const [canvasActionId, setCanvasActionId] = useState(null); // report id currently being applied/rejected
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -64,7 +66,7 @@ const AdminPanel = ({ user }) => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData] = await Promise.all([
+            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData, canvasReportsData] = await Promise.all([
                 fetchUsers(),
                 fetchAdminStats(),
                 fetchLogs(),
@@ -76,6 +78,10 @@ const AdminPanel = ({ user }) => {
                 fetchAdminFeedback().catch(err => {
                     console.warn("Failed to fetch feedback:", err);
                     return [];
+                }),
+                fetchCanvasReports().catch(err => {
+                    console.warn("Failed to fetch Canvas reports:", err);
+                    return [];
                 })
             ]);
             setUsers(usersData);
@@ -83,6 +89,7 @@ const AdminPanel = ({ user }) => {
             setLogs(logsData);
             setAiLogs(aiLogsData || []);
             setFeedback(feedbackData || []);
+            setCanvasReports(canvasReportsData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
@@ -298,6 +305,35 @@ const AdminPanel = ({ user }) => {
         }
     };
 
+    const handleApplyCanvasReport = async (report) => {
+        if (!window.confirm(`Apply correction for "${report.className}"?\n\n${report.currentCourseId || 'none'} → ${report.suggestedCourseId}`)) return;
+        setCanvasActionId(report.id);
+        try {
+            await applyCanvasReport(report.id);
+            setCanvasReports(prev => prev.map(r => r.id === report.id
+                ? { ...r, status: 'applied', updatedAt: new Date().toISOString() }
+                : (r.className === report.className && r.status === 'open'
+                    ? { ...r, currentCourseId: report.suggestedCourseId }
+                    : r)));
+        } catch (err) {
+            alert('Failed to apply correction');
+        } finally {
+            setCanvasActionId(null);
+        }
+    };
+
+    const handleRejectCanvasReport = async (report) => {
+        setCanvasActionId(report.id);
+        try {
+            await rejectCanvasReport(report.id);
+            setCanvasReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'rejected', updatedAt: new Date().toISOString() } : r));
+        } catch (err) {
+            alert('Failed to reject report');
+        } finally {
+            setCanvasActionId(null);
+        }
+    };
+
     const handleToggleBlacklist = async (userId, currentBlacklisted) => {
         const action = currentBlacklisted ? 'unblacklist' : 'blacklist';
         if (!window.confirm(`Are you sure you want to ${action} this user? This will ${currentBlacklisted ? 'restore their access' : 'block their access to the application'}.`)) return;
@@ -478,6 +514,7 @@ const AdminPanel = ({ user }) => {
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
+                    <TabButton id="canvas" label="Canvas" icon={LinkIcon} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                 </div>
             </header>
@@ -1594,6 +1631,74 @@ const AdminPanel = ({ user }) => {
                     </tbody>
                 </table>
             </div>
+        </div>
+    )
+}
+
+{
+    activeTab === 'canvas' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div>
+                    <h3 className="font-semibold text-zinc-900 dark:text-white">Canvas link corrections</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Students report wrong shared Canvas IDs here. Applying a correction updates the link for everyone.</p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                    {canvasReports.filter(r => r.status === 'open').length} open
+                </span>
+            </div>
+
+            {canvasReports.length === 0 ? (
+                <div className="text-center py-16 text-zinc-500 dark:text-zinc-400">No Canvas reports yet.</div>
+            ) : (
+                <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {canvasReports.map(report => (
+                        <div key={report.id} className="p-4 flex flex-col md:flex-row md:items-center gap-4">
+                            <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-zinc-900 dark:text-white">{report.className}</span>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                        report.status === 'open' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                                        : report.status === 'applied' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                        : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                    }`}>{report.status}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm font-mono text-zinc-600 dark:text-zinc-300">
+                                    <span className="text-zinc-400 line-through">{report.currentCourseId || 'none'}</span>
+                                    <span>→</span>
+                                    <a
+                                        href={`https://sydneyboyshigh.instructure.com/courses/${report.suggestedCourseId}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:underline"
+                                    >
+                                        {report.suggestedCourseId} <ExternalLink size={12} />
+                                    </a>
+                                </div>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400">{report.justification}</p>
+                                <p className="text-xs text-zinc-400">Reported by {report.reporterName}</p>
+                            </div>
+                            {report.status === 'open' && (
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        onClick={() => handleApplyCanvasReport(report)}
+                                        disabled={canvasActionId === report.id}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                                    >
+                                        <Check size={14} /> Apply
+                                    </button>
+                                    <button
+                                        onClick={() => handleRejectCanvasReport(report)}
+                                        disabled={canvasActionId === report.id}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold transition-colors disabled:opacity-50"
+                                    >
+                                        <X size={14} /> Reject
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

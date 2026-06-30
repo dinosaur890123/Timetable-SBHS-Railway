@@ -26,9 +26,7 @@ import {
     fetchTimetableQa,
     fetchUserPreferences,
     saveUserPreferences,
-    fetchCanvasLinks,
-    saveCanvasLinks as saveCanvasLinksApi,
-    fetchSharedCanvasLink
+    fetchCanvasCourses
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -101,51 +99,32 @@ function App() {
     const [billingMessage, setBillingMessage] = useState(null);
     const [billingLoading, setBillingLoading] = useState(false);
 
-    // Canvas Links State (for timetable clickable links)
+    // Canvas Links State (for timetable clickable links).
+    // canvasLinks maps className -> full Canvas URL, built from the shared
+    // canonical course IDs (one per class, school-wide).
     const [canvasLinks, setCanvasLinks] = useState({});
-    const [sharedLinks, setSharedLinks] = useState({});
 
-    // Load canvas links on mount
+    // Load shared canvas course links on mount (single request for all classes)
     useEffect(() => {
         if (!user?.studentId) return;
 
-        const loadCanvasLinks = async () => {
-            const data = await fetchCanvasLinks();
-            if (data && data.links) {
+        const loadCanvasCourses = async () => {
+            try {
+                const data = await fetchCanvasCourses();
                 const linksMap = {};
-                data.links.forEach(link => {
-                    linksMap[link.className] = link.canvasUrl;
+                Object.values(data?.courses || {}).forEach(course => {
+                    if (course?.className && course?.url) {
+                        linksMap[course.className] = course.url;
+                    }
                 });
                 setCanvasLinks(linksMap);
+            } catch (e) {
+                console.warn('Failed to load Canvas course links:', e);
             }
         };
 
-        loadCanvasLinks();
+        loadCanvasCourses();
     }, [user?.studentId]);
-
-    // Fetch shared canvas links for classes that don't have user's link
-    useEffect(() => {
-        if (!completeTimetable?.timetable?.[0]?.periods) return;
-
-        const fetchSharedLinks = async () => {
-            const shared = {};
-            const periods = completeTimetable.timetable[0].periods;
-
-            for (const [bellId, period] of Object.entries(periods)) {
-                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
-                if (canvasLinks[period.title]) continue;
-
-                const data = await fetchSharedCanvasLink(period.title);
-                if (data && data.link && data.link.canvasUrl) {
-                    shared[period.title] = data.link.canvasUrl;
-                }
-            }
-
-            setSharedLinks(shared);
-        };
-
-        fetchSharedLinks();
-    }, [completeTimetable, canvasLinks]);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -961,7 +940,7 @@ function App() {
                                 </>
                                 )}
 
-                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} canvasLinks={canvasLinks} sharedLinks={sharedLinks} />
+                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} canvasLinks={canvasLinks} />
                             </div>
                         )}
 
