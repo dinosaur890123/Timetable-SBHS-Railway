@@ -144,7 +144,6 @@ let assignments = []; // Homework/assignments memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
-    update: null, // { message: "...", type: "update" }
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b',
     version: '1.0.0'
@@ -266,15 +265,14 @@ async function getSystemState() {
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, update_message, update_type, ai_provider, ai_model, version, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, version, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, update_message: null, update_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', version: '1.0.0', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', version: '1.0.0', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
-        update: row.update_message ? { message: row.update_message, type: row.update_type || 'update', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b',
         version: row.version || '1.0.0'
@@ -325,11 +323,25 @@ async function setVersion(newVersion) {
     return newVersion;
 }
 
-async function setBroadcast(message, type) {
+async function setBroadcast(message, type, targetVersion = null) {
     if (!isDbEnabled) {
         const ts = new Date().toISOString();
+        if (type === 'update' && message) {
+            if (targetVersion) {
+                systemState.version = targetVersion;
+            } else {
+                systemState.version = incrementVersion(systemState.version);
+            }
+        }
         systemState.broadcast = message ? { message, type: type || 'info', id: ts } : null;
         return systemState.broadcast;
+    }
+
+    let newVersion = null;
+    if (type === 'update' && message) {
+        const currentState = await getSystemState();
+        newVersion = targetVersion || incrementVersion(currentState.version);
+        await setVersion(newVersion);
     }
 
     const res = await db.query(
@@ -338,37 +350,7 @@ async function setBroadcast(message, type) {
     );
 
     const ts = res.rows[0]?.updated_at;
-    return message ? { message, type: type || 'info', id: ts } : null;
-}
-
-async function setUpdate(message, targetVersion = null) {
-    if (!isDbEnabled) {
-        const ts = new Date().toISOString();
-        if (message) {
-            if (targetVersion) {
-                systemState.version = targetVersion;
-            } else {
-                systemState.version = incrementVersion(systemState.version);
-            }
-        }
-        systemState.update = message ? { message, type: 'update', version: systemState.version, id: ts } : null;
-        return systemState.update;
-    }
-
-    let newVersion = null;
-    if (message) {
-        const currentState = await getSystemState();
-        newVersion = targetVersion || incrementVersion(currentState.version);
-        await setVersion(newVersion);
-    }
-
-    const res = await db.query(
-        'UPDATE system_state SET update_message = $1, update_type = $2, updated_at = NOW() WHERE id = 1 RETURNING updated_at',
-        [message || null, message ? 'update' : null]
-    );
-
-    const ts = res.rows[0]?.updated_at;
-    return message ? { message, type: 'update', version: newVersion, id: ts } : null;
+    return message ? { message, type: type || 'info', id: ts, version: newVersion } : null;
 }
 
 async function setMaintenance(maintenance) {
@@ -1982,32 +1964,16 @@ app.get('/api/logs', requireAuth, async (req, res) => {
 // POST /api/broadcast
 app.post('/api/broadcast', requireAuth, async (req, res) => {
     try {
-        const { message, type } = req.body || {};
-        const broadcast = await setBroadcast(message, type);
+        const { message, type, targetVersion } = req.body || {};
+        const broadcast = await setBroadcast(message, type, targetVersion);
 
-        if (message) await addLog('BROADCAST', 'ADMIN', `Global alert: "${message}"`);
+        if (message) await addLog('BROADCAST', 'ADMIN', `Global alert: "${message}" (version: ${broadcast?.version || 'N/A'})`);
         else await addLog('BROADCAST', 'ADMIN', 'Cleared global alert');
 
         res.json({ success: true, broadcast });
     } catch (e) {
         console.error('Broadcast error:', e);
         res.status(500).json({ error: 'Failed to set broadcast' });
-    }
-});
-
-// POST /api/update
-app.post('/api/update', requireAuth, async (req, res) => {
-    try {
-        const { message, targetVersion } = req.body || {};
-        const update = await setUpdate(message, targetVersion);
-
-        if (message) await addLog('UPDATE', 'ADMIN', `Update notification: "${message}" (version: ${update?.version || 'N/A'})`);
-        else await addLog('UPDATE', 'ADMIN', 'Cleared update notification');
-
-        res.json({ success: true, update });
-    } catch (e) {
-        console.error('Update error:', e);
-        res.status(500).json({ error: 'Failed to set update' });
     }
 });
 

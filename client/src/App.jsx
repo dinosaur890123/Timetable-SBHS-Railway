@@ -156,14 +156,6 @@ function App() {
             return null;
         }
     });
-    const [update, setUpdate] = useState(() => {
-        try {
-            const cached = localStorage.getItem('cached_system');
-            return cached ? JSON.parse(cached).update : null;
-        } catch {
-            return null;
-        }
-    });
     const [maintenance, setMaintenance] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_system');
@@ -307,29 +299,22 @@ function App() {
                 if (systemData) {
                     // Version-based update check
                     if (systemData.version && systemData.version !== currentVersion) {
-                        // Only update version if user has acknowledged the update
-                        // (stored in localStorage as acknowledged_version)
-                        const acknowledgedVersion = localStorage.getItem('acknowledged_version');
-                        if (acknowledgedVersion === systemData.version) {
-                            localStorage.setItem('app_version', systemData.version);
-                            setCurrentVersion(systemData.version);
-                        }
+                        localStorage.setItem('app_version', systemData.version);
+                        setCurrentVersion(systemData.version);
                     }
 
-                    // Handle update notification - show if server version > acknowledged version
-                    if (systemData.update?.version) {
-                        const acknowledgedVersion = localStorage.getItem('acknowledged_version') || currentVersion;
-                        if (compareVersions(systemData.update.version, acknowledgedVersion) > 0) {
-                            setUpdate(systemData.update);
+                    // Show broadcast if it's an update and version is newer
+                    if (systemData.broadcast?.type === 'update') {
+                        const serverVersion = systemData.broadcast.version || systemData.version;
+                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
+                            setBroadcast(systemData.broadcast);
                         } else {
-                            setUpdate(null);
+                            setBroadcast(null);
                         }
                     } else {
-                        setUpdate(null);
+                        setBroadcast(systemData.broadcast);
                     }
 
-                    // Handle broadcast (non-update messages)
-                    setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -341,7 +326,7 @@ function App() {
         // Poll every 30 seconds
         const interval = setInterval(pollStatus, 30000);
         return () => clearInterval(interval);
-    }, [currentVersion]);
+    }, []);
 
     // Handle billing query parameters and notifications
     useEffect(() => {
@@ -508,28 +493,22 @@ function App() {
 
                     // Version-based update check
                     if (systemData.version && systemData.version !== currentVersion) {
-                        // Only update version if user has acknowledged the update
-                        const acknowledgedVersion = localStorage.getItem('acknowledged_version');
-                        if (acknowledgedVersion === systemData.version) {
-                            localStorage.setItem('app_version', systemData.version);
-                            setCurrentVersion(systemData.version);
-                        }
+                        localStorage.setItem('app_version', systemData.version);
+                        setCurrentVersion(systemData.version);
                     }
 
-                    // Handle update notification - show if server version > acknowledged version
-                    if (systemData.update?.version) {
-                        const acknowledgedVersion = localStorage.getItem('acknowledged_version') || currentVersion;
-                        if (compareVersions(systemData.update.version, acknowledgedVersion) > 0) {
-                            setUpdate(systemData.update);
+                    // Show broadcast if it's an update and version is newer
+                    if (systemData.broadcast?.type === 'update') {
+                        const serverVersion = systemData.broadcast.version || systemData.version;
+                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
+                            setBroadcast(systemData.broadcast);
                         } else {
-                            setUpdate(null);
+                            setBroadcast(null);
                         }
                     } else {
-                        setUpdate(null);
+                        setBroadcast(systemData.broadcast);
                     }
 
-                    // Handle broadcast (non-update messages)
-                    setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
                 }
@@ -860,29 +839,29 @@ function App() {
                     </div>
                 </header>
 
-                {update && (
-                    <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400`}>
-                        <Info size={18} className="shrink-0" />
-                        <span className="flex-1">{update.message}</span>
-                        <button
-                            onClick={() => {
-                                localStorage.setItem('acknowledged_version', update.version);
-                                setUpdate(null);
-                            }}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
-                        >
-                            Acknowledge
-                        </button>
-                    </div>
-                )}
-
                 {broadcast && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' :
                             broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' :
+                                broadcast.type === 'update' ? 'bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400' :
                                     'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                         <Info size={18} className="shrink-0" />
                         <span className="flex-1">{broadcast.message}</span>
+
+                        {broadcast.type === 'update' && (
+                            <button
+                                onClick={() => {
+                                    const newVersion = broadcast.version || currentVersion;
+                                    localStorage.setItem('app_version', newVersion);
+                                    setCurrentVersion(newVersion);
+                                    setBroadcast(null);
+                                    logout(true);
+                                }}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
+                            >
+                                Update
+                            </button>
+                        )}
                     </div>
                 )}
 

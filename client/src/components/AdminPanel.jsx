@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setUpdate, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
 
 const AdminPanel = ({ user }) => {
@@ -13,18 +13,13 @@ const AdminPanel = ({ user }) => {
     const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
-    const [currentUpdate, setCurrentUpdate] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
-
-    // Update State
-    const [updateMsg, setUpdateMsg] = useState('');
-    const [updateTargetVersion, setUpdateTargetVersion] = useState('');
-    const [broadcastSubTab, setBroadcastSubTab] = useState('broadcast');
+    const [targetVersion, setTargetVersion] = useState('');
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -89,7 +84,6 @@ const AdminPanel = ({ user }) => {
             setAiLogs(aiLogsData || []);
             setFeedback(feedbackData || []);
             setCurrentBroadcast(systemData?.broadcast || null);
-            setCurrentUpdate(systemData?.update || null);
         } catch (err) {
             setApiError('Failed to fetch data from server. Ensure backend is running.');
             console.error(err);
@@ -393,25 +387,13 @@ const AdminPanel = ({ user }) => {
     const handleBroadcast = async (e) => {
         e.preventDefault();
         try {
-            await setBroadcast(broadcastMsg, broadcastType);
+            await setBroadcast(broadcastMsg, broadcastType, targetVersion || null);
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
-            loadData();
+            setTargetVersion('');
+            loadData(); // Refresh logs
         } catch (err) {
             alert("Failed to set broadcast");
-        }
-    };
-
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-        try {
-            await setUpdate(updateMsg, updateTargetVersion || null);
-            alert("Update notification set successfully!");
-            setUpdateMsg('');
-            setUpdateTargetVersion('');
-            loadData();
-        } catch (err) {
-            alert("Failed to set update notification");
         }
     };
 
@@ -983,180 +965,106 @@ const AdminPanel = ({ user }) => {
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-600">
                     <Radio size={32} />
                 </div>
-                <h2 className="text-2xl font-bold dark:text-white">System Notifications</h2>
-                <p className="text-zinc-500 mt-2">Manage broadcast messages and update notifications</p>
+                <h2 className="text-2xl font-bold dark:text-white">System Broadcast</h2>
+                <p className="text-zinc-500 mt-2">Send a global alert message to all active users</p>
             </div>
 
-            <div className="flex gap-2 mb-6 border-b border-zinc-200 dark:border-zinc-800">
-                <button
-                    onClick={() => setBroadcastSubTab('broadcast')}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                        broadcastSubTab === 'broadcast'
-                            ? 'border-black dark:border-white text-zinc-900 dark:text-white'
-                            : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    }`}
-                >
-                    Broadcast
-                </button>
-                <button
-                    onClick={() => setBroadcastSubTab('update')}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                        broadcastSubTab === 'update'
-                            ? 'border-black dark:border-white text-zinc-900 dark:text-white'
-                            : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    }`}
-                >
-                    Update
-                </button>
-            </div>
+            {currentBroadcast && (
+                <div className={`mb-6 p-4 border rounded-xl ${
+                    currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
+                    currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
+                    currentBroadcast.type === 'update' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
+                    'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
+                }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Info size={16} />
+                        <h3 className="font-bold text-sm uppercase tracking-wider">Current Active Broadcast</h3>
+                    </div>
+                    <p className="text-sm">{currentBroadcast.message}</p>
+                </div>
+            )}
 
-            {broadcastSubTab === 'broadcast' && (
-                <div className="space-y-6">
+            <form onSubmit={handleBroadcast} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Announcement Message</label>
+                    <textarea
+                        value={broadcastMsg}
+                        onChange={(e) => setBroadcastMsg(e.target.value)}
+                        className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white resize-none"
+                        placeholder="Type your message here..."
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {['info', 'warning', 'error', 'update'].map((type) => (
+                            <button
+                                key={type}
+                                type="button"
+                                onClick={() => {
+                                    setBroadcastType(type);
+                                    if (type === 'update' && (!broadcastMsg || broadcastMsg.trim() === '')) {
+                                        setBroadcastMsg('A new version of Synchron is available!');
+                                    }
+                                }}
+                                className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
+                                    ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                                        : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
+                                        : type === 'update' ? 'bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                            : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
+                                    : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                                    }`}
+                            >
+                                {type}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {broadcastType === 'update' && (
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
+                        <input
+                            type="text"
+                            value={targetVersion}
+                            onChange={(e) => setTargetVersion(e.target.value)}
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
+                            placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
+                            pattern="\d+\.\d+\.\d+"
+                        />
+                        <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
+                    </div>
+                )}
+
+                <div className="pt-4 flex gap-4">
                     {currentBroadcast && (
-                        <div className={`p-4 border rounded-xl ${
-                            currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
-                            currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
-                            'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
-                        }`}>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Info size={16} />
-                                <h3 className="font-bold text-sm uppercase tracking-wider">Current Active Broadcast</h3>
-                            </div>
-                            <p className="text-sm">{currentBroadcast.message}</p>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={async () => { 
+                                try {
+                                    await setBroadcast('', 'info');
+                                    alert("Broadcast cleared successfully!");
+                                    setBroadcastMsg('');
+                                    loadData();
+                                } catch (err) {
+                                    alert("Failed to clear broadcast");
+                                }
+                            }}
+                            className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
+                        >
+                            Clear Broadcast
+                        </button>
                     )}
-
-                    <form onSubmit={handleBroadcast} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Announcement Message</label>
-                            <textarea
-                                value={broadcastMsg}
-                                onChange={(e) => setBroadcastMsg(e.target.value)}
-                                className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white resize-none"
-                                placeholder="Type your message here..."
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
-                            <div className="grid grid-cols-3 gap-4">
-                                {['info', 'warning', 'error'].map((type) => (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        onClick={() => setBroadcastType(type)}
-                                        className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
-                                            ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                                                : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                                                    : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
-                                            : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
-                                            }`}
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 flex gap-4">
-                            {currentBroadcast && (
-                                <button
-                                    type="button"
-                                    onClick={async () => { 
-                                        try {
-                                            await setBroadcast('', 'info');
-                                            alert("Broadcast cleared successfully!");
-                                            setBroadcastMsg('');
-                                            loadData();
-                                        } catch (err) {
-                                            alert("Failed to clear broadcast");
-                                        }
-                                    }}
-                                    className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
-                                >
-                                    Clear Broadcast
-                                </button>
-                            )}
-                            <button
-                                type="submit"
-                                className="flex-[2] py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
-                            >
-                                Send Announcement
-                            </button>
-                        </div>
-                    </form>
+                    <button
+                        type="submit"
+                        className="flex-[2] py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg"
+                    >
+                        Send Announcement
+                    </button>
                 </div>
-            )}
-
-            {broadcastSubTab === 'update' && (
-                <div className="space-y-6">
-                    {currentUpdate && (
-                        <div className="p-4 border rounded-xl bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Info size={16} />
-                                <h3 className="font-bold text-sm uppercase tracking-wider">Current Update Notification</h3>
-                            </div>
-                            <p className="text-sm">{currentUpdate.message}</p>
-                            <p className="text-xs mt-1 font-medium">Version: {currentUpdate.version}</p>
-                        </div>
-                    )}
-
-                    <form onSubmit={handleUpdate} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Update Message</label>
-                            <textarea
-                                value={updateMsg}
-                                onChange={(e) => setUpdateMsg(e.target.value)}
-                                className="w-full h-32 px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white resize-none"
-                                placeholder="e.g., A new version of Synchron is available with improved performance and bug fixes!"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
-                            <input
-                                type="text"
-                                value={updateTargetVersion}
-                                onChange={(e) => setUpdateTargetVersion(e.target.value)}
-                                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
-                                placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
-                                pattern="\d+\.\d+\.\d+"
-                            />
-                            <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
-                        </div>
-
-                        <div className="pt-4 flex gap-4">
-                            {currentUpdate && (
-                                <button
-                                    type="button"
-                                    onClick={async () => { 
-                                        try {
-                                            await setUpdate('', null);
-                                            alert("Update notification cleared successfully!");
-                                            setUpdateMsg('');
-                                            setUpdateTargetVersion('');
-                                            loadData();
-                                        } catch (err) {
-                                            alert("Failed to clear update notification");
-                                        }
-                                    }}
-                                    className="flex-1 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl font-medium transition-colors"
-                                >
-                                    Clear Update
-                                </button>
-                            )}
-                            <button
-                                type="submit"
-                                className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
-                            >
-                                Set Update Notification
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
+            </form>
         </div>
     )
 }

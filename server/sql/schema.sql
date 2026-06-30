@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS system_state (
   maintenance BOOLEAN NOT NULL DEFAULT FALSE,
   broadcast_message TEXT NULL,
   broadcast_type TEXT NULL,
-  update_message TEXT NULL,
-  update_type TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'hackclub',
   ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
   version TEXT NOT NULL DEFAULT '1.0.0',
@@ -140,7 +138,3 @@ CREATE TABLE IF NOT EXISTS canvas_links (
 
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
-
--- Update/Broadcast separation migration
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_message TEXT NULL;
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS update_type TEXT NULL;

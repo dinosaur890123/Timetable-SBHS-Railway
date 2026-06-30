@@ -90,29 +90,14 @@ export const fetchLogs = async () => {
     }
 };
 
-export const setBroadcast = async (message, type = 'info') => {
+export const setBroadcast = async (message, type = 'info', targetVersion = null) => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/broadcast`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ message, type })
+            body: JSON.stringify({ message, type, targetVersion })
         });
         if (!response.ok) throw new Error('Failed to set broadcast');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const setUpdate = async (message, targetVersion = null) => {
-    try {
-        const response = await fetch(`${ADMIN_API_URL}/update`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ message, targetVersion })
-        });
-        if (!response.ok) throw new Error('Failed to set update');
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
