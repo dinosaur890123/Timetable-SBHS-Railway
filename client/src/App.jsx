@@ -32,6 +32,7 @@ import {
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
+import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X } from 'lucide-react';
 
@@ -105,6 +106,9 @@ function App() {
     const [canvasLinks, setCanvasLinks] = useState({});
     const [sharedLinks, setSharedLinks] = useState({});
 
+    // Notification State
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
     // Load canvas links on mount
     useEffect(() => {
         if (!user?.studentId) return;
@@ -146,6 +150,25 @@ function App() {
 
         fetchSharedLinks();
     }, [completeTimetable, canvasLinks]);
+
+    // Fetch unread notification count periodically
+    useEffect(() => {
+        if (!user?.studentId) return;
+
+        const fetchNotificationCount = async () => {
+            try {
+                const data = await getUnreadNotificationCount();
+                setUnreadNotificationCount(data.count || 0);
+            } catch (error) {
+                console.error('Failed to fetch notification count:', error);
+            }
+        };
+
+        fetchNotificationCount();
+        const interval = setInterval(fetchNotificationCount, 30000); // Poll every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [user?.studentId]);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -783,7 +806,7 @@ function App() {
 
     return (
         <div className="flex min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-            <Navigation currentView={currentView} setView={setCurrentView} user={user} />
+            <Navigation currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
 
             <main className="flex-1 overflow-x-hidden overflow-y-auto">
                 {/* Top Header */}

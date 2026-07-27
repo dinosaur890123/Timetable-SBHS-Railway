@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap } from 'lucide-react';
+import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap, Bell } from 'lucide-react';
 
-const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
+const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notificationCount }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all flex-1 md:w-full md:rounded-xl text-center
+    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all flex-1 md:w-full md:rounded-xl text-center relative
       ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500 md:mt-auto' : ''}
       ${isActive 
         ? (isSpecialAdmin 
@@ -14,11 +14,16 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin }) => (
       }`}
   >
     <Icon size={18} className="shrink-0" />
+    {notificationCount > 0 && (
+      <span className="absolute top-1 right-1 md:top-0 md:right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+        {notificationCount > 9 ? '9+' : notificationCount}
+      </span>
+    )}
     <span className="hidden md:block text-[11px] font-medium leading-tight">{label}</span>
   </button>
 );
 
-const Navigation = ({ currentView, setView, user }) => {
+const Navigation = ({ currentView, setView, user, notificationCount }) => {
   const isAdmin = user && user.role === 'Admin';
 
   const items = [
@@ -28,7 +33,7 @@ const Navigation = ({ currentView, setView, user }) => {
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'awards', icon: Award, label: 'Awards' },
     { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
-    { id: 'notes', icon: GraduationCap, label: 'Study' },
+    { id: 'notes', icon: GraduationCap, label: 'Study', showNotification: true },
   ];
 
   if (isAdmin) {
@@ -52,6 +57,7 @@ const Navigation = ({ currentView, setView, user }) => {
                 isActive={currentView === item.id}
                 onClick={() => setView(item.id)}
                 isSpecialAdmin={item.id === 'admin'}
+                notificationCount={item.showNotification ? notificationCount : 0}
             />
          ))}
        </div>

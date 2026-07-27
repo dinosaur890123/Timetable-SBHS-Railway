@@ -4,10 +4,14 @@ import {
     Loader2, BookOpen, ArrowUpDown, Check, AlertCircle,
     GraduationCap, Brain, Timer, HelpCircle, ArrowLeft,
     Layers, Play, Pause, RotateCcw, ChevronLeft, ChevronRight,
-    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2, CheckSquare
+    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2, CheckSquare, Share2, User, Send, Bell
 } from 'lucide-react';
 import { fetchNotes, saveNote, deleteNote } from '../services/notesApi';
 import { fetchAiNotesSummarise, fetchAiQuizGenerate, fetchAssignments, saveAssignment, deleteAssignment } from '../services/api';
+import {
+    searchUsers, shareResource, getSentResources, getReceivedResources, updateResourceStatus,
+    getNotifications, markNotificationRead, markAllNotificationsRead
+} from '../services/resourceSharingApi';
 
 // Helper to escape HTML to prevent XSS
 const escapeHtml = (text) => {
@@ -2400,6 +2404,457 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
 
 // =============================================
+// RESOURCE SHARING TOOL
+// =============================================
+const ResourceSharingTool = ({ user, onBack }) => {
+    const [activeTab, setActiveTab] = useState('share'); // 'share', 'received', 'sent', 'notifications'
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [shareTitle, setShareTitle] = useState('');
+    const [shareDescription, setShareDescription] = useState('');
+    const [shareType, setShareType] = useState('note');
+    const [shareResourceId, setShareResourceId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [receivedResources, setReceivedResources] = useState([]);
+    const [sentResources, setSentResources] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+
+    // Load data on mount and tab change
+    useEffect(() => {
+        loadReceivedResources();
+        loadSentResources();
+        loadNotifications();
+    }, [activeTab]);
+
+    const loadReceivedResources = async () => {
+        try {
+            const data = await getReceivedResources();
+            setReceivedResources(data);
+        } catch (error) {
+            console.error('Failed to load received resources:', error);
+        }
+    };
+
+    const loadSentResources = async () => {
+        try {
+            const data = await getSentResources();
+            setSentResources(data);
+        } catch (error) {
+            console.error('Failed to load sent resources:', error);
+        }
+    };
+
+    const loadNotifications = async () => {
+        try {
+            const data = await getNotifications();
+            setNotifications(data);
+        } catch (error) {
+            console.error('Failed to load notifications:', error);
+        }
+    };
+
+    const handleSearch = async (query) => {
+        setSearchQuery(query);
+        if (query.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        try {
+            const results = await searchUsers(query);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Search failed:', error);
+        }
+    };
+
+    const handleShare = async () => {
+        if (!selectedUser || !shareTitle || !shareResourceId) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await shareResource(
+                selectedUser.id,
+                shareType,
+                shareResourceId,
+                shareTitle,
+                shareDescription
+            );
+            alert('Resource shared successfully!');
+            setSelectedUser(null);
+            setShareTitle('');
+            setShareDescription('');
+            setShareResourceId('');
+            loadSentResources();
+        } catch (error) {
+            alert('Failed to share resource: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateStatus = async (shareId, status) => {
+        try {
+            await updateResourceStatus(shareId, status);
+            loadReceivedResources();
+        } catch (error) {
+            alert('Failed to update status: ' + error.message);
+        }
+    };
+
+    const handleMarkAsRead = async (notificationId) => {
+        try {
+            await markNotificationRead(notificationId);
+            loadNotifications();
+        } catch (error) {
+            console.error('Failed to mark as read:', error);
+        }
+    };
+
+    const handleMarkAllAsRead = async () => {
+        try {
+            await markAllNotificationsRead();
+            loadNotifications();
+        } catch (error) {
+            console.error('Failed to mark all as read:', error);
+        }
+    };
+
+    return (
+        <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between">
+                <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                    <ArrowLeft size={14} /> Back to Study Hub
+                </button>
+            </div>
+
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">Resource Sharing</h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">Share notes and assignments with classmates</p>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                {['share', 'received', 'sent', 'notifications'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                            activeTab === tab
+                                ? 'text-black dark:text-white border-b-2 border-black dark:border-white'
+                                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                        }`}
+                    >
+                        {tab === 'notifications' && notifications.filter(n => !n.read).length > 0 && (
+                            <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1" />
+                        )}
+                        {tab}
+                    </button>
+                ))}
+            </div>
+
+            {/* Share Tab */}
+            {activeTab === 'share' && (
+                <div className="space-y-6">
+                    <div className="border-2 border-black dark:border-zinc-800 p-6 bg-white dark:bg-zinc-950 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
+                            <Share2 size={16} /> Share Resource
+                        </h3>
+
+                        {/* User Search */}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                                    Search for Student
+                                </label>
+                                <div className="relative">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => handleSearch(e.target.value)}
+                                        placeholder="Enter student ID or name..."
+                                        className="w-full pl-10 pr-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                    />
+                                </div>
+                                {searchResults.length > 0 && (
+                                    <div className="mt-2 border border-zinc-200 dark:border-zinc-800 max-h-40 overflow-y-auto">
+                                        {searchResults.map((result) => (
+                                            <button
+                                                key={result.id}
+                                                onClick={() => {
+                                                    setSelectedUser(result);
+                                                    setSearchQuery(result.name || result.id);
+                                                    setSearchResults([]);
+                                                }}
+                                                className="w-full text-left px-4 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-sm flex items-center gap-2"
+                                            >
+                                                <User size={14} />
+                                                <span className="font-medium">{result.name || result.id}</span>
+                                                <span className="text-zinc-500 text-xs">{result.year ? `Year ${result.year}` : ''}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedUser && (
+                                <div className="flex items-center gap-2 p-3 bg-zinc-100 dark:bg-zinc-900 rounded-lg">
+                                    <User size={16} className="text-zinc-500" />
+                                    <span className="text-sm font-medium">Sharing with: {selectedUser.name || selectedUser.id}</span>
+                                    <button
+                                        onClick={() => {
+                                            setSelectedUser(null);
+                                            setSearchQuery('');
+                                        }}
+                                        className="ml-auto text-zinc-500 hover:text-red-500"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                                    Resource Type
+                                </label>
+                                <select
+                                    value={shareType}
+                                    onChange={(e) => setShareType(e.target.value)}
+                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                >
+                                    <option value="note">Study Note</option>
+                                    <option value="assignment">Assignment</option>
+                                    <option value="link">Link</option>
+                                    <option value="file">File</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                                    Resource ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={shareResourceId}
+                                    onChange={(e) => setShareResourceId(e.target.value)}
+                                    placeholder="Enter resource ID..."
+                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                                    Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={shareTitle}
+                                    onChange={(e) => setShareTitle(e.target.value)}
+                                    placeholder="Resource title..."
+                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={shareDescription}
+                                    onChange={(e) => setShareDescription(e.target.value)}
+                                    placeholder="Optional description..."
+                                    rows={3}
+                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white resize-none"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleShare}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black dark:bg-white text-white dark:text-black font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                Share Resource
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Received Tab */}
+            {activeTab === 'received' && (
+                <div className="space-y-4">
+                    {receivedResources.length === 0 ? (
+                        <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                            <Share2 size={48} className="mx-auto mb-4 opacity-50" />
+                            <p className="text-sm">No shared resources received yet</p>
+                        </div>
+                    ) : (
+                        receivedResources.map((resource) => (
+                            <div
+                                key={resource.id}
+                                className="border-2 border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                                                {resource.resource_type}
+                                            </span>
+                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 ${
+                                                resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
+                                                resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
+                                                'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
+                                            }`}>
+                                                {resource.status}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-bold text-zinc-900 dark:text-white">{resource.title}</h4>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                            From: {resource.sender_name || resource.sender_id}
+                                        </p>
+                                        {resource.description && (
+                                            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2">{resource.description}</p>
+                                        )}
+                                    </div>
+                                    {resource.status === 'pending' && (
+                                        <div className="flex gap-2 ml-4">
+                                            <button
+                                                onClick={() => handleUpdateStatus(resource.id, 'accepted')}
+                                                className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider hover:bg-emerald-600 transition-colors"
+                                            >
+                                                Accept
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateStatus(resource.id, 'declined')}
+                                                className="px-3 py-1 bg-red-500 text-white text-xs font-bold uppercase tracking-wider hover:bg-red-600 transition-colors"
+                                            >
+                                                Decline
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
+            {/* Sent Tab */}
+            {activeTab === 'sent' && (
+                <div className="space-y-4">
+                    {sentResources.length === 0 ? (
+                        <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                            <Send size={48} className="mx-auto mb-4 opacity-50" />
+                            <p className="text-sm">No resources shared yet</p>
+                        </div>
+                    ) : (
+                        sentResources.map((resource) => (
+                            <div
+                                key={resource.id}
+                                className="border-2 border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                                                {resource.resource_type}
+                                            </span>
+                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 ${
+                                                resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
+                                                resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
+                                                'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
+                                            }`}>
+                                                {resource.status}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-bold text-zinc-900 dark:text-white">{resource.title}</h4>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                            To: {resource.recipient_name || resource.recipient_id}
+                                        </p>
+                                        {resource.description && (
+                                            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2">{resource.description}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
+            {/* Notifications Tab */}
+            {activeTab === 'notifications' && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                            Notifications
+                        </h3>
+                        {notifications.some(n => !n.read) && (
+                            <button
+                                onClick={handleMarkAllAsRead}
+                                className="text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                            >
+                                Mark All Read
+                            </button>
+                        )}
+                    </div>
+                    {notifications.length === 0 ? (
+                        <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                            <Bell size={48} className="mx-auto mb-4 opacity-50" />
+                            <p className="text-sm">No notifications</p>
+                        </div>
+                    ) : (
+                        notifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className={`border-2 p-4 bg-white dark:bg-zinc-950 transition-all ${
+                                    notification.read
+                                        ? 'border-zinc-200 dark:border-zinc-800 opacity-60'
+                                        : 'border-pink-500 dark:border-pink-400 shadow-[4px_4px_0px_0px_rgba(236,72,153,0.2)] dark:shadow-[4px_4px_0px_0px_rgba(236,72,153,0.1)]'
+                                }`}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-2 rounded-full ${
+                                        notification.read
+                                            ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400'
+                                            : 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400'
+                                    }`}>
+                                        <Bell size={16} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className={`font-bold ${notification.read ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>
+                                            {notification.title}
+                                        </h4>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{notification.message}</p>
+                                        <p className="text-[10px] text-zinc-400 mt-2">
+                                            {new Date(notification.created_at).toLocaleString()}
+                                        </p>
+                                        {!notification.read && (
+                                            <button
+                                                onClick={() => handleMarkAsRead(notification.id)}
+                                                className="mt-2 text-xs font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400 hover:text-pink-800 dark:hover:text-pink-300 transition-colors"
+                                            >
+                                                Mark as Read
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// =============================================
 // MAIN STUDY HUB (NotesView)
 // =============================================
 const NotesView = ({ user, timetableData, setView }) => {
@@ -2474,6 +2929,9 @@ const NotesView = ({ user, timetableData, setView }) => {
     if (activeTool === 'quiz') {
         return <QuickQuizTool onBack={() => setActiveTool(null)} />;
     }
+    if (activeTool === 'shared') {
+        return <ResourceSharingTool user={user} onBack={() => setActiveTool(null)} />;
+    }
 
     // Study Hub Landing Page
     const studyTools = [
@@ -2526,6 +2984,16 @@ const NotesView = ({ user, timetableData, setView }) => {
             borderColor: 'hover:border-violet-500 dark:hover:border-violet-400',
             iconBg: 'bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400',
             tag: 'Self-Test'
+        },
+        {
+            id: 'shared',
+            icon: Share2,
+            title: 'Resource Sharing',
+            description: 'Share notes, assignments, and resources with classmates. Search by student ID or name and collaborate.',
+            color: 'from-pink-500 to-rose-600',
+            borderColor: 'hover:border-pink-500 dark:hover:border-pink-400',
+            iconBg: 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400',
+            tag: 'Collaborate'
         }
     ];
 

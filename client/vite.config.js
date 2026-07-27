@@ -9,6 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'SBHS Timetable',
         short_name: 'Timetable',
@@ -21,6 +22,55 @@ export default defineConfig({
             src: 'https://cdn.iconscout.com/icon/free/png-256/free-react-1-282599.png',
             sizes: '256x256',
             type: 'image/png'
+          },
+          {
+            src: 'https://cdn.iconscout.com/icon/free/png-256/free-react-1-282599.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/student\.sbhs\.net\.au\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'sbhs-api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60 // 5 minutes
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/auth\.sbhs\.net\.au\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'sbhs-auth-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 // 1 hour
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
           }
         ]
       }

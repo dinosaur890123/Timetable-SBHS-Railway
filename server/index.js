@@ -141,6 +141,8 @@ let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
+let sharedResources = []; // Shared resources memory fallback
+let notifications = []; // Notifications memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -3285,6 +3287,327 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
     } catch (e) {
         console.error('Transit API error:', e);
         res.status(500).json({ error: 'Failed to fetch transit departures' });
+    }
+});
+
+// Resource Sharing Endpoints
+
+// Search for users by student ID or name
+app.get('/api/users/search', requireStudentAuth, async (req, res) => {
+    try {
+        const { query } = req.query;
+        if (!query || query.length < 2) {
+            return res.json([]);
+        }
+
+        const user = req.user;
+        const searchPattern = `%${query.toLowerCase()}%`;
+
+        let result;
+        if (db.hasDb()) {
+            result = await db.query(
+                `SELECT id, name, email, year, role 
+                 FROM app_users 
+                 WHERE (id ILIKE $1 OR name ILIKE $1 OR email ILIKE $1)
+                 AND id != $2
+                 AND blacklisted = false
+                 LIMIT 20`,
+                [searchPattern, user.studentId]
+            );
+            res.json(result.rows);
+        } else {
+            // In-memory fallback
+            const filteredUsers = users.filter(u => 
+                (u.id && u.id.toLowerCase().includes(query.toLowerCase())) ||
+                (u.name && u.name.toLowerCase().includes(query.toLowerCase())) ||
+                (u.email && u.email.toLowerCase().includes(query.toLowerCase()))
+            ).map(u => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                year: u.year,
+                role: u.role
+            }));
+            res.json(filteredUsers.slice(0, 20));
+        }
+    } catch (error) {
+        console.error('User search error:', error);
+        res.status(500).json({ error: 'Failed to search users' });
+    }
+});
+
+// Share a resource with another student
+app.post('/api/resources/share', requireStudentAuth, async (req, res) => {
+    try {
+        const { recipientId, resourceType, resourceId, title, description } = req.body;
+        const senderId = req.user.studentId;
+
+        if (!recipientId || !resourceType || !resourceId || !title) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        if (recipientId === senderId) {
+            return res.status(400).json({ error: 'Cannot share with yourself' });
+        }
+
+        const shareId = crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        if (db.hasDb()) {
+            await db.query(
+                `INSERT INTO shared_resources (id, sender_id, recipient_id, resource_type, resource_id, title, description, status, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $8)`,
+                [shareId, senderId, recipientId, resourceType, resourceId, title, description, now]
+            );
+
+            // Create notification for recipient
+            const notificationId = crypto.randomUUID();
+            await db.query(
+                `INSERT INTO notifications (id, user_id, type, title, message, action_url, read, created_at)
+                 VALUES ($1, $2, 'resource_share', $3, $4, $5, false, $6)`,
+                [notificationId, recipientId, 'New Resource Shared', `${req.user.name || 'A student'} shared "${title}" with you`, `/study?tab=shared`, now]
+            );
+        } else {
+            // In-memory fallback
+            sharedResources.push({
+                id: shareId,
+                sender_id: senderId,
+                recipient_id: recipientId,
+                resource_type: resourceType,
+                resource_id: resourceId,
+                title,
+                description,
+                status: 'pending',
+                created_at: now,
+                updated_at: now
+            });
+
+            notifications.push({
+                id: crypto.randomUUID(),
+                user_id: recipientId,
+                type: 'resource_share',
+                title: 'New Resource Shared',
+                message: `${req.user.name || 'A student'} shared "${title}" with you`,
+                action_url: '/study?tab=shared',
+                read: false,
+                created_at: now
+            });
+        }
+
+        await addLog('RESOURCE_SHARE', senderId, `Shared ${resourceType} "${title}" with ${recipientId}`);
+        res.json({ success: true, shareId });
+    } catch (error) {
+        console.error('Resource share error:', error);
+        res.status(500).json({ error: 'Failed to share resource' });
+    }
+});
+
+// Get resources shared by current user
+app.get('/api/resources/sent', requireStudentAuth, async (req, res) => {
+    try {
+        const senderId = req.user.studentId;
+
+        if (db.hasDb()) {
+            const result = await db.query(
+                `SELECT sr.*, u.name as recipient_name, u.email as recipient_email
+                 FROM shared_resources sr
+                 JOIN app_users u ON sr.recipient_id = u.id
+                 WHERE sr.sender_id = $1
+                 ORDER BY sr.created_at DESC`,
+                [senderId]
+            );
+            res.json(result.rows);
+        } else {
+            const sent = sharedResources.filter(sr => sr.sender_id === senderId);
+            res.json(sent);
+        }
+    } catch (error) {
+        console.error('Get sent resources error:', error);
+        res.status(500).json({ error: 'Failed to fetch sent resources' });
+    }
+});
+
+// Get resources received by current user
+app.get('/api/resources/received', requireStudentAuth, async (req, res) => {
+    try {
+        const recipientId = req.user.studentId;
+
+        if (db.hasDb()) {
+            const result = await db.query(
+                `SELECT sr.*, u.name as sender_name, u.email as sender_email
+                 FROM shared_resources sr
+                 JOIN app_users u ON sr.sender_id = u.id
+                 WHERE sr.recipient_id = $1
+                 ORDER BY sr.created_at DESC`,
+                [recipientId]
+            );
+            res.json(result.rows);
+        } else {
+            const received = sharedResources.filter(sr => sr.recipient_id === recipientId);
+            res.json(received);
+        }
+    } catch (error) {
+        console.error('Get received resources error:', error);
+        res.status(500).json({ error: 'Failed to fetch received resources' });
+    }
+});
+
+// Update resource share status (accept/decline)
+app.put('/api/resources/:id/status', requireStudentAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // 'accepted' or 'declined'
+        const userId = req.user.studentId;
+
+        if (!['accepted', 'declined'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const now = new Date().toISOString();
+
+        if (db.hasDb()) {
+            const result = await db.query(
+                `UPDATE shared_resources 
+                 SET status = $1, updated_at = $2
+                 WHERE id = $3 AND recipient_id = $4
+                 RETURNING *`,
+                [status, now, id, userId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Resource share not found' });
+            }
+        } else {
+            const shareIndex = sharedResources.findIndex(sr => sr.id === id && sr.recipient_id === userId);
+            if (shareIndex === -1) {
+                return res.status(404).json({ error: 'Resource share not found' });
+            }
+            sharedResources[shareIndex].status = status;
+            sharedResources[shareIndex].updated_at = now;
+        }
+
+        await addLog('RESOURCE_STATUS', userId, `Updated resource share ${id} to ${status}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update resource status error:', error);
+        res.status(500).json({ error: 'Failed to update resource status' });
+    }
+});
+
+// Notification Endpoints
+
+// Get user notifications
+app.get('/api/notifications', requireStudentAuth, async (req, res) => {
+    try {
+        const userId = req.user.studentId;
+        const { unreadOnly } = req.query;
+
+        if (db.hasDb()) {
+            let query = `SELECT * FROM notifications WHERE user_id = $1`;
+            const params = [userId];
+
+            if (unreadOnly === 'true') {
+                query += ' AND read = false';
+            }
+
+            query += ' ORDER BY created_at DESC LIMIT 50';
+
+            const result = await db.query(query, params);
+            res.json(result.rows);
+        } else {
+            let userNotifications = notifications.filter(n => n.user_id === userId);
+            if (unreadOnly === 'true') {
+                userNotifications = userNotifications.filter(n => !n.read);
+            }
+            userNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            res.json(userNotifications.slice(0, 50));
+        }
+    } catch (error) {
+        console.error('Get notifications error:', error);
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', requireStudentAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.studentId;
+
+        if (db.hasDb()) {
+            const result = await db.query(
+                `UPDATE notifications 
+                 SET read = true 
+                 WHERE id = $1 AND user_id = $2
+                 RETURNING *`,
+                [id, userId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+        } else {
+            const notifIndex = notifications.findIndex(n => n.id === id && n.user_id === userId);
+            if (notifIndex === -1) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+            notifications[notifIndex].read = true;
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Mark notification read error:', error);
+        res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+});
+
+// Mark all notifications as read
+app.put('/api/notifications/read-all', requireStudentAuth, async (req, res) => {
+    try {
+        const userId = req.user.studentId;
+
+        if (db.hasDb()) {
+            await db.query(
+                `UPDATE notifications 
+                 SET read = true 
+                 WHERE user_id = $1`,
+                [userId]
+            );
+        } else {
+            notifications.forEach(n => {
+                if (n.user_id === userId) {
+                    n.read = true;
+                }
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Mark all notifications read error:', error);
+        res.status(500).json({ error: 'Failed to mark all notifications as read' });
+    }
+});
+
+// Get unread notification count
+app.get('/api/notifications/unread-count', requireStudentAuth, async (req, res) => {
+    try {
+        const userId = req.user.studentId;
+
+        let count = 0;
+        if (db.hasDb()) {
+            const result = await db.query(
+                `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read = false`,
+                [userId]
+            );
+            count = parseInt(result.rows[0].count);
+        } else {
+            count = notifications.filter(n => n.user_id === userId && !n.read).length;
+        }
+
+        res.json({ count });
+    } catch (error) {
+        console.error('Get unread count error:', error);
+        res.status(500).json({ error: 'Failed to get unread count' });
     }
 });
 

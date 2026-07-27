@@ -138,3 +138,37 @@ CREATE TABLE IF NOT EXISTS canvas_links (
 
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
+
+-- Shared Resources migration
+CREATE TABLE IF NOT EXISTS shared_resources (
+  id TEXT PRIMARY KEY,
+  sender_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  recipient_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  resource_type TEXT NOT NULL, -- 'note', 'assignment', 'link', 'file'
+  resource_id TEXT NOT NULL, -- Reference to app_notes.id, app_assignments.id, etc.
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'declined'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS shared_resources_sender_id_idx ON shared_resources (sender_id);
+CREATE INDEX IF NOT EXISTS shared_resources_recipient_id_idx ON shared_resources (recipient_id);
+CREATE INDEX IF NOT EXISTS shared_resources_status_idx ON shared_resources (status);
+
+-- Notifications migration
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL, -- 'resource_share', 'system', 'feedback', 'assignment'
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  action_url TEXT NULL,
+  read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications (user_id);
+CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read);
+CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
