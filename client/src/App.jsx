@@ -41,7 +41,7 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
-    const [defaultDate, setDefaultDate] = useState(new Date());
+    const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
 
     useEffect(() => {
@@ -684,6 +684,58 @@ function App() {
         init();
     }, []);
 
+    // Helper function to find the next/current school day
+    const findNextSchoolDay = async (startDate = new Date()) => {
+        // First check if the start date (today) is a valid school day
+        try {
+            const data = await fetchDayTimetable(startDate);
+            const inner = data?.timetable?.timetable || data?.timetable;
+            const bells = data?.bells || [];
+            const routine = inner?.routine ? inner.routine.split(',') : [];
+
+            const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+            const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+            // Find the latest end time across all bells in the routine
+            const latestEnd = routine.reduce((max, bellId) => {
+                const bell = bells.find(b => b.bell === bellId);
+                if (!bell) return max;
+                const end = bell.endTime ? toMinutes(bell.endTime) : null;
+                return end !== null ? Math.max(max, end) : max;
+            }, -1);
+
+            // Check if this is today and school has ended
+            const isToday = isSameDay(startDate, new Date());
+            const schoolEnded = latestEnd === -1 || nowMinutes >= latestEnd;
+
+            // If it's a valid school day and (not today or school hasn't ended), return it
+            if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
+                if (!isToday || !schoolEnded) {
+                    return startDate;
+                }
+            }
+        } catch (e) {
+            console.error("Error checking school day", e);
+        }
+
+        // If today is not valid or school has ended, find the next school day
+        let nextDay = addDays(startDate, 1);
+        for (let i = 0; i < 42; i++) {
+            try {
+                const data = await fetchDayTimetable(nextDay);
+                const inner = data?.timetable?.timetable || data?.timetable;
+                if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
+                    return nextDay;
+                }
+            } catch (e) {
+                console.error("Error checking next school day", e);
+            }
+            nextDay = addDays(nextDay, 1);
+        }
+        // Fallback to next day if no school day found
+        return addDays(startDate, 1);
+    };
+
     // Fetch complete timetable in the background once authenticated
     useEffect(() => {
         if (!user) return;
@@ -700,27 +752,22 @@ function App() {
         loadCompleteTimetable();
     }, [user]);
 
+    // Initialize defaultDate to the next/current school day after authentication
+    useEffect(() => {
+        if (!user || !isAuthenticated()) return;
+
+        const initializeDefaultDate = async () => {
+            const schoolDay = await findNextSchoolDay();
+            setDefaultDate(schoolDay);
+            setViewDate(schoolDay);
+        };
+
+        initializeDefaultDate();
+    }, [user]);
+
     // Fetch Timetable when date changes
     useEffect(() => {
         if (!isAuthenticated()) return;
-
-        const advanceToNextSchoolDay = async () => {
-            let nextDay = addDays(new Date(), 1);
-            for (let i = 0; i < 42; i++) {
-                try {
-                    const data = await fetchDayTimetable(nextDay);
-                    const inner = data?.timetable?.timetable || data?.timetable;
-                    if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
-                        setViewDate(nextDay);
-                        return;
-                    }
-                } catch (e) {
-                    console.error("Error checking next school day", e);
-                }
-                nextDay = addDays(nextDay, 1);
-            }
-            setViewDate(addDays(new Date(), 1));
-        };
 
         const loadTimetable = async () => {
             try {
@@ -729,30 +776,6 @@ function App() {
 
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
-
-                    if (!hasAutoAdvanced.current) {
-                        hasAutoAdvanced.current = true;
-
-                        const inner = data?.timetable?.timetable || data?.timetable;
-                        const bells = data?.bells || [];
-                        const routine = inner?.routine ? inner.routine.split(',') : [];
-
-                        const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-                        const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-
-                        // Find the latest end time across all bells in the routine
-                        const latestEnd = routine.reduce((max, bellId) => {
-                            const bell = bells.find(b => b.bell === bellId);
-                            if (!bell) return max;
-                            const end = bell.endTime ? toMinutes(bell.endTime) : null;
-                            return end !== null ? Math.max(max, end) : max;
-                        }, -1);
-
-                        // School ended = all scheduled classes are past; no classes → treat as ended
-                        const schoolEnded = latestEnd === -1 || nowMinutes >= latestEnd;
-
-                        if (schoolEnded) await advanceToNextSchoolDay();
-                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch timetable", err);
@@ -785,7 +808,10 @@ function App() {
     // Date Navigation Helpers
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
-    const resetToday = () => setViewDate(defaultDate);
+    const resetToday = async () => {
+        const schoolDay = await findNextSchoolDay();
+        setViewDate(schoolDay);
+    };
 
     const handleToggleSupporter = async (checked) => {
         try {
@@ -1006,9 +1032,9 @@ function App() {
                                     <div className="flex items-center gap-1.5">
                                         <button
                                             onClick={resetToday}
-                                            disabled={isSameDay(viewDate, defaultDate)}
+                                            disabled={defaultDate && isSameDay(viewDate, defaultDate)}
                                             className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-all ${
-                                                isSameDay(viewDate, defaultDate)
+                                                defaultDate && isSameDay(viewDate, defaultDate)
                                                     ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed'
                                                     : 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
                                             }`}
