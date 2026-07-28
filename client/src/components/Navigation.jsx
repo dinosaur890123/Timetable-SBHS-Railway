@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap, Bell } from 'lucide-react';
 
-const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notificationCount }) => (
+const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notificationCount, useFixedHeight }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all flex-1 md:w-full md:rounded-xl text-center relative
+    className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all ${useFixedHeight ? 'md:h-14' : 'flex-1'} md:w-full md:rounded-xl text-center relative
       ${isSpecialAdmin ? 'border-2 border-dotted border-orange-500 dark:border-orange-500 md:mt-auto' : ''}
       ${isActive 
         ? (isSpecialAdmin 
@@ -25,6 +25,19 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notific
 
 const Navigation = ({ currentView, setView, user, notificationCount }) => {
   const isAdmin = user && user.role === 'Admin';
+  const [useFixedHeight, setUseFixedHeight] = useState(true);
+
+  useEffect(() => {
+    const checkScreenHeight = () => {
+      // Revert to divide method (stretching) if screen height is too short
+      const minHeightForFixed = 600; // pixels
+      setUseFixedHeight(window.innerHeight >= minHeightForFixed);
+    };
+
+    checkScreenHeight();
+    window.addEventListener('resize', checkScreenHeight);
+    return () => window.removeEventListener('resize', checkScreenHeight);
+  }, []);
 
   const items = [
     { id: 'home', icon: Home, label: 'My Synchron'},
@@ -43,7 +56,7 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
   return (
     <nav className="fixed bottom-0 left-0 w-full md:sticky md:top-0 md:w-24 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
        <div className="flex md:flex-col justify-around md:justify-start gap-1 md:gap-3 p-2 md:p-3 h-full w-full">
-         <div className="hidden md:flex items-center justify-center py-4 mb-2">
+         <div className="hidden md:flex items-center justify-center py-4 mb-2 shrink-0">
              <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center">
                  <span className="text-white dark:text-black font-extrabold text-xl">S</span>
              </div>
@@ -58,6 +71,7 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
                 onClick={() => setView(item.id)}
                 isSpecialAdmin={item.id === 'admin'}
                 notificationCount={item.showNotification ? notificationCount : 0}
+                useFixedHeight={useFixedHeight}
             />
          ))}
        </div>
