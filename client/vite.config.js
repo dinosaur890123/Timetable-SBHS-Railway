@@ -44,6 +44,11 @@ export default defineConfig({
               },
               cacheableResponse: {
                 statuses: [0, 200]
+              },
+              // Use custom cache key to include query parameters (date)
+              cacheKeyWillBeUsed: async ({ request }) => {
+                const url = new URL(request.url);
+                return url.pathname + url.search;
               }
             }
           },
