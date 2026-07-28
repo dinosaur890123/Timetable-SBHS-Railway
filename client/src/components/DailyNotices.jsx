@@ -1,10 +1,18 @@
-import React from 'react';
-import { Megaphone, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Megaphone, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const DailyNotices = ({ notices, aiBriefing }) => {
   const displayNotices = aiBriefing && aiBriefing.sortedNotices ? aiBriefing.sortedNotices : (notices?.notices || []);
+  const [expandedNotices, setExpandedNotices] = useState({});
   if (displayNotices.length === 0) return null;
+
+  const toggleNoticeExpansion = (idx) => {
+    setExpandedNotices(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
 
   return (
     <motion.div 
@@ -56,11 +64,28 @@ const DailyNotices = ({ notices, aiBriefing }) => {
                         )}
                     </div>
                 </div>
-                
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-none line-clamp-4 prose dark:prose-invert prose-p:my-0 prose-ul:my-0" 
-                    dangerouslySetInnerHTML={{ __html: notice.content }} 
+
+                <div className={`text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-none prose dark:prose-invert prose-p:my-0 prose-ul:my-0 ${expandedNotices[idx] ? '' : 'line-clamp-4'}`}
+                    dangerouslySetInnerHTML={{ __html: notice.content }}
                 />
-                
+
+                <button
+                    onClick={() => toggleNoticeExpansion(idx)}
+                    className="text-[10px] font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 mt-2 flex items-center gap-1 transition-colors"
+                >
+                    {expandedNotices[idx] ? (
+                        <>
+                            <ChevronUp size={12} />
+                            Show less
+                        </>
+                    ) : (
+                        <>
+                            <ChevronDown size={12} />
+                            Show more
+                        </>
+                    )}
+                </button>
+
                 <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-500 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-850">
                     <span className="font-semibold text-zinc-600 dark:text-zinc-400">{notice.authorName}</span>
                     <span className="flex items-center gap-1 opacity-70">
