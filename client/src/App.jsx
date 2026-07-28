@@ -34,7 +34,7 @@ import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
 import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X, WifiOff, Database } from 'lucide-react';
 
 function App() {
     // State
@@ -109,6 +109,10 @@ function App() {
     // Notification State
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
+    // Offline State
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [usingCachedData, setUsingCachedData] = useState(false);
+
     // Load canvas links on mount
     useEffect(() => {
         if (!user?.studentId) return;
@@ -169,6 +173,54 @@ function App() {
 
         return () => clearInterval(interval);
     }, [user?.studentId]);
+
+    // Offline detection
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOffline(false);
+            setUsingCachedData(false);
+        };
+
+        const handleOffline = () => {
+            setIsOffline(true);
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
+    // Detect when using cached data (failed API calls)
+    useEffect(() => {
+        const originalFetch = window.fetch;
+
+        const fetchWithOfflineDetection = async (...args) => {
+            try {
+                const response = await originalFetch(...args);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                setUsingCachedData(false);
+                return response;
+            } catch (error) {
+                // If we're offline or the request failed, we might be using cached data
+                if (isOffline || error.message.includes('Failed to fetch')) {
+                    setUsingCachedData(true);
+                }
+                throw error;
+            }
+        };
+
+        window.fetch = fetchWithOfflineDetection;
+
+        return () => {
+            window.fetch = originalFetch;
+        };
+    }, [isOffline]);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -842,6 +894,18 @@ function App() {
                     </div>
 
                     <div className="flex items-center gap-6">
+                        {/* Offline Indicator */}
+                        {(isOffline || usingCachedData) && (
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                                isOffline 
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' 
+                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50'
+                            }`}>
+                                {isOffline ? <WifiOff size={14} /> : <Database size={14} />}
+                                <span>{isOffline ? 'Offline' : 'Using Cached Data'}</span>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-4">
                             <div className="hidden md:flex flex-col items-end">
                                 <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
