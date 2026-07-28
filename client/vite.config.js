@@ -39,16 +39,11 @@ export default defineConfig({
             options: {
               cacheName: 'sbhs-api-cache',
               expiration: {
-                maxEntries: 50,
+                maxEntries: 100,
                 maxAgeSeconds: 5 * 60 // 5 minutes
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              },
-              // Use custom cache key to include query parameters (date)
-              cacheKeyWillBeUsed: async ({ request }) => {
-                const url = new URL(request.url);
-                return url.pathname + url.search;
               }
             }
           },
