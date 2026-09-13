@@ -6,7 +6,20 @@
     <title>Synchron</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+    <script>
+      // Apply the cached interface theme + colour mode before first paint to avoid a flash.
+      // Full resolution lives in src/theme/uiThemes.js.
+      try {
+        var cfg = JSON.parse(localStorage.getItem('ui_config') || 'null') || { default: 'modern', enabled: ['modern', 'classic'] };
+        var pref = localStorage.getItem('ui_theme');
+        var ui = pref && cfg.enabled.indexOf(pref) !== -1 ? pref : cfg.default;
+        document.documentElement.setAttribute('data-ui', ui || 'modern');
+        if ((localStorage.getItem('theme') || 'dark') === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) {
+        document.documentElement.setAttribute('data-ui', 'modern');
+      }
+    </script>
   </head>
   <body class="bg-zinc-900 text-white">
     <div id="root"></div>

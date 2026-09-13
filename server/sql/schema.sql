@@ -119,6 +119,10 @@ CREATE INDEX IF NOT EXISTS app_assignments_student_id_idx ON app_assignments (st
 -- Version management migration
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '1.0.0';
 
+-- Interface theme migration (which UI themes users may pick, and the default)
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ui_default_theme TEXT NOT NULL DEFAULT 'modern';
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ui_enabled_themes TEXT NOT NULL DEFAULT 'modern,classic';
+
 -- User preferences migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
 

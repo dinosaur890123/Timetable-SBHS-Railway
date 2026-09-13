@@ -148,8 +148,23 @@ let systemState = {
     broadcast: null, // { message: "...", type: "info/warning/error" }
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b',
-    version: '1.0.0'
+    version: '1.0.0',
+    uiDefaultTheme: 'modern',
+    uiEnabledThemes: ['modern', 'classic']
 };
+
+// Interface themes the client knows how to render
+const UI_THEMES = ['modern', 'classic'];
+
+// Normalise an admin-supplied theme config so the default is always one of the enabled themes
+function normalizeUiThemeConfig(defaultTheme, enabledThemes) {
+    let enabled = (Array.isArray(enabledThemes) ? enabledThemes : String(enabledThemes || '').split(','))
+        .map(t => String(t).trim())
+        .filter((t, i, arr) => UI_THEMES.includes(t) && arr.indexOf(t) === i);
+    if (enabled.length === 0) enabled = ['modern'];
+    const def = enabled.includes(defaultTheme) ? defaultTheme : enabled[0];
+    return { uiDefaultTheme: def, uiEnabledThemes: enabled };
+}
 
 // Historical system metrics buffer (last 20 entries)
 const statsHistory = [];
@@ -263,22 +278,40 @@ async function getSystemState() {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
         if (!systemState.version) systemState.version = '1.0.0';
+        Object.assign(systemState, normalizeUiThemeConfig(systemState.uiDefaultTheme, systemState.uiEnabledThemes));
         return systemState;
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, version, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, version, ui_default_theme, ui_enabled_themes, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', version: '1.0.0', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', version: '1.0.0', ui_default_theme: 'modern', ui_enabled_themes: 'modern,classic', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b',
-        version: row.version || '1.0.0'
+        version: row.version || '1.0.0',
+        ...normalizeUiThemeConfig(row.ui_default_theme, row.ui_enabled_themes)
     };
+}
+
+async function setUiThemeConfig(defaultTheme, enabledThemes) {
+    const config = normalizeUiThemeConfig(defaultTheme, enabledThemes);
+
+    if (!isDbEnabled) {
+        Object.assign(systemState, config);
+        return config;
+    }
+
+    await db.query(
+        'UPDATE system_state SET ui_default_theme = $1, ui_enabled_themes = $2, updated_at = NOW() WHERE id = 1',
+        [config.uiDefaultTheme, config.uiEnabledThemes.join(',')]
+    );
+
+    return config;
 }
 
 async function setAiConfig(provider, model) {
@@ -2020,6 +2053,7 @@ app.get('/api/system/status', (req, res) => {
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
                 version: state.version,
+                uiThemes: { default: state.uiDefaultTheme, enabled: state.uiEnabledThemes },
                 supporters
             });
         } catch (e) {
@@ -2101,6 +2135,22 @@ app.post('/api/system/ai-config', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI config error:', e);
         res.status(500).json({ error: 'Failed to update AI configuration' });
+    }
+});
+
+// POST /api/system/ui-themes (Choose which interface themes users can pick, and the default)
+app.post('/api/system/ui-themes', requireAuth, async (req, res) => {
+    try {
+        const { defaultTheme, enabledThemes } = req.body || {};
+        if (!Array.isArray(enabledThemes) || !enabledThemes.some(t => UI_THEMES.includes(t))) {
+            return res.status(400).json({ error: 'enabledThemes must include at least one of: ' + UI_THEMES.join(', ') });
+        }
+        const updated = await setUiThemeConfig(defaultTheme, enabledThemes);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Interface themes: default ${updated.uiDefaultTheme}, enabled ${updated.uiEnabledThemes.join(', ')}`);
+        res.json({ success: true, uiThemes: { default: updated.uiDefaultTheme, enabled: updated.uiEnabledThemes } });
+    } catch (e) {
+        console.error('Update UI themes error:', e);
+        res.status(500).json({ error: 'Failed to update interface themes' });
     }
 });
 

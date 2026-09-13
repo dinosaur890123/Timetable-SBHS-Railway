@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
+import InterfaceThemePicker from './components/InterfaceThemePicker';
+import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
+import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
 
 const Timetable = lazy(() => import('./components/Timetable'));
 const CalendarView = lazy(() => import('./components/CalendarView'));
@@ -70,6 +73,21 @@ function App() {
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [darkStyle, setDarkStyle] = useState(() => localStorage.getItem('dark_style') || 'true-black');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
+
+    // Interface theme: admin decides which are offered + the default; user may pick among them
+    const [uiConfig, setUiConfig] = useState(readCachedUiConfig);
+    const [uiThemePref, setUiThemePref] = useState(readUiThemePreference);
+    const uiTheme = resolveUiTheme(uiThemePref, uiConfig);
+    const isModern = uiTheme === 'modern';
+    const [paletteOpen, setPaletteOpen] = useState(false);
+    useModernShellEffects(isModern, setPaletteOpen);
+
+    const applyUiConfig = (config) => {
+        if (!config) return;
+        const normalized = normalizeUiConfig(config);
+        localStorage.setItem('ui_config', JSON.stringify(normalized));
+        setUiConfig(normalized);
+    };
     const [notices, setNotices] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_notices');
@@ -299,6 +317,7 @@ function App() {
                 colorTheme,
                 darkStyle,
                 aiDisabled,
+                uiTheme: uiThemePref,
                 dashboardLayout: JSON.parse(localStorage.getItem('dashboard_layout') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
@@ -324,6 +343,7 @@ function App() {
                 colorTheme,
                 darkStyle,
                 aiDisabled,
+                uiTheme: uiThemePref,
                 dashboardLayout: layout,
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
@@ -392,6 +412,7 @@ function App() {
 
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
+                    applyUiConfig(systemData.uiThemes);
                 }
             } catch (e) {
                 console.error("Failed to poll system status", e);
@@ -496,6 +517,17 @@ function App() {
         savePreferences();
     }, [aiDisabled]);
 
+    // Interface Theme Config
+    useEffect(() => {
+        document.documentElement.setAttribute('data-ui', uiTheme);
+    }, [uiTheme]);
+
+    useEffect(() => {
+        if (uiThemePref) localStorage.setItem('ui_theme', uiThemePref);
+        else localStorage.removeItem('ui_theme');
+        savePreferences();
+    }, [uiThemePref]);
+
     // Color Theme Config
     useEffect(() => {
         const root = window.document.documentElement;
@@ -586,6 +618,7 @@ function App() {
 
                     setMaintenance(systemData.maintenance);
                     setSupporters(systemData.supporters || []);
+                    applyUiConfig(systemData.uiThemes);
                 }
 
                 // Attempt to register/update user in Admin Panel in background
@@ -647,6 +680,9 @@ function App() {
                             if (prefs.aiDisabled !== undefined) {
                                 setAiDisabled(prefs.aiDisabled);
                                 localStorage.setItem('ai_disabled', prefs.aiDisabled ? 'true' : 'false');
+                            }
+                            if (prefs.uiTheme !== undefined) {
+                                setUiThemePref(prefs.uiTheme || null);
                             }
                             
                             // Apply dashboard layout
@@ -882,12 +918,40 @@ function App() {
         );
     }
 
-    return (
-        <div className="flex min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-            <Navigation currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
+    const uiThemeOptions = uiConfig.enabled.map(id => UI_THEMES[id]);
 
-            <main className="flex-1 overflow-x-hidden overflow-y-auto">
+    return (
+        <div className={isModern
+            ? 'flex h-[100dvh] overflow-hidden bg-m-page text-zinc-900 dark:text-zinc-100'
+            : 'flex min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
+            {isModern ? (
+                <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
+            ) : (
+                <Navigation currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
+            )}
+
+            <main className={isModern
+                ? 'relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]'
+                : 'flex-1 overflow-x-hidden overflow-y-auto'}>
+                {isModern && (
+                    <ModernTopbar
+                        currentView={currentView}
+                        setView={setCurrentView}
+                        theme={theme}
+                        toggleTheme={toggleTheme}
+                        onOpenPalette={() => setPaletteOpen(true)}
+                        isOffline={isOffline}
+                        usingCachedData={usingCachedData}
+                        timetableViewMode={timetableViewMode}
+                        setTimetableViewMode={setTimetableViewMode}
+                    />
+                )}
+                {isModern && (
+                    <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
+                )}
+
                 {/* Top Header */}
+                {!isModern && (
                 <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-900">
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
@@ -951,6 +1015,7 @@ function App() {
                         </button>
                     </div>
                 </header>
+                )}
 
                 {broadcast && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
@@ -978,7 +1043,7 @@ function App() {
                     </div>
                 )}
 
-                <div className="p-4 md:p-8 max-w-7xl mx-auto">
+                <div className={isModern ? 'relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto' : 'p-4 md:p-8 max-w-7xl mx-auto'}>
                     <Suspense fallback={
                         <div className="flex flex-col items-center justify-center p-12 gap-4">
                             <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -1364,6 +1429,16 @@ function App() {
                                                 </div>
                                             )}
 
+                                            {/* Interface Theme Section (only when an admin offers a choice) */}
+                                            {uiThemeOptions.length > 1 && (
+                                                <InterfaceThemePicker
+                                                    options={uiThemeOptions}
+                                                    value={uiTheme}
+                                                    defaultId={uiConfig.default}
+                                                    onChange={setUiThemePref}
+                                                />
+                                            )}
+
                                             {/* Color Themes Section */}
                                             <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
                                                 <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
@@ -1395,7 +1470,8 @@ function App() {
                                                 </div>
                                             </div>
 
-                                            {/* Dark Mode Style Section */}
+                                            {/* Dark Mode Style Section (Classic interface only) */}
+                                            {!isModern && (
                                             <div className={`border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl transition ${theme !== 'dark' ? 'opacity-50 pointer-events-none grayscale-[0.5]' : ''}`}>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Dark Theme Style</span>
@@ -1441,6 +1517,7 @@ function App() {
                                                     </button>
                                                 </div>
                                             </div>
+                                            )}
 
                                             {/* Canvas Links Section */}
                                             <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
@@ -1576,6 +1653,32 @@ function App() {
                     </div>
                 )}
             </main>
+
+            {isModern && (
+                <>
+                    <ModernDock
+                        currentView={currentView}
+                        setView={setCurrentView}
+                        notificationCount={unreadNotificationCount}
+                        onOpenPalette={() => setPaletteOpen(true)}
+                    />
+                    <CommandPalette
+                        open={paletteOpen}
+                        onClose={() => setPaletteOpen(false)}
+                        commands={buildCommands({
+                            user,
+                            setView: setCurrentView,
+                            theme,
+                            toggleTheme,
+                            onAskAi: aiDisabled ? null : () => { setCurrentView('timetable'); setShowAiModal(true); },
+                            uiThemeOptions,
+                            currentUiTheme: uiTheme,
+                            onSelectUiTheme: setUiThemePref,
+                            onSignOut: logout
+                        })}
+                    />
+                </>
+            )}
 
             {/* Toast Notifications */}
             {toasts.length > 0 && (

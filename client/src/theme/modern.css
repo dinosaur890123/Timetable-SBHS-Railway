@@ -1,0 +1,163 @@
+/* ==========================================================================
+   Modern interface theme
+   Activated by <html data-ui="modern">. Retunes the shared neutral scale,
+   typography, radii and surfaces so existing views pick up the look without
+   per-component forks. Shell-specific pieces (sidebar, dock, command palette)
+   live in components/modern/.
+   ========================================================================== */
+
+html[data-ui="modern"] {
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui;
+  --font-display: "Geist", "Inter", ui-sans-serif, system-ui;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace;
+
+  /* Light: warm paper neutrals */
+  --zinc-50: 249 249 247;
+  --zinc-100: 243 243 240;
+  --zinc-200: 233 233 229;
+  --zinc-300: 214 214 209;
+
+  --m-page: 241 241 238;
+  --m-panel: 250 250 248;
+  --m-card: 255 255 255;
+  --m-line: 24 24 27;
+  --m-line-a: 0.08;
+  --m-shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 1px rgb(24 24 27 / 0.02);
+  --m-shadow-lg: 0 12px 32px -12px rgb(24 24 27 / 0.18), 0 2px 6px -2px rgb(24 24 27 / 0.06);
+
+  font-size: 15px;
+  color-scheme: light;
+}
+
+html[data-ui="modern"].dark {
+  /* Dark: layered graphite, never pure black */
+  --black: 15 15 18;
+  --zinc-950: 21 21 25;
+  --zinc-900: 28 28 33;
+  --zinc-800: 40 40 46;
+  --zinc-700: 60 60 68;
+
+  --m-page: 10 10 12;
+  --m-panel: 15 15 18;
+  --m-card: 21 21 25;
+  --m-line: 255 255 255;
+  --m-line-a: 0.07;
+  --m-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+  --m-shadow-lg: 0 24px 48px -16px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.05);
+
+  color-scheme: dark;
+}
+
+html[data-ui="modern"] body {
+  background: rgb(var(--m-page));
+  letter-spacing: -0.005em;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Typography: calmer weights and tighter display type ---------- */
+html[data-ui="modern"] .font-black { font-weight: 650; }
+html[data-ui="modern"] .font-extrabold { font-weight: 600; }
+html[data-ui="modern"] :is(h1, h2, h3).font-bold { font-weight: 600; }
+html[data-ui="modern"] :is(.text-3xl, .text-4xl, .text-5xl) { letter-spacing: -0.03em; }
+html[data-ui="modern"] :is(.text-xl, .text-2xl) { letter-spacing: -0.02em; }
+html[data-ui="modern"] .tracking-widest { letter-spacing: 0.08em; }
+html[data-ui="modern"] h1 .underline.decoration-accent\/40 { text-decoration: none; }
+
+/* ---------- Half-step neutrals used across the codebase ---------- */
+html[data-ui="modern"].dark .dark\:border-zinc-850 { border-color: rgb(34 34 40); }
+html[data-ui="modern"].dark .dark\:bg-zinc-850 { background-color: rgb(34 34 40); }
+html[data-ui="modern"] .border-zinc-150 { border-color: rgb(238 238 234); }
+
+/* ---------- Radii ---------- */
+html[data-ui="modern"] :is(.border, .border-2):not([class*="rounded"]) {
+  border-radius: 10px;
+}
+html[data-ui="modern"] :is(.border, .border-2):is([class~="p-5"], [class~="p-6"], [class~="p-8"], [class~="md:p-6"], [class~="md:p-8"]):not([class*="rounded"]) {
+  border-radius: 16px;
+}
+html[data-ui="modern"] :is(button, select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="range"])):not([class*="rounded"]) {
+  border-radius: 10px;
+}
+html[data-ui="modern"] :is(.border, .border-2):is([class*="bg-white"], [class*="bg-zinc-950"], [class*="bg-zinc-900"]):is([class~="p-4"], [class~="p-5"], [class~="p-6"], [class~="p-8"]) {
+  box-shadow: var(--m-shadow);
+}
+
+/* ---------- Form controls ---------- */
+html[data-ui="modern"] :is(input, textarea, select):not([data-bare]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--color-accent) / 0.18);
+  border-color: hsl(var(--color-accent) / 0.6);
+}
+html[data-ui="modern"] button:focus-visible {
+  outline: 2px solid hsl(var(--color-accent) / 0.5);
+  outline-offset: 2px;
+}
+
+/* ---------- Scrollbars ---------- */
+html[data-ui="modern"] * {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--m-line) / 0.14) transparent;
+}
+html[data-ui="modern"] .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+html[data-ui="modern"] .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border: 0; }
+html[data-ui="modern"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--m-line) / 0.14);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+/* ---------- Dashboard tiles: spotlight + glowing edge on hover ---------- */
+html[data-ui="modern"] .relative-tile-wrapper > :first-child {
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 300ms;
+}
+html[data-ui="modern"] .relative-tile-wrapper::before,
+html[data-ui="modern"] .relative-tile-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms;
+  z-index: 1;
+}
+html[data-ui="modern"] .relative-tile-wrapper::before {
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--color-accent) / 0.06), transparent 45%);
+}
+html[data-ui="modern"] .relative-tile-wrapper::after {
+  padding: 1px;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--color-accent) / 0.45), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+html[data-ui="modern"] .relative-tile-wrapper:hover::before,
+html[data-ui="modern"] .relative-tile-wrapper:hover::after {
+  opacity: 1;
+}
+
+/* ---------- Shell helpers ---------- */
+.m-shadow-lg {
+  box-shadow: var(--m-shadow-lg);
+}
+
+/* Dot grid + soft accent glow behind the page header, faded out with a mask */
+.m-dots {
+  background-image:
+    radial-gradient(600px circle at 50% -120px, hsl(var(--color-accent) / 0.07), transparent 70%),
+    radial-gradient(rgb(var(--m-line) / 0.09) 1px, transparent 1px);
+  background-size: 100% 100%, 18px 18px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 100% at 50% 0%, #000 10%, transparent 70%);
+  mask-image: radial-gradient(ellipse 70% 100% at 50% 0%, #000 10%, transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="modern"] *,
+  html[data-ui="modern"] *::before,
+  html[data-ui="modern"] *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

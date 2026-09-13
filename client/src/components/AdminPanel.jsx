@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus } from '../services/api';
+import AdminUiThemeSettings from './AdminUiThemeSettings';
 
 const AdminPanel = ({ user }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1284,6 +1285,9 @@ const AdminPanel = ({ user }) => {
                 Perform system maintenance tasks.
             </p>
             <div className="space-y-4">
+                {/* Interface Themes Config */}
+                <AdminUiThemeSettings />
+
                 {/* AI Provider Config */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>

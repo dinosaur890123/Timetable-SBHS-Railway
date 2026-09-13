@@ -189,6 +189,21 @@ export const updateAiConfig = async (provider, model) => {
     }
 };
 
+export const updateUiThemeConfig = async (defaultTheme, enabledThemes) => {
+    try {
+        const response = await fetch(`${ADMIN_API_URL}/system/ui-themes`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ defaultTheme, enabledThemes })
+        });
+        if (!response.ok) throw new Error('Failed to update interface themes');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const fetchAiLogs = async () => {
     try {
         const response = await fetch(`${ADMIN_API_URL}/ai/logs`, {

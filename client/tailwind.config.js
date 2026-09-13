@@ -1,4 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+
+// Neutral scale is driven by CSS variables (see index.css) so interface themes
+// can retune surfaces without touching component class names.
+const zincSteps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+const zinc = Object.fromEntries(
+  zincSteps.map(step => [step, `rgb(var(--zinc-${step}) / <alpha-value>)`])
+);
+
 export default {
   content: [
     "./index.html",
@@ -8,11 +16,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-        space: ['"Space Grotesk"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        sans: ['var(--font-sans)', 'sans-serif'],
+        space: ['var(--font-display)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       colors: {
+        zinc,
+        black: 'rgb(var(--black) / <alpha-value>)',
+        // Modern interface surfaces (variables defined in theme/modern.css)
+        m: {
+          page: 'rgb(var(--m-page) / <alpha-value>)',
+          panel: 'rgb(var(--m-panel) / <alpha-value>)',
+          card: 'rgb(var(--m-card) / <alpha-value>)',
+          line: 'rgb(var(--m-line) / var(--m-line-a))',
+        },
         accent: 'hsl(var(--color-accent) / <alpha-value>)',
         'accent-contrast': 'hsl(var(--color-accent-contrast) / <alpha-value>)',
         sbhs: {
