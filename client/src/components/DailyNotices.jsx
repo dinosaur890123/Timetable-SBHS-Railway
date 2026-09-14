@@ -73,9 +73,9 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden h-fit"
+      className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden h-[calc(100vh-8rem)] flex flex-col"
     >
-      <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 backdrop-blur-sm">
+      <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 backdrop-blur-sm shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-950 dark:text-white rounded-lg">
@@ -108,7 +108,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
         </div>
       </div>
 
-      <div className="max-h-[calc(100vh-280px)] overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {displayNotices.map((notice, idx) => (
             <motion.div 
@@ -116,7 +116,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className="group p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors"
+              className="group p-6 hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors"
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug flex-1">
