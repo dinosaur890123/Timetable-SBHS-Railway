@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { format, addDays, startOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles, Filter } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { format, addDays, startOfWeek, isSameWeek } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles, X } from 'lucide-react';
 import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const CalendarView = ({ user }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termInfo, setTermInfo] = useState(null);
-  const [selectedTermWeek, setSelectedTermWeek] = useState('all');
+  const [showCalendarPopup, setShowCalendarPopup] = useState(false);
+  const popupRef = useRef(null);
 
   // Load events for the month/week
   useEffect(() => {
@@ -129,39 +130,45 @@ const CalendarView = ({ user }) => {
     loadEvents();
   }, [currentDate, user]);
 
-  // Generate available term/week options from events
-  const termWeekOptions = useMemo(() => {
-    const options = new Set();
-    options.add('all');
-    
-    events.forEach(dayGroup => {
-      if (dayGroup.info?.term && dayGroup.info?.week) {
-        const key = `${dayGroup.info.term}-${dayGroup.info.week}`;
-        options.add(key);
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setShowCalendarPopup(false);
       }
-    });
-    
-    return Array.from(options).sort((a, b) => {
-      if (a === 'all') return -1;
-      if (b === 'all') return 1;
-      const [termA, weekA] = a.split('-').map(Number);
-      const [termB, weekB] = b.split('-').map(Number);
-      if (termA !== termB) return termA - termB;
-      return weekA - weekB;
-    });
-  }, [events]);
+    };
 
-  // Filter events based on selected term/week
-  const filteredEvents = useMemo(() => {
-    if (selectedTermWeek === 'all') {
-      return events;
+    if (showCalendarPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendarPopup]);
+
+  // Generate weeks for calendar popup (show 12 weeks back and 12 weeks forward)
+  const weekOptions = useMemo(() => {
+    const weeks = [];
+    const currentWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+    
+    for (let i = -12; i <= 12; i++) {
+      const weekStart = addDays(currentWeekStart, i * 7);
+      const weekEnd = addDays(weekStart, 6);
+      weeks.push({
+        start: weekStart,
+        end: weekEnd,
+        isCurrent: i === 0
+      });
     }
     
-    const [selectedTerm, selectedWeek] = selectedTermWeek.split('-').map(Number);
-    return events.filter(dayGroup => 
-      dayGroup.info?.term === selectedTerm && dayGroup.info?.week === selectedWeek
-    );
-  }, [events, selectedTermWeek]);
+    return weeks;
+  }, [currentDate]);
+
+  const handleWeekSelect = (weekStart) => {
+    setCurrentDate(weekStart);
+    setShowCalendarPopup(false);
+  };
 
   const getEventTypeColor = (type) => {
     switch(type) {
@@ -201,25 +208,64 @@ const CalendarView = ({ user }) => {
             <ChevronLeft size={20} />
           </button>
           
-          <div className="relative">
-            <select
-              value={selectedTermWeek}
-              onChange={(e) => setSelectedTermWeek(e.target.value)}
-              className="appearance-none bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white text-sm font-semibold px-3 py-2 pr-8 rounded-lg cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 transition-all min-w-[140px]"
+          <div className="relative" ref={popupRef}>
+            <button
+              onClick={() => setShowCalendarPopup(!showCalendarPopup)}
+              className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm min-w-[140px] hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between gap-2"
             >
-              <option value="all">All Weeks</option>
-              {termWeekOptions.filter(opt => opt !== 'all').map(option => {
-                const [term, week] = option.split('-').map(Number);
-                return (
-                  <option key={option} value={option}>
-                    Term {term} Week {week}
-                  </option>
-                );
-              })}
-            </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-              <Filter size={14} className="text-zinc-500 dark:text-zinc-400" />
-            </div>
+              <span>{termInfo ? `Term ${termInfo.term} Week ${termInfo.week}` : format(currentDate, 'MMM yyyy')}</span>
+              <CalIcon size={14} className="text-zinc-500 dark:text-zinc-400" />
+            </button>
+            
+            <AnimatePresence>
+              {showCalendarPopup && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white">Select Week</span>
+                    <button
+                      onClick={() => setShowCalendarPopup(false)}
+                      className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                    >
+                      <X size={14} className="text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto custom-scrollbar p-2">
+                    <div className="space-y-1">
+                      {weekOptions.map((week, idx) => {
+                        const weekStart = startOfWeek(week.start, { weekStartsOn: 0 });
+                        const isSelected = isSameWeek(week.start, currentDate, { weekStartsOn: 0 });
+                        
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleWeekSelect(week.start)}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-black text-white dark:bg-white dark:text-black'
+                                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{format(week.start, 'd MMM')} - {format(week.end, 'd MMM yyyy')}</span>
+                              {week.isCurrent && (
+                                <span className="text-[10px] font-extrabold uppercase">Current</span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           
           <button 
@@ -243,7 +289,7 @@ const CalendarView = ({ user }) => {
            </div>
            <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
          </motion.div>
-       ) : filteredEvents.length === 0 ? (
+       ) : events.length === 0 ? (
          <motion.div 
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
@@ -253,11 +299,11 @@ const CalendarView = ({ user }) => {
              <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600" />
            </div>
            <p className="text-zinc-500 dark:text-zinc-400 font-medium">No events found</p>
-           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try selecting a different term/week</p>
+           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try navigating to a different week</p>
          </motion.div>
        ) : (
          <div className="space-y-3">
-           {filteredEvents.map((dayGroup, idx) => (
+           {events.map((dayGroup, idx) => (
              <motion.div 
                initial={{ opacity: 0, y: 10 }}
                animate={{ opacity: 1, y: 0 }}
