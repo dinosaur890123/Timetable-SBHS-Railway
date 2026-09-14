@@ -912,7 +912,7 @@ function App() {
                         <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                     </div>
                 }>
-                    <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} />
+                    <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} uiTheme={uiTheme} />
                 </Suspense>
             </div>
         );

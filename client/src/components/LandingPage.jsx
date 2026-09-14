@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
 
-const LandingPage = ({ authError, clearAuthError, supporters }) => {
+const LandingPage = ({ authError, clearAuthError, supporters, uiTheme = 'modern' }) => {
   // State for mock timetable widget interaction
   const [mockActiveTab, setMockActiveTab] = useState('timetable');
   const [currentTime, setCurrentTime] = useState('');
@@ -217,6 +217,40 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                       <span>SECURE DELEGATED LOGIN</span>
                     </div>
                 </div>
+
+                {uiTheme === 'modern' ? (
+                    <div className="mt-6 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 max-w-xl">
+                        <div className="flex items-start gap-3">
+                            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 shrink-0">
+                                <AlertOctagon size={16} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Important: Local Network Permission</h4>
+                                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                    When signing in, your browser may ask for <strong className="text-zinc-900 dark:text-white">Local network</strong> permission. 
+                                    Please <strong className="text-zinc-900 dark:text-white">click "Allow"</strong> to ensure the app functions correctly. 
+                                    This permission is required for proper data synchronization.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="mt-6 p-4 border border-white bg-black max-w-xl">
+                        <div className="flex items-start gap-3">
+                            <div className="p-1.5 bg-white text-black shrink-0">
+                                <AlertOctagon size={16} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider mb-1">IMPORTANT: LOCAL NETWORK PERMISSION</h4>
+                                <p className="text-xs text-zinc-400 leading-relaxed font-mono">
+                                    When signing in, your browser may ask for <strong className="text-white">Local network</strong> permission. 
+                                    Please <strong className="text-white">click "Allow"</strong> to ensure the app functions correctly. 
+                                    This permission is required for proper data synchronization.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
               </motion.div>
             </div>
 
