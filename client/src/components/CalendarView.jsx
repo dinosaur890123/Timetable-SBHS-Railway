@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles, Filter } from 'lucide-react';
 import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
 import { motion } from 'framer-motion';
 
@@ -9,6 +9,7 @@ const CalendarView = ({ user }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termInfo, setTermInfo] = useState(null);
+  const [selectedTermWeek, setSelectedTermWeek] = useState('all');
 
   // Load events for the month/week
   useEffect(() => {
@@ -128,6 +129,40 @@ const CalendarView = ({ user }) => {
     loadEvents();
   }, [currentDate, user]);
 
+  // Generate available term/week options from events
+  const termWeekOptions = useMemo(() => {
+    const options = new Set();
+    options.add('all');
+    
+    events.forEach(dayGroup => {
+      if (dayGroup.info?.term && dayGroup.info?.week) {
+        const key = `${dayGroup.info.term}-${dayGroup.info.week}`;
+        options.add(key);
+      }
+    });
+    
+    return Array.from(options).sort((a, b) => {
+      if (a === 'all') return -1;
+      if (b === 'all') return 1;
+      const [termA, weekA] = a.split('-').map(Number);
+      const [termB, weekB] = b.split('-').map(Number);
+      if (termA !== termB) return termA - termB;
+      return weekA - weekB;
+    });
+  }, [events]);
+
+  // Filter events based on selected term/week
+  const filteredEvents = useMemo(() => {
+    if (selectedTermWeek === 'all') {
+      return events;
+    }
+    
+    const [selectedTerm, selectedWeek] = selectedTermWeek.split('-').map(Number);
+    return events.filter(dayGroup => 
+      dayGroup.info?.term === selectedTerm && dayGroup.info?.week === selectedWeek
+    );
+  }, [events, selectedTermWeek]);
+
   const getEventTypeColor = (type) => {
     switch(type) {
       case 'assessment': return 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white';
@@ -165,9 +200,28 @@ const CalendarView = ({ user }) => {
           >
             <ChevronLeft size={20} />
           </button>
-          <span className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm min-w-fit">
-            {termInfo ? `Term ${termInfo.term} Week ${termInfo.week}` : format(currentDate, 'MMM yyyy')}
-          </span>
+          
+          <div className="relative">
+            <select
+              value={selectedTermWeek}
+              onChange={(e) => setSelectedTermWeek(e.target.value)}
+              className="appearance-none bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white text-sm font-semibold px-3 py-2 pr-8 rounded-lg cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400 transition-all min-w-[140px]"
+            >
+              <option value="all">All Weeks</option>
+              {termWeekOptions.filter(opt => opt !== 'all').map(option => {
+                const [term, week] = option.split('-').map(Number);
+                return (
+                  <option key={option} value={option}>
+                    Term {term} Week {week}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+              <Filter size={14} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+          </div>
+          
           <button 
             onClick={() => setCurrentDate(d => addDays(d, 7))}
             className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
@@ -189,7 +243,7 @@ const CalendarView = ({ user }) => {
            </div>
            <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
          </motion.div>
-       ) : events.length === 0 ? (
+       ) : filteredEvents.length === 0 ? (
          <motion.div 
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
@@ -199,11 +253,11 @@ const CalendarView = ({ user }) => {
              <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600" />
            </div>
            <p className="text-zinc-500 dark:text-zinc-400 font-medium">No events found</p>
-           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try navigating to a different week</p>
+           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try selecting a different term/week</p>
          </motion.div>
        ) : (
          <div className="space-y-3">
-           {events.map((dayGroup, idx) => (
+           {filteredEvents.map((dayGroup, idx) => (
              <motion.div 
                initial={{ opacity: 0, y: 10 }}
                animate={{ opacity: 1, y: 0 }}
