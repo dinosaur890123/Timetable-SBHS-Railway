@@ -1528,7 +1528,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                 </div>
             ) : processedAssignments.length === 0 ? (
                 <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 p-16 text-center bg-white dark:bg-zinc-950">
-                    <CheckSquare size={40} className="mx-auto text-zinc-350 dark:text-zinc-750 mb-4" />
+                    <CheckSquare size={40} className="mx-auto text-zinc-400 dark:text-zinc-600 mb-4" />
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white uppercase tracking-tight">No Tasks Found</h3>
                     <p className="text-xs text-zinc-500 mt-1">Add your first task to start tracking your progress.</p>
                 </div>
@@ -1571,7 +1571,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                     </h3>
 
                                     {item.notes && (
-                                        <p className="text-xs text-zinc-550 dark:text-zinc-400 mt-1 whitespace-pre-wrap">{item.notes}</p>
+                                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 whitespace-pre-wrap">{item.notes}</p>
                                     )}
 
                                     <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
@@ -1628,7 +1628,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">Homework Title</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Homework Title</label>
                                 <input
                                     type="text"
                                     value={title}
@@ -1641,7 +1641,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-455 dark:text-zinc-550 select-none">Subject / Category</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Subject / Category</label>
                                 <input
                                     type="text"
                                     value={subject}
@@ -1669,7 +1669,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
                             <div className="grid grid-cols-2 gap-3 select-none">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550">Due Date</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Date</label>
                                     <input
                                         type="date"
                                         value={dueDate}
@@ -1679,7 +1679,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-550">Due Time</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Time</label>
                                     <input
                                         type="time"
                                         value={dueTime}
@@ -2041,7 +2041,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                         </span>
                         Study Notes
                     </h1>
-                    <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">
+                    <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-xs">
                         Keep track of your classes, study briefs, and summaries. All changes sync automatically.
                     </p>
                 </div>
@@ -2879,7 +2879,7 @@ const NotesView = ({ user, timetableData, setView }) => {
 
                     <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-2">Unlock Study Platform</h2>
 
-                    <p className="text-zinc-550 dark:text-zinc-450 text-sm max-w-md mx-auto mb-8 leading-relaxed">
+                    <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-md mx-auto mb-8 leading-relaxed">
                         Supercharge your study sessions. Take notes, create flashcards, time your focus with Pomodoro, and quiz yourself — all in one hub.
                     </p>
 
@@ -2906,7 +2906,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                     </button>
                 </div>
 
-                <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">
+                <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">
                     Powered by NoteFlow Infrastructure
                 </div>
             </div>
@@ -3007,7 +3007,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                     </span>
                     Study
                 </h1>
-                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">
+                <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-xs">
                     Your all-in-one study toolkit. Choose a tool to get started.
                 </p>
             </div>
@@ -3055,7 +3055,7 @@ const NotesView = ({ user, timetableData, setView }) => {
                 </p>
             </div>
 
-            <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-450 dark:text-zinc-550 select-none">
+            <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">
                 Powered by NoteFlow Infrastructure
             </div>
         </div>

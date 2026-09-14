@@ -69,7 +69,7 @@ const LandingPage = ({ authError, clearAuthError, supporters, uiTheme = 'modern'
               </button>
             </div>
             
-            <div className="mb-6 p-4 bg-black border border-zinc-800 text-zinc-350 font-mono text-sm break-all">
+            <div className="mb-6 p-4 bg-black border border-zinc-800 text-zinc-400 font-mono text-sm break-all">
               <span className="font-bold text-white uppercase block mb-1 text-xs">// Error Details:</span>
               {authError}
             </div>
