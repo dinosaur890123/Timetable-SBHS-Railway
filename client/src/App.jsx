@@ -1149,7 +1149,7 @@ function App() {
                         {/* NOTICES VIEW */}
                         {currentView === 'notices' && (
                             <div className="max-w-3xl mx-auto">
-                                <DailyNotices notices={notices} aiBriefing={aiBriefing} />
+                                <DailyNotices notices={notices} aiBriefing={aiBriefing} user={user} />
                             </div>
                         )}
 
