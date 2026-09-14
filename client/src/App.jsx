@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense, useMemo } from 'react';
 import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
 import InterfaceThemePicker from './components/InterfaceThemePicker';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Timetable = lazy(() => import('./components/Timetable'));
 const CalendarView = lazy(() => import('./components/CalendarView'));
@@ -296,6 +297,58 @@ function App() {
 
     // Date Picker State
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [calendarPopupRef, setCalendarPopupRef] = useState(null);
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+    // Close calendar popup when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (calendarPopupRef && !calendarPopupRef.contains(event.target)) {
+                setShowDatePicker(false);
+            }
+        };
+
+        if (showDatePicker) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showDatePicker, calendarPopupRef]);
+
+    // Generate calendar days for the popup
+    const calendarDays = useMemo(() => {
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDay = firstDay.getDay();
+        const totalDays = lastDay.getDate();
+
+        const days = [];
+        
+        // Add empty cells for days before the first day of the month
+        for (let i = 0; i < startDay; i++) {
+            days.push(null);
+        }
+        
+        // Add actual days
+        for (let day = 1; day <= totalDays; day++) {
+            days.push(new Date(year, month, day));
+        }
+        
+        return days;
+    }, [calendarMonth]);
+
+    const handleDateSelect = (date) => {
+        setViewDate(date);
+        setShowDatePicker(false);
+    };
+
+    const navigateMonth = (direction) => {
+        setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
+    };
 
     // Toast Notification States
     const [toasts, setToasts] = useState([]);
@@ -1119,23 +1172,74 @@ function App() {
                                     </div>
                                 </div>
 
-                                {showDatePicker && (
-                                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowDatePicker(false)}>
-                                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
-                                            <input
-                                                type="date"
-                                                value={format(viewDate, 'yyyy-MM-dd')}
-                                                onChange={(e) => {
-                                                    if (e.target.value) {
-                                                        setViewDate(new Date(e.target.value));
-                                                        setShowDatePicker(false);
-                                                    }
-                                                }}
-                                                className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-                                            />
+                                <AnimatePresence>
+                                    {showDatePicker && (
+                                        <div className="relative" ref={setCalendarPopupRef}>
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
+                                            >
+                                                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between">
+                                                    <button
+                                                        onClick={() => navigateMonth(-1)}
+                                                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                    >
+                                                        <ChevronLeft size={14} className="text-zinc-500 dark:text-zinc-400" />
+                                                    </button>
+                                                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white">
+                                                        {format(calendarMonth, 'MMMM yyyy')}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => navigateMonth(1)}
+                                                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                    >
+                                                        <ChevronRight size={14} className="text-zinc-500 dark:text-zinc-400" />
+                                                    </button>
+                                                </div>
+                                                
+                                                <div className="p-3">
+                                                    <div className="grid grid-cols-7 gap-1 mb-2">
+                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                                            <div key={day} className="text-[10px] font-extrabold uppercase text-zinc-400 dark:text-zinc-500 text-center">
+                                                                {day}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-7 gap-1">
+                                                        {calendarDays.map((date, idx) => {
+                                                            if (!date) {
+                                                                return <div key={idx} className="aspect-square" />;
+                                                            }
+                                                            
+                                                            const isSelected = isSameDay(date, viewDate);
+                                                            const isToday = isSameDay(date, new Date());
+                                                            
+                                                            return (
+                                                                <button
+                                                                    key={idx}
+                                                                    onClick={() => handleDateSelect(date)}
+                                                                    className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                                                                            : isToday
+                                                                                ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                                                                                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                                                    }`}
+                                                                >
+                                                                    {format(date, 'd')}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </AnimatePresence>
                                 </>
                                 )}
 
