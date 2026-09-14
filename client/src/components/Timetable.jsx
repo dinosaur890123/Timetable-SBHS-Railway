@@ -115,7 +115,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         // Get all unique period slots across all days
         const allPeriodSlots = new Set();
         days.forEach((_, dayIndex) => {
-            const dayData = timetableStructure?.timetable?.[dayIndex] || timetableStructure?.[dayIndex];
+            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
+            const dayData = timetableStructure?.days?.[dayIndex + 1];
             if (dayData?.routine) {
                 dayData.routine.split(',').forEach(bellId => {
                     const bell = bells.find(b => b.bell === bellId);
@@ -133,7 +134,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
         // Get class info for a specific day and period
         const getClassInfo = (dayIndex, bellId) => {
-            const dayData = timetableStructure?.timetable?.[dayIndex] || timetableStructure?.[dayIndex];
+            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
+            const dayData = timetableStructure?.days?.[dayIndex + 1];
             if (!dayData) return null;
             
             const periods = dayData.periods || {};
