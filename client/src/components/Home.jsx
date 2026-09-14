@@ -1206,11 +1206,17 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     <p className="text-zinc-500 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
                         <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
                         {format(currentTime, 'EEEE, d MMMM yyyy')}
-                        {innerTimetable?.dayname && (
-                            <span className="ml-2 px-2.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700">
-                                {innerTimetable.dayname}
-                            </span>
-                        )}
+                        {innerTimetable?.dayname && (() => {
+                            const schoolEndMin = schoolEndTimeStr ? getMinutes(schoolEndTimeStr) : null;
+                            const isAfterSchool = schoolEndMin !== null && currentMinutes > schoolEndMin;
+                            const isBeforeMidnight = currentTime.getHours() < 24;
+                            const showTomorrow = isAfterSchool && isBeforeMidnight;
+                            return (
+                                <span className="ml-2 px-2.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700">
+                                    {showTomorrow ? `Tomorrow is ${innerTimetable.dayname}` : innerTimetable.dayname}
+                                </span>
+                            );
+                        })()}
                     </p>
                 </div>
 
