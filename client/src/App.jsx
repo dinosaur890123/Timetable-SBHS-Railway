@@ -1280,7 +1280,7 @@ function App() {
 
                         {/* CANVAS LINKS VIEW */}
                         {currentView === 'canvas-links' && (
-                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} />
+                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
                         )}
 
                         {/* ADMIN VIEW */}

@@ -1104,6 +1104,117 @@ app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, r
     }
 });
 
+// GET /api/canvas-courses - Get all shared canvas courses
+app.get('/api/canvas-courses', requireStudentAuth, async (req, res) => {
+    try {
+        let courses = {};
+
+        if (!isDbEnabled) {
+            return res.json({ success: true, courses });
+        }
+
+        const result = await db.query(
+            `SELECT class_name, course_id, set_by, created_at, updated_at
+             FROM canvas_courses
+             ORDER BY class_name ASC`,
+            []
+        );
+
+        courses = {};
+        result.rows.forEach(row => {
+            courses[row.class_name] = {
+                courseId: row.course_id,
+                url: `https://canvas.instructure.com/courses/${row.course_id}`,
+                setBy: row.set_by,
+                createdAt: toIso(row.created_at),
+                updatedAt: toIso(row.updated_at)
+            };
+        });
+
+        res.json({ success: true, courses });
+    } catch (e) {
+        console.error('Get canvas courses error:', e);
+        res.json({ success: true, courses: {} });
+    }
+});
+
+// POST /api/canvas-courses - Set shared canvas course for a class
+app.post('/api/canvas-courses', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { className, courseId } = req.body || {};
+
+        if (!className || !courseId) {
+            return res.status(400).json({ error: 'Class name and course ID are required' });
+        }
+
+        if (!isDbEnabled) {
+            return res.json({ success: true, course: { courseId, url: `https://canvas.instructure.com/courses/${courseId}`, setBy: studentId } });
+        }
+
+        // Check if already set
+        const existing = await db.query(
+            `SELECT course_id FROM canvas_courses WHERE class_name = $1`,
+            [String(className)]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'already_set', message: 'This class already has a shared Canvas course' });
+        }
+
+        const id = crypto.randomUUID();
+        await db.query(
+            `INSERT INTO canvas_courses (id, class_name, course_id, set_by, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+            [id, String(className), String(courseId), studentId]
+        );
+
+        await addLog('CANVAS_COURSE_SET', studentId, `Set canvas course ${courseId} for class ${className}`);
+
+        res.json({
+            success: true,
+            course: {
+                courseId: courseId,
+                url: `https://canvas.instructure.com/courses/${courseId}`,
+                setBy: studentId
+            }
+        });
+    } catch (e) {
+        console.error('Set canvas course error:', e);
+        res.status(500).json({ error: 'Failed to set canvas course' });
+    }
+});
+
+// POST /api/canvas-courses/report - Report incorrect shared canvas course
+app.post('/api/canvas-courses/report', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { className, suggestedCourseId, justification } = req.body || {};
+
+        if (!className || !suggestedCourseId || !justification) {
+            return res.status(400).json({ error: 'Class name, suggested course ID, and justification are required' });
+        }
+
+        if (!isDbEnabled) {
+            return res.json({ success: true, message: 'Report submitted (memory fallback)' });
+        }
+
+        const id = crypto.randomUUID();
+        await db.query(
+            `INSERT INTO canvas_course_reports (id, class_name, suggested_course_id, justification, reported_by, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+            [id, String(className), String(suggestedCourseId), String(justification), studentId]
+        );
+
+        await addLog('CANVAS_COURSE_REPORT', studentId, `Reported canvas course for class ${className}`);
+
+        res.json({ success: true, message: 'Report submitted successfully' });
+    } catch (e) {
+        console.error('Report canvas course error:', e);
+        res.status(500).json({ error: 'Failed to submit report' });
+    }
+});
+
 // GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
 app.get('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     try {

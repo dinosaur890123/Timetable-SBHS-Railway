@@ -756,7 +756,8 @@ export const fetchCanvasCourses = async () => {
     if (!response.ok) {
         throw new Error(`Failed to fetch canvas courses: ${response.status}`);
     }
-    return response.json();
+    const data = await response.json();
+    return data?.courses || {};
 };
 
 // Set the shared Canvas ID for a class. Resolves with { ok, alreadySet, course, error }.

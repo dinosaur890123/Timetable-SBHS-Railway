@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, Lock, Flag, CheckCircle2, X } from 'lucide-react';
 import { fetchCanvasCourses, setCanvasCourse, reportCanvasCourse } from '../services/api';
 
-const CanvasLinksView = ({ onBack, timetableData }) => {
+const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const [courses, setCourses] = useState({}); // className -> { courseId, url, setBy, updatedAt }
   const [drafts, setDrafts] = useState({}); // className -> input value (for unset classes)
   const [savingClass, setSavingClass] = useState(null);
@@ -14,20 +14,51 @@ const CanvasLinksView = ({ onBack, timetableData }) => {
   const [toast, setToast] = useState('');
 
   const getClasses = useCallback(() => {
-    // Handle nested timetable structure similar to Timetable.jsx
-    const timetable = timetableData?.timetable;
-    const innerTimetable = timetable?.timetable || timetable;
-    
-    if (!innerTimetable?.periods) return [];
-    const periods = innerTimetable.periods;
     const classes = new Set();
-    Object.values(periods).forEach(period => {
-      if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-        classes.add(period.title);
+    
+    // Try to get classes from complete timetable first (has all days)
+    if (completeTimetable) {
+      const timetableStructure = completeTimetable.timetable || completeTimetable;
+      
+      // Handle different possible structures
+      if (timetableStructure?.days) {
+        // Structure with days array
+        Object.values(timetableStructure.days).forEach(dayData => {
+          if (dayData?.periods) {
+            Object.values(dayData.periods).forEach(period => {
+              if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
+                classes.add(period.title);
+              }
+            });
+          }
+        });
+      } else if (timetableStructure?.periods) {
+        // Structure with direct periods
+        Object.values(timetableStructure.periods).forEach(period => {
+          if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
+            classes.add(period.title);
+          }
+        });
       }
-    });
+    }
+    
+    // Fallback to daily timetable if complete timetable didn't yield classes
+    if (classes.size === 0 && timetableData) {
+      const timetable = timetableData?.timetable;
+      const innerTimetable = timetable?.timetable || timetable;
+      
+      if (innerTimetable?.periods) {
+        const periods = innerTimetable.periods;
+        Object.values(periods).forEach(period => {
+          if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
+            classes.add(period.title);
+          }
+        });
+      }
+    }
+    
     return Array.from(classes).sort();
-  }, [timetableData]);
+  }, [timetableData, completeTimetable]);
 
   const loadCourses = useCallback(async () => {
     try {

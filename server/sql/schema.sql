@@ -143,6 +143,33 @@ CREATE TABLE IF NOT EXISTS canvas_links (
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
 
+-- Shared Canvas Courses migration (one canonical course ID per class, school-wide)
+CREATE TABLE IF NOT EXISTS canvas_courses (
+  id TEXT PRIMARY KEY,
+  class_name TEXT NOT NULL UNIQUE,
+  course_id TEXT NOT NULL,
+  set_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS canvas_courses_class_name_idx ON canvas_courses (class_name);
+
+-- Canvas Course Reports migration (for reporting incorrect shared links)
+CREATE TABLE IF NOT EXISTS canvas_course_reports (
+  id TEXT PRIMARY KEY,
+  class_name TEXT NOT NULL,
+  suggested_course_id TEXT NOT NULL,
+  justification TEXT NOT NULL,
+  reported_by TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'resolved', 'rejected'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS canvas_course_reports_class_name_idx ON canvas_course_reports (class_name);
+CREATE INDEX IF NOT EXISTS canvas_course_reports_status_idx ON canvas_course_reports (status);
+
 -- Shared Resources migration
 CREATE TABLE IF NOT EXISTS shared_resources (
   id TEXT PRIMARY KEY,
