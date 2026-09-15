@@ -132,7 +132,7 @@ const ClockWidget = ({ onPreferenceChange }) => {
     );
 };
 
-// Timetable Preview Widget to show daily timeline of classes
+// Timetable Preview Widget to show daily timeline of classes - ultra compact
 const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
     const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
 
@@ -142,15 +142,59 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
         return h * 60 + m;
     };
 
+    // Filter routine: show all if before school, otherwise show from current period onwards
+    // Skip breaks, roll call, and period 0 if it doesn't exist
+    const filteredRoutine = routine.filter((bellId, idx) => {
+        const bell = bells.find(b => b.bell === bellId);
+        if (!bell) return false;
+        if (bellId === "RC") return false;
+        if (bellId === "0") return false; // Skip period 0
+
+        const periodInfo = periods[bellId] || { title: bell.bellDisplay };
+        if (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call")) return false;
+        if (isBreakBell(bellId, periodInfo)) return false; // Skip breaks
+
+        const startMin = getMinutes(bell.time);
+        const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
+        const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
+        const isPast = currentMinutes >= endMin;
+
+        // If before first period, show all
+        const firstBell = bells.find(b => b.bell === routine[0]);
+        const firstStart = firstBell ? getMinutes(firstBell.time) : 0;
+        if (currentMinutes < firstStart) return true;
+
+        // Otherwise, show current and future periods only
+        if (isCurrent) return true;
+        if (isPast) return false;
+
+        // Find current period index
+        const currentIdx = routine.findIndex(id => {
+            const b = bells.find(bel => bel.bell === id);
+            if (!b) return false;
+            const s = getMinutes(b.time);
+            const e = b.endTime ? getMinutes(b.endTime) : s + 60;
+            return currentMinutes >= s && currentMinutes < e;
+        });
+
+        if (currentIdx === -1) {
+            // No current period (between periods), show all from this point
+            return true;
+        }
+
+        // Show from current period onwards
+        return idx >= currentIdx;
+    });
+
     return (
-        <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-555 dark:text-zinc-455 mb-4 flex items-center gap-2">
-                <BookOpen size={14} />
-                Today's Timeline
+        <div className="bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] p-4 h-full flex flex-col rounded-2xl">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3 flex items-center gap-2">
+                <BookOpen size={12} />
+                Today's Schedule
             </h2>
-            <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[220px]">
-                {routine.length > 0 ? (
-                    routine.map((bellId, idx) => {
+            <div className="space-y-0.5 flex-1">
+                {filteredRoutine.length > 0 ? (
+                    filteredRoutine.map((bellId, idx) => {
                         const bell = bells.find(b => b.bell === bellId);
                         if (!bell) return null;
 
@@ -159,49 +203,42 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                         const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
 
                         const periodInfo = periods[bellId] || { title: bell.bellDisplay };
-                        const isBreak = isBreakBell(bellId, periodInfo);
-                        const title = isBreak ? bell.bellDisplay : (periodInfo.title || "Free Period");
+                        const title = periodInfo.title || "Free Period";
 
-                        if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
-                            return null;
-                        }
+                        const progress = isCurrent && startMin != null && endMin
+                            ? Math.min(100, Math.max(0, ((currentMinutes - startMin) / (endMin - startMin)) * 100))
+                            : 0;
 
                         return (
-                            <div
-                                key={idx}
-                                className={`p-2.5 border transition-all duration-300 flex items-center justify-between ${isCurrent
-                                        ? 'bg-accent text-accent-contrast border-accent animate-pulse-subtle'
-                                        : isBreak
-                                            ? 'bg-zinc-50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-900 text-zinc-500 dark:text-zinc-500'
-                                            : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-850 text-zinc-850 dark:text-zinc-200'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 flex items-center justify-center font-bold text-xs border ${isCurrent
-                                            ? 'border-white dark:border-black text-white dark:text-black'
-                                            : 'border-zinc-300 dark:border-zinc-700 text-zinc-555 dark:text-zinc-455'
-                                        }`}>
-                                        {bellId}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-extrabold text-sm leading-none">{title}</h4>
-                                        <p className={`text-[10px] mt-1.5 font-semibold ${isCurrent ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-555'}`}>
-                                            {bell.time} - {bell.endTime || '??'}
-                                            {!isBreak && periodInfo.room && ` | ${periodInfo.room}`}
-                                        </p>
-                                    </div>
-                                </div>
-                                {isCurrent && (
-                                    <span className="flex h-2 w-2 relative">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            <div key={idx}>
+                                <div
+                                    className={`flex items-center gap-2 py-1 px-2 rounded-lg text-xs ${isCurrent
+                                            ? 'bg-white/10 text-white'
+                                            : 'text-zinc-300'
+                                        }`}
+                                >
+                                    <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-white' : 'text-zinc-200'}`}>
+                                        {title}
                                     </span>
+                                    {periodInfo.room && (
+                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                            {periodInfo.room}
+                                        </span>
+                                    )}
+                                    {isCurrent && (
+                                        <span className="text-white/60 text-[10px] font-medium shrink-0">
+                                            {Math.max(0, Math.ceil(endMin - currentMinutes))}m
+                                        </span>
+                                    )}
+                                </div>
+                                {idx < filteredRoutine.length - 1 && (
+                                    <div className="h-px bg-[rgb(255_255_255/0.05)] mx-2" />
                                 )}
                             </div>
                         );
                     })
                 ) : (
-                    <div className="text-center py-8 text-zinc-500 text-sm">No classes scheduled.</div>
+                    <div className="text-center py-4 text-zinc-500 text-xs">No classes scheduled.</div>
                 )}
             </div>
         </div>
