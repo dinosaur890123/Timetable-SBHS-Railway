@@ -153,17 +153,17 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
       )}
 
       {/* Modern Header */}
-      <nav className="sticky top-0 z-10 border-b border-[rgb(255_255_255/0.07)] bg-black/40 backdrop-blur-xl">
+      <nav className="sticky top-0 z-30 border-b border-[rgb(255_255_255/0.07)] bg-black/40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               {/* Modern logo with easter egg */}
               {useOriginalIcon ? (
-                <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-white/10 rounded-lg cursor-pointer" onClick={handleIconClick}>
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse" />
+                <div className="grid grid-cols-2 gap-0.5 p-2 bg-white/10 rounded-lg cursor-pointer w-10 h-10" onClick={handleIconClick}>
+                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
+                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
+                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
+                  <div className="w-3.5 h-3.5 bg-white rounded-sm animate-pulse" />
                 </div>
               ) : (
                 <img 
