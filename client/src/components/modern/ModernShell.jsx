@@ -230,24 +230,27 @@ export const ModernTopbar = ({
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
 export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette }) => {
     const items = [
-        { id: 'home', icon: Home },
-        { id: 'timetable', icon: LayoutGrid },
-        { id: 'calendar', icon: CalendarDays },
-        { id: 'notices', icon: Newspaper },
-        { id: 'notes', icon: GraduationCap, badge: notificationCount }
+        { id: 'home', icon: Home, label: 'Home' },
+        { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
+        { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
+        { id: 'notices', icon: Newspaper, label: 'Notices' },
+        { id: 'notes', icon: GraduationCap, label: 'Study', badge: notificationCount }
     ];
 
+    const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
+
     return (
-        <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
-            <div className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-2xl border border-m-line bg-m-card/85 backdrop-blur-xl m-shadow-lg">
-                {items.map(({ id, icon: Icon, badge }) => {
+        <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+            <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-card/90 backdrop-blur-xl m-shadow-lg">
+                {items.map(({ id, icon: Icon, label, badge }) => {
                     const active = currentView === id;
                     return (
                         <button
                             key={id}
                             onClick={() => setView(id)}
                             aria-label={VIEW_LABELS[id]}
-                            className={`relative w-12 h-11 grid place-items-center rounded-xl transition-colors ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-400'}`}
+                            aria-current={active ? 'page' : undefined}
+                            className={`${itemClass} ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
                         >
                             {active && (
                                 <motion.span
@@ -257,13 +260,14 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
                                 />
                             )}
                             <Icon size={19} strokeWidth={active ? 2.1 : 1.8} className={`relative ${active ? 'text-accent' : ''}`} />
-                            {badge > 0 && <span className="absolute top-2 right-2.5 w-1.5 h-1.5 rounded-full bg-accent" />}
+                            <span className="relative text-[11px] font-medium leading-none truncate max-w-full px-0.5">{label}</span>
+                            {badge > 0 && <span className="absolute top-1.5 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-accent" />}
                         </button>
                     );
                 })}
-                <span className="w-px h-6 bg-zinc-900/10 dark:bg-white/10 mx-0.5" />
-                <button onClick={onOpenPalette} aria-label="More" className="w-12 h-11 grid place-items-center rounded-xl text-zinc-400">
+                <button onClick={onOpenPalette} aria-label="More" className={`${itemClass} text-zinc-500 dark:text-zinc-400`}>
                     <Menu size={19} strokeWidth={1.8} />
+                    <span className="text-[11px] font-medium leading-none">More</span>
                 </button>
             </div>
         </nav>
