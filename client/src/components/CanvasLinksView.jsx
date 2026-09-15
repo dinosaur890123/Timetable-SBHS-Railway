@@ -86,18 +86,30 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     }
     setSavingClass(className);
     setErrors(prev => ({ ...prev, [className]: '' }));
-    const res = await setCanvasCourse(className, value);
-    setSavingClass(null);
-    if (res.ok) {
-      setCourses(prev => ({ ...prev, [className]: res.course }));
-      setDrafts(prev => ({ ...prev, [className]: '' }));
-      showToast(`Saved Canvas link for ${className}`);
-    } else {
-      if (res.alreadySet) {
-        // Someone set it just before us — refresh to show the canonical value.
-        await loadCourses();
+    
+    try {
+      console.log('Setting canvas course:', { className, value });
+      const res = await setCanvasCourse(className, value);
+      console.log('Canvas course response:', res);
+      setSavingClass(null);
+      
+      if (res.ok) {
+        setCourses(prev => ({ ...prev, [className]: res.course }));
+        setDrafts(prev => ({ ...prev, [className]: '' }));
+        showToast(`Saved Canvas link for ${className}`);
+      } else {
+        if (res.alreadySet) {
+          // Someone set it just before us — refresh to show the canonical value.
+          await loadCourses();
+          showToast('This class already has a shared Canvas course');
+        } else {
+          setErrors(prev => ({ ...prev, [className]: res.error || 'Failed to save Canvas link' }));
+        }
       }
-      setErrors(prev => ({ ...prev, [className]: res.error }));
+    } catch (error) {
+      setSavingClass(null);
+      console.error('Error setting canvas course:', error);
+      setErrors(prev => ({ ...prev, [className]: 'Network error. Please try again.' }));
     }
   };
 

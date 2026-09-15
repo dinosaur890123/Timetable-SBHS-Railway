@@ -757,6 +757,10 @@ export const fetchCanvasCourses = async () => {
         throw new Error(`Failed to fetch canvas courses: ${response.status}`);
     }
     const data = await response.json();
+    // Handle both direct courses object and wrapped response
+    if (data.success && data.courses) {
+        return data.courses;
+    }
     return data?.courses || {};
 };
 
@@ -773,10 +777,18 @@ export const setCanvasCourse = async (className, courseId) => {
         body: JSON.stringify({ className, courseId })
     });
     const data = await response.json().catch(() => ({}));
-    if (response.ok) {
+    
+    // Check if request was successful (HTTP 2xx)
+    if (response.ok && data.success) {
         return { ok: true, course: data.course };
     }
-    return { ok: false, alreadySet: data.error === 'already_set', error: data.message || data.error || 'Failed to save Canvas link' };
+    
+    // Handle errors
+    if (response.status === 409) {
+        return { ok: false, alreadySet: true, error: data.message || 'This class already has a shared Canvas course' };
+    }
+    
+    return { ok: false, alreadySet: false, error: data.message || data.error || 'Failed to save Canvas link' };
 };
 
 // Report an incorrect shared Canvas ID. Resolves with { ok, message, error }.
@@ -792,10 +804,12 @@ export const reportCanvasCourse = async (className, suggestedCourseId, justifica
         body: JSON.stringify({ className, suggestedCourseId, justification })
     });
     const data = await response.json().catch(() => ({}));
-    if (response.ok) {
+    
+    if (response.ok && data.success) {
         return { ok: true, message: data.message };
     }
-    return { ok: false, error: data.error || 'Failed to submit report' };
+    
+    return { ok: false, error: data.message || data.error || 'Failed to submit report' };
 };
 
 
