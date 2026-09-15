@@ -61,7 +61,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[rgb(10_10_12)] text-zinc-100 font-sans selection:bg-white selection:text-black relative overflow-hidden">
+    <div className="min-h-screen bg-[rgb(10_10_12)] text-zinc-100 font-sans selection:bg-white selection:text-black relative overflow-x-hidden">
       {/* Modern theme background with subtle dot grid */}
       <div className="absolute inset-0 m-dots pointer-events-none z-0" />
       
@@ -159,11 +159,11 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
             <div className="flex items-center gap-3">
               {/* Modern logo with easter egg */}
               {useOriginalIcon ? (
-                <div className="grid grid-cols-2 gap-0.5 p-2 bg-white/10 rounded-lg cursor-pointer w-10 h-10" onClick={handleIconClick}>
-                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
-                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
-                  <div className="w-3.5 h-3.5 bg-white rounded-sm" />
-                  <div className="w-3.5 h-3.5 bg-white rounded-sm animate-pulse" />
+                <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-white/10 rounded-lg cursor-pointer" onClick={handleIconClick}>
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse" />
                 </div>
               ) : (
                 <img 
