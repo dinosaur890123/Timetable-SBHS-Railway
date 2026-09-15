@@ -21,6 +21,10 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
   // State for mock timetable widget interaction
   const [mockActiveTab, setMockActiveTab] = useState('timetable');
   const [currentTime, setCurrentTime] = useState('');
+  
+  // Easter egg state for icon toggle
+  const [iconClickCount, setIconClickCount] = useState(0);
+  const [useOriginalIcon, setUseOriginalIcon] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -31,6 +35,17 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleIconClick = () => {
+    setIconClickCount(prev => {
+      const newCount = prev + 1;
+      if (newCount >= 3) {
+        setUseOriginalIcon(true);
+        return 0;
+      }
+      return newCount;
+    });
+  };
 
   const mockPeriods = [
     { name: 'English', time: '09:00 - 10:00', room: 'Room 203', teacher: 'Mrs. B', status: 'Normal' },
@@ -138,17 +153,26 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
       )}
 
       {/* Modern Header */}
-      <nav className="relative z-10 border-b border-[rgb(255_255_255/0.07)] bg-black/40 backdrop-blur-xl">
+      <nav className="sticky top-0 z-10 border-b border-[rgb(255_255_255/0.07)] bg-black/40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              {/* Modern logo */}
-              <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-white/10 rounded-lg">
-                <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse" />
-              </div>
+              {/* Modern logo with easter egg */}
+              {useOriginalIcon ? (
+                <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-white/10 rounded-lg cursor-pointer" onClick={handleIconClick}>
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse" />
+                </div>
+              ) : (
+                <img 
+                  src="/icon-1500x1500.png" 
+                  alt="Synchron Logo" 
+                  className="w-10 h-10 rounded-lg cursor-pointer hover:scale-105 transition-transform"
+                  onClick={handleIconClick}
+                />
+              )}
               <span className="font-semibold text-base tracking-wide text-white uppercase">
                 <span className="underline decoration-white/50 decoration-2 underline-offset-4 font-semibold">synchron</span>
               </span>
@@ -456,15 +480,8 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                 <div className="mt-4 space-y-3 text-left">
                     <h3 className="text-xl font-semibold uppercase tracking-tight text-white">Synchron Pro Supporters</h3>
                     <p className="text-sm text-zinc-400 max-w-xl font-light leading-relaxed">
-                        Special thanks to the amazing individuals who support the development and hosting of Synchron:
+                        Special thanks to the amazing individuals who support the development and hosting of Synchron.
                     </p>
-                    <div className="flex flex-wrap gap-2 pt-3">
-                        {supporters.map((supporter, idx) => (
-                            <span key={idx} className="inline-flex items-center px-3 py-1.5 font-mono text-xs text-white border border-[rgb(255_255_255/0.1)] bg-[rgb(21_21_25)] hover:border-white/20 transition-colors select-none rounded-lg">
-                                {supporter}
-                            </span>
-                        ))}
-                    </div>
                 </div>
             </div>
         )}
