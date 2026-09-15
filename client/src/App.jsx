@@ -152,11 +152,21 @@ function App() {
 
     // Fetch shared canvas links for classes that don't have user's link
     useEffect(() => {
-        if (!completeTimetable?.timetable?.[0]?.periods) return;
+        // Handle different possible data structures for completeTimetable
+        let periods = null;
+        
+        if (completeTimetable?.timetable?.[0]?.periods) {
+            periods = completeTimetable.timetable[0].periods;
+        } else if (completeTimetable?.timetable?.periods) {
+            periods = completeTimetable.timetable.periods;
+        } else if (completeTimetable?.periods) {
+            periods = completeTimetable.periods;
+        }
+        
+        if (!periods) return;
 
         const fetchSharedLinks = async () => {
             const shared = {};
-            const periods = completeTimetable.timetable[0].periods;
 
             for (const [bellId, period] of Object.entries(periods)) {
                 if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;

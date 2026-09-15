@@ -14,8 +14,12 @@ const CanvasLinksView = ({ onBack, timetableData }) => {
   const [toast, setToast] = useState('');
 
   const getClasses = useCallback(() => {
-    if (!timetableData?.timetable?.periods) return [];
-    const periods = timetableData.timetable.periods;
+    // Handle nested timetable structure similar to Timetable.jsx
+    const timetable = timetableData?.timetable;
+    const innerTimetable = timetable?.timetable || timetable;
+    
+    if (!innerTimetable?.periods) return [];
+    const periods = innerTimetable.periods;
     const classes = new Set();
     Object.values(periods).forEach(period => {
       if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
