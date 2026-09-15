@@ -58,7 +58,7 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
        <div className="flex md:flex-col justify-around md:justify-start gap-1 md:gap-3 p-2 md:p-3 h-full w-full">
          <div className="hidden md:flex items-center justify-center py-4 mb-2 shrink-0">
              <div className="w-10 h-10 bg-black dark:bg-white flex items-center justify-center">
-                 <span className="text-white dark:text-black font-extrabold text-xl">S</span>
+                 <img src="/favicon-32x32.png" alt="Synchron" className="w-6 h-6" />
              </div>
          </div>
 
