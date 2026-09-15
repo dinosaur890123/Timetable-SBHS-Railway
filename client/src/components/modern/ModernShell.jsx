@@ -281,9 +281,9 @@ export const CommandPalette = ({ open, onClose, commands }) => {
     const listRef = useRef(null);
 
     const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return commands;
-        return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(q));
+        const searchQuery = query.trim().toLowerCase();
+        if (!searchQuery) return commands;
+        return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
     }, [commands, query]);
 
     useEffect(() => {
@@ -299,24 +299,29 @@ export const CommandPalette = ({ open, onClose, commands }) => {
         listRef.current?.querySelector(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: 'nearest' });
     }, [activeIndex]);
 
-    const run = (command) => {
+    const executeCommand = (command) => {
         if (!command) return;
         onClose();
         command.run();
     };
 
-    const onKeyDown = (e) => {
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setActiveIndex(i => Math.min(i + 1, filtered.length - 1));
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setActiveIndex(i => Math.max(i - 1, 0));
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            run(filtered[activeIndex]);
-        } else if (e.key === 'Escape') {
-            onClose();
+    const handleKeyDown = (e) => {
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setActiveIndex(i => Math.min(i + 1, filtered.length - 1));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setActiveIndex(i => Math.max(i - 1, 0));
+                break;
+            case 'Enter':
+                e.preventDefault();
+                executeCommand(filtered[activeIndex]);
+                break;
+            case 'Escape':
+                onClose();
+                break;
         }
     };
 
@@ -346,11 +351,9 @@ export const CommandPalette = ({ open, onClose, commands }) => {
                             <Search size={16} className="text-zinc-400 shrink-0" />
                             <input
                                 ref={inputRef}
-                                data-bare
-                                autoFocus
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={onKeyDown}
+                                onKeyDown={handleKeyDown}
                                 placeholder="Jump to a page or run a command…"
                                 className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
                             />
@@ -375,7 +378,7 @@ export const CommandPalette = ({ open, onClose, commands }) => {
                                         <button
                                             data-index={index}
                                             onMouseMove={() => setActiveIndex(index)}
-                                            onClick={() => run(command)}
+                                            onClick={() => executeCommand(command)}
                                             className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left text-sm transition-colors ${active ? 'bg-zinc-900/[0.05] dark:bg-white/[0.06] text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}
                                         >
                                             <Icon size={15} className={active ? 'text-accent' : 'text-zinc-400'} />
@@ -396,16 +399,27 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 
 // Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiThemeOptions, currentUiTheme, onSelectUiTheme, onSignOut }) => {
-    const nav = buildNavGroups(user?.role === 'Admin').flatMap(g => g.items).map(item => ({
-        id: `nav-${item.id}`,
-        group: 'Go to',
-        label: VIEW_LABELS[item.id],
-        icon: item.icon,
-        run: () => setView(item.id)
-    }));
-    nav.push({ id: 'nav-canvas-links', group: 'Go to', label: 'Canvas Links', icon: BookOpen, run: () => setView('canvas-links') });
+    // Navigation commands
+    const navCommands = buildNavGroups(user?.role === 'Admin')
+        .flatMap(g => g.items)
+        .map(item => ({
+            id: `nav-${item.id}`,
+            group: 'Go to',
+            label: VIEW_LABELS[item.id],
+            icon: item.icon,
+            run: () => setView(item.id)
+        }));
+    
+    navCommands.push({ 
+        id: 'nav-canvas-links', 
+        group: 'Go to', 
+        label: 'Canvas Links', 
+        icon: BookOpen, 
+        run: () => setView('canvas-links') 
+    });
 
-    const actions = [
+    // Action commands
+    const actionCommands = [
         {
             id: 'toggle-theme',
             group: 'Actions',
@@ -414,7 +428,14 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiTh
             icon: theme === 'dark' ? Sun : Moon,
             run: toggleTheme
         },
-        ...(onAskAi ? [{ id: 'ask-ai', group: 'Actions', label: 'Ask the timetable assistant', keywords: 'ai question', icon: Sparkles, run: onAskAi }] : []),
+        ...(onAskAi ? [{ 
+            id: 'ask-ai', 
+            group: 'Actions', 
+            label: 'Ask the timetable assistant', 
+            keywords: 'ai question', 
+            icon: Sparkles, 
+            run: onAskAi 
+        }] : []),
         ...uiThemeOptions
             .filter(t => t.id !== currentUiTheme)
             .map(t => ({
@@ -425,10 +446,16 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiTh
                 icon: Palette,
                 run: () => onSelectUiTheme(t.id)
             })),
-        { id: 'sign-out', group: 'Account', label: 'Sign out', icon: LogOut, run: onSignOut }
+        { 
+            id: 'sign-out', 
+            group: 'Account', 
+            label: 'Sign out', 
+            icon: LogOut, 
+            run: onSignOut 
+        }
     ];
 
-    return [...nav, ...actions];
+    return [...navCommands, ...actionCommands];
 };
 
 // Shell-level behaviour: Ctrl/Cmd+K shortcut and pointer-tracked spotlight on dashboard tiles.
@@ -436,14 +463,14 @@ export const useModernShellEffects = (enabled, setPaletteOpen) => {
     useEffect(() => {
         if (!enabled) return;
 
-        const onKey = (e) => {
+        const handleKeyboardShortcut = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
-                setPaletteOpen(open => !open);
+                setPaletteOpen(prev => !prev);
             }
         };
 
-        const onPointerMove = (e) => {
+        const handlePointerMove = (e) => {
             const tile = e.target.closest?.('.relative-tile-wrapper');
             if (!tile) return;
             const rect = tile.getBoundingClientRect();
@@ -451,11 +478,12 @@ export const useModernShellEffects = (enabled, setPaletteOpen) => {
             tile.style.setProperty('--my', `${e.clientY - rect.top}px`);
         };
 
-        window.addEventListener('keydown', onKey);
-        document.addEventListener('pointermove', onPointerMove, { passive: true });
+        window.addEventListener('keydown', handleKeyboardShortcut);
+        document.addEventListener('pointermove', handlePointerMove, { passive: true });
+        
         return () => {
-            window.removeEventListener('keydown', onKey);
-            document.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('keydown', handleKeyboardShortcut);
+            document.removeEventListener('pointermove', handlePointerMove);
         };
     }, [enabled, setPaletteOpen]);
 };
