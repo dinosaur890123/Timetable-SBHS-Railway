@@ -19,7 +19,7 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notific
         {notificationCount > 9 ? '9+' : notificationCount}
       </span>
     )}
-    <span className="hidden md:block text-[11px] font-medium leading-tight">{label}</span>
+    <span className="hidden md:block text-[11px] font-medium leading-tight whitespace-nowrap">{label}</span>
   </button>
 );
 

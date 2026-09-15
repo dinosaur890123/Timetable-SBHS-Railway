@@ -241,7 +241,7 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
 
     return (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-card/90 backdrop-blur-xl m-shadow-lg">
+            <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/80 backdrop-blur-xl m-shadow-lg">
                 {items.map(({ id, icon: Icon, label, badge }) => {
                     const active = currentView === id;
                     return (
@@ -260,14 +260,14 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
                                 />
                             )}
                             <Icon size={19} strokeWidth={active ? 2.1 : 1.8} className={`relative ${active ? 'text-accent' : ''}`} />
-                            <span className="relative text-[11px] font-medium leading-none truncate max-w-full px-0.5">{label}</span>
+                            <span className="relative text-[11px] font-medium leading-none px-0.5 whitespace-nowrap">{label}</span>
                             {badge > 0 && <span className="absolute top-1.5 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-accent" />}
                         </button>
                     );
                 })}
                 <button onClick={onOpenPalette} aria-label="More" className={`${itemClass} text-zinc-500 dark:text-zinc-400`}>
                     <Menu size={19} strokeWidth={1.8} />
-                    <span className="text-[11px] font-medium leading-none">More</span>
+                    <span className="text-[11px] font-medium leading-none whitespace-nowrap">More</span>
                 </button>
             </div>
         </nav>
