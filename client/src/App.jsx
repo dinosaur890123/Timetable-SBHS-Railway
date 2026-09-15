@@ -1126,47 +1126,46 @@ function App() {
                                 {/* Date Controls & AI Button Row - only show in daily view */}
                                 {timetableViewMode === 'daily' && (
                                     <>
-                                    <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 py-1.5 px-3 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                                    <div className="flex items-center gap-1">
-                                        <button onClick={prevDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronLeft size={16} />
+                                    <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 p-1 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex items-center gap-0.5 min-w-0">
+                                        <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 sm:w-8 sm:h-8 grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronLeft size={18} />
                                         </button>
                                         <button
                                             onClick={() => setShowDatePicker(!showDatePicker)}
-                                            className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-[120px] justify-center"
+                                            aria-label="Choose date"
+                                            className="flex items-baseline gap-1.5 px-2 h-10 sm:h-8 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-0 sm:min-w-[132px] justify-center"
                                         >
-                                            <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                                            <span className="text-sm font-semibold text-zinc-900 dark:text-white">
                                                 {format(viewDate, 'EEEE')}
                                             </span>
-                                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                                            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
                                                 {format(viewDate, 'd MMM')}
                                             </span>
                                         </button>
-                                        <button onClick={nextDay} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronRight size={16} />
+                                        <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 sm:w-8 sm:h-8 grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
+                                            <ChevronRight size={18} />
                                         </button>
                                     </div>
 
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            onClick={resetToday}
-                                            disabled={defaultDate && isSameDay(viewDate, defaultDate)}
-                                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-all ${
-                                                defaultDate && isSameDay(viewDate, defaultDate)
-                                                    ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed'
-                                                    : 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-                                            }`}
-                                        >
-                                            <CalendarIcon size={11} />
-                                            Today
-                                        </button>
+                                    <div className="flex items-center gap-1.5 pr-0.5 shrink-0">
+                                        {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
+                                            <button
+                                                onClick={resetToday}
+                                                className="flex items-center gap-1 px-2.5 h-9 sm:h-7 text-xs font-semibold rounded-lg transition-colors text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                                            >
+                                                <CalendarIcon size={13} />
+                                                Today
+                                            </button>
+                                        )}
                                         {!aiDisabled && (
                                             <button
                                                 onClick={() => setShowAiModal(true)}
-                                                className="h-7 px-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1"
+                                                aria-label="Ask AI about your timetable"
+                                                className="h-9 sm:h-7 px-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1"
                                             >
-                                                <Sparkles size={12} className="animate-pulse" />
-                                                Ask AI
+                                                <Sparkles size={13} />
+                                                <span className="hidden min-[400px]:inline">Ask AI</span>
                                             </button>
                                         )}
                                     </div>

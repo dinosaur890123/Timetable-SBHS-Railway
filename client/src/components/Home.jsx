@@ -414,9 +414,9 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                         Fetching Live Times...
                     </div>
                 ) : error ? (
-                    <div className="text-center py-4 text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-950/30 p-3">
-                        ⚠️ {error}
-                        <button type="button" onClick={fetchDepartures} className="block mx-auto mt-2 text-[10px] font-black uppercase underline hover:text-red-700">Try Again</button>
+                    <div className="flex items-center justify-between gap-3 py-3 text-sm text-zinc-500 dark:text-zinc-400">
+                        <span>Live times unavailable right now.</span>
+                        <button type="button" onClick={fetchDepartures} className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">Retry</button>
                     </div>
                 ) : departures.length === 0 ? (
                     <div className="text-center py-6 text-zinc-450 font-mono text-[10px] uppercase tracking-widest italic">
@@ -732,7 +732,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const getSchoolCountdown = () => {
         if (!schoolEndTimeStr) return null;
         const endMin = getMinutes(schoolEndTimeStr);
-        const diff = endMin - currentMinutes;
+        const diff = Math.ceil(endMin - currentMinutes);
 
         // Only show if the school day is currently active and hasn't ended
         const firstBell = bells.find(b => b.bell === routine[0]);
@@ -976,7 +976,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             case 'current_class':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
+                        <div className="hidden md:block absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
                         </div>
                         <h2 className="text-sm font-extrabold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
@@ -1196,23 +1196,24 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-5 md:space-y-8 animate-in fade-in duration-700 pb-6 md:pb-20">
             {/* Header controls & Greeting (Fixed, non-editable greeting at the top) */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-6">
-                <div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2 leading-none">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 border-b border-zinc-200 dark:border-zinc-900 pb-5 md:pb-6">
+                <div className="min-w-0">
+                    <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight md:leading-none">
                         {greeting}, <span className="text-accent underline decoration-accent/40 underline-offset-4">{user?.givenName || 'Student'}</span>
                     </h1>
-                    <p className="text-zinc-500 dark:text-zinc-400 font-semibold text-base flex items-center gap-2 mt-3.5 select-none">
-                        <CalendarIcon size={18} className="text-zinc-400 dark:text-zinc-500" />
-                        {format(currentTime, 'EEEE, d MMMM yyyy')}
+                    <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm md:text-base flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2 md:mt-3.5 select-none">
+                        <CalendarIcon size={16} className="text-zinc-400 dark:text-zinc-500" />
+                        <span className="md:hidden">{format(currentTime, 'EEE d MMM')}</span>
+                        <span className="hidden md:inline">{format(currentTime, 'EEEE, d MMMM yyyy')}</span>
                         {innerTimetable?.dayname && (() => {
                             const schoolEndMin = schoolEndTimeStr ? getMinutes(schoolEndTimeStr) : null;
                             const isAfterSchool = schoolEndMin !== null && currentMinutes > schoolEndMin;
                             const isBeforeMidnight = currentTime.getHours() < 24;
                             const showTomorrow = isAfterSchool && isBeforeMidnight;
                             return (
-                                <span className="ml-2 px-2.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700">
+                                <span className="px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs md:text-sm font-semibold border border-zinc-300 dark:border-zinc-700">
                                     {showTomorrow ? `Tomorrow is ${innerTimetable.dayname}` : innerTimetable.dayname}
                                 </span>
                             );
@@ -1220,8 +1221,8 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     </p>
                 </div>
 
-                {/* Customize Dashboard Controls */}
-                <div className="flex items-center gap-2 shrink-0 select-none pb-0.5">
+                {/* Customize Dashboard Controls (on phones the entry point lives at the bottom of the page) */}
+                <div className={`${isEditing ? 'flex' : 'hidden sm:flex'} items-center gap-2 shrink-0 select-none pb-0.5`}>
                     {isEditing ? (
                         <>
                             <button
@@ -1255,11 +1256,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
             </div>
 
             {/* Interactive Grid Container */}
-            <div className={`p-4 transition-all duration-300 ${isEditing
-                    ? 'bg-grid dark:bg-grid-glow-bw border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/10'
+            <div className={`transition-all duration-300 ${isEditing
+                    ? 'p-3 md:p-4 bg-grid dark:bg-grid-glow-bw border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-900/10'
                     : ''
                 }`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 relative">
                     {filteredActiveTiles.map((tile, index) => {
                         const tileConfig = ALL_TILES[tile.id];
                         if (!tileConfig) return null;
@@ -1271,6 +1272,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
                         // Hide current class tile on mobile unless class is within 2 hours
                         if (tile.id === 'current_class' && isMobile && !shouldShowCurrentClassOnMobile && !isEditing) {
+                            return null;
+                        }
+
+                        // The phone already shows the time in its status bar
+                        if (tile.id === 'clock' && isMobile && !isEditing) {
                             return null;
                         }
 
@@ -1386,6 +1392,18 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                     )}
                 </div>
             )}
+
+            {!isEditing && (
+                <div className="sm:hidden flex justify-center">
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+                    >
+                        <LayoutGrid size={15} />
+                        Customise dashboard
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
@@ -1399,7 +1417,7 @@ const MapPin = ({ size }) => (
 );
 
 const UserIcon = ({ size }) => (
-    <svg xmlns="http://www.w3.org/2500/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
     </svg>
