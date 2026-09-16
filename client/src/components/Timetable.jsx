@@ -299,6 +299,18 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 canvasLink={canvasLinks[data.periodInfo.title] || sharedLinks[data.periodInfo.title] || null}
                             />
                         ))}
+                        {/* End of Day divider */}
+                        {routineData.length > 0 && (
+                            <div className="my-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                        End of Day
+                                    </span>
+                                    <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 </>

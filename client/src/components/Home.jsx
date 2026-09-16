@@ -187,16 +187,25 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
 
     // Track if we've already shown a lunch divider
     let lunchDividerShown = false;
+    
+    // Check if there are any actual classes (non-break items)
+    const hasClasses = filteredRoutine.some(bellId => {
+        const bell = bells.find(b => b.bell === bellId);
+        if (!bell) return false;
+        const periodInfo = periods[bellId] || { title: bell.bellDisplay };
+        return !isBreakBell(bellId, periodInfo);
+    });
 
     return (
-        <div className="bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] p-4 h-full flex flex-col rounded-2xl">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3 flex items-center gap-2">
+        <div className="bg-white dark:bg-[rgb(15_15_18)] border border-zinc-200 dark:border-[rgb(255_255_255/0.07)] p-4 h-full flex flex-col rounded-2xl">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
                 <BookOpen size={12} />
                 Upcoming Classes
             </h2>
             <div className="space-y-0.5 flex-1">
                 {filteredRoutine.length > 0 ? (
-                    filteredRoutine.map((bellId, idx) => {
+                    <>
+                        {filteredRoutine.map((bellId, idx) => {
                         const bell = bells.find(b => b.bell === bellId);
                         if (!bell) return null;
 
@@ -241,11 +250,11 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                             return (
                                 <div key={idx} className="my-2">
                                     <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-px bg-[rgb(255_255_255/0.15)]" />
-                                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                                        <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
+                                        <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
                                             {breakName}
                                         </span>
-                                        <div className="flex-1 h-px bg-[rgb(255_255_255/0.15)]" />
+                                        <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
                                     </div>
                                 </div>
                             );
@@ -255,35 +264,48 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                             <div key={idx}>
                                 <div
                                     className={`flex items-center gap-2 py-1 px-2 rounded-lg text-xs ${isCurrent
-                                            ? 'bg-white/10 text-white'
-                                            : 'text-zinc-300'
+                                            ? 'bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white'
+                                            : 'text-zinc-700 dark:text-zinc-300'
                                         }`}
                                 >
-                                    <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-white' : 'text-zinc-200'}`}>
+                                    <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
                                         {title}
                                     </span>
                                     {periodInfo.fullTeacher && (
-                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
                                             {periodInfo.fullTeacher}
                                         </span>
                                     )}
                                     {periodInfo.room && (
-                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
                                             {periodInfo.room}
                                         </span>
                                     )}
                                     {isCurrent && (
-                                        <span className="text-white/60 text-[10px] font-medium shrink-0">
+                                        <span className="text-zinc-600 dark:text-white/60 text-[10px] font-medium shrink-0">
                                             {Math.max(0, Math.ceil(endMin - currentMinutes))}m
                                         </span>
                                     )}
                                 </div>
                                 {idx < filteredRoutine.length - 1 && (
-                                    <div className="h-px bg-[rgb(255_255_255/0.05)] mx-2" />
+                                    <div className="h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.05)] mx-2" />
                                 )}
                             </div>
                         );
-                    })
+                    })}
+                    {/* Add End of Day divider if there are classes */}
+                    {hasClasses && (
+                        <div className="my-2">
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
+                                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                    End of Day
+                                </span>
+                                <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
+                            </div>
+                        </div>
+                    )}
+                    </>
                 ) : (
                     <div className="text-center py-4 text-zinc-500 text-xs">No classes scheduled.</div>
                 )}
