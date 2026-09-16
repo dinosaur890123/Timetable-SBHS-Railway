@@ -143,7 +143,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
     };
 
     // Filter routine: show all if before school, otherwise show from current period onwards
-    // Skip breaks, roll call, and period 0 if it doesn't exist
+    // Skip roll call and period 0 if it doesn't exist, but keep breaks as dividers
     const filteredRoutine = routine.filter((bellId, idx) => {
         const bell = bells.find(b => b.bell === bellId);
         if (!bell) return false;
@@ -152,7 +152,6 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
 
         const periodInfo = periods[bellId] || { title: bell.bellDisplay };
         if (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call")) return false;
-        if (isBreakBell(bellId, periodInfo)) return false; // Skip breaks
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
@@ -186,11 +185,14 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
         return idx >= currentIdx;
     });
 
+    // Track if we've already shown a lunch divider
+    let lunchDividerShown = false;
+
     return (
         <div className="bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] p-4 h-full flex flex-col rounded-2xl">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3 flex items-center gap-2">
                 <BookOpen size={12} />
-                Today's Schedule
+                Upcoming Classes
             </h2>
             <div className="space-y-0.5 flex-1">
                 {filteredRoutine.length > 0 ? (
@@ -204,10 +206,50 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
 
                         const periodInfo = periods[bellId] || { title: bell.bellDisplay };
                         const title = periodInfo.title || "Free Period";
+                        const isBreak = isBreakBell(bellId, periodInfo);
+
+                        // Get break name
+                        const getBreakName = (bellId, periodInfo) => {
+                            const id = String(bellId).toUpperCase().trim();
+                            if (id === "R") return "Recess";
+                            if (id === "L") return "Lunch";
+                            if (periodInfo && periodInfo.title) {
+                                const title = periodInfo.title.toLowerCase();
+                                if (title.includes('lunch')) return "Lunch";
+                                if (title.includes('recess')) return "Recess";
+                            }
+                            return "Break";
+                        };
 
                         const progress = isCurrent && startMin != null && endMin
                             ? Math.min(100, Math.max(0, ((currentMinutes - startMin) / (endMin - startMin)) * 100))
                             : 0;
+
+                        // Handle break dividers
+                        if (isBreak) {
+                            const breakName = getBreakName(bellId, periodInfo);
+                            const isLunch = breakName === "Lunch";
+                            
+                            // Only show lunch divider once
+                            if (isLunch && lunchDividerShown) {
+                                return null;
+                            }
+                            if (isLunch) {
+                                lunchDividerShown = true;
+                            }
+
+                            return (
+                                <div key={idx} className="my-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-px bg-[rgb(255_255_255/0.15)]" />
+                                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                                            {breakName}
+                                        </span>
+                                        <div className="flex-1 h-px bg-[rgb(255_255_255/0.15)]" />
+                                    </div>
+                                </div>
+                            );
+                        }
 
                         return (
                             <div key={idx}>
@@ -220,6 +262,11 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                     <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-white' : 'text-zinc-200'}`}>
                                         {title}
                                     </span>
+                                    {periodInfo.fullTeacher && (
+                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                            {periodInfo.fullTeacher}
+                                        </span>
+                                    )}
                                     {periodInfo.room && (
                                         <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-300' : 'text-zinc-500'}`}>
                                             {periodInfo.room}
