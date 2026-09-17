@@ -23,6 +23,7 @@ export default {
       colors: {
         zinc,
         black: 'rgb(var(--black) / <alpha-value>)',
+        white: 'rgb(var(--white) / <alpha-value>)',
         // Modern interface surfaces (variables defined in theme/modern.css)
         m: {
           page: 'rgb(var(--m-page) / <alpha-value>)',

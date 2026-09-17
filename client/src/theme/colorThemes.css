@@ -1,0 +1,328 @@
+/* ==========================================================================
+   Immersive colour themes (generated)
+   Each colour theme tints the shared neutral scale and modern surfaces toward
+   its accent hue in OKLCH, keeping lightness (and so contrast) unchanged.
+   Selectors are specific enough to beat theme/modern.css overrides.
+   ========================================================================== */
+
+/* mint */
+html.theme-mint {
+  --white: 254 255 255;
+  --zinc-50: 246 252 247;
+  --zinc-100: 238 247 240;
+  --zinc-200: 221 232 223;
+  --zinc-300: 203 217 207;
+  --zinc-400: 151 167 155;
+  --zinc-500: 103 119 107;
+  --zinc-600: 72 88 76;
+  --zinc-700: 55 68 58;
+  --zinc-800: 32 42 35;
+  --zinc-900: 19 27 21;
+  --zinc-950: 6 11 7;
+}
+html[data-ui="modern"].theme-mint {
+  --white: 254 255 255;
+  --zinc-50: 245 251 246;
+  --zinc-100: 237 245 239;
+  --zinc-200: 226 236 228;
+  --zinc-300: 205 218 208;
+  --m-page: 233 244 236;
+  --m-panel: 246 252 247;
+  --m-card: 254 255 255;
+}
+html[data-ui="modern"].dark.theme-mint {
+  --black: 11 17 12;
+  --zinc-950: 16 24 18;
+  --zinc-900: 22 31 25;
+  --zinc-800: 33 44 36;
+  --zinc-700: 53 64 56;
+  --m-page: 7 12 8;
+  --m-panel: 11 17 12;
+  --m-card: 16 24 18;
+}
+
+/* amber */
+html.theme-amber {
+  --white: 255 255 255;
+  --zinc-50: 253 249 245;
+  --zinc-100: 249 243 237;
+  --zinc-200: 234 227 219;
+  --zinc-300: 220 211 201;
+  --zinc-400: 171 160 148;
+  --zinc-500: 123 112 100;
+  --zinc-600: 91 81 70;
+  --zinc-700: 71 62 53;
+  --zinc-800: 45 38 31;
+  --zinc-900: 28 23 18;
+  --zinc-950: 12 9 5;
+}
+html[data-ui="modern"].theme-amber {
+  --white: 255 255 255;
+  --zinc-50: 252 248 244;
+  --zinc-100: 248 242 235;
+  --zinc-200: 238 232 224;
+  --zinc-300: 221 212 203;
+  --m-page: 247 240 231;
+  --m-panel: 253 249 245;
+  --m-card: 255 255 254;
+}
+html[data-ui="modern"].dark.theme-amber {
+  --black: 19 15 10;
+  --zinc-950: 25 21 15;
+  --zinc-900: 33 27 21;
+  --zinc-800: 46 39 32;
+  --zinc-700: 67 59 51;
+  --m-page: 13 10 6;
+  --m-panel: 19 15 10;
+  --m-card: 25 21 15;
+}
+
+/* blue */
+html.theme-blue {
+  --white: 255 255 255;
+  --zinc-50: 247 250 255;
+  --zinc-100: 239 245 254;
+  --zinc-200: 222 229 241;
+  --zinc-300: 204 213 227;
+  --zinc-400: 152 163 180;
+  --zinc-500: 104 115 132;
+  --zinc-600: 73 84 100;
+  --zinc-700: 56 64 78;
+  --zinc-800: 33 40 50;
+  --zinc-900: 19 25 33;
+  --zinc-950: 6 9 15;
+}
+html[data-ui="modern"].theme-blue {
+  --white: 255 255 255;
+  --zinc-50: 245 249 255;
+  --zinc-100: 237 243 253;
+  --zinc-200: 226 233 245;
+  --zinc-300: 206 214 228;
+  --m-page: 234 241 253;
+  --m-panel: 247 250 255;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-blue {
+  --black: 11 16 22;
+  --zinc-950: 17 22 30;
+  --zinc-900: 23 29 38;
+  --zinc-800: 34 41 52;
+  --zinc-700: 54 61 74;
+  --m-page: 7 10 16;
+  --m-panel: 11 16 22;
+  --m-card: 17 22 30;
+}
+
+/* violet */
+html.theme-violet {
+  --white: 255 255 255;
+  --zinc-50: 251 249 255;
+  --zinc-100: 246 242 252;
+  --zinc-200: 231 226 239;
+  --zinc-300: 215 209 225;
+  --zinc-400: 166 158 177;
+  --zinc-500: 118 110 129;
+  --zinc-600: 87 79 97;
+  --zinc-700: 67 61 75;
+  --zinc-800: 42 37 48;
+  --zinc-900: 26 22 31;
+  --zinc-950: 10 8 14;
+}
+html[data-ui="modern"].theme-violet {
+  --white: 255 255 255;
+  --zinc-50: 250 247 255;
+  --zinc-100: 245 241 251;
+  --zinc-200: 235 230 242;
+  --zinc-300: 217 211 225;
+  --m-page: 243 238 251;
+  --m-panel: 251 249 255;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-violet {
+  --black: 17 14 21;
+  --zinc-950: 23 20 28;
+  --zinc-900: 31 26 36;
+  --zinc-800: 43 38 50;
+  --zinc-700: 64 58 71;
+  --m-page: 11 9 15;
+  --m-panel: 17 14 21;
+  --m-card: 23 20 28;
+}
+
+/* rose */
+html.theme-rose {
+  --white: 255 255 255;
+  --zinc-50: 255 248 248;
+  --zinc-100: 254 241 241;
+  --zinc-200: 240 224 224;
+  --zinc-300: 227 207 208;
+  --zinc-400: 179 155 156;
+  --zinc-500: 131 107 108;
+  --zinc-600: 99 77 78;
+  --zinc-700: 77 58 59;
+  --zinc-800: 49 35 36;
+  --zinc-900: 32 21 22;
+  --zinc-950: 15 7 7;
+}
+html[data-ui="modern"].theme-rose {
+  --white: 255 255 255;
+  --zinc-50: 255 247 247;
+  --zinc-100: 252 239 240;
+  --zinc-200: 244 229 229;
+  --zinc-300: 227 208 209;
+  --m-page: 253 236 237;
+  --m-panel: 255 248 248;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-rose {
+  --black: 22 13 13;
+  --zinc-950: 29 18 19;
+  --zinc-900: 37 25 25;
+  --zinc-800: 51 36 37;
+  --zinc-700: 73 56 57;
+  --m-page: 16 8 8;
+  --m-panel: 22 13 13;
+  --m-card: 29 18 19;
+}
+
+/* teal */
+html.theme-teal {
+  --white: 254 255 255;
+  --zinc-50: 244 252 251;
+  --zinc-100: 236 247 245;
+  --zinc-200: 217 232 229;
+  --zinc-300: 199 217 214;
+  --zinc-400: 146 168 163;
+  --zinc-500: 97 119 115;
+  --zinc-600: 67 88 84;
+  --zinc-700: 50 68 65;
+  --zinc-800: 28 43 40;
+  --zinc-900: 16 27 25;
+  --zinc-950: 4 11 10;
+}
+html[data-ui="modern"].theme-teal {
+  --white: 254 255 255;
+  --zinc-50: 243 251 249;
+  --zinc-100: 234 246 244;
+  --zinc-200: 222 236 234;
+  --zinc-300: 201 218 215;
+  --m-page: 230 245 242;
+  --m-panel: 244 252 250;
+  --m-card: 254 255 255;
+}
+html[data-ui="modern"].dark.theme-teal {
+  --black: 8 17 16;
+  --zinc-950: 13 24 22;
+  --zinc-900: 19 31 29;
+  --zinc-800: 30 44 42;
+  --zinc-700: 48 65 62;
+  --m-page: 5 12 11;
+  --m-panel: 8 17 16;
+  --m-card: 13 24 22;
+}
+
+/* orange */
+html.theme-orange {
+  --white: 255 255 255;
+  --zinc-50: 255 249 245;
+  --zinc-100: 252 242 238;
+  --zinc-200: 238 226 220;
+  --zinc-300: 224 209 202;
+  --zinc-400: 175 158 150;
+  --zinc-500: 127 110 102;
+  --zinc-600: 95 79 71;
+  --zinc-700: 74 60 54;
+  --zinc-800: 47 37 32;
+  --zinc-900: 30 22 18;
+  --zinc-950: 13 8 6;
+}
+html[data-ui="modern"].theme-orange {
+  --white: 255 255 255;
+  --zinc-50: 254 247 244;
+  --zinc-100: 250 241 236;
+  --zinc-200: 242 230 225;
+  --zinc-300: 224 210 204;
+  --m-page: 250 238 232;
+  --m-panel: 255 248 245;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-orange {
+  --black: 20 14 10;
+  --zinc-950: 27 19 16;
+  --zinc-900: 36 26 22;
+  --zinc-800: 49 38 33;
+  --zinc-700: 70 58 52;
+  --m-page: 15 9 6;
+  --m-panel: 20 14 10;
+  --m-card: 27 19 16;
+}
+
+/* sky */
+html.theme-sky {
+  --white: 255 255 255;
+  --zinc-50: 245 251 255;
+  --zinc-100: 236 246 253;
+  --zinc-200: 218 231 239;
+  --zinc-300: 200 215 226;
+  --zinc-400: 147 165 178;
+  --zinc-500: 98 117 130;
+  --zinc-600: 68 86 98;
+  --zinc-700: 51 66 76;
+  --zinc-800: 29 41 49;
+  --zinc-900: 17 26 32;
+  --zinc-950: 5 10 14;
+}
+html[data-ui="modern"].theme-sky {
+  --white: 255 255 255;
+  --zinc-50: 243 250 255;
+  --zinc-100: 235 245 251;
+  --zinc-200: 223 235 243;
+  --zinc-300: 202 216 226;
+  --m-page: 230 243 252;
+  --m-panel: 245 251 255;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-sky {
+  --black: 9 16 22;
+  --zinc-950: 14 23 29;
+  --zinc-900: 20 30 37;
+  --zinc-800: 31 42 50;
+  --zinc-700: 49 63 72;
+  --m-page: 5 11 15;
+  --m-panel: 9 16 22;
+  --m-card: 14 23 29;
+}
+
+/* ---------- Ambient accent (any non-default colour theme) ---------- */
+
+/* Soft glow of the accent washing in from the corners behind the app */
+html[class*="theme-"] .m-ambient {
+  background-image:
+    radial-gradient(900px circle at 0% 0%, hsl(var(--color-accent) / 0.10), transparent 60%),
+    radial-gradient(800px circle at 100% 100%, hsl(var(--color-accent) / 0.06), transparent 60%);
+  background-attachment: fixed;
+}
+html.dark[class*="theme-"] .m-ambient {
+  background-image:
+    radial-gradient(900px circle at 0% 0%, hsl(var(--color-accent) / 0.08), transparent 60%),
+    radial-gradient(800px circle at 100% 100%, hsl(var(--color-accent) / 0.05), transparent 60%);
+}
+
+/* Stronger header glow in the modern main panel */
+html[class*="theme-"] .m-dots {
+  background-image:
+    radial-gradient(700px circle at 50% -120px, hsl(var(--color-accent) / 0.16), transparent 70%),
+    radial-gradient(rgb(var(--m-line) / 0.09) 1px, transparent 1px);
+}
+
+/* Scrollbars pick up the accent */
+html[data-ui="modern"][class*="theme-"] * {
+  scrollbar-color: hsl(var(--color-accent) / 0.35) transparent;
+}
+html[data-ui="modern"][class*="theme-"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-accent) / 0.35);
+  background-clip: padding-box;
+}
+html:not([data-ui="modern"])[class*="theme-"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-accent));
+}

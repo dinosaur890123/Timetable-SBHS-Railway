@@ -612,6 +612,16 @@ function App() {
         savePreferences();
     }, [colorTheme]);
 
+    // Match the browser/OS chrome to the themed page background
+    useEffect(() => {
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        const styles = getComputedStyle(document.documentElement);
+        const token = uiTheme === 'modern' ? '--m-page' : (theme === 'dark' ? '--black' : '--zinc-50');
+        const rgb = styles.getPropertyValue(token).trim();
+        if (rgb) meta.setAttribute('content', `rgb(${rgb.split(/\s+/).join(', ')})`);
+    }, [colorTheme, theme, uiTheme]);
+
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
     // Auth & Initial Data
@@ -985,8 +995,8 @@ function App() {
 
     return (
         <div className={isModern
-            ? 'flex h-[100dvh] overflow-hidden bg-m-page text-zinc-900 dark:text-zinc-100'
-            : 'flex min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
+            ? 'flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100'
+            : 'flex min-h-screen bg-zinc-50 dark:bg-black m-ambient text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
             {isModern ? (
                 <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
             ) : (
