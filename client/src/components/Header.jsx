@@ -24,7 +24,7 @@ const Header = ({ user, onLogout }) => {
               <span className="text-sm font-semibold text-zinc-200 leading-none">
                 {user.givenName}
               </span>
-              <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
+              <span className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">
                 Year {user.yearGroup}
               </span>
             </div>

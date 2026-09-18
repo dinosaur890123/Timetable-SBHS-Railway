@@ -4,7 +4,8 @@ import {
     Loader2, BookOpen, ArrowUpDown, Check, AlertCircle,
     GraduationCap, Brain, Timer, HelpCircle, ArrowLeft,
     Layers, Play, Pause, RotateCcw, ChevronLeft, ChevronRight,
-    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2, CheckSquare, Share2, User, Send, Bell
+    Zap, Target, Clock, Sparkles, PenTool, X, CheckCircle2, CheckSquare, Share2, User, Send, Bell,
+    ArrowUpRight, Repeat, CalendarDays, Cloud, MessageSquare
 } from 'lucide-react';
 import { fetchNotes, saveNote, deleteNote } from '../services/notesApi';
 import { fetchAiNotesSummarise, fetchAiQuizGenerate, fetchAssignments, saveAssignment, deleteAssignment } from '../services/api';
@@ -134,8 +135,8 @@ const getSubjectBgColor = (subject) => {
         'bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-900/50',
         'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900/50',
         'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-900/50',
-        'bg-sky-100 text-sky-850 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-900/50',
-        'bg-lime-100 text-lime-850 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-900/50'
+        'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-900/50',
+        'bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-900/50'
     ];
 
     return colors[index];
@@ -223,7 +224,7 @@ const FlashcardsTool = ({ onBack }) => {
                     <button onClick={() => setStudyMode(false)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                         <ArrowLeft size={14} /> Exit Study
                     </button>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
                         {currentCardIndex + 1} / {activeDeck.cards.length}
                     </span>
                 </div>
@@ -237,17 +238,17 @@ const FlashcardsTool = ({ onBack }) => {
                     onClick={() => setIsFlipped(!isFlipped)}
                     className="cursor-pointer select-none"
                 >
-                    <div className={`min-h-[280px] border-2 border-black dark:border-zinc-700 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${isFlipped
-                            ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-600 dark:border-emerald-700'
-                            : 'bg-white dark:bg-zinc-950'
-                        } shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-4">
+                    <div className={`min-h-[280px] border border-zinc-200 dark:border-zinc-800 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${isFlipped
+       ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-600 dark:border-emerald-700'
+       : 'bg-white dark:bg-zinc-950'
+      } `}>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">
                             {isFlipped ? '✓ Answer' : '? Question'}
                         </span>
                         <p className="text-xl font-bold text-zinc-900 dark:text-white leading-relaxed">
                             {isFlipped ? card.back : card.front}
                         </p>
-                        <span className="text-[10px] text-zinc-400 mt-6 font-mono">
+                        <span className="text-[11px] text-zinc-400 mt-6 font-mono">
                             {isFlipped ? 'Click to see question' : 'Click to reveal answer'}
                         </span>
                     </div>
@@ -258,7 +259,7 @@ const FlashcardsTool = ({ onBack }) => {
                     <button
                         onClick={() => { setCurrentCardIndex(prev => Math.max(0, prev - 1)); setIsFlipped(false); }}
                         disabled={currentCardIndex === 0}
-                        className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                        className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
                     >
                         <ChevronLeft size={14} /> Prev
                     </button>
@@ -273,7 +274,7 @@ const FlashcardsTool = ({ onBack }) => {
                     <button
                         onClick={() => { setCurrentCardIndex(prev => Math.min(activeDeck.cards.length - 1, prev + 1)); setIsFlipped(false); }}
                         disabled={currentCardIndex === activeDeck.cards.length - 1}
-                        className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 bg-black dark:bg-white text-white dark:text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                        className="flex items-center gap-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-800 bg-black dark:bg-white text-white dark:text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
                     >
                         Next <ChevronRight size={14} />
                     </button>
@@ -300,11 +301,11 @@ const FlashcardsTool = ({ onBack }) => {
                     </button>
                     <div className="flex items-center gap-2">
                         {activeDeck.cards.length > 0 && (
-                            <button onClick={startStudy} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                            <button onClick={startStudy} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border border-zinc-300 dark:border-zinc-700 transition-all">
                                 <Play size={14} /> Study Now
                             </button>
                         )}
-                        <button onClick={() => setShowAddCard(true)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                        <button onClick={() => setShowAddCard(true)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-800 transition-all">
                             <Plus size={14} /> Add Card
                         </button>
                     </div>
@@ -317,9 +318,9 @@ const FlashcardsTool = ({ onBack }) => {
 
                 {/* Add Card Form */}
                 {showAddCard && (
-                    <div className="border-2 border-black dark:border-zinc-700 p-5 bg-white dark:bg-zinc-950 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <div className="border border-zinc-200 dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 space-y-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">New Flashcard</span>
+                            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">New Flashcard</span>
                             <button onClick={() => setShowAddCard(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
                                 <X size={14} />
                             </button>
@@ -358,7 +359,7 @@ const FlashcardsTool = ({ onBack }) => {
                             <div key={card.id} className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950 flex items-start justify-between gap-4 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">#{idx + 1}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">#{idx + 1}</span>
                                     </div>
                                     <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{card.front}</p>
                                     <p className="text-xs text-zinc-500 mt-0.5 truncate">{card.back}</p>
@@ -381,24 +382,24 @@ const FlashcardsTool = ({ onBack }) => {
                 <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                     <ArrowLeft size={14} /> Study Hub
                 </button>
-                <button onClick={() => setShowNewDeck(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                <button onClick={() => setShowNewDeck(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border border-zinc-300 dark:border-zinc-700 transition-all">
                     <Plus size={14} /> New Deck
                 </button>
             </div>
 
             <div>
-                <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
-                    <span className="p-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white">
-                        <Layers className="w-7 h-7" />
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                        <Layers className="w-6 h-6" />
                     </span>
                     Flashcards
                 </h1>
-                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">Create decks, add cards, and test your knowledge with flip-to-reveal study sessions.</p>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">Create decks, add cards, and test your knowledge with flip-to-reveal study sessions.</p>
             </div>
 
             {/* New Deck Form */}
             {showNewDeck && (
-                <div className="border-2 border-black dark:border-zinc-700 p-4 bg-white dark:bg-zinc-950 flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                <div className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950 flex items-center gap-3">
                     <input
                         type="text"
                         value={newDeckName}
@@ -428,7 +429,7 @@ const FlashcardsTool = ({ onBack }) => {
                         <div
                             key={deck.id}
                             onClick={() => setActiveDeckId(deck.id)}
-                            className="border-2 border-black dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.1)]"
+                            className="border border-zinc-200 dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all group"
                         >
                             <div className="flex items-start justify-between">
                                 <div>
@@ -529,13 +530,13 @@ const PomodoroTool = ({ onBack }) => {
             </button>
 
             <div className="text-center">
-                <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center justify-center gap-3">
-                    <span className="p-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white">
-                        <Timer className="w-7 h-7" />
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">
+                        <Timer className="w-6 h-6" />
                     </span>
                     Pomodoro Timer
                 </h1>
-                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">Stay focused with timed study sessions and breaks.</p>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">Stay focused with timed study sessions and breaks.</p>
             </div>
 
             {/* Mode Selector */}
@@ -549,9 +550,9 @@ const PomodoroTool = ({ onBack }) => {
                         key={m.id}
                         onClick={() => switchMode(m.id)}
                         className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-all ${mode === m.id
-                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)]'
-                                : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-zinc-500'
-                            }`}
+        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white '
+        : 'bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-800 hover:border-zinc-500'
+       }`}
                     >
                         <m.icon size={13} /> {m.label}
                     </button>
@@ -559,14 +560,14 @@ const PomodoroTool = ({ onBack }) => {
             </div>
 
             {/* Timer Display */}
-            <div className="border-2 border-black dark:border-zinc-700 bg-white dark:bg-zinc-950 p-12 text-center relative overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
+            <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-12 text-center relative overflow-hidden">
                 {/* Progress bar at top */}
                 <div className="absolute top-0 left-0 h-1.5 bg-zinc-200 dark:bg-zinc-800 w-full">
                     <div
                         className={`h-full transition-all duration-1000 ${mode === 'focus'
-                                ? 'bg-black dark:bg-white'
-                                : 'bg-emerald-500'
-                            }`}
+        ? 'bg-black dark:bg-white'
+        : 'bg-emerald-500'
+       }`}
                         style={{ width: `${progress * 100}%` }}
                     />
                 </div>
@@ -575,7 +576,7 @@ const PomodoroTool = ({ onBack }) => {
                     {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
                 </div>
 
-                <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                <div className="mt-2 text-[11px] font-black uppercase tracking-widest text-zinc-400">
                     {mode === 'focus' ? 'Focus Session' : mode === 'short-break' ? 'Short Break' : 'Long Break'}
                 </div>
 
@@ -583,16 +584,16 @@ const PomodoroTool = ({ onBack }) => {
                 <div className="flex items-center justify-center gap-3 mt-8">
                     <button
                         onClick={toggleTimer}
-                        className={`flex items-center gap-2 px-8 py-3 text-sm font-black uppercase tracking-wider border-2 transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${isRunning
-                                ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-black dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)]'
-                                : 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)]'
-                            }`}
+                        className={`flex items-center gap-2 px-8 py-3 text-sm font-black uppercase tracking-wider border-2 transition-all ${isRunning
+        ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-black dark:border-zinc-700 '
+        : 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white '
+       }`}
                     >
                         {isRunning ? <><Pause size={16} /> Pause</> : <><Play size={16} /> {timeLeft === 0 ? 'Restart' : 'Start'}</>}
                     </button>
                     <button
                         onClick={resetTimer}
-                        className="p-3 border-2 border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-500 transition-all"
+                        className="p-3 border border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-500 transition-all"
                     >
                         <RotateCcw size={16} />
                     </button>
@@ -601,19 +602,19 @@ const PomodoroTool = ({ onBack }) => {
 
             {/* Sessions counter */}
             <div className="text-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sessions Completed</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Sessions Completed</span>
                 <div className="flex items-center justify-center gap-2 mt-2">
                     {Array.from({ length: Math.max(4, sessionsCompleted) }).map((_, i) => (
                         <div
                             key={i}
                             className={`w-4 h-4 border-2 transition-all ${i < sessionsCompleted
-                                    ? 'bg-black dark:bg-white border-black dark:border-white'
-                                    : 'border-zinc-300 dark:border-zinc-800'
-                                }`}
+         ? 'bg-black dark:bg-white border-black dark:border-white'
+         : 'border-zinc-300 dark:border-zinc-800'
+        }`}
                         />
                     ))}
                 </div>
-                <p className="text-[10px] text-zinc-400 mt-2 font-mono">{sessionsCompleted} × 25 min = {sessionsCompleted * 25} min focused</p>
+                <p className="text-[11px] text-zinc-400 mt-2 font-mono">{sessionsCompleted} × 25 min = {sessionsCompleted * 25} min focused</p>
             </div>
         </div>
     );
@@ -817,9 +818,9 @@ const QuickQuizTool = ({ onBack }) => {
             const percentage = Math.round((score / total) * 100);
             return (
                 <div className="p-6 max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="border-2 border-black dark:border-zinc-700 p-8 bg-white dark:bg-zinc-950 text-center shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)]">
+                    <div className="border border-zinc-200 dark:border-zinc-800 p-8 bg-white dark:bg-zinc-950 text-center">
                         <div className={`w-20 h-20 mx-auto flex items-center justify-center border-2 mb-4 ${percentage >= 80 ? 'border-emerald-500 text-emerald-500' : percentage >= 50 ? 'border-amber-500 text-amber-500' : 'border-red-500 text-red-500'
-                            }`}>
+       }`}>
                             <span className="text-2xl font-black">{percentage}%</span>
                         </div>
                         <h2 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">
@@ -828,10 +829,10 @@ const QuickQuizTool = ({ onBack }) => {
                         <p className="text-sm text-zinc-500 mt-1">{score} out of {total} correct</p>
 
                         <div className="flex items-center justify-center gap-3 mt-6">
-                            <button onClick={startQuiz} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+                            <button onClick={startQuiz} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700">
                                 Retry Quiz
                             </button>
-                            <button onClick={() => { setTakingQuiz(false); setShowResults(false); }} className="px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-500">
+                            <button onClick={() => { setTakingQuiz(false); setShowResults(false); }} className="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-500">
                                 Back to Quiz
                             </button>
                         </div>
@@ -847,7 +848,7 @@ const QuickQuizTool = ({ onBack }) => {
                                         {isCorrect ? <CheckCircle2 size={14} className="text-emerald-500" /> : <X size={14} className="text-red-500" />}
                                         <span className="text-xs font-bold text-zinc-900 dark:text-white">Q{idx + 1}: {q.question}</span>
                                     </div>
-                                    <p className="text-[10px] text-zinc-500">
+                                    <p className="text-[11px] text-zinc-500">
                                         Your answer: <span className={isCorrect ? 'text-emerald-600' : 'text-red-500'}>{q.options[selectedAnswers[q.id]] || 'Not answered'}</span>
                                         {!isCorrect && <span className="text-emerald-600"> • Correct: {q.options[q.correctIndex]}</span>}
                                     </p>
@@ -866,7 +867,7 @@ const QuickQuizTool = ({ onBack }) => {
                     <button onClick={() => setTakingQuiz(false)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                         <ArrowLeft size={14} /> Exit Quiz
                     </button>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
                         Question {currentQIndex + 1} / {activeQuiz.questions.length}
                     </span>
                 </div>
@@ -876,7 +877,7 @@ const QuickQuizTool = ({ onBack }) => {
                     <div className="h-full bg-black dark:bg-white transition-all duration-300" style={{ width: `${((currentQIndex + 1) / activeQuiz.questions.length) * 100}%` }} />
                 </div>
 
-                <div className="border-2 border-black dark:border-zinc-700 p-6 bg-white dark:bg-zinc-950 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                <div className="border border-zinc-200 dark:border-zinc-800 p-6 bg-white dark:bg-zinc-950">
                     <h3 className="text-lg font-black text-zinc-900 dark:text-white mb-4">{currentQ.question}</h3>
                     <div className="space-y-2">
                         {currentQ.options.map((opt, idx) => (
@@ -884,11 +885,11 @@ const QuickQuizTool = ({ onBack }) => {
                                 key={idx}
                                 onClick={() => selectAnswer(currentQ.id, idx)}
                                 className={`w-full text-left px-4 py-3 text-sm font-medium border-2 transition-all ${selectedAnswers[currentQ.id] === idx
-                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                        : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                                    }`}
+          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+          : 'bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+         }`}
                             >
-                                <span className="font-black mr-2 text-[10px] uppercase">{String.fromCharCode(65 + idx)}.</span>
+                                <span className="font-black mr-2 text-[11px] uppercase">{String.fromCharCode(65 + idx)}.</span>
                                 {opt}
                             </button>
                         ))}
@@ -899,21 +900,21 @@ const QuickQuizTool = ({ onBack }) => {
                     <button
                         onClick={() => setCurrentQIndex(prev => Math.max(0, prev - 1))}
                         disabled={currentQIndex === 0}
-                        className="px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 border-zinc-300 dark:border-zinc-800 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
+                        className="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-800 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
                     >
                         Previous
                     </button>
                     {currentQIndex === activeQuiz.questions.length - 1 ? (
                         <button
                             onClick={() => setShowResults(true)}
-                            className="px-6 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                            className="px-6 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border border-zinc-300 dark:border-zinc-700"
                         >
                             Submit Quiz
                         </button>
                     ) : (
                         <button
                             onClick={() => setCurrentQIndex(prev => prev + 1)}
-                            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider border border-zinc-300 dark:border-zinc-700"
                         >
                             Next
                         </button>
@@ -933,11 +934,11 @@ const QuickQuizTool = ({ onBack }) => {
                     </button>
                     <div className="flex items-center gap-2">
                         {activeQuiz.questions.length > 0 && (
-                            <button onClick={startQuiz} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                            <button onClick={startQuiz} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border border-zinc-300 dark:border-zinc-700 transition-all">
                                 <Play size={14} /> Take Quiz
                             </button>
                         )}
-                        <button onClick={() => setShowAddQuestion(true)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-bold uppercase tracking-wider border-2 border-black dark:border-zinc-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                        <button onClick={() => setShowAddQuestion(true)} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-xs font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-800 transition-all">
                             <Plus size={14} /> Add Question
                         </button>
                     </div>
@@ -950,9 +951,9 @@ const QuickQuizTool = ({ onBack }) => {
 
                 {/* Add Question Form */}
                 {showAddQuestion && (
-                    <div className="border-2 border-black dark:border-zinc-700 p-5 bg-white dark:bg-zinc-950 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <div className="border border-zinc-200 dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 space-y-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">New Question</span>
+                            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">New Question</span>
                             <button onClick={() => setShowAddQuestion(false)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
                                 <X size={14} />
                             </button>
@@ -965,15 +966,15 @@ const QuickQuizTool = ({ onBack }) => {
                             className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
                         />
                         <div className="space-y-2">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Answer Options (click to mark correct)</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Answer Options (click to mark correct)</span>
                             {newOptions.map((opt, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCorrectIndex(idx)}
                                         className={`w-6 h-6 border-2 flex items-center justify-center shrink-0 transition-all ${correctIndex === idx
-                                                ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400'
-                                            }`}
+            ? 'bg-emerald-500 border-emerald-500 text-white'
+            : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400'
+           }`}
                                     >
                                         {correctIndex === idx && <Check size={12} />}
                                     </button>
@@ -1010,11 +1011,11 @@ const QuickQuizTool = ({ onBack }) => {
                             <div key={q.id} className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Q{idx + 1}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Q{idx + 1}</span>
                                         <p className="text-sm font-bold text-zinc-900 dark:text-white">{q.question}</p>
                                         <div className="flex flex-wrap gap-1 mt-1.5">
                                             {q.options.map((opt, oIdx) => (
-                                                <span key={oIdx} className={`text-[10px] px-1.5 py-0.5 border ${oIdx === q.correctIndex ? 'bg-emerald-100 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-bold' : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'}`}>
+                                                <span key={oIdx} className={`text-[11px] px-1.5 py-0.5 border ${oIdx === q.correctIndex ? 'bg-emerald-100 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-bold' : 'border-zinc-200 dark:border-zinc-800 text-zinc-500'}`}>
                                                     {String.fromCharCode(65 + oIdx)}. {opt}
                                                 </span>
                                             ))}
@@ -1050,27 +1051,27 @@ const QuickQuizTool = ({ onBack }) => {
                     <ArrowLeft size={14} /> Study Hub
                 </button>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setShowAiModal(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-wider border-2 border-purple-200 dark:border-purple-800/40 shadow-[3px_3px_0px_0px_rgba(147,51,234,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                    <button onClick={() => setShowAiModal(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-wider border border-purple-200 dark:border-purple-800/40 transition-all">
                         <Sparkles size={14} className="text-purple-600 dark:text-purple-400 animate-pulse" /> AI Generate Quiz
                     </button>
-                    <button onClick={() => setShowNewQuiz(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                    <button onClick={() => setShowNewQuiz(true)} className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider border border-zinc-300 dark:border-zinc-700 transition-all">
                         <Plus size={14} /> New Quiz
                     </button>
                 </div>
             </div>
 
             <div>
-                <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
-                    <span className="p-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white">
-                        <HelpCircle className="w-7 h-7" />
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center border border-violet-200 dark:border-violet-900/40 bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400">
+                        <HelpCircle className="w-6 h-6" />
                     </span>
                     Quick Quiz
                 </h1>
-                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">Create multiple-choice quizzes to test yourself before exams.</p>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">Create multiple-choice quizzes to test yourself before exams.</p>
             </div>
 
             {showNewQuiz && (
-                <div className="border-2 border-black dark:border-zinc-700 p-4 bg-white dark:bg-zinc-950 flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                <div className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950 flex items-center gap-3">
                     <input
                         type="text"
                         value={newQuizName}
@@ -1099,7 +1100,7 @@ const QuickQuizTool = ({ onBack }) => {
                         <div
                             key={quiz.id}
                             onClick={() => setActiveQuizId(quiz.id)}
-                            className="border-2 border-black dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.1)]"
+                            className="border border-zinc-200 dark:border-zinc-800 p-5 bg-white dark:bg-zinc-950 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all group"
                         >
                             <div className="flex items-start justify-between">
                                 <div>
@@ -1121,7 +1122,7 @@ const QuickQuizTool = ({ onBack }) => {
             {/* AI Generate Quiz Modal */}
             {showAiModal && (
                 <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col select-text">
+                    <div className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 flex flex-col select-text">
                         {/* Modal Header */}
                         <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between">
                             <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1144,28 +1145,28 @@ const QuickQuizTool = ({ onBack }) => {
                                     <Loader2 size={36} className="animate-spin text-purple-600 dark:text-purple-400 animate-pulse" />
                                     <div className="space-y-1">
                                         <p className="font-mono text-xs uppercase tracking-widest text-zinc-900 dark:text-white">Generating quiz...</p>
-                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 animate-pulse">{aiLoadingStage}</p>
+                                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 animate-pulse">{aiLoadingStage}</p>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="space-y-4 text-left">
                                     {aiError && (
-                                        <div className="p-3 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 text-xs font-mono">
+                                        <div className="p-3 border border-red-500 bg-red-50 dark:bg-red-950/10 text-red-600 dark:text-red-400 text-xs font-mono">
                                             {aiError}
                                         </div>
                                     )}
 
                                     {/* Source Selector */}
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Quiz Source</label>
+                                        <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Quiz Source</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() => setAiSource('note')}
                                                 className={`py-2 text-xs font-bold uppercase border-2 transition-all ${aiSource === 'note'
-                                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
-                                                        : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
-                                                    }`}
+              ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white '
+              : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
+             }`}
                                             >
                                                 Study Note
                                             </button>
@@ -1173,9 +1174,9 @@ const QuickQuizTool = ({ onBack }) => {
                                                 type="button"
                                                 onClick={() => setAiSource('topic')}
                                                 className={`py-2 text-xs font-bold uppercase border-2 transition-all ${aiSource === 'topic'
-                                                        ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
-                                                        : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
-                                                    }`}
+              ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white '
+              : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:border-zinc-400 dark:text-zinc-400'
+             }`}
                                             >
                                                 Custom Topic
                                             </button>
@@ -1185,7 +1186,7 @@ const QuickQuizTool = ({ onBack }) => {
                                     {/* Source Input */}
                                     {aiSource === 'note' ? (
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Select Study Note</label>
+                                            <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Select Study Note</label>
                                             {aiNotes.length === 0 ? (
                                                 <div className="p-3 border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-400 italic">
                                                     No study notes found. Create some notes first or choose Custom Topic.
@@ -1204,7 +1205,7 @@ const QuickQuizTool = ({ onBack }) => {
                                         </div>
                                     ) : (
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Topic / Subject</label>
+                                            <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Topic / Subject</label>
                                             <input
                                                 type="text"
                                                 value={aiTopic}
@@ -1217,7 +1218,7 @@ const QuickQuizTool = ({ onBack }) => {
 
                                     {/* Question Count Selector */}
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Number of Questions</label>
+                                        <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-500 block">Number of Questions</label>
                                         <select
                                             value={aiQuestionCount}
                                             onChange={(e) => setAiQuestionCount(parseInt(e.target.value))}
@@ -1238,7 +1239,7 @@ const QuickQuizTool = ({ onBack }) => {
                                 <button
                                     type="button"
                                     onClick={() => setShowAiModal(false)}
-                                    className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
+                                    className="px-4 py-2 border border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
                                 >
                                     Cancel
                                 </button>
@@ -1246,7 +1247,7 @@ const QuickQuizTool = ({ onBack }) => {
                                     type="button"
                                     onClick={handleGenerateAiQuiz}
                                     disabled={aiSource === 'note' && aiNotes.length === 0}
-                                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white border border-zinc-200 dark:border-zinc-800 dark:border-purple-700 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
                                 >
                                     Generate Quiz
                                 </button>
@@ -1476,19 +1477,19 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                 <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                     <ArrowLeft size={14} /> Study Hub
                 </button>
-                <button onClick={openCreateForm} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-750 text-white text-xs font-black uppercase tracking-wider border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+                <button onClick={openCreateForm} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase tracking-wider border border-zinc-200 dark:border-zinc-800 dark:border-purple-700 transition-all">
                     <Plus size={14} /> Add Homework
                 </button>
             </div>
 
             <div>
-                <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
-                    <span className="p-2 bg-purple-650 text-white border border-black dark:border-purple-700">
-                        <CheckSquare className="w-7 h-7" />
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400">
+                        <CheckSquare className="w-6 h-6" />
                     </span>
                     Homework Tracker
                 </h1>
-                <p className="text-zinc-550 dark:text-zinc-450 mt-2 text-xs">Manage assignments, track deadlines, and sync automatically with your Synchron Calendar.</p>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">Manage assignments, track deadlines, and sync automatically with your Synchron Calendar.</p>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-black dark:border-zinc-800 pb-3">
@@ -1498,9 +1499,9 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`px-3 py-1 text-xs font-bold uppercase border transition-all ${filterStatus === status
-                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 hover:border-zinc-400'
-                                }`}
+         ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+         : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 hover:border-zinc-400'
+        }`}
                         >
                             {status}
                         </button>
@@ -1508,7 +1509,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Sort By:</span>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Sort By:</span>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
@@ -1523,7 +1524,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
-                    <Loader2 size={36} className="animate-spin mb-4 text-purple-650 dark:text-purple-400" />
+                    <Loader2 size={36} className="animate-spin mb-4 text-purple-600 dark:text-purple-400" />
                     <span className="font-mono text-xs uppercase tracking-widest">Loading task matrix...</span>
                 </div>
             ) : processedAssignments.length === 0 ? (
@@ -1541,26 +1542,26 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                         return (
                             <div
                                 key={item.id}
-                                className={`border-2 border-black dark:border-zinc-850 p-4 bg-white dark:bg-zinc-950 flex items-start gap-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.1)] transition-all`}
+                                className={`border border-zinc-200 dark:border-zinc-800 dark:border-zinc-850 p-4 bg-white dark:bg-zinc-950 flex items-start gap-3  transition-all`}
                             >
                                 <button
                                     onClick={() => handleToggleStatus(item)}
-                                    className={`w-6 h-6 border-2 border-black dark:border-zinc-700 shrink-0 flex items-center justify-center transition-all ${isCompleted ? 'bg-purple-650 border-purple-650 text-white' : 'hover:border-purple-650'
-                                        }`}
+                                    className={`w-6 h-6 border border-zinc-200 dark:border-zinc-800 shrink-0 flex items-center justify-center transition-all ${isCompleted ? 'bg-purple-600 border-purple-600 text-white' : 'hover:border-purple-600'
+          }`}
                                 >
                                     {isCompleted && <Check size={14} />}
                                 </button>
 
                                 <div className="flex-1 min-w-0 text-left select-text">
                                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                                        <span className={`px-2 py-0.5 border text-[9px] font-black uppercase tracking-wider bg-zinc-100 border-zinc-300 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400`}>
+                                        <span className={`px-2 py-0.5 border text-[10px] font-black uppercase tracking-wider bg-zinc-100 border-zinc-300 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400`}>
                                             {item.subject}
                                         </span>
-                                        <span className={`px-1.5 py-0.5 border text-[9px] font-bold uppercase tracking-wider ${getPriorityStyle(item.priority)}`}>
+                                        <span className={`px-1.5 py-0.5 border text-[10px] font-bold uppercase tracking-wider ${getPriorityStyle(item.priority)}`}>
                                             {item.priority}
                                         </span>
                                         {isOverdue && (
-                                            <span className="px-1.5 py-0.5 border border-red-300 bg-red-100 text-red-800 text-[9px] font-extrabold uppercase tracking-wider dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/40">
+                                            <span className="px-1.5 py-0.5 border border-red-300 bg-red-100 text-red-800 text-[10px] font-extrabold uppercase tracking-wider dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/40">
                                                 Overdue
                                             </span>
                                         )}
@@ -1574,7 +1575,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                         <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 whitespace-pre-wrap">{item.notes}</p>
                                     )}
 
-                                    <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 select-none">
+                                    <div className="flex items-center gap-1.5 mt-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400 select-none">
                                         <Clock size={11} />
                                         <span>Due: {dueDateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
@@ -1604,10 +1605,10 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
             {showForm && (
                 <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 select-text">
-                    <form onSubmit={handleSave} className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col">
+                    <form onSubmit={handleSave} className="w-full max-w-md bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 flex flex-col">
                         <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between select-none">
                             <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-purple-650 dark:text-purple-400" />
+                                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                                 {editingAssignment ? 'Edit Homework' : 'New Homework'}
                             </h3>
                             <button
@@ -1622,13 +1623,13 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
                         <div className="p-6 space-y-4 text-left">
                             {formError && (
-                                <div className="p-3 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 text-xs font-mono select-none">
+                                <div className="p-3 border border-red-500 bg-red-50 dark:bg-red-950/10 text-red-600 dark:text-red-400 text-xs font-mono select-none">
                                     {formError}
                                 </div>
                             )}
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Homework Title</label>
+                                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Homework Title</label>
                                 <input
                                     type="text"
                                     value={title}
@@ -1641,7 +1642,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Subject / Category</label>
+                                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">Subject / Category</label>
                                 <input
                                     type="text"
                                     value={subject}
@@ -1656,10 +1657,10 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                             key={sub}
                                             type="button"
                                             onClick={() => setSubject(sub)}
-                                            className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${subject === sub
-                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                    : 'bg-white dark:bg-zinc-900 border-zinc-205 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-450'
-                                                }`}
+                                            className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${subject === sub
+             ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+             : 'bg-white dark:bg-zinc-900 border-zinc-205 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-450'
+            }`}
                                         >
                                             {sub}
                                         </button>
@@ -1669,7 +1670,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
 
                             <div className="grid grid-cols-2 gap-3 select-none">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Date</label>
+                                    <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Date</label>
                                     <input
                                         type="date"
                                         value={dueDate}
@@ -1679,7 +1680,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Time</label>
+                                    <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Due Time</label>
                                     <input
                                         type="time"
                                         value={dueTime}
@@ -1691,7 +1692,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             </div>
 
                             <div className="space-y-1 select-none">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555">Priority Level</label>
+                                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555">Priority Level</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {['Low', 'Medium', 'High'].map(prio => (
                                         <button
@@ -1699,9 +1700,9 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                                             type="button"
                                             onClick={() => setPriority(prio)}
                                             className={`py-1.5 text-xs font-bold uppercase border transition-all ${priority === prio
-                                                    ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                    : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-655 dark:text-zinc-400'
-                                                }`}
+             ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+             : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-655 dark:text-zinc-400'
+            }`}
                                             disabled={saving}
                                         >
                                             {prio}
@@ -1711,7 +1712,7 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555 select-none">Notes / Details (Optional)</label>
+                                <label className="text-[11px] font-black uppercase tracking-widest text-zinc-450 dark:text-zinc-555 select-none">Notes / Details (Optional)</label>
                                 <textarea
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
@@ -1727,14 +1728,14 @@ const AssignmentTrackerTool = ({ user, timetableData, onBack }) => {
                             <button
                                 type="button"
                                 onClick={() => setShowForm(false)}
-                                className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
+                                className="px-4 py-2 border border-zinc-300 dark:border-zinc-850 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all"
                                 disabled={saving}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-5 py-2 bg-purple-650 hover:bg-purple-700 dark:bg-purple-650 dark:hover:bg-purple-500 text-white border-2 border-black dark:border-purple-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white border border-zinc-200 dark:border-zinc-800 dark:border-purple-700 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
                                 disabled={saving}
                             >
                                 {saving ? 'Saving...' : 'Save Task'}
@@ -2035,20 +2036,20 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                             <ArrowLeft size={14} /> Study Hub
                         </button>
                     </div>
-                    <h1 className="text-3xl font-black text-zinc-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
-                        <span className="p-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white">
-                            <BookOpen className="w-7 h-7" />
-                        </span>
-                        Study Notes
-                    </h1>
-                    <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-xs">
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+                        <BookOpen className="w-6 h-6" />
+                    </span>
+                    Study Notes
+                </h1>
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
                         Keep track of your classes, study briefs, and summaries. All changes sync automatically.
                     </p>
                 </div>
 
                 <button
                     onClick={handleNewNote}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 text-sm font-black uppercase tracking-wider transition-all duration-150 border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 text-sm font-black uppercase tracking-wider transition-all duration-150 border border-zinc-300 dark:border-zinc-700"
                 >
                     <Plus size={16} /> New Study Note
                 </button>
@@ -2060,7 +2061,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                     <span className="font-mono text-xs uppercase tracking-widest">Initialising Notes Sandbox...</span>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 border-2 border-black dark:border-zinc-800 min-h-[60vh] bg-white dark:bg-zinc-950">
+                <div className="grid grid-cols-1 lg:grid-cols-12 border border-zinc-200 dark:border-zinc-800 min-h-[60vh] bg-white dark:bg-zinc-950">
 
                     {/* Left Sidebar (Lg cols 4) */}
                     <div className="lg:col-span-4 border-b-2 lg:border-b-0 lg:border-r-2 border-black dark:border-zinc-800 flex flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -2080,7 +2081,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                             <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-1.5 text-zinc-400">
                                     <ArrowUpDown size={12} />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Sort By</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">Sort By</span>
                                 </div>
                                 <select
                                     value={sortBy}
@@ -2099,10 +2100,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                             <div className="px-4 py-2 bg-zinc-100 dark:bg-zinc-900/30 border-b border-zinc-200 dark:border-zinc-800 flex gap-1.5 overflow-x-auto custom-scrollbar whitespace-nowrap">
                                 <button
                                     onClick={() => setSelectedSubjectFilter('All')}
-                                    className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === 'All'
-                                            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
-                                        }`}
+                                    className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === 'All'
+           ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+           : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
+          }`}
                                 >
                                     All
                                 </button>
@@ -2110,10 +2111,10 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     <button
                                         key={sub}
                                         onClick={() => setSelectedSubjectFilter(sub)}
-                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === sub
-                                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
-                                            }`}
+                                        className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide border transition-all ${selectedSubjectFilter === sub
+            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-550'
+           }`}
                                     >
                                         {sub}
                                     </button>
@@ -2142,15 +2143,15 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                                 setPreviewMode(false);
                                             }}
                                             className={`p-4 cursor-pointer text-left transition-all ${isActive
-                                                    ? 'bg-zinc-200 dark:bg-zinc-900 border-l-4 border-black dark:border-white'
-                                                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-900/50'
-                                                }`}
+             ? 'bg-zinc-200 dark:bg-zinc-900 border-l-4 border-black dark:border-white'
+             : 'hover:bg-zinc-100 dark:hover:bg-zinc-900/50'
+            }`}
                                         >
                                             <div className="flex items-center justify-between gap-2 mb-1.5">
-                                                <span className={`px-2 py-0.5 border text-[9px] font-black uppercase tracking-wider ${getSubjectBgColor(note.subject)}`}>
+                                                <span className={`px-2 py-0.5 border text-[10px] font-black uppercase tracking-wider ${getSubjectBgColor(note.subject)}`}>
                                                     {note.subject || 'General'}
                                                 </span>
-                                                <span className="text-[10px] font-mono text-zinc-400">
+                                                <span className="text-[11px] font-mono text-zinc-400">
                                                     {new Date(note.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                 </span>
                                             </div>
@@ -2178,22 +2179,22 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     {/* Autosave Status */}
                                     <div className="flex items-center gap-2">
                                         {saveStatus === 'saving' && (
-                                            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                            <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                                                 <Loader2 size={11} className="animate-spin" /> Saving sync...
                                             </span>
                                         )}
                                         {saveStatus === 'saved' && (
-                                            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400">
+                                            <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400">
                                                 <Check size={11} /> Saved Cloud
                                             </span>
                                         )}
                                         {saveStatus === 'offline-saved' && (
-                                            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-500" title="Changes stored locally, waiting for internet to sync">
+                                            <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-blue-500" title="Changes stored locally, waiting for internet to sync">
                                                 <AlertCircle size={11} /> Stored Offline
                                             </span>
                                         )}
                                         {saveStatus === 'idle' && (
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-450">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-450">
                                                 Active Brief Sandbox
                                             </span>
                                         )}
@@ -2253,7 +2254,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
                                     {/* Subject Input / Combo suggestions */}
                                     <div className="space-y-2 text-left">
-                                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block">
+                                        <label className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400 block">
                                             Subject / Class Category
                                         </label>
                                         <div className="flex flex-wrap gap-2">
@@ -2268,15 +2269,15 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
 
                                         {/* Clicking suggested classes from timetable */}
                                         <div className="flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar max-w-full">
-                                            <span className="text-[9px] font-black uppercase text-zinc-400 select-none tracking-wider whitespace-nowrap">Suggested:</span>
+                                            <span className="text-[10px] font-black uppercase text-zinc-400 select-none tracking-wider whitespace-nowrap">Suggested:</span>
                                             {suggestedSubjects.map(sub => (
                                                 <button
                                                     key={sub}
                                                     onClick={() => onNoteChange('subject', sub)}
-                                                    className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border transition-all ${activeNote.subject === sub
-                                                            ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                            : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 hover:text-zinc-700'
-                                                        }`}
+                                                    className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border transition-all ${activeNote.subject === sub
+               ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+               : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 hover:text-zinc-700'
+              }`}
                                                 >
                                                     {sub}
                                                 </button>
@@ -2314,7 +2315,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                 <p className="text-zinc-500 text-xs mt-1 mb-4">Select an existing brief from the sidebar, or create a brand new draft.</p>
                                 <button
                                     onClick={handleNewNote}
-                                    className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-850 dark:hover:bg-zinc-100 transitionactive:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]"
+                                    className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-850 dark:hover:bg-zinc-100 transitionactive:scale-95"
                                 >
                                     Create First Note
                                 </button>
@@ -2327,7 +2328,7 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
             {/* AI Summary Modal */}
             {showSummaryModal && (
                 <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 select-text">
-                    <div className="w-full max-w-2xl bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col max-h-[85vh]">
+                    <div className="w-full max-w-2xl bg-white dark:bg-zinc-950 border-4 border-black dark:border-zinc-700 flex flex-col max-h-[85vh]">
                         {/* Modal Header */}
                         <div className="p-4 border-b-2 border-black dark:border-zinc-700 bg-purple-50 dark:bg-purple-950/20 flex items-center justify-between">
                             <h3 className="font-black uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
@@ -2349,11 +2350,11 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                     <Loader2 size={36} className="animate-spin text-purple-600 dark:text-purple-400" />
                                     <div className="space-y-1">
                                         <p className="font-mono text-xs uppercase tracking-widest text-zinc-900 dark:text-white">Synthesising study notes...</p>
-                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Extracting key definitions, concepts, and summaries.</p>
+                                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Extracting key definitions, concepts, and summaries.</p>
                                     </div>
                                 </div>
                             ) : summaryError ? (
-                                <div className="p-4 border-2 border-red-500 bg-red-50 dark:bg-red-950/10 text-red-650 dark:text-red-400 space-y-2 text-left">
+                                <div className="p-4 border border-red-500 bg-red-50 dark:bg-red-950/10 text-red-600 dark:text-red-400 space-y-2 text-left">
                                     <div className="flex items-center gap-2 font-bold uppercase text-xs">
                                         <AlertCircle size={14} />
                                         Generation Error
@@ -2377,19 +2378,19 @@ const NotesEditor = ({ user, timetableData, setView, onBack }) => {
                                         navigator.clipboard.writeText(summaryResult);
                                         alert("Summary copied to clipboard!");
                                     }}
-                                    className="px-4 py-2 border-2 border-zinc-300 dark:border-zinc-800 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all duration-150 active:translate-y-[1px]"
+                                    className="px-4 py-2 border border-zinc-300 dark:border-zinc-800 hover:border-black dark:hover:border-white text-xs font-bold uppercase tracking-wider transition-all duration-150"
                                 >
                                     Copy to Clipboard
                                 </button>
                                 <button
                                     onClick={handlePrependSummary}
-                                    className="px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-2 border-black dark:border-zinc-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-xs font-bold uppercase tracking-wider transition-all duration-150"
+                                    className="px-4 py-2 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 text-xs font-bold uppercase tracking-wider transition-all duration-150"
                                 >
                                     Insert at Top
                                 </button>
                                 <button
                                     onClick={handleAppendSummary}
-                                    className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none text-xs font-bold uppercase tracking-wider transition-all duration-150"
+                                    className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black border border-zinc-300 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider transition-all duration-150"
                                 >
                                     Append to Bottom
                                 </button>
@@ -2544,10 +2545,10 @@ const ResourceSharingTool = ({ user, onBack }) => {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
-                            activeTab === tab
-                                ? 'text-black dark:text-white border-b-2 border-black dark:border-white'
-                                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                        }`}
+       activeTab === tab
+        ? 'text-black dark:text-white border-b-2 border-black dark:border-white'
+        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+      }`}
                     >
                         {tab === 'notifications' && notifications.filter(n => !n.read).length > 0 && (
                             <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1" />
@@ -2560,7 +2561,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
             {/* Share Tab */}
             {activeTab === 'share' && (
                 <div className="space-y-6">
-                    <div className="border-2 border-black dark:border-zinc-800 p-6 bg-white dark:bg-zinc-950 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
+                    <div className="border border-zinc-200 dark:border-zinc-800 p-6 bg-white dark:bg-zinc-950">
                         <h3 className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                             <Share2 size={16} /> Share Resource
                         </h3>
@@ -2578,7 +2579,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                         value={searchQuery}
                                         onChange={(e) => handleSearch(e.target.value)}
                                         placeholder="Enter student ID or name..."
-                                        className="w-full pl-10 pr-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                        className="w-full pl-10 pr-4 py-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
                                     />
                                 </div>
                                 {searchResults.length > 0 && (
@@ -2625,7 +2626,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                 <select
                                     value={shareType}
                                     onChange={(e) => setShareType(e.target.value)}
-                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                    className="w-full px-4 py-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
                                 >
                                     <option value="note">Study Note</option>
                                     <option value="assignment">Assignment</option>
@@ -2643,7 +2644,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                     value={shareResourceId}
                                     onChange={(e) => setShareResourceId(e.target.value)}
                                     placeholder="Enter resource ID..."
-                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                    className="w-full px-4 py-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
                                 />
                             </div>
 
@@ -2656,7 +2657,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                     value={shareTitle}
                                     onChange={(e) => setShareTitle(e.target.value)}
                                     placeholder="Resource title..."
-                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
+                                    className="w-full px-4 py-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white"
                                 />
                             </div>
 
@@ -2669,14 +2670,14 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                     onChange={(e) => setShareDescription(e.target.value)}
                                     placeholder="Optional description..."
                                     rows={3}
-                                    className="w-full px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white resize-none"
+                                    className="w-full px-4 py-2 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-black dark:focus:border-white resize-none"
                                 />
                             </div>
 
                             <button
                                 onClick={handleShare}
                                 disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black dark:bg-white text-white dark:text-black font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black dark:bg-white text-white dark:text-black font-bold uppercase tracking-wider text-sm border border-zinc-300 dark:border-zinc-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                                 Share Resource
@@ -2698,19 +2699,19 @@ const ResourceSharingTool = ({ user, onBack }) => {
                         receivedResources.map((resource) => (
                             <div
                                 key={resource.id}
-                                className="border-2 border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
+                                className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
                                                 {resource.resource_type}
                                             </span>
-                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 ${
-                                                resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
-                                                resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
-                                                'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
-                                            }`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 ${
+            resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
+            resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
+            'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
+           }`}>
                                                 {resource.status}
                                             </span>
                                         </div>
@@ -2757,19 +2758,19 @@ const ResourceSharingTool = ({ user, onBack }) => {
                         sentResources.map((resource) => (
                             <div
                                 key={resource.id}
-                                className="border-2 border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
+                                className="border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-950"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
                                                 {resource.resource_type}
                                             </span>
-                                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 ${
-                                                resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
-                                                resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
-                                                'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
-                                            }`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 ${
+            resource.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400' :
+            resource.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
+            'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
+           }`}>
                                                 {resource.status}
                                             </span>
                                         </div>
@@ -2814,17 +2815,17 @@ const ResourceSharingTool = ({ user, onBack }) => {
                             <div
                                 key={notification.id}
                                 className={`border-2 p-4 bg-white dark:bg-zinc-950 transition-all ${
-                                    notification.read
-                                        ? 'border-zinc-200 dark:border-zinc-800 opacity-60'
-                                        : 'border-pink-500 dark:border-pink-400 shadow-[4px_4px_0px_0px_rgba(236,72,153,0.2)] dark:shadow-[4px_4px_0px_0px_rgba(236,72,153,0.1)]'
-                                }`}
+         notification.read
+          ? 'border-zinc-200 dark:border-zinc-800 opacity-60'
+          : 'border-pink-500 dark:border-pink-400 '
+        }`}
                             >
                                 <div className="flex items-start gap-3">
                                     <div className={`p-2 rounded-full ${
-                                        notification.read
-                                            ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400'
-                                            : 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400'
-                                    }`}>
+          notification.read
+           ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400'
+           : 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400'
+         }`}>
                                         <Bell size={16} />
                                     </div>
                                     <div className="flex-1">
@@ -2832,7 +2833,7 @@ const ResourceSharingTool = ({ user, onBack }) => {
                                             {notification.title}
                                         </h4>
                                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{notification.message}</p>
-                                        <p className="text-[10px] text-zinc-400 mt-2">
+                                        <p className="text-[11px] text-zinc-400 mt-2">
                                             {new Date(notification.created_at).toLocaleString()}
                                         </p>
                                         {!notification.read && (
@@ -2855,6 +2856,115 @@ const ResourceSharingTool = ({ user, onBack }) => {
 };
 
 // =============================================
+// NOTEFLOW
+// The full study workspace this hub's tools are a taste of.
+// Everything here is theme-driven (accent + neutral scale only), so it holds
+// up across every colour theme, both interface themes and light/dark.
+// =============================================
+const NOTEFLOW_URL = 'https://www.noteflow.dev';
+
+const NOTEFLOW_TOOLS = [
+    'Study notes', 'Flashcards', 'Practice exams', 'Tasks',
+    'Planner', 'Pomodoro timer', 'AI tutor', 'Writing feedback'
+];
+
+const NOTEFLOW_PILLARS = [
+    {
+        icon: Repeat,
+        title: 'Spaced repetition',
+        body: 'Rate a card and NoteFlow schedules its next review for the moment you would otherwise forget it. Intervals stretch as the material settles in.'
+    },
+    {
+        icon: MessageSquare,
+        title: 'An AI tutor that files itself',
+        body: 'Ask at eleven at night, then turn the answer into a note or a deck in one step. Practice exams generate from your own material.'
+    },
+    {
+        icon: CalendarDays,
+        title: 'Planner, tasks and grades',
+        body: 'Every note, deck and assessment belongs to a subject, with Google Calendar sync and a running weighted grade per subject.'
+    },
+    {
+        icon: Cloud,
+        title: 'Sync, offline and backups',
+        body: 'One account across the browser and your devices. It keeps working offline, and your whole library exports in one click.'
+    }
+];
+
+const StudyPageHeader = () => (
+    <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-widest">
+            <GraduationCap size={14} /> Study
+        </div>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Your study workspace</h1>
+        <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            Lightweight tools tied to your timetable, plus NoteFlow &mdash; the full workspace
+            these tools are a taste of.
+        </p>
+    </div>
+);
+
+const NoteFlowPromo = () => (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+        <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-widest">
+                <Sparkles size={14} /> NoteFlow &middot; RSVP open
+            </div>
+            <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Everything you study, in one place</h2>
+            <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Notes, spaced-repetition flashcards, practice exams, a planner, a Pomodoro timer
+                and an AI tutor &mdash; one workspace, one set of subjects, synced across your devices.
+            </p>
+        </div>
+
+        {/* The eight tools */}
+        <div className="flex flex-wrap gap-2">
+            {NOTEFLOW_TOOLS.map((tool) => (
+                <span
+                    key={tool}
+                    className="rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/30 px-3 py-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400"
+                >
+                    {tool}
+                </span>
+            ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <a
+                href={NOTEFLOW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-black dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+            >
+                RSVP at noteflow.dev <ArrowUpRight size={16} />
+            </a>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Notes, tasks, planner, Pomodoro, grades, flashcards and practice exams are{' '}
+                <span className="font-semibold text-zinc-900 dark:text-white">free, without limits</span>.
+                Paid plans only add AI requests.
+            </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+            {NOTEFLOW_PILLARS.map((pillar) => (
+                <div
+                    key={pillar.title}
+                    className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30"
+                >
+                    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
+                        <pillar.icon size={16} className="text-indigo-500 shrink-0" />
+                        {pillar.title}
+                    </div>
+                    <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                        {pillar.body}
+                    </p>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+// =============================================
 // MAIN STUDY HUB (NotesView)
 // =============================================
 const NotesView = ({ user, timetableData, setView }) => {
@@ -2865,49 +2975,36 @@ const NotesView = ({ user, timetableData, setView }) => {
 
     if (!isProUser) {
         return (
-            <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-white dark:bg-zinc-950 p-12 border-2 border-black dark:border-zinc-800 text-center relative overflow-hidden select-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <StudyPageHeader />
 
-                    <div className="w-20 h-20 bg-purple-100 dark:bg-purple-950/40 rounded-2xl flex items-center justify-center mx-auto mb-6 text-purple-600 dark:text-purple-400 border border-purple-200/20">
-                        <GraduationCap size={36} className="animate-pulse" />
-                    </div>
+                <NoteFlowPromo />
 
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                        <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 bg-purple-600 text-white border border-purple-700">PRO FEATURE</span>
-                    </div>
-
-                    <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-2">Unlock Study Platform</h2>
-
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-md mx-auto mb-8 leading-relaxed">
-                        Supercharge your study sessions. Take notes, create flashcards, time your focus with Pomodoro, and quiz yourself — all in one hub.
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8 text-left text-xs font-mono">
-                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
-                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">📝 Study Notes</span>
-                            Write notes in clean markdown with headings, bold, lists, and a live toggle preview.
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-start gap-5">
+                        <div className="w-12 h-12 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center">
+                            <GraduationCap size={22} />
                         </div>
-                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
-                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">🧠 Flashcards</span>
-                            Create decks and test your knowledge with flip-to-reveal study cards.
-                        </div>
-                        <div className="border border-zinc-200 dark:border-zinc-850 p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
-                            <span className="font-bold text-zinc-950 dark:text-white block mb-1">⏱️ Pomodoro & Quiz</span>
-                            Focus timer with sessions tracking, plus quick self-assessment quizzes.
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-bold uppercase tracking-widest">
+                                Pro feature
+                            </div>
+                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Built-in basics</h2>
+                            <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                Notes, flashcards, homework tracking, a Pomodoro timer and quick quizzes,
+                                tied to your timetable. Pro unlocks them here &mdash; or use NoteFlow above
+                                for the full workspace, free.
+                            </p>
+                            <div className="pt-2">
+                                <button
+                                    onClick={() => setView && setView('profile')}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-black dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+                                >
+                                    Upgrade to Pro ($4.99 annually)
+                                </button>
+                            </div>
                         </div>
                     </div>
-
-                    <button
-                        onClick={() => setView && setView('profile')}
-                        className="px-6 py-3 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-bold uppercase tracking-wider text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-                    >
-                        Upgrade to Pro ($4.99 Annually)
-                    </button>
-                </div>
-
-                <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">
-                    Powered by NoteFlow Infrastructure
                 </div>
             </div>
         );
@@ -2933,131 +3030,119 @@ const NotesView = ({ user, timetableData, setView }) => {
         return <ResourceSharingTool user={user} onBack={() => setActiveTool(null)} />;
     }
 
-    // Study Hub Landing Page
+    // Study Hub landing. NoteFlow leads; the built-in tools sit below it.
     const studyTools = [
         {
             id: 'notes',
             icon: PenTool,
             title: 'Take Notes',
-            description: 'Write detailed study notes with Markdown editor, auto-save, and subject tagging from your timetable.',
-            color: 'from-blue-500 to-indigo-600',
-            borderColor: 'hover:border-blue-500 dark:hover:border-blue-400',
-            iconBg: 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400',
-            tag: 'Cloud Sync'
+            description: 'Write study notes in Markdown with auto-save and subject tagging from your timetable.',
+            tag: 'Cloud Sync',
+            accent: 'text-blue-500'
         },
         {
             id: 'flashcards',
             icon: Layers,
             title: 'Flashcards',
-            description: 'Create custom decks and study with flip-to-reveal cards. Perfect for vocabulary, definitions, and key concepts.',
-            color: 'from-emerald-500 to-teal-600',
-            borderColor: 'hover:border-emerald-500 dark:hover:border-emerald-400',
-            iconBg: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400',
-            tag: 'Active Recall'
+            description: 'Create decks and study with flip-to-reveal cards. Good for vocabulary, definitions and key concepts.',
+            tag: 'Active Recall',
+            accent: 'text-emerald-500'
         },
         {
             id: 'assignments',
             icon: CheckSquare,
             title: 'Homework Tracker',
-            description: 'Track homework, assignments, and tasks. Set due dates, priorities, and sync them to your Synchron Calendar.',
-            color: 'from-purple-500 to-indigo-600',
-            borderColor: 'hover:border-purple-500 dark:hover:border-purple-400',
-            iconBg: 'bg-purple-100 dark:bg-purple-950/40 text-purple-650 dark:text-purple-400',
-            tag: 'Calendar Sync'
+            description: 'Track homework and assignments with due dates and priorities, synced to your Synchron Calendar.',
+            tag: 'Calendar Sync',
+            accent: 'text-purple-500'
         },
         {
             id: 'pomodoro',
             icon: Timer,
             title: 'Pomodoro Timer',
-            description: 'Stay focused with timed 25-minute study sessions and built-in breaks. Track your daily focus streaks.',
-            color: 'from-amber-500 to-orange-600',
-            borderColor: 'hover:border-amber-500 dark:hover:border-amber-400',
-            iconBg: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400',
-            tag: 'Focus Mode'
+            description: 'Stay focused with timed 25-minute sessions and built-in breaks. Tracks your daily focus streaks.',
+            tag: 'Focus Mode',
+            accent: 'text-amber-500'
         },
         {
             id: 'quiz',
             icon: HelpCircle,
             title: 'Quick Quiz',
-            description: 'Build multiple-choice quizzes to test yourself before exams. Track your scores and review wrong answers.',
-            color: 'from-violet-500 to-purple-600',
-            borderColor: 'hover:border-violet-500 dark:hover:border-violet-400',
-            iconBg: 'bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400',
-            tag: 'Self-Test'
+            description: 'Build multiple-choice quizzes to test yourself before exams and review the ones you got wrong.',
+            tag: 'Self-Test',
+            accent: 'text-violet-500'
         },
         {
             id: 'shared',
             icon: Share2,
             title: 'Resource Sharing',
-            description: 'Share notes, assignments, and resources with classmates. Search by student ID or name and collaborate.',
-            color: 'from-pink-500 to-rose-600',
-            borderColor: 'hover:border-pink-500 dark:hover:border-pink-400',
-            iconBg: 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400',
-            tag: 'Collaborate'
+            description: 'Share notes, assignments and resources with classmates by student ID or name.',
+            tag: 'Collaborate',
+            accent: 'text-pink-500'
         }
     ];
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-black text-zinc-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
-                    <span className="p-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white">
-                        <GraduationCap className="w-7 h-7" />
-                    </span>
-                    Study
-                </h1>
-                <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-xs">
-                    Your all-in-one study toolkit. Choose a tool to get started.
-                </p>
-            </div>
+        <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <StudyPageHeader />
 
-            {/* Study Tools Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {studyTools.map((tool) => (
-                    <button
-                        key={tool.id}
-                        onClick={() => setActiveTool(tool.id)}
-                        className={`text-left border-2 border-black dark:border-zinc-800 p-6 bg-white dark:bg-zinc-950 transition-all duration-200 group cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${tool.borderColor}`}
-                    >
-                        <div className="flex items-start gap-4">
-                            <div className={`p-3 border border-zinc-200/50 dark:border-zinc-800/50 shrink-0 ${tool.iconBg} transition-transform duration-200 group-hover:scale-110`}>
-                                <tool.icon size={24} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-black text-lg text-zinc-900 dark:text-white uppercase tracking-tight">
-                                        {tool.title}
-                                    </h3>
-                                    <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 whitespace-nowrap">
-                                        {tool.tag}
-                                    </span>
-                                </div>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                    {tool.description}
-                                </p>
-                            </div>
-                        </div>
-                    </button>
-                ))}
-            </div>
+            <NoteFlowPromo />
 
-            {/* Quick Stats Footer */}
-            <div className="border-2 border-black dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
-                <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-zinc-400" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Study Tip</span>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-5">
+                <div className="space-y-2">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Built-in basics</h2>
+                    <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        Quick tools that live inside Synchron and read straight from your timetable.
+                    </p>
                 </div>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                    Use <strong className="text-zinc-900 dark:text-white">active recall</strong> with flashcards, then reinforce with <strong className="text-zinc-900 dark:text-white">spaced repetition</strong>.
-                    Combine 25-minute <strong className="text-zinc-900 dark:text-white">Pomodoro sessions</strong> with short breaks for optimal focus.
-                    Test yourself with <strong className="text-zinc-900 dark:text-white">quick quizzes</strong> to identify weak areas before exams.
-                </p>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                    {studyTools.map((tool) => (
+                        <button
+                            key={tool.id}
+                            onClick={() => setActiveTool(tool.id)}
+                            className="text-left rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/30 p-4 transition-all hover:border-zinc-400 dark:hover:border-zinc-600"
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 shrink-0 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
+                                    <tool.icon size={18} className={tool.accent} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-zinc-900 dark:text-white">{tool.title}</span>
+                                        <span className="rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                                            {tool.tag}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                                        {tool.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <div className="text-center text-[10px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 select-none">
-                Powered by NoteFlow Infrastructure
-            </div>
+            <a
+                href={NOTEFLOW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+            >
+                <div className="min-w-0">
+                    <div className="font-semibold text-zinc-900 dark:text-white">
+                        Want spaced repetition, practice exams and an AI tutor?
+                    </div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                        That is the rest of NoteFlow. Free to study &mdash; you only pay for more AI.
+                    </p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                    noteflow.dev
+                    <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </span>
+            </a>
         </div>
     );
 };

@@ -255,7 +255,7 @@ const CalendarView = ({ user }) => {
                             <div className="flex items-center justify-between">
                               <span>{format(week.start, 'd MMM')} - {format(week.end, 'd MMM yyyy')}</span>
                               {week.isCurrent && (
-                                <span className="text-[10px] font-extrabold uppercase">Current</span>
+                                <span className="text-[11px] font-extrabold uppercase">Current</span>
                               )}
                             </div>
                           </button>

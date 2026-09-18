@@ -85,7 +85,7 @@
   }
 
   html:not([data-ui="modern"]) body {
-    zoom: 0.9;
+    zoom: 0.96;
   }
 
   ::selection {

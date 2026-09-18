@@ -1222,7 +1222,7 @@ function App() {
                                                 <div className="p-3">
                                                     <div className="grid grid-cols-7 gap-1 mb-2">
                                                         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                                            <div key={day} className="text-[10px] font-extrabold uppercase text-zinc-400 dark:text-zinc-500 text-center">
+                                                            <div key={day} className="text-[11px] font-extrabold uppercase text-zinc-400 dark:text-zinc-500 text-center">
                                                                 {day}
                                                             </div>
                                                         ))}
@@ -1320,10 +1320,10 @@ function App() {
                                                     <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white flex flex-wrap items-center justify-center gap-2 text-center w-full break-words leading-tight">
                                                         <span>{user?.givenName} {user?.surname}</span>
                                                         {isProUser && (
-                                                            <span className="text-[10px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white rounded-full animate-pulse shrink-0">Pro</span>
+                                                            <span className="text-[11px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full animate-pulse shrink-0">Pro</span>
                                                         )}
                                                     </h2>
-                                                    <p className="text-[11px] text-zinc-500 mt-1 text-center w-full break-all px-2">{user?.email}</p>
+                                                    <p className="text-[12px] text-zinc-500 mt-1 text-center w-full break-all px-2">{user?.email}</p>
                                                 </div>
                                             </div>
                                             <div className="pt-2">
@@ -1384,7 +1384,7 @@ function App() {
                                                             </div>
                                                             <div>
                                                                 <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Synchron Pro Subscriber</h3>
-                                                                <p className="text-[11px] text-zinc-500 mt-0.5">Subscription active</p>
+                                                                <p className="text-[12px] text-zinc-500 mt-0.5">Subscription active</p>
                                                             </div>
                                                         </div>
                                                         <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">
@@ -1428,7 +1428,7 @@ function App() {
                                                             </div>
                                                             <div>
                                                                 <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Upgrade to Synchron Pro</h3>
-                                                                <p className="text-[11px] text-zinc-500 mt-0.5">$4.99 annually</p>
+                                                                <p className="text-[12px] text-zinc-500 mt-0.5">$4.99 annually</p>
                                                             </div>
                                                         </div>
                                                         <div className="space-y-1.5 pt-1">
@@ -1528,7 +1528,7 @@ function App() {
                                                         {aiDisabled ? 'Disabled' : 'Enabled'}
                                                     </button>
                                                 </div>
-                                                <p className="text-[11px] text-zinc-500">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
+                                                <p className="text-[12px] text-zinc-500">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
                                             </div>
 
                                             {/* Supporter Toggle Option */}
@@ -1546,7 +1546,7 @@ function App() {
                                                             {user.showSupporter === false ? 'Hidden' : 'Shown'}
                                                         </button>
                                                     </div>
-                                                    <p className="text-[11px] text-zinc-500">Display your name publicly in Settings under the supporter list (Shown by default).</p>
+                                                    <p className="text-[12px] text-zinc-500">Display your name publicly in Settings under the supporter list (Shown by default).</p>
                                                 </div>
                                             )}
 
@@ -1596,7 +1596,7 @@ function App() {
                                             <div className={`border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl transition ${theme !== 'dark' ? 'opacity-50 pointer-events-none grayscale-[0.5]' : ''}`}>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Dark Theme Style</span>
-                                                    {theme !== 'dark' && <span className="text-[11px] text-zinc-500 mt-0.5">Switch to Dark Mode to use</span>}
+                                                    {theme !== 'dark' && <span className="text-[12px] text-zinc-500 mt-0.5">Switch to Dark Mode to use</span>}
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {/* True Black Option */}
@@ -1678,7 +1678,7 @@ function App() {
                                             )}
 
                                             <div className="text-center pt-4">
-                                                <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
+                                                <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
                                                     Synchron v{currentVersion}
                                                 </p>
                                             </div>
@@ -1733,7 +1733,7 @@ function App() {
                                                 setShowAiModal(false);
                                                 setCurrentView('profile');
                                             }}
-                                            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 rounded-xl font-semibold"
+                                            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-700 transition active:scale-95 rounded-xl font-semibold"
                                         >
                                             Upgrade to Pro ($4.99)
                                         </button>

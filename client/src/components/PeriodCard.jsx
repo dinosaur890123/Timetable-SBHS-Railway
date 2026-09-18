@@ -132,7 +132,7 @@ const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinu
                                 </span>
                             )}
                             {isNext && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shrink-0">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[12px] font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shrink-0">
                                     Up next
                                 </span>
                             )}

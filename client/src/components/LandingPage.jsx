@@ -114,7 +114,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
             </div>
 
             <div className="space-y-3 bg-[rgb(15_15_18)] p-4 border border-[rgb(255_255_255/0.07)] font-mono text-xs rounded-xl">
-              <div className="font-semibold text-zinc-500 uppercase tracking-wide mb-2 text-[10px]">Compiled Client Build Configuration:</div>
+              <div className="font-semibold text-zinc-500 uppercase tracking-wide mb-2 text-[11px]">Compiled Client Build Configuration:</div>
               <div className="flex justify-between border-b border-[rgb(255_255_255/0.07)] pb-1.5">
                 <span className="text-zinc-500">Client ID</span>
                 <span className="text-zinc-300 font-semibold">{getOauthConfig().clientId}</span>
@@ -179,7 +179,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
             </div>
 
             {/* System Status Indicators */}
-            <div className="hidden sm:flex items-center gap-4 text-[10px] font-mono text-zinc-500 border-l border-[rgb(255_255_255/0.07)] pl-6">
+            <div className="hidden sm:flex items-center gap-4 text-[11px] font-mono text-zinc-500 border-l border-[rgb(255_255_255/0.07)] pl-6">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-white/60 animate-pulse rounded-full" />
                 API: ONLINE
@@ -276,7 +276,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                    </div>
 
                    <div className="flex items-center gap-4">
-                     <span className="font-mono text-[10px] text-zinc-400 tracking-wide">TIME: {currentTime || "00:00:00"}</span>
+                     <span className="font-mono text-[11px] text-zinc-400 tracking-wide">TIME: {currentTime || "00:00:00"}</span>
                      <div className="flex gap-1.5">
                        <span className="w-2.5 h-2.5 border border-white/20 bg-black rounded-sm" />
                        <span className="w-2.5 h-2.5 border border-white/20 bg-white/60 rounded-sm animate-pulse" />
@@ -308,7 +308,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                      <div className="space-y-4">
                        <div className="flex justify-between items-center text-xs font-mono text-zinc-400 uppercase pb-2 border-b border-[rgb(255_255_255/0.07)]">
                          <span>Period Sequence</span>
-                         <span className="text-zinc-400 text-[10px] bg-[rgb(15_15_18)] px-2 py-0.5 border border-[rgb(255_255_255/0.07)] rounded">A-DAY // TODAY</span>
+                         <span className="text-zinc-400 text-[11px] bg-[rgb(15_15_18)] px-2 py-0.5 border border-[rgb(255_255_255/0.07)] rounded">A-DAY // TODAY</span>
                        </div>
 
                        <div className="space-y-2.5">
@@ -319,19 +319,19 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                                  <span className="font-mono text-xs text-zinc-500">P{idx+1}</span>
                                  <span className="font-semibold text-sm text-white uppercase">{period.name}</span>
                                </div>
-                               <span className="font-mono text-[10px] text-zinc-400">{period.time}</span>
+                               <span className="font-mono text-[11px] text-zinc-400">{period.time}</span>
                              </div>
 
                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-[rgb(255_255_255/0.05)] text-xs font-mono">
                                <div className="flex items-center gap-1.5 text-zinc-400">
                                  <span>{period.room}</span>
                                  {period.oldRoom && (
-                                   <span className="text-[10px] text-zinc-500 line-through">({period.oldRoom})</span>
+                                   <span className="text-[11px] text-zinc-500 line-through">({period.oldRoom})</span>
                                  )}
                                </div>
                                <div className="flex items-center gap-2">
                                  {period.status !== 'Normal' && (
-                                   <span className="text-[9px] font-mono font-semibold uppercase px-2 py-0.5 border rounded bg-white/10 text-white border-white/20">
+                                   <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 border rounded bg-white/10 text-white border-white/20">
                                      {period.status}
                                    </span>
                                  )}
@@ -356,7 +356,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                            <div key={idx} className="border border-[rgb(255_255_255/0.07)] p-3 hover:border-white/20 bg-[rgb(15_15_18)] transition-all rounded-xl">
                              <div className="flex justify-between items-center mb-1.5">
                                <h4 className="text-sm font-semibold text-white uppercase">{notice.title}</h4>
-                               <span className="font-mono text-[9px] font-semibold text-white bg-white/10 border border-white/20 px-1.5 py-0.5 uppercase tracking-wide rounded">
+                               <span className="font-mono text-[10px] font-semibold text-white bg-white/10 border border-white/20 px-1.5 py-0.5 uppercase tracking-wide rounded">
                                  {notice.group}
                                </span>
                              </div>
@@ -368,7 +368,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                    )}
 
                    {/* Console Telemetry Row */}
-                   <div className="mt-6 pt-3 border-t border-[rgb(255_255_255/0.07)] flex justify-between items-center text-[10px] font-mono text-zinc-400 uppercase">
+                   <div className="mt-6 pt-3 border-t border-[rgb(255_255_255/0.07)] flex justify-between items-center text-[11px] font-mono text-zinc-400 uppercase">
                      <span className="flex items-center gap-1">
                        <span className="w-1.5 h-1.5 bg-white/60 animate-ping rounded-full" />
                        REAL_TIME DATA SIMULATION
@@ -494,7 +494,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
             </div>
 
             <div className="flex items-center gap-6 mt-6 md:mt-0">
-                <div className="hidden lg:flex items-center gap-4 text-zinc-500 text-[10px] uppercase">
+                <div className="hidden lg:flex items-center gap-4 text-zinc-500 text-[11px] uppercase">
                   <span>LOC_ENV: PRODUCTION</span>
                   <span>BUILD_TAG: A01_DEV</span>
                 </div>

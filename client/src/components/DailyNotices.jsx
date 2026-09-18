@@ -18,14 +18,14 @@ const stripHtml = (html = '') => html.replace(/<[^>]*>/g, ' ');
 const PriorityBadge = ({ notice }) => {
   if (notice.isMeeting === 1) {
     return (
-      <span className="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+      <span className="shrink-0 px-2 py-0.5 rounded-md text-[12px] font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
         Meeting
       </span>
     );
   }
   if (notice.priority >= 4) {
     return (
-      <span className="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+      <span className="shrink-0 px-2 py-0.5 rounded-md text-[12px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
         High priority
       </span>
     );

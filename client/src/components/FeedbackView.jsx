@@ -78,11 +78,11 @@ const FeedbackView = ({ onBack }) => {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Ticket Number</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Ticket Number</p>
               <p className="mt-2 font-mono text-lg font-bold text-zinc-900 dark:text-white">{submittedTicket}</p>
             </div>
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Need to attach media?</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Need to attach media?</p>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 Email <span className="font-semibold text-zinc-900 dark:text-white">synchron.work@gmail.com</span> and include your ticket number in the subject line.
               </p>
@@ -192,7 +192,7 @@ const FeedbackView = ({ onBack }) => {
               onChange={(e) => setSeverity(Number(e.target.value))}
               className="w-full accent-black dark:accent-white"
             />
-            <div className="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <div className="mt-2 flex justify-between text-[11px] font-bold uppercase tracking-widest text-zinc-400">
               <span>Low</span>
               <span>Critical</span>
             </div>

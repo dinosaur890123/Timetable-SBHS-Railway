@@ -74,7 +74,7 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount })
             <nav className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
                 {groups.map(group => (
                     <div key={group.label}>
-                        <div className="px-2.5 mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                        <div className="px-2.5 mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
                             {group.label}
                         </div>
                         <ul className="space-y-0.5">
@@ -100,7 +100,7 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount })
                                             <Icon size={16} strokeWidth={active ? 2.1 : 1.8} className={`relative shrink-0 ${active ? 'text-accent' : ''}`} />
                                             <span className="relative flex-1 text-left font-medium">{VIEW_LABELS[id]}</span>
                                             {count > 0 && (
-                                                <span className="relative font-mono text-[10px] min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent text-accent-contrast">
+                                                <span className="relative font-mono text-[11px] min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent text-accent-contrast">
                                                     {count > 9 ? '9+' : count}
                                                 </span>
                                             )}
@@ -117,14 +117,14 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount })
                 onClick={() => setView('profile')}
                 className="mt-3 flex items-center gap-2.5 p-2 rounded-xl border border-transparent hover:border-zinc-900/[0.07] dark:hover:border-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.03] transition-colors text-left"
             >
-                <span className="w-8 h-8 shrink-0 rounded-full grid place-items-center font-mono text-[11px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                <span className="w-8 h-8 shrink-0 rounded-full grid place-items-center font-mono text-[12px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                     {initialsOf(user)}
                 </span>
                 <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                         {user?.givenName} {user?.surname}
                     </span>
-                    <span className="block truncate font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
+                    <span className="block truncate font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
                         {plan}
                     </span>
                 </span>
@@ -191,7 +191,7 @@ export const ModernTopbar = ({
                 >
                     <Search size={14} />
                     <span className="flex-1 text-left">Search</span>
-                    <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
+                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
                 </button>
                 <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
                     <Search size={16} />
@@ -260,14 +260,14 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
                                 />
                             )}
                             <Icon size={19} strokeWidth={active ? 2.1 : 1.8} className={`relative ${active ? 'text-accent' : ''}`} />
-                            <span className="relative text-[11px] font-medium leading-none px-0.5 whitespace-nowrap">{label}</span>
+                            <span className="relative text-[12px] font-medium leading-none px-0.5 whitespace-nowrap">{label}</span>
                             {badge > 0 && <span className="absolute top-1.5 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-accent" />}
                         </button>
                     );
                 })}
                 <button onClick={onOpenPalette} aria-label="More" className={`${itemClass} text-zinc-500 dark:text-zinc-400`}>
                     <Menu size={19} strokeWidth={1.8} />
-                    <span className="text-[11px] font-medium leading-none whitespace-nowrap">More</span>
+                    <span className="text-[12px] font-medium leading-none whitespace-nowrap">More</span>
                 </button>
             </div>
         </nav>
@@ -357,7 +357,7 @@ export const CommandPalette = ({ open, onClose, commands }) => {
                                 placeholder="Jump to a page or run a command…"
                                 className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
                             />
-                            <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
+                            <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
                         </div>
                         <div ref={listRef} className="max-h-[50vh] overflow-y-auto p-1.5">
                             {filtered.length === 0 && (
@@ -371,7 +371,7 @@ export const CommandPalette = ({ open, onClose, commands }) => {
                                 return (
                                     <React.Fragment key={command.id}>
                                         {showGroup && (
-                                            <div className="px-2.5 pt-2.5 pb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+                                            <div className="px-2.5 pt-2.5 pb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400">
                                                 {command.group}
                                             </div>
                                         )}

@@ -15,11 +15,11 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notific
   >
     <Icon size={18} className="shrink-0" />
     {notificationCount > 0 && (
-      <span className="absolute top-1 right-1 md:top-0 md:right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+      <span className="absolute top-1 right-1 md:top-0 md:right-0 bg-red-500 text-white text-[11px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
         {notificationCount > 9 ? '9+' : notificationCount}
       </span>
     )}
-    <span className="hidden md:block text-[11px] font-medium leading-tight whitespace-nowrap">{label}</span>
+    <span className="hidden md:block text-[12px] font-medium leading-tight whitespace-nowrap">{label}</span>
   </button>
 );
 

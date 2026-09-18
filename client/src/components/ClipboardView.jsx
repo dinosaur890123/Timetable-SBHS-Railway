@@ -92,7 +92,7 @@ const ClipboardView = ({ user }) => {
                         <Users size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Teams</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Teams</span>
                         <h4 className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{teams.length} Teams</h4>
                     </div>
                 </div>
@@ -105,7 +105,7 @@ const ClipboardView = ({ user }) => {
                         <Calendar size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Weekly Sessions</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Weekly Sessions</span>
                         <h4 className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{sessions.length} Scheduled</h4>
                     </div>
                 </div>
@@ -118,7 +118,7 @@ const ClipboardView = ({ user }) => {
                         <FileCheck size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Pre-Explained Leave</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Pre-Explained Leave</span>
                         <h4 className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{preExplained.length} Active</h4>
                     </div>
                 </div>
@@ -165,7 +165,7 @@ const ClipboardView = ({ user }) => {
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="font-extrabold text-zinc-900 dark:text-white text-lg leading-tight">{sess.activity}</h4>
-                                        <span className="text-[10px] font-black uppercase text-zinc-400 mt-2 block tracking-wider">TRAINING SESSION</span>
+                                        <span className="text-[11px] font-black uppercase text-zinc-400 mt-2 block tracking-wider">TRAINING SESSION</span>
                                     </div>
                                     <div className="space-y-2 text-xs font-semibold text-zinc-650 dark:text-zinc-300">
                                         <div className="flex items-center gap-2"><Clock size={15} className="text-zinc-400" /> {sess.date} | {sess.time}</div>
@@ -199,17 +199,17 @@ const ClipboardView = ({ user }) => {
                                     <div className="space-y-2 flex-1">
                                         <div className="flex justify-between items-baseline gap-2">
                                             <h4 className="font-extrabold text-zinc-900 dark:text-white text-base leading-tight">{team.name}</h4>
-                                            <span className="text-[9px] font-black uppercase tracking-wider text-accent border border-accent/15 px-1.5 py-0.5 shrink-0 bg-accent/5">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-accent border border-accent/15 px-1.5 py-0.5 shrink-0 bg-accent/5">
                                                 {team.season}
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-zinc-500 pt-2">
                                             <div>
-                                                <span className="text-[10px] text-zinc-400 block font-bold">SPORT/ACTIVITY</span>
+                                                <span className="text-[11px] text-zinc-400 block font-bold">SPORT/ACTIVITY</span>
                                                 <span className="text-zinc-800 dark:text-zinc-300">{team.sportOrActivity}</span>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] text-zinc-400 block font-bold">COACH</span>
+                                                <span className="text-[11px] text-zinc-400 block font-bold">COACH</span>
                                                 <span className="text-zinc-800 dark:text-zinc-300">{team.coach}</span>
                                             </div>
                                         </div>
@@ -229,9 +229,9 @@ const ClipboardView = ({ user }) => {
                                 <div key={act.id} className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm space-y-2">
                                     <div className="flex justify-between items-start gap-2">
                                         <h4 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">{act.name}</h4>
-                                        <span className="text-[9px] font-black uppercase text-zinc-400 shrink-0">{act.type}</span>
+                                        <span className="text-[10px] font-black uppercase text-zinc-400 shrink-0">{act.type}</span>
                                     </div>
-                                    <p className="text-[11px] text-zinc-500 font-semibold">Active: Term {act.term}</p>
+                                    <p className="text-[12px] text-zinc-500 font-semibold">Active: Term {act.term}</p>
                                 </div>
                             ))}
                         </div>

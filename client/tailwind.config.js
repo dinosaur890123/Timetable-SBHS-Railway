@@ -3,9 +3,19 @@
 // Neutral scale is driven by CSS variables (see index.css) so interface themes
 // can retune surfaces without touching component class names.
 const zincSteps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-const zinc = Object.fromEntries(
-  zincSteps.map(step => [step, `rgb(var(--zinc-${step}) / <alpha-value>)`])
-);
+
+// Half-steps (zinc-150 … zinc-850) are used throughout the UI. They are mixed
+// from their two neighbours rather than hardcoded, so every colour theme and
+// interface theme retunes them for free by retuning the base scale.
+const zincHalfSteps = [150, 250, 350, 450, 550, 650, 750, 850];
+
+const zinc = Object.fromEntries([
+  ...zincSteps.map(step => [step, `rgb(var(--zinc-${step}) / <alpha-value>)`]),
+  ...zincHalfSteps.map(step => [
+    step,
+    `color-mix(in srgb, rgb(var(--zinc-${step - 50})), rgb(var(--zinc-${step + 50})))`
+  ])
+]);
 
 export default {
   content: [

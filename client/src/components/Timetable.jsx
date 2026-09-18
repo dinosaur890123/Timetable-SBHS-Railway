@@ -231,7 +231,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                         </span>
                                                         <div className="flex items-center gap-1 mt-0.5">
                                                             {classInfo.room && (
-                                                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                                                                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                                                                     {classInfo.room}
                                                                 </span>
                                                             )}
@@ -304,7 +304,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             <div className="my-2">
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
-                                    <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
                                         End of Day
                                     </span>
                                     <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />

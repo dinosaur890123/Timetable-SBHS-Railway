@@ -88,7 +88,7 @@ const ClockWidget = ({ onPreferenceChange }) => {
                 </h2>
                 <button
                     onClick={toggleFormat}
-                    className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition"
+                    className="text-[11px] font-extrabold uppercase px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition"
                     title="Change clock view"
                 >
                     {formatType}
@@ -122,7 +122,7 @@ const ClockWidget = ({ onPreferenceChange }) => {
                         <div className="text-2xl font-extrabold font-mono text-zinc-900 dark:text-white leading-none">
                             {timeStr}
                         </div>
-                        <div className="text-[11px] font-bold text-zinc-400 tracking-wider mt-2">
+                        <div className="text-[12px] font-bold text-zinc-400 tracking-wider mt-2">
                             {dateStr}
                         </div>
                     </div>
@@ -251,7 +251,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                 <div key={idx} className="my-2">
                                     <div className="flex items-center gap-2">
                                         <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
-                                        <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                        <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
                                             {breakName}
                                         </span>
                                         <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
@@ -272,17 +272,17 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                                         {title}
                                     </span>
                                     {periodInfo.fullTeacher && (
-                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                        <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
                                             {periodInfo.fullTeacher}
                                         </span>
                                     )}
                                     {periodInfo.room && (
-                                        <span className={`text-[10px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                        <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
                                             {periodInfo.room}
                                         </span>
                                     )}
                                     {isCurrent && (
-                                        <span className="text-zinc-600 dark:text-white/60 text-[10px] font-medium shrink-0">
+                                        <span className="text-zinc-600 dark:text-white/60 text-[11px] font-medium shrink-0">
                                             {Math.max(0, Math.ceil(endMin - currentMinutes))}m
                                         </span>
                                     )}
@@ -298,7 +298,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                         <div className="my-2">
                             <div className="flex items-center gap-2">
                                 <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
-                                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
                                     End of Day
                                 </span>
                                 <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
@@ -329,7 +329,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     title="Open Timetable View"
                 >
                     <BookOpen size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
-                    <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Ttable</span>
+                    <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Ttable</span>
                 </button>
                 <button
                     onClick={() => setView('calendar')}
@@ -337,7 +337,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     title="Open Calendar View"
                 >
                     <CalendarIcon size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
-                    <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Cal</span>
+                    <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Cal</span>
                 </button>
                 <button
                     onClick={() => setView('notices')}
@@ -345,7 +345,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     title="Open Notices View"
                 >
                     <Bell size={18} className="text-zinc-700 dark:text-zinc-350 group-hover:text-current" />
-                    <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Notices</span>
+                    <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Notices</span>
                 </button>
                 <button
                     onClick={toggleTheme}
@@ -357,7 +357,7 @@ const QuickLinksWidget = ({ setView, theme, toggleTheme }) => {
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-700 group-hover:text-current"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
                     )}
-                    <span className="text-[9px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Theme</span>
+                    <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider text-zinc-500 group-hover:text-current">Theme</span>
                 </button>
             </div>
         </div>
@@ -381,7 +381,7 @@ const ScratchpadWidget = ({ onPreferenceChange }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                     Scratchpad
                 </h2>
-                <span className="text-[9px] font-black uppercase text-zinc-400">Persisted</span>
+                <span className="text-[10px] font-black uppercase text-zinc-400">Persisted</span>
             </div>
             <textarea
                 value={text}
@@ -448,7 +448,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                         <h2 className="text-xs font-extrabold uppercase tracking-widest text-zinc-900 dark:text-white leading-none">
                             Live departures
                         </h2>
-                        <span className="text-[9px] font-mono text-zinc-400 block mt-0.5 max-w-[150px] truncate" title={activeStopName}>
+                        <span className="text-[10px] font-mono text-zinc-400 block mt-0.5 max-w-[150px] truncate" title={activeStopName}>
                             {activeStopName}
                         </span>
                     </div>
@@ -467,7 +467,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
                         </button>
                     ) : (
-                        <div className="px-1.5 py-0.5 bg-red-100 dark:bg-red-955/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider border border-red-200/30">
+                        <div className="px-1.5 py-0.5 bg-red-100 dark:bg-red-955/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-wider border border-red-200/30">
                             Free Preview
                         </div>
                     )}
@@ -486,7 +486,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
             <div className="flex-1 flex flex-col justify-center min-h-0">
                 {isConfiguring ? (
                     <form onSubmit={handleSaveConfig} className="space-y-3 p-1.5 animate-in fade-in slide-in-from-top-1 duration-200 text-left">
-                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block">
+                        <label className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400 block">
                             Configure Station / Stop Name
                         </label>
                         <div className="flex flex-col gap-2">
@@ -500,14 +500,14 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                             <div className="flex gap-2">
                                 <button
                                     type="submit"
-                                    className="flex-1 py-1.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 border border-black dark:border-white"
+                                    className="flex-1 py-1.5 bg-black text-white dark:bg-white dark:text-black text-[11px] font-black uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 border border-black dark:border-white"
                                 >
                                     Save Stop
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setIsConfiguring(false)}
-                                    className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-850 text-[10px] font-black uppercase tracking-wider text-zinc-650 dark:text-zinc-400 transition"
+                                    className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-850 text-[11px] font-black uppercase tracking-wider text-zinc-650 dark:text-zinc-400 transition"
                                 >
                                     Cancel
                                 </button>
@@ -515,7 +515,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                         </div>
                     </form>
                 ) : loading && departures.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-6 text-zinc-400 font-mono text-[10px] uppercase tracking-widest">
+                    <div className="flex flex-col items-center justify-center py-6 text-zinc-400 font-mono text-[11px] uppercase tracking-widest">
                         <div className="w-6 h-6 border-2 border-zinc-200 dark:border-zinc-800 border-t-zinc-500 dark:border-t-zinc-400 rounded-full animate-spin mb-2" />
                         Fetching Live Times...
                     </div>
@@ -525,7 +525,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                         <button type="button" onClick={fetchDepartures} className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">Retry</button>
                     </div>
                 ) : departures.length === 0 ? (
-                    <div className="text-center py-6 text-zinc-450 font-mono text-[10px] uppercase tracking-widest italic">
+                    <div className="text-center py-6 text-zinc-450 font-mono text-[11px] uppercase tracking-widest italic">
                         No active departures found
                     </div>
                 ) : (
@@ -582,14 +582,14 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-zinc-950 dark:via-zinc-950/95 dark:to-transparent pt-10 pb-1 px-3 flex flex-col items-center justify-end z-10">
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">Synchron Pro</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">Synchron Pro</span>
                                 </div>
-                                <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-medium text-center leading-tight mb-2">
+                                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium text-center leading-tight mb-2">
                                     Unlock all departures & custom stops
                                 </p>
                                 <button
                                     onClick={() => setView && setView('profile')}
-                                    className="px-3 py-1 bg-gradient-to-r from-red-600 to-amber-600 text-white text-[8px] font-black uppercase tracking-wider hover:opacity-90 transition active:scale-95 rounded-md shadow-sm"
+                                    className="px-3 py-1 bg-gradient-to-r from-red-600 to-amber-600 text-white text-[10px] font-black uppercase tracking-wider hover:opacity-90 transition active:scale-95 rounded-md shadow-sm"
                                 >
                                     Upgrade — $4.99/year
                                 </button>
@@ -601,7 +601,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
 
             {/* Footer */}
             {!isConfiguring && (
-                <div className="text-[8px] font-mono text-zinc-400 dark:text-zinc-550 flex items-center justify-between mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-900 select-none">
+                <div className="text-[10px] font-mono text-zinc-400 dark:text-zinc-550 flex items-center justify-between mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-900 select-none">
                     <span className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                         TfNSW Live Proxy
@@ -1008,17 +1008,17 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         <Sparkles size={20} md:size={24} className="text-violet-400" />
                                     </div>
                                     <div className="space-y-0.5 md:space-y-1">
-                                        <h2 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                        <h2 className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                             Daily AI Briefing
-                                            <span className="text-[8px] md:text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
+                                            <span className="text-[10px] md:text-[10px] uppercase font-black tracking-wider px-1.5 py-0.5 bg-violet-600 text-white rounded-full">PRO</span>
                                         </h2>
                                         <h3 className="text-sm md:text-base font-bold text-white mt-1">Unlock Personalized Morning Briefings</h3>
-                                        <p className="text-[10px] md:text-xs text-zinc-400 hidden sm:block">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $4.99 annually.</p>
+                                        <p className="text-[11px] md:text-xs text-zinc-400 hidden sm:block">Get custom AI summaries of your day's classes, notices, and sports updates. Upgrade to Pro for $4.99 annually.</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setView && setView('profile')}
-                                    className="px-3 py-2 md:px-4 md:py-2.5 bg-gradient-to-r from-violet-600 to-indigo-650 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-750 transition active:scale-95 shrink-0 rounded-xl font-bold"
+                                    className="px-3 py-2 md:px-4 md:py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[11px] md:text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-700 transition active:scale-95 shrink-0 rounded-xl font-bold"
                                 >
                                     Upgrade ($4.99/yr)
                                 </button>
@@ -1115,12 +1115,12 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                             {currentClass.title || "Free Period"}
                                         </h3>
                                         {currentClass.isSubstituted && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
                                                 Substitution
                                             </span>
                                         )}
                                         {currentClass.hasRoomChange && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-950/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-950/45 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
                                                 Room Change
                                             </span>
                                         )}
@@ -1130,13 +1130,13 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         {currentClass.room && (
                                             <span className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200">
                                                 <MapPin size={16} /> {currentClass.room}
-                                                {currentClass.oldRoom && <span className="text-[10px] text-zinc-400 line-through">({currentClass.oldRoom})</span>}
+                                                {currentClass.oldRoom && <span className="text-[11px] text-zinc-400 line-through">({currentClass.oldRoom})</span>}
                                             </span>
                                         )}
                                         {currentClass.fullTeacher && (
                                             <span className="flex items-center gap-1.5">
                                                 <UserIcon size={16} /> {currentClass.fullTeacher}
-                                                {currentClass.oldTeacher && <span className="text-[10px] text-zinc-400 line-through">({currentClass.oldTeacher})</span>}
+                                                {currentClass.oldTeacher && <span className="text-[11px] text-zinc-400 line-through">({currentClass.oldTeacher})</span>}
                                             </span>
                                         )}
                                     </div>
@@ -1199,7 +1199,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             {countdownStr && (
                                 <div className="border-l border-zinc-800 pl-6 animate-in fade-in duration-300">
                                     <div className="text-lg font-extrabold text-amber-400 leading-none">{countdownStr}</div>
-                                    <div className="text-[10px] font-bold text-zinc-500 uppercase mt-1">School Left</div>
+                                    <div className="text-[11px] font-bold text-zinc-500 uppercase mt-1">School Left</div>
                                 </div>
                             )}
                         </div>
@@ -1262,11 +1262,11 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         <div className="flex items-center justify-between mt-2">
                             <div>
                                 <div className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none">{awardPoints} Pts</div>
-                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Total Merits</span>
+                                <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Total Merits</span>
                             </div>
                             <div className="text-right">
                                 <div className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none">{badgesCount} Badges</div>
-                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Authorised</span>
+                                <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block mt-1">Authorised</span>
                             </div>
                         </div>
                     </div>
@@ -1281,7 +1281,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         {nextSession ? (
                             <div className="space-y-1 mt-2">
                                 <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white line-clamp-1 leading-tight">{nextSession.activity}</h4>
-                                <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-2 mt-1">
+                                <div className="text-[11px] font-bold text-zinc-400 flex items-center gap-2 mt-1">
                                     <span>{nextSession.time}</span>
                                     <span>|</span>
                                     <span className="text-accent">{nextSession.location}</span>
@@ -1406,7 +1406,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
                                         {/* Header Controls */}
                                         <div className="flex items-center justify-between pointer-events-auto">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-white bg-black px-2 py-0.5 border border-zinc-700">
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-white bg-black px-2 py-0.5 border border-zinc-700">
                                                 {tileConfig.title}
                                             </span>
                                             <button
@@ -1421,13 +1421,13 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
                                         {/* Drag instructions / info */}
                                         <div className="text-center text-zinc-400 dark:text-zinc-500 pointer-events-none select-none my-auto">
-                                            <p className="text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5">
+                                            <p className="text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5">
                                                 <LayoutGrid size={12} /> Drag Card to Reorder
                                             </p>
                                         </div>
 
                                         {/* Size Details */}
-                                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 text-left pointer-events-none select-none">
+                                        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-left pointer-events-none select-none">
                                             Size {tile.w}x{tile.h}
                                         </div>
 
@@ -1460,7 +1460,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                             <Plus size={16} />
                             Available Widgets
                         </h3>
-                        <span className="text-[10px] font-extrabold text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 uppercase tracking-wide">
+                        <span className="text-[11px] font-extrabold text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 uppercase tracking-wide">
                             {availableTiles.length} Hidden
                         </span>
                     </div>
@@ -1476,7 +1476,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     >
                                         <div>
                                             <h4 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200 leading-tight">{config.title}</h4>
-                                            <p className="text-[9px] text-zinc-500 font-extrabold uppercase mt-1 tracking-wider">
+                                            <p className="text-[10px] text-zinc-500 font-extrabold uppercase mt-1 tracking-wider">
                                                 Size: {config.minW}x{config.minH}
                                             </p>
                                         </div>

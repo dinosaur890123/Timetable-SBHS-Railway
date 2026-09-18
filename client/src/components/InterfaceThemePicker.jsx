@@ -41,7 +41,7 @@ const InterfaceThemePicker = ({ options, value, defaultId, onChange }) => (
     <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
         <div className="flex flex-col">
             <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Interface</span>
-            <span className="text-[11px] text-zinc-500 mt-0.5">Changes layout, navigation and styling. Colours and dark mode carry over.</span>
+            <span className="text-[12px] text-zinc-500 mt-0.5">Changes layout, navigation and styling. Colours and dark mode carry over.</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {options.map(option => {
@@ -62,10 +62,10 @@ const InterfaceThemePicker = ({ options, value, defaultId, onChange }) => (
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-bold text-zinc-900 dark:text-white">{option.name}</span>
                                     {option.id === defaultId && (
-                                        <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-px rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500">Default</span>
+                                        <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-px rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500">Default</span>
                                     )}
                                 </div>
-                                <p className="text-[11px] text-zinc-500 mt-1 leading-snug">{option.description}</p>
+                                <p className="text-[12px] text-zinc-500 mt-1 leading-snug">{option.description}</p>
                             </div>
                             <span className={`mt-0.5 w-4 h-4 shrink-0 rounded-full grid place-items-center transition ${selected ? 'bg-accent text-accent-contrast' : 'border border-zinc-300 dark:border-zinc-700'}`}>
                                 {selected && <Check size={10} strokeWidth={3} />}

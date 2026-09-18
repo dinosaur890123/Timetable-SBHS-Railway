@@ -786,14 +786,14 @@ const AdminPanel = ({ user }) => {
                                 const pctHeight = (item.count / maxVal) * 85;
                                 return (
                                     <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                                        <div className="absolute -top-6 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[10px] py-0.5 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-mono pointer-events-none shadow">
+                                        <div className="absolute -top-6 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[11px] py-0.5 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-mono pointer-events-none shadow">
                                             {item.count}
                                         </div>
                                         <div 
                                             className="w-full bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all rounded-t-sm"
                                             style={{ height: `${pctHeight}%` }}
                                         ></div>
-                                        <span className="text-[9px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+                                        <span className="text-[10px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
                                             {item.date}
                                         </span>
                                     </div>
@@ -878,21 +878,21 @@ const AdminPanel = ({ user }) => {
                     {/* AI Quick Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Total Questions</span>
+                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Total Questions</span>
                             <span className="text-xl font-bold text-zinc-900 dark:text-white mt-1 block">{aiLogs.length}</span>
                         </div>
                         <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Filtered Queries</span>
+                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Filtered Queries</span>
                             <span className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1 block">{filteredAiLogs.length}</span>
                         </div>
                         <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Gemini API Calls</span>
+                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Gemini API Calls</span>
                             <span className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">
                                 {aiLogs.filter(l => String(l.provider).toLowerCase() === 'gemini').length}
                             </span>
                         </div>
                         <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Hack Club AI Calls</span>
+                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Hack Club AI Calls</span>
                             <span className="text-xl font-bold text-green-600 dark:text-green-400 mt-1 block">
                                 {aiLogs.filter(l => String(l.provider).toLowerCase() !== 'gemini').length}
                             </span>
@@ -930,12 +930,12 @@ const AdminPanel = ({ user }) => {
                                                     <div className="font-semibold text-zinc-900 dark:text-white">
                                                         {users.find(u => String(u.id) === String(log.studentId))?.name || 'Unknown Student'}
                                                     </div>
-                                                    <div className="text-zinc-500 font-mono text-[10px] mt-0.5">
+                                                    <div className="text-zinc-500 font-mono text-[11px] mt-0.5">
                                                         {log.studentId}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-xs whitespace-nowrap">
-                                                    <span className={`px-2 py-0.5 rounded-full font-semibold border text-[10px] ${
+                                                    <span className={`px-2 py-0.5 rounded-full font-semibold border text-[11px] ${
                                                         isGemini 
                                                             ? 'bg-blue-50/80 text-blue-700 border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30' 
                                                             : 'bg-green-50/80 text-green-700 border-green-200/50 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'
@@ -1440,7 +1440,7 @@ const AdminPanel = ({ user }) => {
                             <>
                                 <button 
                                     onClick={() => handleBulkUpdateFeedbackStatus('resolved')}
-                                    className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 dark:text-emerald-450 rounded-lg transition-colors flex items-center gap-1 border border-emerald-250/20"
+                                    className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 dark:text-emerald-400 rounded-lg transition-colors flex items-center gap-1 border border-emerald-200/20"
                                 >
                                     Resolve ({selectedFeedback.size})
                                 </button>
@@ -1452,7 +1452,7 @@ const AdminPanel = ({ user }) => {
                                 </button>
                                 <button 
                                     onClick={handleBulkDeleteFeedback}
-                                    className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-950/60 dark:text-red-450 rounded-lg transition-colors flex items-center gap-1 border border-red-250/20"
+                                    className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-950/60 dark:text-red-400 rounded-lg transition-colors flex items-center gap-1 border border-red-200/20"
                                 >
                                     <Trash2 size={14} />
                                     Delete ({selectedFeedback.size})
@@ -1583,7 +1583,7 @@ const AdminPanel = ({ user }) => {
                                                     sevClass = 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30';
                                                     break;
                                                 case 3:
-                                                    sevClass = 'bg-yellow-50 text-yellow-750 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30';
+                                                    sevClass = 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30';
                                                     break;
                                                 case 2:
                                                     sevClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30';
@@ -1818,7 +1818,7 @@ const AdminPanel = ({ user }) => {
                                     alert("Failed to delete feedback request.");
                                 }
                             }}
-                            className="px-4 py-2 bg-red-650 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
                         >
                             Delete Manually
                         </button>

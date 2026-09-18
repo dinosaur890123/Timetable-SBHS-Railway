@@ -109,7 +109,7 @@ const AwardSchemeView = ({ user }) => {
                         <Trophy size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Total Merit Points</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Total Merit Points</span>
                         <h4 className="text-3xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{totalMeritPoints} Points</h4>
                     </div>
                 </div>
@@ -122,7 +122,7 @@ const AwardSchemeView = ({ user }) => {
                         <Shield size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Authorised Badges</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Authorised Badges</span>
                         <h4 className="text-3xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">{badges.length} active</h4>
                     </div>
                 </div>
@@ -135,7 +135,7 @@ const AwardSchemeView = ({ user }) => {
                         <TrendingUp size={22} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Rollover Points</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Rollover Points</span>
                         <h4 className="text-3xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">
                             {rollover ? `${rollover.rolloverPoints} pts` : '0 pts'}
                         </h4>
@@ -187,7 +187,7 @@ const AwardSchemeView = ({ user }) => {
                                         <div>
                                             <h4 className="font-extrabold text-zinc-900 dark:text-white text-base">{a.title}</h4>
                                             <p className="text-zinc-550 text-xs mt-1.5 leading-relaxed">{a.description}</p>
-                                            <span className="text-[10px] font-semibold text-zinc-400 mt-2 block">{a.dateIssued}</span>
+                                            <span className="text-[11px] font-semibold text-zinc-400 mt-2 block">{a.dateIssued}</span>
                                         </div>
                                         <div className="px-2.5 py-1 bg-accent/15 text-accent border border-accent/25 text-xs font-black uppercase tracking-wider shrink-0">
                                             +{a.points} Pts
@@ -217,7 +217,7 @@ const AwardSchemeView = ({ user }) => {
                                             </div>
                                             <div>
                                                 <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">{b.title}</h4>
-                                                <span className="text-[10px] font-bold text-zinc-400 block mt-1 uppercase tracking-wider">{b.category}</span>
+                                                <span className="text-[11px] font-bold text-zinc-400 block mt-1 uppercase tracking-wider">{b.category}</span>
                                             </div>
                                         </div>
                                     )) : (
@@ -239,7 +239,7 @@ const AwardSchemeView = ({ user }) => {
                                         <div key={d.id} className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm flex justify-between items-center">
                                             <div>
                                                 <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">{d.title}</h4>
-                                                <p className="text-[10px] text-zinc-400 font-semibold mt-1">{d.presentationNight}</p>
+                                                <p className="text-[11px] text-zinc-400 font-semibold mt-1">{d.presentationNight}</p>
                                             </div>
                                             <div className="text-xs font-black uppercase text-accent tracking-widest bg-accent/5 px-2 py-0.5 border border-accent/10">
                                                 {d.year}
@@ -271,7 +271,7 @@ const AwardSchemeView = ({ user }) => {
                                         <div>
                                             <h4 className="font-extrabold text-zinc-900 dark:text-white text-base leading-tight">{p.title}</h4>
                                             <p className="text-zinc-550 text-xs mt-1.5 leading-relaxed">{p.description}</p>
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-accent mt-3 block">{p.year} Award</span>
+                                            <span className="text-[11px] font-black uppercase tracking-wider text-accent mt-3 block">{p.year} Award</span>
                                         </div>
                                     </div>
                                 ))}
@@ -300,7 +300,7 @@ const AwardSchemeView = ({ user }) => {
                                 <div>
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="font-extrabold text-lg text-zinc-900 dark:text-white">{ga.name}</h4>
-                                        <span className="text-[10px] font-black uppercase bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 px-2 py-0.5 text-zinc-550 shrink-0">
+                                        <span className="text-[11px] font-black uppercase bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 px-2 py-0.5 text-zinc-550 shrink-0">
                                             {ga.pointsRequired} Pts Required
                                         </span>
                                     </div>
@@ -350,7 +350,7 @@ const AwardSchemeView = ({ user }) => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-lg text-zinc-900 dark:text-white">{hp.points}</span>
-                                        <span className="text-[10px] text-zinc-400 font-extrabold uppercase">Points</span>
+                                        <span className="text-[11px] text-zinc-400 font-extrabold uppercase">Points</span>
                                     </div>
                                 </div>
                             );
@@ -376,7 +376,7 @@ const AwardSchemeView = ({ user }) => {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-extrabold text-zinc-950 dark:text-white text-base">{nom.nomineeName}</span>
                                         <span className="text-xs text-zinc-400 font-medium">({nom.nomineeId})</span>
-                                        <span className="text-[10px] font-black uppercase text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 leading-none">
+                                        <span className="text-[11px] font-black uppercase text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 leading-none">
                                             {nom.awardId.replace('-', ' ')}
                                         </span>
                                     </div>
