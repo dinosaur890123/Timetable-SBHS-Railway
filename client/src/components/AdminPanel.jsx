@@ -64,33 +64,39 @@ const AdminPanel = ({ user }) => {
 
     const loadData = async () => {
         setLoading(true);
-        try {
-            const [usersData, statsData, logsData, systemData, aiLogsData, feedbackData] = await Promise.all([
-                fetchUsers(),
-                fetchAdminStats(),
-                fetchLogs(),
-                fetchSystemStatus(),
-                fetchAiLogs().catch(err => {
-                    console.warn("Failed to fetch AI logs:", err);
-                    return [];
-                }),
-                fetchAdminFeedback().catch(err => {
-                    console.warn("Failed to fetch feedback:", err);
-                    return [];
-                })
-            ]);
-            setUsers(usersData);
-            setStats(statsData);
-            setLogs(logsData);
-            setAiLogs(aiLogsData || []);
-            setFeedback(feedbackData || []);
-            setCurrentBroadcast(systemData?.broadcast || null);
-        } catch (err) {
-            setApiError('Failed to fetch data from server. Ensure backend is running.');
-            console.error(err);
-        } finally {
-            setLoading(false);
+        setApiError(null);
+
+        // Settle every request independently: one slow or failing endpoint must
+        // not hold the whole panel on its loading state.
+        const results = await Promise.allSettled([
+            fetchUsers(),
+            fetchAdminStats(),
+            fetchLogs(),
+            fetchSystemStatus(),
+            fetchAiLogs(),
+            fetchAdminFeedback()
+        ]);
+        const [usersRes, statsRes, logsRes, systemRes, aiLogsRes, feedbackRes] = results;
+
+        if (usersRes.status === 'fulfilled') setUsers(usersRes.value || []);
+        if (statsRes.status === 'fulfilled') setStats(statsRes.value);
+        if (logsRes.status === 'fulfilled') setLogs(logsRes.value || []);
+        if (aiLogsRes.status === 'fulfilled') setAiLogs(aiLogsRes.value || []);
+        if (feedbackRes.status === 'fulfilled') setFeedback(feedbackRes.value || []);
+        if (systemRes.status === 'fulfilled') setCurrentBroadcast(systemRes.value?.broadcast || null);
+
+        const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback'];
+        const failed = results
+            .map((res, i) => (res.status === 'rejected' ? { label: labels[i], reason: res.reason } : null))
+            .filter(Boolean);
+
+        if (failed.length) {
+            failed.forEach(({ label, reason }) => console.error(`Admin: failed to load ${label}:`, reason));
+            const detail = failed[0].reason?.message || 'Unknown error';
+            setApiError(`Failed to load ${failed.map(f => f.label).join(', ')}. ${detail}`);
         }
+
+        setLoading(false);
     };
 
     useEffect(() => {

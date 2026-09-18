@@ -664,8 +664,11 @@ const verifySbhsToken = async (req) => {
 
     const token = authHeader.split(' ')[1];
     try {
+        // Without a timeout an unresponsive SBHS API keeps the request open
+        // indefinitely, and every admin page load hangs behind it.
         const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: AbortSignal.timeout(8000)
         });
         if (!response.ok) return null;
         return await response.json();

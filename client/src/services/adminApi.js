@@ -1,5 +1,25 @@
 const ADMIN_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
+// Requests that never settle leave the UI stuck on its loading state forever,
+// so every admin call is bounded by a timeout and fails loudly instead.
+const REQUEST_TIMEOUT_MS = 20000;
+
+const apiFetch = async (url, options = {}) => {
+    const { timeout = REQUEST_TIMEOUT_MS, ...init } = options;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+        return await fetch(url, { ...init, signal: controller.signal });
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error(`Request timed out after ${Math.round(timeout / 1000)}s: ${url}`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
 const getHeaders = () => {
     const token = localStorage.getItem('sbhs_access_token');
     return {
@@ -10,10 +30,10 @@ const getHeaders = () => {
 
 export const fetchAdminStats = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/stats`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/stats`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch stats');
+        if (!response.ok) throw new Error(`Failed to fetch stats (HTTP ${response.status})`);
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -23,10 +43,10 @@ export const fetchAdminStats = async () => {
 
 export const fetchUsers = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/users`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/users`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch users');
+        if (!response.ok) throw new Error(`Failed to fetch users (HTTP ${response.status})`);
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -36,7 +56,7 @@ export const fetchUsers = async () => {
 
 export const deleteUser = async (userId) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
              method: 'DELETE',
              headers: getHeaders()
         });
@@ -50,7 +70,7 @@ export const deleteUser = async (userId) => {
 
 export const updateUser = async (userId, updates) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
             method: 'PUT',
             headers: getHeaders(),
             body: JSON.stringify(updates)
@@ -65,7 +85,7 @@ export const updateUser = async (userId, updates) => {
 
 export const clearServerCache = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/cache/clear`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/cache/clear`, {
             method: 'POST',
             headers: getHeaders()
         });
@@ -79,10 +99,10 @@ export const clearServerCache = async () => {
 
 export const fetchLogs = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/logs`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/logs`, {
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch logs');
+        if (!response.ok) throw new Error(`Failed to fetch logs (HTTP ${response.status})`);
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -92,7 +112,7 @@ export const fetchLogs = async () => {
 
 export const setBroadcast = async (message, type = 'info', targetVersion = null) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/broadcast`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/broadcast`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ message, type, targetVersion })
@@ -107,7 +127,7 @@ export const setBroadcast = async (message, type = 'info', targetVersion = null)
 
 export const setMaintenanceMode = async (enabled) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/maintenance`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/maintenance`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ maintenance: enabled })
@@ -122,7 +142,7 @@ export const setMaintenanceMode = async (enabled) => {
 
 export const registerUser = async (user) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/register`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/register`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify(user)
@@ -142,7 +162,7 @@ export const registerUser = async (user) => {
 
 export const promoteUserToAdmin = async (studentId) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/users/promote`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/users/promote`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ studentId })
@@ -161,7 +181,7 @@ export const promoteUserToAdmin = async (studentId) => {
 
 export const pruneOldLogs = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/maintenance/prune-logs`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/maintenance/prune-logs`, {
             method: 'POST',
             headers: getHeaders()
         });
@@ -176,7 +196,7 @@ export const pruneOldLogs = async () => {
 
 export const updateAiConfig = async (provider, model) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/system/ai-config`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/system/ai-config`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ provider, model })
@@ -191,7 +211,7 @@ export const updateAiConfig = async (provider, model) => {
 
 export const updateUiThemeConfig = async (defaultTheme, enabledThemes) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/system/ui-themes`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/system/ui-themes`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ defaultTheme, enabledThemes })
@@ -206,7 +226,7 @@ export const updateUiThemeConfig = async (defaultTheme, enabledThemes) => {
 
 export const fetchAiLogs = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/ai/logs`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/ai/logs`, {
             headers: getHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch AI logs');
@@ -219,7 +239,7 @@ export const fetchAiLogs = async () => {
 
 export const clearAiCache = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/ai/cache/clear`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/ai/cache/clear`, {
             method: 'POST',
             headers: getHeaders()
         });
@@ -233,7 +253,7 @@ export const clearAiCache = async () => {
 
 export const fetchAdminFeedback = async () => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/feedback`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback`, {
             headers: getHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch feedback entries');
@@ -246,7 +266,7 @@ export const fetchAdminFeedback = async () => {
 
 export const updateFeedbackStatus = async (feedbackId, status) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
             method: 'PUT',
             headers: getHeaders(),
             body: JSON.stringify({ status })
@@ -261,7 +281,7 @@ export const updateFeedbackStatus = async (feedbackId, status) => {
 
 export const deleteFeedback = async (feedbackId) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
             method: 'DELETE',
             headers: getHeaders()
         });
@@ -275,7 +295,7 @@ export const deleteFeedback = async (feedbackId) => {
 
 export const bulkUpdateFeedbackStatus = async (feedbackIds, status) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
             method: 'PUT',
             headers: getHeaders(),
             body: JSON.stringify({ ids: feedbackIds, status })
@@ -290,7 +310,7 @@ export const bulkUpdateFeedbackStatus = async (feedbackIds, status) => {
 
 export const bulkDeleteFeedback = async (feedbackIds) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
             method: 'DELETE',
             headers: getHeaders(),
             body: JSON.stringify({ ids: feedbackIds })
@@ -305,7 +325,7 @@ export const bulkDeleteFeedback = async (feedbackIds) => {
 
 export const toggleUserBlacklist = async (userId, blacklisted) => {
     try {
-        const response = await fetch(`${ADMIN_API_URL}/users/${userId}`, {
+        const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
             method: 'PUT',
             headers: getHeaders(),
             body: JSON.stringify({ blacklisted })

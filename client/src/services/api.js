@@ -152,7 +152,9 @@ const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
 export const fetchSystemStatus = async () => {
     try {
-        const response = await fetch(`${SYSTEM_API_URL}/system/status`);
+        const response = await fetch(`${SYSTEM_API_URL}/system/status`, {
+            signal: AbortSignal.timeout(10000)
+        });
         if (!response.ok) return null;
         return await response.json();
     } catch {
