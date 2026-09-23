@@ -46,7 +46,7 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'awards', icon: Award, label: 'Awards' },
     { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
-    { id: 'notes', icon: GraduationCap, label: 'Study', showNotification: true },
+    { id: 'notes', icon: GraduationCap, label: 'NoteFlow Lite', showNotification: true },
   ];
 
   if (isAdmin) {
