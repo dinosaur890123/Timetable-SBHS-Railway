@@ -385,7 +385,8 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                dashboardLayout: JSON.parse(localStorage.getItem('dashboard_layout') || 'null'),
+                dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
+                dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
                 transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
@@ -405,13 +406,15 @@ function App() {
         }
 
         savePreferencesTimeout.current = setTimeout(() => {
+            const isMobile = window.innerWidth < 768;
             const preferences = {
                 theme,
                 colorTheme,
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                dashboardLayout: layout,
+                dashboardLayoutMobile: isMobile ? layout : JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
+                dashboardLayoutDesktop: !isMobile ? layout : JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
                 transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
@@ -768,9 +771,12 @@ function App() {
                                 setUiThemePref(prefs.uiTheme || null);
                             }
                             
-                            // Apply dashboard layout
-                            if (prefs.dashboardLayout) {
-                                localStorage.setItem('dashboard_layout', JSON.stringify(prefs.dashboardLayout));
+                            // Apply dashboard layouts (separate for mobile/desktop)
+                            if (prefs.dashboardLayoutMobile) {
+                                localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
+                            }
+                            if (prefs.dashboardLayoutDesktop) {
+                                localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
                             }
                             
                             // Apply other widget-specific preferences

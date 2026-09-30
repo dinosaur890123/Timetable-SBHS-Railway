@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap, Sparkles,
     LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight, Award, Clipboard
@@ -618,7 +618,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
     // Fetch Award Scheme & Clipboard stats inside Home for the widgets
     const [awardPoints, setAwardPoints] = useState(0);
@@ -650,9 +649,15 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     }, [user]);
 
 
-    // Load active dashboard layout configuration from local storage
+    // Track screen size for responsive layout switching
+    const isMobileRef = useRef(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(isMobileRef.current);
+
+    // Load active dashboard layout configuration from local storage (separate for mobile/desktop)
     const [activeTiles, setActiveTiles] = useState(() => {
-        const saved = localStorage.getItem('dashboard_layout');
+        const isMobile = isMobileRef.current;
+        const storageKey = isMobile ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -662,12 +667,25 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 console.error("Failed to parse saved layout:", e);
             }
         }
+        // Fall back to checking the other layout key if current one doesn't exist
+        const fallbackKey = isMobile ? 'dashboard_layout_desktop' : 'dashboard_layout_mobile';
+        const fallbackSaved = localStorage.getItem(fallbackKey);
+        if (fallbackSaved) {
+            try {
+                const parsed = JSON.parse(fallbackSaved);
+                return parsed.filter(t => t.id !== 'greeting');
+            } catch (e) {
+                console.error("Failed to parse fallback layout:", e);
+            }
+        }
         return DEFAULT_LAYOUT;
     });
 
-    // Save dashboard layout on modification
+    // Save dashboard layout on modification (separate for mobile/desktop)
     useEffect(() => {
-        localStorage.setItem('dashboard_layout', JSON.stringify(activeTiles));
+        const isMobile = window.innerWidth < 768;
+        const storageKey = isMobile ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
+        localStorage.setItem(storageKey, JSON.stringify(activeTiles));
         if (onLayoutChange) {
             onLayoutChange(activeTiles);
         }
@@ -679,10 +697,34 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     }, []);
 
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        const handleResize = () => {
+            const newIsMobile = window.innerWidth < 768;
+            if (newIsMobile !== isMobileRef.current) {
+                // Save current layout before switching
+                const currentStorageKey = isMobileRef.current ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
+                localStorage.setItem(currentStorageKey, JSON.stringify(activeTiles));
+
+                // Load layout for new screen size
+                const newStorageKey = newIsMobile ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
+                const saved = localStorage.getItem(newStorageKey);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        setActiveTiles(parsed.filter(t => t.id !== 'greeting'));
+                    } catch (e) {
+                        console.error("Failed to parse saved layout on resize:", e);
+                    }
+                } else {
+                    setActiveTiles(DEFAULT_LAYOUT);
+                }
+
+                isMobileRef.current = newIsMobile;
+                setIsMobile(newIsMobile);
+            }
+        };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [activeTiles]);
 
     // Get time-based greeting
     const hour = currentTime.getHours();
