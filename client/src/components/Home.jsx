@@ -614,7 +614,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
 };
 
 // Main Home Component
-const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled, onLayoutChange }) => {
+const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled, onLayoutChange, dashboardLayoutMobile, dashboardLayoutDesktop }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
@@ -653,9 +653,14 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const isMobileRef = useRef(window.innerWidth < 768);
     const [isMobile, setIsMobile] = useState(isMobileRef.current);
 
-    // Load active dashboard layout configuration from local storage (separate for mobile/desktop)
+    // Load active dashboard layout configuration from props/local storage (separate for mobile/desktop)
     const [activeTiles, setActiveTiles] = useState(() => {
         const isMobile = isMobileRef.current;
+        const layoutFromProps = isMobile ? dashboardLayoutMobile : dashboardLayoutDesktop;
+        if (layoutFromProps) {
+            return layoutFromProps.filter(t => t.id !== 'greeting');
+        }
+
         const storageKey = isMobile ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
         const saved = localStorage.getItem(storageKey);
         if (saved) {
@@ -681,10 +686,17 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
         return DEFAULT_LAYOUT;
     });
 
+    // Update activeTiles when props change (from server sync)
+    useEffect(() => {
+        const layoutFromProps = isMobile ? dashboardLayoutMobile : dashboardLayoutDesktop;
+        if (layoutFromProps) {
+            setActiveTiles(layoutFromProps.filter(t => t.id !== 'greeting'));
+        }
+    }, [dashboardLayoutMobile, dashboardLayoutDesktop, isMobile]);
+
     // Save dashboard layout on modification (separate for mobile/desktop)
     useEffect(() => {
-        const isMobile = window.innerWidth < 768;
-        const storageKey = isMobile ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
+        const storageKey = isMobileRef.current ? 'dashboard_layout_mobile' : 'dashboard_layout_desktop';
         localStorage.setItem(storageKey, JSON.stringify(activeTiles));
         if (onLayoutChange) {
             onLayoutChange(activeTiles);

@@ -126,6 +126,24 @@ function App() {
     const [canvasLinks, setCanvasLinks] = useState({});
     const [sharedLinks, setSharedLinks] = useState({});
 
+    // Dashboard Layout State
+    const [dashboardLayoutMobile, setDashboardLayoutMobile] = useState(() => {
+        try {
+            const saved = localStorage.getItem('dashboard_layout_mobile');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
+    const [dashboardLayoutDesktop, setDashboardLayoutDesktop] = useState(() => {
+        try {
+            const saved = localStorage.getItem('dashboard_layout_desktop');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
+
     // Notification State
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -401,20 +419,26 @@ function App() {
     const handleLayoutChange = (layout) => {
         if (!user?.studentId || !syncPreferencesToServer.current) return;
 
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            setDashboardLayoutMobile(layout);
+        } else {
+            setDashboardLayoutDesktop(layout);
+        }
+
         if (savePreferencesTimeout.current) {
             clearTimeout(savePreferencesTimeout.current);
         }
 
         savePreferencesTimeout.current = setTimeout(() => {
-            const isMobile = window.innerWidth < 768;
             const preferences = {
                 theme,
                 colorTheme,
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                dashboardLayoutMobile: isMobile ? layout : JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
-                dashboardLayoutDesktop: !isMobile ? layout : JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
+                dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
+                dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
                 transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
@@ -774,9 +798,11 @@ function App() {
                             // Apply dashboard layouts (separate for mobile/desktop)
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
+                                setDashboardLayoutMobile(prefs.dashboardLayoutMobile);
                             }
                             if (prefs.dashboardLayoutDesktop) {
                                 localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
+                                setDashboardLayoutDesktop(prefs.dashboardLayoutDesktop);
                             }
                             
                             // Apply other widget-specific preferences
@@ -1153,6 +1179,8 @@ function App() {
                                 toggleTheme={toggleTheme}
                                 aiDisabled={aiDisabled}
                                 onLayoutChange={handleLayoutChange}
+                                dashboardLayoutMobile={dashboardLayoutMobile}
+                                dashboardLayoutDesktop={dashboardLayoutDesktop}
                             />
                         )}
 
