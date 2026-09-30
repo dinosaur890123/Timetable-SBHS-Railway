@@ -478,9 +478,9 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
                     Our Supporters
                 </div>
                 <div className="mt-4 space-y-3 text-left">
-                    <h3 className="text-xl font-semibold uppercase tracking-tight text-white">Synchron Pro Supporters</h3>
+                    <h3 className="text-xl font-semibold uppercase tracking-tight text-white">To our Synchron Pro supporters...</h3>
                     <p className="text-sm text-zinc-400 max-w-xl font-light leading-relaxed">
-                        Special thanks to the amazing individuals who support the development and hosting of Synchron.
+                        Kudos to you, the amazing individuals who support the development and hosting of Synchron.
                     </p>
                 </div>
             </div>
@@ -490,7 +490,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
         <div className="mt-40 pt-10 border-t border-[rgb(255_255_255/0.07)] flex flex-col md:flex-row items-center justify-between text-xs font-mono text-zinc-400">
             <div className="flex flex-col gap-1.5 text-center md:text-left">
               <p>© {new Date().getFullYear()} SYNCHRON. UNOFFICIALLY THE OFFICIAL CLIENT FOR SYDNEY BOYS HIGH SCHOOL.</p>
-              <p className="text-zinc-500">BUILT INDEPENDENTLY. ALL DATA SYNCHRONISED DIRECTLY VIA OFFICIAL STUDENT APIS.</p>
+              <p className="text-zinc-500">Built independently, but its your Synchrotron.</p>
             </div>
 
             <div className="flex items-center gap-6 mt-6 md:mt-0">
