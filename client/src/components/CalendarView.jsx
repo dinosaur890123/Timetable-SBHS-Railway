@@ -1,56 +1,53 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { format, addDays, startOfWeek, isSameWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, Sparkles, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react';
 import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const CalendarView = ({ user }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [termInfo, setTermInfo] = useState(null);
-  const [showCalendarPopup, setShowCalendarPopup] = useState(false);
-  const popupRef = useRef(null);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  // Load events for the month/week
+  // Load events for the current month
   useEffect(() => {
     const loadEvents = async () => {
       setLoading(true);
       try {
-        const start = startOfWeek(currentDate, { weekStartsOn: 0 });
-        const end = addDays(start, 6);
-        
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+        const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+
         const isPro = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-        
+
         const promises = [
-          fetchCalendarEvents(start, end),
-          fetchDateInfo(addDays(start, 3)).catch(() => null)
+          fetchCalendarEvents(calendarStart, calendarEnd),
+          fetchDateInfo(currentDate).catch(() => null)
         ];
-        
+
         if (isPro) {
           promises.push(fetchAssignments().catch(() => ({ success: true, assignments: [] })));
         }
 
         const [eventsData, daysData, assignmentsData] = await Promise.all(promises);
-        
+
         let mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
         const userAssignments = assignmentsData?.assignments || [];
 
         if (isPro && userAssignments.length > 0) {
           userAssignments.forEach(assignment => {
             const dueDate = new Date(assignment.dueDate);
-            // Bounds check
-            if (dueDate >= start && dueDate <= end) {
+            if (dueDate >= calendarStart && dueDate <= calendarEnd) {
               const assignmentDateStr = format(dueDate, 'yyyy-MM-dd');
-              
-              // Find matching dayGroup
+
               let dayGroup = mergedEvents.find(group => group.info?.date === assignmentDateStr);
               if (!dayGroup) {
-                // Determine day term/week info from calendar data or fallbacks
                 let term = 1;
                 let week = 1;
                 let weekType = 'A';
-                
+
                 const siblingGroup = mergedEvents.find(g => g.info?.term);
                 if (siblingGroup) {
                   term = siblingGroup.info.term;
@@ -79,7 +76,6 @@ const CalendarView = ({ user }) => {
                 mergedEvents.push(dayGroup);
               }
 
-              // Append assignment item
               dayGroup.items.push({
                 title: assignment.title,
                 type: 'assignment',
@@ -92,35 +88,10 @@ const CalendarView = ({ user }) => {
             }
           });
 
-          // Sort dayGroups chronologically
           mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
         }
-        
+
         setEvents(mergedEvents);
-
-        let currentTerm = null;
-        let currentWeek = null;
-
-        if (eventsData && eventsData.length > 0) {
-          const firstEventWithInfo = eventsData.find(d => d.info && d.info.term && d.info.week);
-          if (firstEventWithInfo) {
-            currentTerm = firstEventWithInfo.info.term;
-            currentWeek = firstEventWithInfo.info.week;
-          }
-        }
-
-        if (!currentTerm && daysData) {
-          const values = Object.values(daysData);
-          for (const val of values) {
-            if (val && typeof val === 'object' && val.term && val.week) {
-              currentTerm = val.term;
-              currentWeek = val.week;
-              break;
-            }
-          }
-        }
-
-        setTermInfo(currentTerm && currentWeek ? { term: currentTerm, week: currentWeek } : null);
       } catch (err) {
         console.error(err);
       } finally {
@@ -130,45 +101,33 @@ const CalendarView = ({ user }) => {
     loadEvents();
   }, [currentDate, user]);
 
-  // Close popup when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setShowCalendarPopup(false);
-      }
-    };
+  // Generate calendar grid
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
-    if (showCalendarPopup) {
-      document.addEventListener('mousedown', handleClickOutside);
+    const days = [];
+    const current = calendarStart;
+
+    while (current <= calendarEnd) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
     }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showCalendarPopup]);
-
-  // Generate weeks for calendar popup (show 12 weeks back and 12 weeks forward)
-  const weekOptions = useMemo(() => {
-    const weeks = [];
-    const currentWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
-    
-    for (let i = -12; i <= 12; i++) {
-      const weekStart = addDays(currentWeekStart, i * 7);
-      const weekEnd = addDays(weekStart, 6);
-      weeks.push({
-        start: weekStart,
-        end: weekEnd,
-        isCurrent: i === 0
-      });
-    }
-    
-    return weeks;
+    return days;
   }, [currentDate]);
 
-  const handleWeekSelect = (weekStart) => {
-    setCurrentDate(weekStart);
-    setShowCalendarPopup(false);
+  // Get events for a specific date
+  const getEventsForDate = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayGroup = events.find(group => group.info?.date === dateStr);
+    return dayGroup?.items || [];
   };
+
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
   const getEventTypeColor = (type) => {
     switch(type) {
@@ -187,206 +146,188 @@ const CalendarView = ({ user }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full">
+    <div className="max-w-7xl mx-auto w-full">
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+        className="flex items-center justify-between mb-6"
       >
         <div>
           <h2 className="text-3xl font-bold dark:text-white text-zinc-900">Synchron Calendar</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Events and important dates</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setCurrentDate(d => addDays(d, -7))}
+          <button
+            onClick={prevMonth}
             className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
-            aria-label="Previous week"
+            aria-label="Previous month"
           >
             <ChevronLeft size={20} />
           </button>
-          
-          <div className="relative" ref={popupRef}>
-            <button
-              onClick={() => setShowCalendarPopup(!showCalendarPopup)}
-              className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm min-w-[140px] hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between gap-2"
-            >
-              <span>{termInfo ? `Term ${termInfo.term} Week ${termInfo.week}` : format(currentDate, 'MMM yyyy')}</span>
-              <CalIcon size={14} className="text-zinc-500 dark:text-zinc-400" />
-            </button>
-            
-            <AnimatePresence>
-              {showCalendarPopup && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
-                >
-                  <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white">Select Week</span>
-                    <button
-                      onClick={() => setShowCalendarPopup(false)}
-                      className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
-                    >
-                      <X size={14} className="text-zinc-500 dark:text-zinc-400" />
-                    </button>
-                  </div>
-                  
-                  <div className="max-h-64 overflow-y-auto custom-scrollbar p-2">
-                    <div className="space-y-1">
-                      {weekOptions.map((week, idx) => {
-                        const weekStart = startOfWeek(week.start, { weekStartsOn: 0 });
-                        const isSelected = isSameWeek(week.start, currentDate, { weekStartsOn: 0 });
-                        
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleWeekSelect(week.start)}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                              isSelected
-                                ? 'bg-black text-white dark:bg-white dark:text-black'
-                                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span>{format(week.start, 'd MMM')} - {format(week.end, 'd MMM yyyy')}</span>
-                              {week.isCurrent && (
-                                <span className="text-[11px] font-extrabold uppercase">Current</span>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+
+          <div className="px-4 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm min-w-[140px] text-center">
+            {format(currentDate, 'MMMM yyyy')}
           </div>
-          
-          <button 
-            onClick={() => setCurrentDate(d => addDays(d, 7))}
+
+          <button
+            onClick={nextMonth}
             className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
-            aria-label="Next week"
+            aria-label="Next month"
           >
             <ChevronRight size={20} />
           </button>
         </div>
       </motion.div>
- 
-       {loading ? (
-         <motion.div 
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           className="text-center py-20"
-         >
-           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4 mx-auto">
-             <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-black dark:border-t-white animate-spin"></div>
-           </div>
-           <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
-         </motion.div>
-       ) : events.length === 0 ? (
-         <motion.div 
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           className="text-center py-16"
-         >
-           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4">
-             <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600" />
-           </div>
-           <p className="text-zinc-500 dark:text-zinc-400 font-medium">No events found</p>
-           <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">Try navigating to a different week</p>
-         </motion.div>
-       ) : (
-         <div className="space-y-3">
-           {events.map((dayGroup, idx) => (
-             <motion.div 
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: idx * 0.05 }}
-               key={dayGroup.info.date}
-               className="bg-white dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
-             >
-               {/* Day Header */}
-               <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 backdrop-blur-sm">
-                 <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                     <div className="flex flex-col">
-                       <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                         {format(new Date(dayGroup.info.date), 'EEEE')}
-                       </span>
-                       <span className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
-                         {format(new Date(dayGroup.info.date), 'd')}
-                       </span>
-                     </div>
-                     <div className="pl-4 border-l border-zinc-200 dark:border-zinc-800">
-                       <div className="text-xs font-extrabold uppercase tracking-wide text-zinc-900 dark:text-zinc-100 mb-1">
-                         Term {dayGroup.info.term}
-                       </div>
-                       <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                         Week {dayGroup.info.week}{dayGroup.info.weekType}
-                       </div>
-                     </div>
-                   </div>
-                   <div className="text-right hidden sm:block">
-                     <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                       {dayGroup.items.length} event{dayGroup.items.length !== 1 ? 's' : ''}
-                     </span>
-                   </div>
-                 </div>
-               </div>
 
-              {/* Events List */}
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                {dayGroup.items.map((event, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: (idx * 0.05) + (i * 0.03) }}
-                    className="px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Left Accent Bar */}
-                      <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
-                      
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
-                            {event.title}
-                          </h3>
-                          <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
-                            {event.type}
-                          </span>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                          {event.subject && (
-                            <span className="font-medium">{event.subject}</span>
-                          )}
-                          {event.subject && event.time && (
-                            <span className="hidden sm:inline opacity-50">•</span>
-                          )}
-                          {event.time && (
-                            <span className="flex items-center gap-1">
-                              <Clock size={12} />
-                              {event.time}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
+      {loading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-20"
+        >
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4 mx-auto">
+            <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-black dark:border-t-white animate-spin"></div>
+          </div>
+          <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
+        </motion.div>
+      ) : (
+        <div className="grid grid-cols-7 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+          {/* Day headers */}
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+            <div key={day} className="bg-zinc-50 dark:bg-zinc-900 p-3 text-center">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{day}</span>
+            </div>
           ))}
+
+          {/* Calendar days */}
+          {calendarDays.map((date, idx) => {
+            const dayEvents = getEventsForDate(date);
+            const isCurrentMonth = isSameMonth(date, currentDate);
+            const isTodayDate = isToday(date);
+            const isSelected = selectedDate && isSameDay(date, selectedDate);
+
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.01 }}
+                onClick={() => setSelectedDate(date)}
+                className={`bg-white dark:bg-zinc-950 min-h-[100px] p-2 cursor-pointer transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900 ${
+                  !isCurrentMonth ? 'opacity-40' : ''
+                } ${isSelected ? 'ring-2 ring-inset ring-accent' : ''}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-sm font-medium ${
+                    isTodayDate
+                      ? 'bg-black text-white dark:bg-white dark:text-black w-7 h-7 flex items-center justify-center rounded-full'
+                      : isCurrentMonth
+                        ? 'text-zinc-900 dark:text-zinc-100'
+                        : 'text-zinc-400 dark:text-zinc-600'
+                  }`}>
+                    {format(date, 'd')}
+                  </span>
+                </div>
+
+                {dayEvents.length > 0 && (
+                  <div className="space-y-1">
+                    {dayEvents.slice(0, 3).map((event, i) => (
+                      <div
+                        key={i}
+                        className={`text-[10px] px-1.5 py-0.5 rounded truncate border ${getEventTypeColor(event.type)}`}
+                        title={event.title}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 px-1.5">
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
+      )}
+
+      {/* Selected date detail view */}
+      {selectedDate && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 bg-white dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+        >
+          <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    {format(selectedDate, 'EEEE')}
+                  </span>
+                  <span className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
+                    {format(selectedDate, 'd MMMM yyyy')}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDate(null)}
+                className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <ChevronLeft size={20} className="text-zinc-500 dark:text-zinc-400" />
+              </button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+            {getEventsForDate(selectedDate).map((event, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className="px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
+                        {event.title}
+                      </h3>
+                      <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
+                        {event.type}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                      {event.subject && (
+                        <span className="font-medium">{event.subject}</span>
+                      )}
+                      {event.subject && event.time && (
+                        <span className="hidden sm:inline opacity-50">•</span>
+                      )}
+                      {event.time && (
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} />
+                          {event.time}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            {getEventsForDate(selectedDate).length === 0 && (
+              <div className="px-5 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                No events on this day
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
     </div>
   );
