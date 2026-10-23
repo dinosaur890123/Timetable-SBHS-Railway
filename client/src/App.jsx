@@ -3,6 +3,7 @@ import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
 import InterfaceThemePicker from './components/InterfaceThemePicker';
+import DefaultPagePicker from './components/DefaultPagePicker';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +46,7 @@ function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
+    const [defaultPagePreference, setDefaultPagePreference] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
@@ -403,6 +405,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
+                defaultPage: defaultPagePreference,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -437,6 +440,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
+                defaultPage: defaultPagePreference,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -622,6 +626,13 @@ function App() {
         savePreferences();
     }, [uiThemePref]);
 
+    // Save default page preference when it changes
+    useEffect(() => {
+        if (syncPreferencesToServer.current && defaultPagePreference) {
+            savePreferences();
+        }
+    }, [defaultPagePreference]);
+
     // Color Theme Config
     useEffect(() => {
         const root = window.document.documentElement;
@@ -773,7 +784,7 @@ function App() {
                     fetchUserPreferences(userData.studentId).then(prefData => {
                         if (prefData && prefData.preferences) {
                             const prefs = prefData.preferences;
-                            
+
                             // Apply theme preferences
                             if (prefs.theme) {
                                 setTheme(prefs.theme);
@@ -794,7 +805,13 @@ function App() {
                             if (prefs.uiTheme !== undefined) {
                                 setUiThemePref(prefs.uiTheme || null);
                             }
-                            
+
+                            // Apply default page preference
+                            if (prefs.defaultPage) {
+                                setDefaultPagePreference(prefs.defaultPage);
+                                setCurrentView(prefs.defaultPage);
+                            }
+
                             // Apply dashboard layouts (separate for mobile/desktop)
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
@@ -804,7 +821,7 @@ function App() {
                                 localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
                                 setDashboardLayoutDesktop(prefs.dashboardLayoutDesktop);
                             }
-                            
+
                             // Apply other widget-specific preferences
                             if (prefs.clockWidgetFormat) {
                                 localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
@@ -1603,6 +1620,16 @@ function App() {
                                                     onChange={setUiThemePref}
                                                 />
                                             )}
+
+                                            {/* Default Home Page Section */}
+                                            <DefaultPagePicker
+                                                defaultPage={defaultPagePreference}
+                                                isAdmin={user?.role === 'Admin'}
+                                                onChange={(pageId) => {
+                                                    setDefaultPagePreference(pageId);
+                                                    // Save will be triggered by the effect
+                                                }}
+                                            />
 
                                             {/* Color Themes Section */}
                                             <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
