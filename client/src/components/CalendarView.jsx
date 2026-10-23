@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X } from 'lucide-react';
 import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const CalendarView = ({ user }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -146,7 +146,7 @@ const CalendarView = ({ user }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <div className="max-w-7xl mx-auto w-full relative">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -255,80 +255,97 @@ const CalendarView = ({ user }) => {
         </div>
       )}
 
-      {/* Selected date detail view */}
-      {selectedDate && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 bg-white dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
-        >
-          <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    {format(selectedDate, 'EEEE')}
-                  </span>
-                  <span className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
-                    {format(selectedDate, 'd MMMM yyyy')}
-                  </span>
+      {/* Right side panel for selected date */}
+      <AnimatePresence>
+        {selectedDate && (
+          <>
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden"
+            >
+              <div className="h-full flex flex-col">
+                {/* Panel header */}
+                <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      {format(selectedDate, 'EEEE')}
+                    </span>
+                    <span className="text-2xl font-bold dark:text-white text-zinc-900 block mt-0.5">
+                      {format(selectedDate, 'd MMMM yyyy')}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                  >
+                    <X size={20} className="text-zinc-500 dark:text-zinc-400" />
+                  </button>
                 </div>
-              </div>
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                <ChevronLeft size={20} className="text-zinc-500 dark:text-zinc-400" />
-              </button>
-            </div>
-          </div>
 
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-            {getEventsForDate(selectedDate).map((event, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className="px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
-                        {event.title}
-                      </h3>
-                      <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
-                        {event.type}
-                      </span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                      {event.subject && (
-                        <span className="font-medium">{event.subject}</span>
-                      )}
-                      {event.subject && event.time && (
-                        <span className="hidden sm:inline opacity-50">•</span>
-                      )}
-                      {event.time && (
-                        <span className="flex items-center gap-1">
-                          <Clock size={12} />
-                          {event.time}
-                        </span>
-                      )}
-                    </div>
+                {/* Panel content */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                    {getEventsForDate(selectedDate).map((event, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
+                                {event.title}
+                              </h3>
+                              <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
+                                {event.type}
+                              </span>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                              {event.subject && (
+                                <span className="font-medium">{event.subject}</span>
+                              )}
+                              {event.subject && event.time && (
+                                <span className="hidden sm:inline opacity-50">•</span>
+                              )}
+                              {event.time && (
+                                <span className="flex items-center gap-1">
+                                  <Clock size={12} />
+                                  {event.time}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {getEventsForDate(selectedDate).length === 0 && (
+                      <div className="px-5 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                        No events on this day
+                      </div>
+                    )}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-            {getEventsForDate(selectedDate).length === 0 && (
-              <div className="px-5 py-8 text-center text-zinc-500 dark:text-zinc-400">
-                No events on this day
               </div>
-            )}
-          </div>
-        </motion.div>
-      )}
+            </motion.div>
+
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedDate(null)}
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

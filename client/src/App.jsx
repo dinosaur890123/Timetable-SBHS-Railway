@@ -44,10 +44,8 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [currentView, setCurrentView] = useState(() => {
-        const savedDefault = localStorage.getItem('default_page');
-        return savedDefault || 'home';
-    });
+    const [currentView, setCurrentView] = useState('home');
+    const [defaultPage, setDefaultPage] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
@@ -58,6 +56,13 @@ function App() {
             setCurrentView('admin');
         }
     }, []);
+
+    // Apply default page on mount (after user data loads)
+    useEffect(() => {
+        if (user && defaultPage) {
+            setCurrentView(defaultPage);
+        }
+    }, [user, defaultPage]);
 
     const [timetable, setTimetable] = useState(() => {
         try {
@@ -406,7 +411,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: currentView,
+                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -441,7 +446,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: currentView,
+                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -802,7 +807,7 @@ function App() {
 
                             // Apply default page preference
                             if (prefs.defaultPage) {
-                                localStorage.setItem('default_page', prefs.defaultPage);
+                                setDefaultPage(prefs.defaultPage);
                                 setCurrentView(prefs.defaultPage);
                             }
 
@@ -1622,10 +1627,9 @@ function App() {
                                                     <span className="text-[12px] text-zinc-500 mt-0.5">Choose which page to show when you log in. Syncs across all devices.</span>
                                                 </div>
                                                 <select
-                                                    value={currentView}
+                                                    value={defaultPage}
                                                     onChange={(e) => {
-                                                        localStorage.setItem('default_page', e.target.value);
-                                                        setCurrentView(e.target.value);
+                                                        setDefaultPage(e.target.value);
                                                         savePreferences();
                                                     }}
                                                     className="w-full px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
