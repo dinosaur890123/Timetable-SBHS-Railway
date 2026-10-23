@@ -3,7 +3,7 @@ import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
 import InterfaceThemePicker from './components/InterfaceThemePicker';
-import DefaultPagePicker from './components/DefaultPagePicker';
+import { Check, Home as HomeIcon, LayoutGrid, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, ShieldCheck } from 'lucide-react';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,8 +45,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [currentView, setCurrentView] = useState('home');
-    const [defaultPagePreference, setDefaultPagePreference] = useState('home');
+    const [currentView, setCurrentView] = useState(() => localStorage.getItem('default_page') || 'home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
@@ -405,7 +404,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: defaultPagePreference,
+                defaultPage: currentView,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -419,40 +418,11 @@ function App() {
         }, 1000); // Debounce for 1 second
     };
 
-    const handleLayoutChange = (layout) => {
-        if (!user?.studentId || !syncPreferencesToServer.current) return;
-
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-            setDashboardLayoutMobile(layout);
-        } else {
-            setDashboardLayoutDesktop(layout);
-        }
-
-        if (savePreferencesTimeout.current) {
-            clearTimeout(savePreferencesTimeout.current);
-        }
-
-        savePreferencesTimeout.current = setTimeout(() => {
-            const preferences = {
-                theme,
-                colorTheme,
-                darkStyle,
-                aiDisabled,
-                uiTheme: uiThemePref,
-                defaultPage: defaultPagePreference,
-                dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
-                dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
-                clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
-                scratchpadContent: localStorage.getItem('scratchpad_content') || '',
-                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
-            };
-
-            saveUserPreferences(user.studentId, preferences).catch(e => {
-                console.log("Failed to save preferences to server:", e);
-            });
-        }, 1000);
+    const handleLayoutChange = () => {
+        savePreferences();
     };
+
+
 
     const addToast = (title, message, type = 'success', persistent = false) => {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
@@ -625,13 +595,6 @@ function App() {
         else localStorage.removeItem('ui_theme');
         savePreferences();
     }, [uiThemePref]);
-
-    // Save default page preference when it changes
-    useEffect(() => {
-        if (syncPreferencesToServer.current && defaultPagePreference) {
-            savePreferences();
-        }
-    }, [defaultPagePreference]);
 
     // Color Theme Config
     useEffect(() => {
@@ -808,8 +771,8 @@ function App() {
 
                             // Apply default page preference
                             if (prefs.defaultPage) {
-                                setDefaultPagePreference(prefs.defaultPage);
                                 setCurrentView(prefs.defaultPage);
+                                localStorage.setItem('default_page', prefs.defaultPage);
                             }
 
                             // Apply dashboard layouts (separate for mobile/desktop)
@@ -1622,14 +1585,59 @@ function App() {
                                             )}
 
                                             {/* Default Home Page Section */}
-                                            <DefaultPagePicker
-                                                defaultPage={defaultPagePreference}
-                                                isAdmin={user?.role === 'Admin'}
-                                                onChange={(pageId) => {
-                                                    setDefaultPagePreference(pageId);
-                                                    // Save will be triggered by the effect
-                                                }}
-                                            />
+                                            <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Default Home Page</span>
+                                                    <span className="text-[12px] text-zinc-500 mt-0.5">Choose which page to show when you log in. This setting syncs across all your devices.</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {[
+                                                        { id: 'home', label: 'My Synchron', icon: HomeIcon, description: 'Your personalized dashboard with widgets' },
+                                                        { id: 'timetable', label: 'Timetable', icon: LayoutGrid, description: 'View your daily and weekly timetable' },
+                                                        { id: 'calendar', label: 'Calendar', icon: CalendarDays, description: 'See calendar events and important dates' },
+                                                        { id: 'notices', label: 'Notices', icon: Newspaper, description: 'Daily school notices and announcements' },
+                                                        { id: 'awards', label: 'Awards', icon: Award, description: 'Award scheme, badges, and achievements' },
+                                                        { id: 'clipboard', label: 'Clipboard', icon: Clipboard, description: 'Training sessions and activities' },
+                                                        { id: 'notes', label: 'NoteFlow Lite', icon: GraduationCap, description: 'Your personal study notes' },
+                                                        ...(user?.role === 'Admin' ? [{ id: 'admin', label: 'Admin Panel', icon: ShieldCheck, description: 'System administration and settings' }] : [])
+                                                    ].map(page => {
+                                                        const selected = currentView === page.id;
+                                                        const Icon = page.icon;
+                                                        return (
+                                                            <button
+                                                                key={page.id}
+                                                                onClick={() => {
+                                                                    setCurrentView(page.id);
+                                                                    localStorage.setItem('default_page', page.id);
+                                                                    savePreferences();
+                                                                }}
+                                                                aria-pressed={selected}
+                                                                className={`group p-3 rounded-xl border-2 text-left transition-all ${selected
+                                                                    ? 'border-accent bg-accent/[0.04]'
+                                                                    : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950'
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className={`p-2 rounded-lg ${selected ? 'bg-accent text-accent-contrast' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'}`}>
+                                                                            <Icon size={18} />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-xs font-bold text-zinc-900 dark:text-white">{page.label}</span>
+                                                                            </div>
+                                                                            <p className="text-[11px] text-zinc-500 mt-1 leading-snug">{page.description}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className={`mt-1 w-4 h-4 shrink-0 rounded-full grid place-items-center transition ${selected ? 'bg-accent text-accent-contrast' : 'border border-zinc-300 dark:border-zinc-700'}`}>
+                                                                        {selected && <Check size={10} strokeWidth={3} />}
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
                                             {/* Color Themes Section */}
                                             <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
