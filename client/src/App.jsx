@@ -44,19 +44,17 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [currentView, setCurrentView] = useState(() => {
-        const saved = localStorage.getItem('default_page');
-        console.log('Initial currentView from localStorage:', saved);
-        return saved || 'home';
-    });
-    const [defaultPage, setDefaultPage] = useState(() => {
-        const saved = localStorage.getItem('default_page');
-        console.log('Initial defaultPage from localStorage:', saved);
-        return saved || 'home';
-    });
+    const [currentView, setCurrentView] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
+
+    useEffect(() => {
+        // Check if user is navigating exactly to /admin
+        if (window.location.pathname === '/admin') {
+            setCurrentView('admin');
+        }
+    }, []);
 
     const [timetable, setTimetable] = useState(() => {
         try {
@@ -405,7 +403,6 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -413,11 +410,8 @@ function App() {
                 transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
             };
 
-            console.log('Saving preferences to server:', preferences);
-            saveUserPreferences(user.studentId, preferences).then(res => {
-                console.log('Preferences saved successfully:', res);
-            }).catch(e => {
-                console.error("Failed to save preferences to server:", e);
+            saveUserPreferences(user.studentId, preferences).catch(e => {
+                console.log("Failed to save preferences to server:", e);
             });
         }, 1000); // Debounce for 1 second
     };
@@ -443,7 +437,6 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -780,7 +773,7 @@ function App() {
                     fetchUserPreferences(userData.studentId).then(prefData => {
                         if (prefData && prefData.preferences) {
                             const prefs = prefData.preferences;
-
+                            
                             // Apply theme preferences
                             if (prefs.theme) {
                                 setTheme(prefs.theme);
@@ -801,19 +794,7 @@ function App() {
                             if (prefs.uiTheme !== undefined) {
                                 setUiThemePref(prefs.uiTheme || null);
                             }
-
-                            // Apply default page preference
-                            if (prefs.defaultPage) {
-                                localStorage.setItem('default_page', prefs.defaultPage);
-                                setDefaultPage(prefs.defaultPage);
-                            } else {
-                                // If no default page in DB, use localStorage
-                                const localDefault = localStorage.getItem('default_page');
-                                if (localDefault) {
-                                    setDefaultPage(localDefault);
-                                }
-                            }
-
+                            
                             // Apply dashboard layouts (separate for mobile/desktop)
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
@@ -823,7 +804,7 @@ function App() {
                                 localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
                                 setDashboardLayoutDesktop(prefs.dashboardLayoutDesktop);
                             }
-
+                            
                             // Apply other widget-specific preferences
                             if (prefs.clockWidgetFormat) {
                                 localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
@@ -1622,33 +1603,6 @@ function App() {
                                                     onChange={setUiThemePref}
                                                 />
                                             )}
-
-                                            {/* Default Home Page Section */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Default Home Page</span>
-                                                    <span className="text-[12px] text-zinc-500 mt-0.5">Choose which page to show when you log in. Syncs across all devices.</span>
-                                                </div>
-                                                <select
-                                                    value={defaultPage}
-                                                    onChange={(e) => {
-                                                        console.log('Changing defaultPage to:', e.target.value);
-                                                        localStorage.setItem('default_page', e.target.value);
-                                                        setDefaultPage(e.target.value);
-                                                        savePreferences();
-                                                    }}
-                                                    className="w-full px-3 py-2 text-sm bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
-                                                >
-                                                    <option value="home">My Synchron (Dashboard)</option>
-                                                    <option value="timetable">Timetable</option>
-                                                    <option value="calendar">Calendar</option>
-                                                    <option value="notices">Notices</option>
-                                                    <option value="awards">Awards</option>
-                                                    <option value="clipboard">Clipboard</option>
-                                                    <option value="notes">NoteFlow Lite</option>
-                                                    {user?.role === 'Admin' && <option value="admin">Admin Panel</option>}
-                                                </select>
-                                            </div>
 
                                             {/* Color Themes Section */}
                                             <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
