@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Clock, BookOpen, Bell, ArrowRight, CheckCircle, Calendar as CalendarIcon, Zap, Sparkles,
-    LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight, Award, Clipboard, ExternalLink
+    LayoutGrid, RotateCcw, Check, Plus, X, ChevronLeft, ChevronRight, Award, Clipboard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -618,7 +618,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
-    const [canvasLinks, setCanvasLinks] = useState({});
 
     // Fetch Award Scheme & Clipboard stats inside Home for the widgets
     const [awardPoints, setAwardPoints] = useState(0);
@@ -629,18 +628,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
     const handlePreferenceChange = () => {
         if (onLayoutChange) onLayoutChange();
     };
-
-    // Load canvas links from localStorage
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('canvas_links');
-            if (saved) {
-                setCanvasLinks(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.warn('Failed to load Canvas links:', e);
-        }
-    }, []);
 
     useEffect(() => {
         if (!user?.studentId) return;
@@ -1147,8 +1134,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                 );
             }
             case 'current_class':
-                const currentClassCanvasLink = currentClass?.title ? canvasLinks[currentClass.title]?.url : null;
-                const currentClassContent = (
+                return (
                     <div className="bg-white dark:bg-zinc-950 p-6 md:p-8 border border-zinc-200 dark:border-zinc-850 relative overflow-hidden group h-full flex flex-col justify-center">
                         <div className="hidden md:block absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none">
                             <Clock size={120} />
@@ -1192,9 +1178,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                                 Room Change
                                             </span>
                                         )}
-                                        {currentClassCanvasLink && (
-                                            <ExternalLink size={16} className="text-zinc-400" />
-                                        )}
                                     </div>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
                                         <span className="flex items-center gap-1.5"><Clock size={16} /> {currentClass.time} - {currentClass.endTime || '??'}</span>
@@ -1222,21 +1205,6 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                         )}
                     </div>
                 );
-
-                if (currentClassCanvasLink) {
-                    return (
-                        <a
-                            href={currentClassCanvasLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block h-full"
-                            aria-label={`Open ${currentClass.title} in Canvas`}
-                        >
-                            {currentClassContent}
-                        </a>
-                    );
-                }
-                return currentClassContent;
             case 'next_class':
                 return (
                     <div className="bg-white dark:bg-zinc-950 p-6 border border-zinc-200 dark:border-zinc-850 h-full flex flex-col justify-between">

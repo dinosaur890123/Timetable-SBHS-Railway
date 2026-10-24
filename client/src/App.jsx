@@ -30,7 +30,10 @@ import {
     fetchAiBriefing,
     fetchTimetableQa,
     fetchUserPreferences,
-    saveUserPreferences
+    saveUserPreferences,
+    fetchCanvasLinks,
+    saveCanvasLinks as saveCanvasLinksApi,
+    fetchSharedCanvasLink
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
@@ -121,6 +124,7 @@ function App() {
 
     // Canvas Links State (for timetable clickable links)
     const [canvasLinks, setCanvasLinks] = useState({});
+    const [sharedLinks, setSharedLinks] = useState({});
 
     // Dashboard Layout State
     const [dashboardLayoutMobile, setDashboardLayoutMobile] = useState(() => {
@@ -150,24 +154,57 @@ function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [usingCachedData, setUsingCachedData] = useState(false);
 
-    // Load canvas links from localStorage on mount
+    // Load canvas links on mount
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('canvas_links');
-            if (saved) {
-                const parsed = JSON.parse(saved);
+        if (!user?.studentId) return;
+
+        const loadCanvasLinks = async () => {
+            const data = await fetchCanvasLinks();
+            if (data && data.links) {
                 const linksMap = {};
-                Object.keys(parsed).forEach(className => {
-                    linksMap[className] = parsed[className].url;
+                data.links.forEach(link => {
+                    linksMap[link.className] = link.canvasUrl;
                 });
                 setCanvasLinks(linksMap);
             }
-        } catch (e) {
-            console.warn('Failed to load Canvas links:', e);
+        };
+
+        loadCanvasLinks();
+    }, [user?.studentId]);
+
+    // Fetch shared canvas links for classes that don't have user's link
+    useEffect(() => {
+        // Handle different possible data structures for completeTimetable
+        let periods = null;
+        
+        if (completeTimetable?.timetable?.[0]?.periods) {
+            periods = completeTimetable.timetable[0].periods;
+        } else if (completeTimetable?.timetable?.periods) {
+            periods = completeTimetable.timetable.periods;
+        } else if (completeTimetable?.periods) {
+            periods = completeTimetable.periods;
         }
-    }, []);
+        
+        if (!periods) return;
 
+        const fetchSharedLinks = async () => {
+            const shared = {};
 
+            for (const [bellId, period] of Object.entries(periods)) {
+                if (!period.title || period.title === 'Free Period' || period.title.toLowerCase().includes('roll call')) continue;
+                if (canvasLinks[period.title]) continue;
+
+                const data = await fetchSharedCanvasLink(period.title);
+                if (data && data.link && data.link.canvasUrl) {
+                    shared[period.title] = data.link.canvasUrl;
+                }
+            }
+
+            setSharedLinks(shared);
+        };
+
+        fetchSharedLinks();
+    }, [completeTimetable, canvasLinks]);
 
     // Fetch unread notification count periodically
     useEffect(() => {

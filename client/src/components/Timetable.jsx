@@ -8,29 +8,10 @@ import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, canvasLinks = {}, sharedLinks = {} }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
-    const [localCanvasLinks, setLocalCanvasLinks] = useState({});
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 15000);
         return () => clearInterval(timer);
-    }, []);
-
-    // Load local canvas links from localStorage
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('canvas_links');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Convert from { className: { url } } to { className: url }
-                const linksMap = {};
-                Object.keys(parsed).forEach(className => {
-                    linksMap[className] = parsed[className].url;
-                });
-                setLocalCanvasLinks(linksMap);
-            }
-        } catch (e) {
-            console.warn('Failed to load Canvas links:', e);
-        }
     }, []);
 
     if (!timetableData || !timetableData.bells) {
@@ -315,7 +296,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 currentMinutes={currentMinutes}
                                 startMinutes={data.startMin}
                                 endMinutes={data.endMin}
-                                canvasLink={localCanvasLinks[data.periodInfo.title] || canvasLinks[data.periodInfo.title] || sharedLinks[data.periodInfo.title] || null}
+                                canvasLink={canvasLinks[data.periodInfo.title] || sharedLinks[data.periodInfo.title] || null}
                             />
                         ))}
                         {/* End of Day divider */}
