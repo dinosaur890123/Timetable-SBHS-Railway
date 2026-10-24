@@ -236,7 +236,7 @@ export const ModernTopbar = ({
 };
 
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
-export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette, defaultPage }) => {
+export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
@@ -245,20 +245,13 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
         { id: 'notes', icon: GraduationCap, label: 'Study', badge: notificationCount }
     ];
 
-    const isItemActive = (itemId) => {
-        if (itemId === 'home') {
-            return currentView === 'home';
-        }
-        return currentView === itemId;
-    };
-
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
 
     return (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
             <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/80 backdrop-blur-xl m-shadow-lg">
                 {items.map(({ id, icon: Icon, label, badge }) => {
-                    const active = isItemActive(id);
+                    const active = currentView === id;
                     return (
                         <button
                             key={id}

@@ -44,22 +44,19 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [currentView, setCurrentView] = useState('home');
-    const [defaultPage, setDefaultPage] = useState(() => localStorage.getItem('default_page') || 'home');
+    const [currentView, setCurrentView] = useState(() => {
+        const saved = localStorage.getItem('default_page');
+        console.log('Initial currentView from localStorage:', saved);
+        return saved || 'home';
+    });
+    const [defaultPage, setDefaultPage] = useState(() => {
+        const saved = localStorage.getItem('default_page');
+        console.log('Initial defaultPage from localStorage:', saved);
+        return saved || 'home';
+    });
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
-
-    // Map default page to actual view component
-    const getHomeView = () => {
-        if (defaultPage === 'home') return 'home';
-        return defaultPage;
-    };
-
-    const actualView = currentView === 'home' ? getHomeView() : currentView;
-
-    // For navigation: highlight 'home' when currentView is 'home', highlight other views when currentView matches them
-    const navView = currentView;
 
     const [timetable, setTimetable] = useState(() => {
         try {
@@ -1062,9 +1059,9 @@ function App() {
             ? 'flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100'
             : 'flex min-h-screen bg-zinc-50 dark:bg-black m-ambient text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
             {isModern ? (
-                <ModernSidebar currentView={navView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} defaultPage={defaultPage} />
+                <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
             ) : (
-                <Navigation currentView={navView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} defaultPage={defaultPage} />
+                <Navigation currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
             )}
 
             <main className={isModern
@@ -1094,7 +1091,7 @@ function App() {
                         <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
                             {currentView}
                         </h1>
-                        {actualView === 'timetable' && (
+                        {currentView === 'timetable' && (
                             <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
                                 <button
                                     onClick={() => setTimetableViewMode('daily')}
@@ -1189,7 +1186,7 @@ function App() {
                     }>
 
                         {/* HOME VIEW */}
-                        {actualView === 'home' && (
+                        {currentView === 'home' && (
                             <Home
                                 user={user}
                                 timetableData={timetable}
@@ -1207,7 +1204,7 @@ function App() {
                         )}
 
                         {/* TIMETABLE VIEW */}
-                        {actualView === 'timetable' && (
+                        {currentView === 'timetable' && (
                             <div className="space-y-3">
                                 {/* Date Controls & AI Button Row - only show in daily view */}
                                 {timetableViewMode === 'daily' && (
@@ -1333,21 +1330,21 @@ function App() {
                         )}
 
                         {/* CALENDAR VIEW */}
-                        {actualView === 'calendar' && <CalendarView user={user} />}
+                        {currentView === 'calendar' && <CalendarView user={user} />}
 
                         {/* NOTICES VIEW */}
-                        {actualView === 'notices' && (
+                        {currentView === 'notices' && (
                             <DailyNotices notices={notices} aiBriefing={aiBriefing} user={user} />
                         )}
 
                         {/* AWARD SCHEME VIEW */}
-                        {actualView === 'awards' && <AwardSchemeView user={user} />}
+                        {currentView === 'awards' && <AwardSchemeView user={user} />}
 
                         {/* CLIPBOARD VIEW */}
-                        {actualView === 'clipboard' && <ClipboardView user={user} />}
+                        {currentView === 'clipboard' && <ClipboardView user={user} />}
 
                         {/* NOTES VIEW */}
-                        {actualView === 'notes' && <NotesView user={user} timetableData={timetable} setView={setCurrentView} />}
+                        {currentView === 'notes' && <NotesView user={user} timetableData={timetable} setView={setCurrentView} />}
 
                         {/* FEEDBACK VIEW */}
                         {currentView === 'feedback' && (
@@ -1360,7 +1357,7 @@ function App() {
                         )}
 
                         {/* ADMIN VIEW */}
-                        {actualView === 'admin' && <AdminPanel user={user} />}
+                        {currentView === 'admin' && <AdminPanel user={user} />}
 
                         {/* PROFILE VIEW (Simple placeholder) */}
                         {currentView === 'profile' && (() => {
@@ -1635,6 +1632,7 @@ function App() {
                                                 <select
                                                     value={defaultPage}
                                                     onChange={(e) => {
+                                                        console.log('Changing defaultPage to:', e.target.value);
                                                         localStorage.setItem('default_page', e.target.value);
                                                         setDefaultPage(e.target.value);
                                                         savePreferences();
@@ -1882,7 +1880,6 @@ function App() {
                         setView={setCurrentView}
                         notificationCount={unreadNotificationCount}
                         onOpenPalette={() => setPaletteOpen(true)}
-                        defaultPage={defaultPage}
                     />
                     <CommandPalette
                         open={paletteOpen}

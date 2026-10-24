@@ -23,7 +23,7 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notific
   </button>
 );
 
-const Navigation = ({ currentView, setView, user, notificationCount, defaultPage }) => {
+const Navigation = ({ currentView, setView, user, notificationCount }) => {
   const isAdmin = user && user.role === 'Admin';
   const [useFixedHeight, setUseFixedHeight] = useState(true);
 
@@ -53,14 +53,6 @@ const Navigation = ({ currentView, setView, user, notificationCount, defaultPage
     items.push({ id: 'admin', icon: ShieldCheck, label: 'Admin Panel' });
   }
 
-  // Check if a nav item is active - 'home' is active if currentView is 'home' OR if defaultPage matches and currentView is home
-  const isItemActive = (itemId) => {
-    if (itemId === 'home') {
-      return currentView === 'home';
-    }
-    return currentView === itemId;
-  };
-
   return (
     <nav className="fixed bottom-0 left-0 w-full md:sticky md:top-0 md:w-24 bg-white dark:bg-zinc-950 border-t md:border-r border-zinc-200 dark:border-zinc-900 md:h-screen z-40">
        <div className="flex md:flex-col justify-around md:justify-start gap-1 md:gap-3 p-2 md:p-3 h-full w-full">
@@ -71,11 +63,11 @@ const Navigation = ({ currentView, setView, user, notificationCount, defaultPage
          </div>
 
          {items.map(item => (
-            <NavItem
+            <NavItem 
                 key={item.id}
                 icon={item.icon}
                 label={item.label}
-                isActive={isItemActive(item.id)}
+                isActive={currentView === item.id}
                 onClick={() => setView(item.id)}
                 isSpecialAdmin={item.id === 'admin'}
                 notificationCount={item.showNotification ? notificationCount : 0}
