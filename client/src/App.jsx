@@ -45,23 +45,25 @@ function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
-    const [defaultPage, setDefaultPage] = useState(() => localStorage.getItem('default_page') || 'home');
+    const [defaultPage, setDefaultPage] = useState('home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
+    const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
     useEffect(() => {
         // Check if user is navigating exactly to /admin
         if (window.location.pathname === '/admin') {
             setCurrentView('admin');
-        } else {
-            // Set initial view from saved default
-            const savedDefault = localStorage.getItem('default_page');
-            if (savedDefault) {
-                setCurrentView(savedDefault);
-            }
         }
     }, []);
+
+    // Apply default page after preferences are loaded
+    useEffect(() => {
+        if (preferencesLoaded && defaultPage && window.location.pathname !== '/admin') {
+            setCurrentView(defaultPage);
+        }
+    }, [preferencesLoaded, defaultPage]);
 
     const [timetable, setTimetable] = useState(() => {
         try {
@@ -410,7 +412,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: currentView,
+                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -418,8 +420,11 @@ function App() {
                 transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
             };
 
-            saveUserPreferences(user.studentId, preferences).catch(e => {
-                console.log("Failed to save preferences to server:", e);
+            console.log('Saving preferences to server:', preferences);
+            saveUserPreferences(user.studentId, preferences).then(res => {
+                console.log('Preferences saved successfully:', res);
+            }).catch(e => {
+                console.error("Failed to save preferences to server:", e);
             });
         }, 1000); // Debounce for 1 second
     };
@@ -445,7 +450,7 @@ function App() {
                 darkStyle,
                 aiDisabled,
                 uiTheme: uiThemePref,
-                defaultPage: currentView,
+                defaultPage: defaultPage,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -808,7 +813,6 @@ function App() {
                             if (prefs.defaultPage) {
                                 localStorage.setItem('default_page', prefs.defaultPage);
                                 setDefaultPage(prefs.defaultPage);
-                                setCurrentView(prefs.defaultPage);
                             }
 
                             // Apply dashboard layouts (separate for mobile/desktop)
@@ -834,9 +838,11 @@ function App() {
                         }
                         // Enable server sync after initial load
                         syncPreferencesToServer.current = true;
+                        setPreferencesLoaded(true);
                     }).catch(e => {
                         console.log("Failed to load user preferences", e);
                         // Still enable sync even if load failed
+                        setPreferencesLoaded(true);
                         syncPreferencesToServer.current = true;
                     });
                 }
