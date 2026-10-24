@@ -59,10 +59,18 @@ const BrandMark = ({ className = '' }) => (
     </div>
 );
 
-export const ModernSidebar = ({ currentView, setView, user, notificationCount }) => {
+export const ModernSidebar = ({ currentView, setView, user, notificationCount, defaultPage }) => {
     const groups = buildNavGroups(user?.role === 'Admin');
     const plan = [isProUser(user) ? 'Pro' : 'Free', user?.role === 'Admin' ? 'Admin' : (user?.yearGroup ? `Year ${user.yearGroup}` : null)]
         .filter(Boolean).join(' · ');
+
+    // Check if nav item is active
+    const isItemActive = (itemId) => {
+        if (itemId === 'home') {
+            return currentView === 'home';
+        }
+        return currentView === itemId;
+    };
 
     return (
         <aside className="hidden md:flex w-60 shrink-0 flex-col h-[100dvh] sticky top-0 px-3 pt-4 pb-3 select-none">
@@ -79,7 +87,7 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount })
                         </div>
                         <ul className="space-y-0.5">
                             {group.items.map(({ id, icon: Icon, badge }) => {
-                                const active = currentView === id;
+                                const active = isItemActive(id);
                                 const count = badge === 'notifications' ? notificationCount : 0;
                                 return (
                                     <li key={id}>
@@ -228,7 +236,7 @@ export const ModernTopbar = ({
 };
 
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
-export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette }) => {
+export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette, defaultPage }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
@@ -237,13 +245,20 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
         { id: 'notes', icon: GraduationCap, label: 'Study', badge: notificationCount }
     ];
 
+    const isItemActive = (itemId) => {
+        if (itemId === 'home') {
+            return currentView === 'home';
+        }
+        return currentView === itemId;
+    };
+
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
 
     return (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
             <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/80 backdrop-blur-xl m-shadow-lg">
                 {items.map(({ id, icon: Icon, label, badge }) => {
-                    const active = currentView === id;
+                    const active = isItemActive(id);
                     return (
                         <button
                             key={id}
