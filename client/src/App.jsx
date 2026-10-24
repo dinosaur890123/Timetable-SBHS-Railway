@@ -44,26 +44,14 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangl
 function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [currentView, setCurrentView] = useState('home');
-    const [defaultPage, setDefaultPage] = useState('home');
+    const [currentView, setCurrentView] = useState(() => {
+        const saved = localStorage.getItem('default_page');
+        return saved || 'home';
+    });
+    const [defaultPage, setDefaultPage] = useState(() => localStorage.getItem('default_page') || 'home');
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
-    const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-
-    useEffect(() => {
-        // Check if user is navigating exactly to /admin
-        if (window.location.pathname === '/admin') {
-            setCurrentView('admin');
-        }
-    }, []);
-
-    // Apply default page after preferences are loaded
-    useEffect(() => {
-        if (preferencesLoaded && defaultPage && window.location.pathname !== '/admin') {
-            setCurrentView(defaultPage);
-        }
-    }, [preferencesLoaded, defaultPage]);
 
     const [timetable, setTimetable] = useState(() => {
         try {
@@ -813,6 +801,12 @@ function App() {
                             if (prefs.defaultPage) {
                                 localStorage.setItem('default_page', prefs.defaultPage);
                                 setDefaultPage(prefs.defaultPage);
+                            } else {
+                                // If no default page in DB, use localStorage
+                                const localDefault = localStorage.getItem('default_page');
+                                if (localDefault) {
+                                    setDefaultPage(localDefault);
+                                }
                             }
 
                             // Apply dashboard layouts (separate for mobile/desktop)
@@ -838,11 +832,9 @@ function App() {
                         }
                         // Enable server sync after initial load
                         syncPreferencesToServer.current = true;
-                        setPreferencesLoaded(true);
                     }).catch(e => {
                         console.log("Failed to load user preferences", e);
                         // Still enable sync even if load failed
-                        setPreferencesLoaded(true);
                         syncPreferencesToServer.current = true;
                     });
                 }
