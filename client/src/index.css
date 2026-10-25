@@ -157,6 +157,14 @@ html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black\/50 {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Entrance animations are decorative: skip them for reduced-motion users in every interface
+   (modern.css only covers data-ui="modern"). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation: none;
+  }
+}
+
 @media (orientation: landscape) {
   .admin-tabs-container {
     display: flex !important;

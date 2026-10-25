@@ -1,3 +1,5 @@
+import tailwindcssAnimate from 'tailwindcss-animate';
+
 /** @type {import('tailwindcss').Config} */
 
 // Neutral scale is driven by CSS variables (see index.css) so interface themes
@@ -53,5 +55,6 @@ export default {
       }
     },
   },
-  plugins: [],
+  // Provides the animate-in / fade-in / slide-in-from-* / zoom-in-* entrance utilities used across views.
+  plugins: [tailwindcssAnimate],
 }

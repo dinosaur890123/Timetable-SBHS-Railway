@@ -1560,7 +1560,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
 
             {/* Inactive Available Widgets Panel (Drawer) */}
             {isEditing && (
-                <div className="p-6 bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-bottom duration-300">
+                <div className="p-6 bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex items-center justify-between mb-5 border-b border-zinc-200 dark:border-zinc-800 pb-3 select-none">
                         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-900 dark:text-white flex items-center gap-2">
                             <Plus size={16} />
