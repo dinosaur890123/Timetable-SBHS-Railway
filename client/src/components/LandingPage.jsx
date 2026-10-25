@@ -1,513 +1,454 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  ArrowRight, 
-  Calendar, 
-  Clock, 
-  Shield, 
-  Award, 
-  LayoutDashboard, 
-  AlertOctagon, 
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import {
+  ArrowRight,
+  AlertOctagon,
   X,
-  Terminal,
-  Activity,
-  Cpu,
+  Sun,
+  Moon,
   Lock,
-  Heart
+  Info,
+  Heart,
+  Clock,
+  Newspaper,
+  CalendarDays,
+  MapPin,
+  User as UserIcon
 } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
+import { BrandMark } from './modern/ModernShell';
 
-const LandingPage = ({ authError, clearAuthError, supporters }) => {
-  // State for mock timetable widget interaction
-  const [mockActiveTab, setMockActiveTab] = useState('timetable');
-  const [currentTime, setCurrentTime] = useState('');
-  
-  // Easter egg state for icon toggle
-  const [iconClickCount, setIconClickCount] = useState(0);
-  const [useOriginalIcon, setUseOriginalIcon] = useState(false);
+// Mirrors the colour theme picker in Settings; swatch values match the accents in index.css.
+const COLOR_THEMES = [
+  { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
+  { id: 'mint', name: 'Mint', hsl: '150 84% 37%' },
+  { id: 'teal', name: 'Teal', hsl: '174 84% 41%' },
+  { id: 'sky', name: 'Sky', hsl: '199 89% 48%' },
+  { id: 'blue', name: 'Blue', hsl: '217 91% 60%' },
+  { id: 'violet', name: 'Violet', hsl: '271 91% 65%' },
+  { id: 'rose', name: 'Rose', hsl: '349 86% 60%' },
+  { id: 'orange', name: 'Orange', hsl: '24 95% 53%' },
+  { id: 'amber', name: 'Amber', hsl: '38 92% 50%' }
+];
+
+const FEATURES = [
+  {
+    icon: Clock,
+    title: 'Live timetable',
+    body: 'Room changes and substitutes flagged the moment they happen, with a countdown to the next bell.'
+  },
+  {
+    icon: Newspaper,
+    title: 'Notices that matter',
+    body: 'Daily notices filtered to your year group, so the important ones actually stand out.'
+  },
+  {
+    icon: CalendarDays,
+    title: 'Everything else, too',
+    body: 'Calendar, Award Scheme points and study tools, in one calm, fast place.'
+  }
+];
+
+const ease = [0.2, 0.8, 0.2, 1];
+const stagger = { show: { transition: { staggerChildren: 0.07 } } };
+const rise = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease } }
+};
+
+
+// One row of the preview, styled after PeriodCard.
+const PreviewPeriod = ({ time, bell, title, teacher, room, state, change, note, progress, minutesLeft }) => {
+  const isCurrent = state === 'current';
+  const isPast = state === 'past';
+  const strip = change === 'room' ? 'bg-amber-500' : change === 'sub' ? 'bg-blue-500' : null;
+
+  return (
+    <div className={`flex items-center gap-3 ${isPast ? 'opacity-45' : ''}`}>
+      <span className={`w-11 shrink-0 text-right text-[13px] font-medium tabular-nums ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-400'}`}>
+        {time}
+      </span>
+
+      <div className={`relative flex-1 min-w-0 overflow-hidden rounded-xl border px-3 py-2.5 ${isCurrent ? 'border-accent bg-m-card' : 'border-m-line bg-m-panel'}`}>
+        {isCurrent && (
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0 w-full origin-left bg-accent/[0.08] transition-transform duration-1000 ease-linear"
+            style={{ transform: `scaleX(${progress})` }}
+          />
+        )}
+        {strip && !isCurrent && <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${strip}`} />}
+
+        <div className="relative flex items-center gap-3">
+          <span className={`grid place-items-center w-7 h-7 shrink-0 rounded-lg text-xs font-semibold ${isCurrent ? 'bg-accent text-accent-contrast' : 'bg-zinc-900/[0.05] dark:bg-white/[0.06] text-zinc-500 dark:text-zinc-400'}`}>
+            {bell}
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{title}</span>
+              {isCurrent && (
+                <span className="shrink-0 text-xs font-medium tabular-nums text-accent">{minutesLeft}m left</span>
+              )}
+              {state === 'next' && (
+                <span className="shrink-0 rounded-md bg-zinc-900/[0.05] dark:bg-white/[0.07] px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+                  Up next
+                </span>
+              )}
+            </div>
+            <div className="mt-0.5 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 min-w-0">
+              <span className={`inline-flex items-center gap-1 min-w-0 ${change === 'sub' ? 'text-blue-600 dark:text-blue-400 font-medium' : ''}`}>
+                <UserIcon size={11} className="shrink-0" />
+                <span className="truncate">{teacher}</span>
+              </span>
+              <span className={`inline-flex items-center gap-1 shrink-0 ${change === 'room' ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}`}>
+                <MapPin size={11} className="shrink-0" />
+                {room}
+              </span>
+              {note && <span className="hidden sm:inline truncate text-zinc-400 dark:text-zinc-500">{note}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AuthErrorDialog = ({ authError, onDismiss }) => {
+  const config = getOauthConfig();
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="absolute inset-0 bg-zinc-950/30 dark:bg-black/60 backdrop-blur-[2px]" onClick={onDismiss} />
+      <motion.div
+        role="alertdialog"
+        aria-labelledby="auth-error-title"
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.98 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+        className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto rounded-2xl border border-m-line bg-m-card p-6 m-shadow-lg"
+      >
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <span className="grid place-items-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-500">
+              <AlertOctagon size={18} />
+            </span>
+            <div>
+              <h3 id="auth-error-title" className="text-base font-semibold text-zinc-900 dark:text-white">Sign-in failed</h3>
+              <p className="text-xs text-zinc-500">The SBHS portal didn't accept the request.</p>
+            </div>
+          </div>
+          <button
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mb-5 rounded-xl border border-m-line bg-m-panel p-3.5 font-mono text-xs text-zinc-600 dark:text-zinc-300 break-all">
+          {authError}
+        </div>
+
+        <div className="mb-5">
+          <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400">Things to check</div>
+          <ol className="space-y-2.5 text-sm text-zinc-600 dark:text-zinc-400">
+            <li className="flex gap-2.5">
+              <span className="font-mono text-xs text-zinc-400 pt-0.5">1</span>
+              <div>
+                <strong className="font-medium text-zinc-900 dark:text-zinc-100">Redirect URI.</strong> The redirect URL in the SBHS developer portal must exactly match{' '}
+                <code className="rounded border border-m-line bg-m-panel px-1.5 py-0.5 font-mono text-xs text-zinc-900 dark:text-zinc-100">{config.redirectUri}</code>.
+              </div>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-mono text-xs text-zinc-400 pt-0.5">2</span>
+              <div>
+                <strong className="font-medium text-zinc-900 dark:text-zinc-100">Client secret.</strong> The developer portal client secret must match the one provided in settings.
+              </div>
+            </li>
+            <li className="flex gap-2.5">
+              <span className="font-mono text-xs text-zinc-400 pt-0.5">3</span>
+              <div>
+                <strong className="font-medium text-zinc-900 dark:text-zinc-100">Redeploy the client.</strong> Vite reads this config at build time, so after changing environment variables in Railway you must trigger a new frontend deployment.
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div className="rounded-xl border border-m-line bg-m-panel p-3.5 font-mono text-xs space-y-1.5">
+          <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-zinc-400">Compiled client config</div>
+          <div className="flex justify-between gap-4">
+            <span className="text-zinc-400">Client ID</span>
+            <span className="text-zinc-700 dark:text-zinc-300 truncate">{config.clientId}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-zinc-400">Redirect URI</span>
+            <span className="text-zinc-700 dark:text-zinc-300 truncate">{config.redirectUri}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-zinc-400">Client secret</span>
+            <span className="text-zinc-700 dark:text-zinc-300">
+              {config.hasClientSecret ? `Present (length ${config.clientSecretLength})` : 'Not present'}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={onDismiss}
+            className="h-9 px-4 rounded-lg border border-m-line text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+          >
+            Dismiss
+          </button>
+          <button
+            onClick={() => {
+              onDismiss();
+              performLogin();
+            }}
+            className="h-9 px-4 rounded-lg bg-accent text-accent-contrast text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Try again
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const LandingPage = ({ authError, clearAuthError, supporters, theme, toggleTheme, colorTheme, setColorTheme }) => {
+  const [now, setNow] = useState(() => new Date());
+
+  // Easter egg: three clicks on the logo bring back the original four-square mark.
+  const [logoClicks, setLogoClicks] = useState(0);
+  const [useOriginalMark, setUseOriginalMark] = useState(false);
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toTimeString().split(' ')[0]);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleIconClick = () => {
-    setIconClickCount(prev => {
-      const newCount = prev + 1;
-      if (newCount >= 3) {
-        setUseOriginalIcon(true);
+  const handleLogoClick = () => {
+    setLogoClicks(prev => {
+      if (prev + 1 >= 3) {
+        setUseOriginalMark(true);
         return 0;
       }
-      return newCount;
+      return prev + 1;
     });
   };
 
-  const mockPeriods = [
-    { name: 'English', time: '09:00 - 10:00', room: 'Room 203', teacher: 'Mrs. B', status: 'Normal' },
-    { name: 'Design and Technology', time: '10:05 - 11:05', room: 'Room 502', teacher: 'Mr. G', status: 'Room Change', oldRoom: 'Room 102' },
-    { name: 'Physics', time: '11:25 - 12:25', room: 'Room 307', teacher: 'Mr. H', status: 'Substitution', oldTeacher: 'Mrs. S' },
-    { name: 'Mathematics Ext. 2', time: '12:30 - 13:30', room: 'Room 105', teacher: 'Mr. J', status: 'Normal' },
-    { name: 'History', time: '14:10 - 15:10', room: 'Room 205', teacher: 'Ms. R', status: 'Normal' }
-  ];
+  // The preview's current period loops once an hour off the real clock, so its countdown is always ticking.
+  const progress = (now.getMinutes() * 60 + now.getSeconds()) / 3600;
+  const minutesLeft = 60 - now.getMinutes();
 
-  const mockNotices = [
-    { title: 'Chess Club Championship', group: 'All Years', body: 'Round 3 begins today at lunchtime in Room 102. Please check pairings on the tournament board.' },
-    { title: 'Year 11 Peer Support Meeting', group: 'Year 11', body: 'Mandatory briefing in the Great Hall at the start of Period 3 today.' }
-  ];
+  const activeTheme = COLOR_THEMES.find(t => t.id === colorTheme) || COLOR_THEMES[0];
 
   return (
-    <div className="min-h-screen bg-[rgb(10_10_12)] text-zinc-100 font-sans selection:bg-white selection:text-black relative overflow-x-hidden">
-      {/* Modern theme background with subtle dot grid */}
-      <div className="absolute inset-0 m-dots pointer-events-none z-0" />
-      
-      {authError && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[rgb(21_21_25)] border border-[rgb(255_255_255/0.07)] w-full max-w-2xl p-8 text-left transition-all relative rounded-2xl m-shadow-lg">
-            <div className="absolute top-0 left-0 bg-white/10 text-white font-mono text-xs px-3 py-1.5 uppercase font-bold rounded-tl-2xl">
-              SYSTEM_ALERT
-            </div>
-            <div className="flex justify-between items-start mb-6 mt-4">
-              <div className="flex items-center gap-3 text-white">
-                <AlertOctagon className="text-white shrink-0" size={24} />
-                <h3 className="text-xl font-semibold uppercase tracking-wide">Authentication Failure</h3>
-              </div>
-              <button
-                onClick={clearAuthError}
-                className="p-1.5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors rounded-lg"
+    <MotionConfig reducedMotion="user">
+      <div className="relative min-h-[100dvh] overflow-x-hidden bg-m-page text-zinc-900 dark:text-zinc-100 transition-colors duration-500">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[640px] m-dots" />
+
+        <AnimatePresence>
+          {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
+        </AnimatePresence>
+
+        {/* Header */}
+        <header className="relative z-10 mx-auto flex h-16 max-w-5xl items-center justify-between px-5 sm:px-6">
+          <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label="Synchron">
+            {useOriginalMark ? (
+              <span className="grid grid-cols-2 gap-0.5 p-1.5 rounded-lg bg-zinc-900 dark:bg-white">
+                {[0, 1, 2, 3].map(i => (
+                  <span key={i} className={`w-1.5 h-1.5 rounded-[2px] ${i === 3 ? 'bg-accent' : 'bg-white dark:bg-zinc-900'}`} />
+                ))}
+              </span>
+            ) : (
+              <BrandMark />
+            )}
+            <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle colour mode"
+              className="w-8 h-8 grid place-items-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={theme}
+                  initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                  transition={{ duration: 0.18 }}
+                  className="grid place-items-center"
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </motion.span>
+              </AnimatePresence>
+            </button>
+            <button
+              onClick={performLogin}
+              className="h-8 px-3.5 rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[13px] font-medium hover:opacity-90 transition-opacity"
+            >
+              Sign in
+            </button>
+          </div>
+        </header>
+
+        <main className="relative z-10 mx-auto max-w-5xl px-5 sm:px-6">
+          {/* Hero */}
+          <motion.section variants={stagger} initial="hidden" animate="show" className="pt-14 sm:pt-24 text-center">
+            <motion.div variants={rise} className="inline-flex items-center gap-2 h-7 px-3 rounded-full border border-m-line bg-m-card/70 backdrop-blur font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+              For Sydney Boys High
+            </motion.div>
+
+            <motion.h1 variants={rise} className="mt-6 text-[2.75rem] sm:text-7xl font-semibold leading-[1.02] tracking-[-0.04em] text-zinc-900 dark:text-white">
+              Your school day,
+              <br />
+              <span className="text-zinc-400 dark:text-zinc-500">in sync.</span>
+            </motion.h1>
+
+            <motion.p variants={rise} className="mx-auto mt-5 max-w-md text-[15px] sm:text-base leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Your timetable, room changes, substitutes and daily notices, live and in one place.
+            </motion.p>
+
+            <motion.div variants={rise} className="mt-8 flex flex-col items-center gap-3">
+              <motion.button
+                onClick={performLogin}
+                whileTap={{ scale: 0.97 }}
+                className="group inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-medium text-accent-contrast shadow-[0_10px_30px_-10px_hsl(var(--color-accent)/0.7)] hover:opacity-95 transition-opacity"
               >
-                <X size={20} />
-              </button>
-            </div>
+                Sign in with SBHS
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+              </motion.button>
+              <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+                <Lock size={11} />
+                Secure sign-in through the SBHS student portal
+              </span>
+            </motion.div>
+          </motion.section>
 
-            <div className="mb-6 p-4 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] text-zinc-400 font-mono text-sm break-all rounded-xl">
-              <span className="font-semibold text-white uppercase block mb-1 text-xs">// Error Details:</span>
-              {authError}
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <h4 className="font-semibold text-white uppercase tracking-wide text-xs border-b border-[rgb(255_255_255/0.07)] pb-2 font-mono">Troubleshooting Checklist:</h4>
-              <ul className="text-zinc-400 text-sm list-none space-y-3 font-mono">
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-500 font-semibold shrink-0">[1]</span>
-                  <div>
-                    <strong className="text-zinc-200">Redirect URI Mismatch:</strong> The redirect URL defined in SBHS developer portal must match <code className="bg-[rgb(15_15_18)] px-1.5 py-0.5 border border-[rgb(255_255_255/0.07)] font-mono text-white text-xs rounded">{getOauthConfig().redirectUri}</code> exactly.
-                  </div>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-500 font-semibold shrink-0">[2]</span>
-                  <div>
-                    <strong className="text-zinc-200">Client Secret:</strong> The developer portal client secret must match the one provided in settings.
-                  </div>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-500 font-semibold shrink-0">[3]</span>
-                  <div>
-                    <strong className="text-zinc-200">Re-deploy Client:</strong> Vite builds client config at <span className="underline text-white font-semibold">build time</span>. If you recently changed environment variables in Railway, you <strong className="text-white">MUST trigger a new deployment</strong> of the frontend service.
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-3 bg-[rgb(15_15_18)] p-4 border border-[rgb(255_255_255/0.07)] font-mono text-xs rounded-xl">
-              <div className="font-semibold text-zinc-500 uppercase tracking-wide mb-2 text-[11px]">Compiled Client Build Configuration:</div>
-              <div className="flex justify-between border-b border-[rgb(255_255_255/0.07)] pb-1.5">
-                <span className="text-zinc-500">Client ID</span>
-                <span className="text-zinc-300 font-semibold">{getOauthConfig().clientId}</span>
-              </div>
-              <div className="flex justify-between border-b border-[rgb(255_255_255/0.07)] pb-1.5">
-                <span className="text-zinc-500">Redirect URI</span>
-                <span className="text-zinc-300 font-semibold">{getOauthConfig().redirectUri}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Client Secret Status</span>
-                <span className={getOauthConfig().hasClientSecret ? "text-white font-semibold" : "text-zinc-500 font-semibold"}>
-                  {getOauthConfig().hasClientSecret ? `Present (Length: ${getOauthConfig().clientSecretLength})` : "Not Present"}
+          {/* Live preview */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3, ease }}
+            className="mx-auto mt-14 sm:mt-20 max-w-xl"
+            aria-label="Preview of today's timetable"
+          >
+            <div className="rounded-2xl border border-m-line bg-m-card p-2 sm:p-3 m-shadow-lg">
+              <div className="flex items-center justify-between px-2 pt-1 pb-3">
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+                  Monday · Week A
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-60" />
+                    <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  </span>
+                  Live
                 </span>
               </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3 font-mono">
-              <button
-                onClick={clearAuthError}
-                className="px-6 py-2.5 border border-[rgb(255_255_255/0.1)] text-zinc-300 font-medium hover:border-white/20 hover:text-white transition-colors rounded-xl"
-              >
-                Dismiss
-              </button>
-              <button
-                onClick={() => {
-                  clearAuthError();
-                  performLogin();
-                }}
-                className="px-6 py-2.5 bg-white text-black font-semibold border border-white hover:bg-zinc-100 transition-all rounded-xl"
-              >
-                Retry Login
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modern Header */}
-      <nav className="sticky top-0 z-30 border-b border-[rgb(255_255_255/0.07)] bg-black/40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              {/* Modern logo with easter egg */}
-              {useOriginalIcon ? (
-                <div className="grid grid-cols-2 gap-0.5 p-1.5 bg-white/10 rounded-lg cursor-pointer" onClick={handleIconClick}>
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-                  <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse" />
-                </div>
-              ) : (
-                <img 
-                  src="/icon-1500x1500.png" 
-                  alt="Synchron Logo" 
-                  className="w-10 h-10 rounded-lg cursor-pointer hover:scale-105 transition-transform"
-                  onClick={handleIconClick}
+              <div className="space-y-1.5">
+                <PreviewPeriod time="9:00" bell="2" title="English" teacher="Ms R" room="203" state="past" />
+                <PreviewPeriod
+                  time="10:05" bell="3" title="Physics" teacher="Mr H" room="307" state="current"
+                  change="sub" note="for Mrs S" progress={progress} minutesLeft={minutesLeft}
                 />
-              )}
-              <span className="font-semibold text-base tracking-wide text-white uppercase">
-                <span className="underline decoration-white/50 decoration-2 underline-offset-4 font-semibold">synchron</span>
-              </span>
+                <PreviewPeriod
+                  time="11:25" bell="4" title="Design & Technology" teacher="Mr G" room="502" state="next"
+                  change="room" note="was 102"
+                />
+                <PreviewPeriod time="12:30" bell="5" title="Mathematics Ext. 2" teacher="Mr J" room="105" state="later" />
+              </div>
             </div>
 
-            {/* System Status Indicators */}
-            <div className="hidden sm:flex items-center gap-4 text-[11px] font-mono text-zinc-500 border-l border-[rgb(255_255_255/0.07)] pl-6">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-white/60 animate-pulse rounded-full" />
-                API: ONLINE
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-white/60 animate-pulse rounded-full" />
-                DB: CONNECTED
-              </span>
-              <span className="text-zinc-500">V2.4.0</span>
-            </div>
-          </div>
-
-          <button
-             onClick={performLogin}
-             className="relative text-xs font-medium text-black bg-white px-4 py-2 border border-white hover:bg-zinc-100 transition-all duration-200 rounded-xl"
-          >
-             LOG_IN // AUTH
-          </button>
-        </div>
-      </nav>
-
-      <main className="relative z-10 max-w-7xl mx-auto px-6 pt-20 md:pt-28 pb-24">
-        
-        {/* Hero Grid Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-40">
-            
-            {/* Left Hero Text Column */}
-            <div className="lg:col-span-7 flex flex-col text-left">
-              <motion.div
-                 initial={{ opacity: 0, y: 15 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.6 }}
-              >
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-[rgb(255_255_255/0.1)] bg-[rgb(15_15_18)] text-zinc-400 text-xs font-mono tracking-wide uppercase mb-8 rounded-lg">
-                   <Activity size={12} className="text-white/60 animate-pulse" />
-                   SYSTEM STATUS: OK // FOR_SBHS
-                </div>
-
-                <h1 className="text-4xl sm:text-6xl md:text-7xl font-semibold text-white mb-6 tracking-tight leading-[1.08]">
-                  <span className="underline decoration-white/30 decoration-2 underline-offset-8 font-semibold">Synchron</span>ise <br />
-                  <span className="text-zinc-400">your Timetable.</span>
-                </h1>
-
-                <p className="text-base md:text-lg text-zinc-400 mb-10 leading-relaxed max-w-xl font-normal">
-                  Ditch the lag. Access your live timetable, classroom shifts, substitute notifications, and filtered school notices in a screamingly fast, modular layout custom-engineered for SBHS.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-2">
+            {/* Colour themes */}
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-1" role="group" aria-label="Colour theme">
+                {COLOR_THEMES.map(t => {
+                  const selected = t.id === activeTheme.id;
+                  return (
                     <button
-                      onClick={performLogin}
-                      className="group relative flex items-center justify-center gap-3 px-8 py-4 bg-white text-black text-sm font-semibold uppercase tracking-wide border border-white hover:bg-zinc-100 transition-all duration-200 rounded-xl sm:w-auto"
+                      key={t.id}
+                      onClick={() => setColorTheme(t.id)}
+                      aria-label={`${t.name} colour theme`}
+                      aria-pressed={selected}
+                      title={t.name}
+                      className="relative grid place-items-center w-8 h-8 rounded-full"
                     >
-                      Authenticate with SBHS
-                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                      {selected && (
+                        <motion.span
+                          layoutId="landing-swatch"
+                          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                          className="absolute inset-0 rounded-full border border-zinc-900/20 dark:border-white/25"
+                        />
+                      )}
+                      <span
+                        className={`w-5 h-5 rounded-full ring-1 ring-inset ring-black/10 transition-transform hover:scale-110 ${t.swatch || ''}`}
+                        style={t.hsl ? { backgroundColor: `hsl(${t.hsl})` } : undefined}
+                      />
                     </button>
-
-                    <div className="flex items-center gap-2.5 text-xs font-mono text-zinc-500">
-                      <Lock size={12} className="text-zinc-500" />
-                      <span>SECURE DELEGATED LOGIN</span>
-                    </div>
-                </div>
-
-                <div className="mt-6 p-4 rounded-xl bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] max-w-xl">
-                    <div className="flex items-start gap-3">
-                        <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
-                            <AlertOctagon size={16} />
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-white mb-1">Important: Local Network Permission</h4>
-                            <p className="text-xs text-zinc-400 leading-relaxed">
-                                When signing in, your browser may ask for <strong className="text-zinc-200">Local network</strong> permission.
-                                Please <strong className="text-zinc-200">click "Allow"</strong> to ensure the app functions correctly.
-                                This permission is required for proper data synchronization.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-              </motion.div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-zinc-400">
+                <span className="text-zinc-600 dark:text-zinc-300">{activeTheme.name}</span>
+                {' '}· nine colour themes, light and dark. Your pick carries over when you sign in.
+              </p>
             </div>
+          </motion.section>
 
-            {/* Right Interactive Dashboard Console Preview */}
-            <div className="lg:col-span-5 relative w-full font-sans">
-              <motion.div
-                 initial={{ opacity: 0, scale: 0.98 }}
-                 animate={{ opacity: 1, scale: 1 }}
-                 transition={{ duration: 0.8, delay: 0.1 }}
-                 className="relative z-10 w-full bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.1)] backdrop-blur-xl rounded-2xl m-shadow-lg"
-              >
-                 {/* Top Terminal Bar */}
-                 <div className="flex items-center justify-between px-4 py-3 border-b border-[rgb(255_255_255/0.07)] bg-[rgb(21_21_25)] rounded-t-2xl">
-                   <div className="flex items-center gap-2">
-                     <Terminal size={14} className="text-zinc-400" />
-                     <span className="font-mono text-xs font-semibold text-white">CONSOLE // PREVIEW_PANEL</span>
-                   </div>
+          {/* Features */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.6, ease }}
+            className="mt-24 sm:mt-32 grid gap-px overflow-hidden rounded-2xl border border-m-line bg-m-line sm:grid-cols-3"
+          >
+            {FEATURES.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="bg-m-panel p-6">
+                <Icon size={18} className="text-accent" />
+                <h3 className="mt-4 text-[15px] font-medium text-zinc-900 dark:text-white">{title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{body}</p>
+              </div>
+            ))}
+          </motion.section>
 
-                   <div className="flex items-center gap-4">
-                     <span className="font-mono text-[11px] text-zinc-400 tracking-wide">TIME: {currentTime || "00:00:00"}</span>
-                     <div className="flex gap-1.5">
-                       <span className="w-2.5 h-2.5 border border-white/20 bg-black rounded-sm" />
-                       <span className="w-2.5 h-2.5 border border-white/20 bg-white/60 rounded-sm animate-pulse" />
-                     </div>
-                   </div>
-                 </div>
+          <p className="mx-auto mt-10 flex max-w-md items-start justify-center gap-2 text-center text-xs leading-relaxed text-zinc-400">
+            <Info size={13} className="mt-px shrink-0 text-amber-500" />
+            <span>
+              When you sign in, your browser may ask for <span className="text-zinc-600 dark:text-zinc-300">Local network</span> access.
+              Choose <span className="text-zinc-600 dark:text-zinc-300">Allow</span> so Synchron can sync.
+            </span>
+          </p>
 
-                 {/* Console Tabs */}
-                 <div className="flex border-b border-[rgb(255_255_255/0.07)] text-xs font-mono bg-[rgb(15_15_18)]">
-                   <button
-                     onClick={() => setMockActiveTab('timetable')}
-                     className={`flex-1 py-3 text-center border-r border-[rgb(255_255_255/0.07)] transition-colors uppercase tracking-wide font-semibold
-                       ${mockActiveTab === 'timetable' ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-                   >
-                     Live_Timetable
-                   </button>
-                   <button
-                     onClick={() => setMockActiveTab('notices')}
-                     className={`flex-1 py-3 text-center transition-colors uppercase tracking-wide font-semibold
-                       ${mockActiveTab === 'notices' ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-                   >
-                     Daily_Notices
-                   </button>
-                 </div>
+          {supporters && supporters.length > 0 && (
+            <p className="mt-16 flex items-center justify-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <Heart size={14} className="fill-rose-500 text-rose-500" />
+              Kept running by our Synchron Pro supporters. Thank you.
+            </p>
+          )}
+        </main>
 
-                 {/* Console Body */}
-                 <div className="p-5 min-h-[300px] flex flex-col justify-between">
-                   {mockActiveTab === 'timetable' && (
-                     <div className="space-y-4">
-                       <div className="flex justify-between items-center text-xs font-mono text-zinc-400 uppercase pb-2 border-b border-[rgb(255_255_255/0.07)]">
-                         <span>Period Sequence</span>
-                         <span className="text-zinc-400 text-[11px] bg-[rgb(15_15_18)] px-2 py-0.5 border border-[rgb(255_255_255/0.07)] rounded">A-DAY // TODAY</span>
-                       </div>
-
-                       <div className="space-y-2.5">
-                         {mockPeriods.map((period, idx) => (
-                           <div key={idx} className={`border border-[rgb(255_255_255/0.07)] p-3 flex flex-col transition-all hover:border-white/20 hover:bg-[rgb(21_21_25)] rounded-xl ${period.status !== 'Normal' ? 'bg-[rgb(21_21_25)/80]' : ''}`}>
-                             <div className="flex justify-between items-start">
-                               <div className="flex items-center gap-2">
-                                 <span className="font-mono text-xs text-zinc-500">P{idx+1}</span>
-                                 <span className="font-semibold text-sm text-white uppercase">{period.name}</span>
-                               </div>
-                               <span className="font-mono text-[11px] text-zinc-400">{period.time}</span>
-                             </div>
-
-                             <div className="flex justify-between items-center mt-2 pt-2 border-t border-[rgb(255_255_255/0.05)] text-xs font-mono">
-                               <div className="flex items-center gap-1.5 text-zinc-400">
-                                 <span>{period.room}</span>
-                                 {period.oldRoom && (
-                                   <span className="text-[11px] text-zinc-500 line-through">({period.oldRoom})</span>
-                                 )}
-                               </div>
-                               <div className="flex items-center gap-2">
-                                 {period.status !== 'Normal' && (
-                                   <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 border rounded bg-white/10 text-white border-white/20">
-                                     {period.status}
-                                   </span>
-                                 )}
-                                 <span className="text-zinc-400">{period.teacher}</span>
-                               </div>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-
-                   {mockActiveTab === 'notices' && (
-                     <div className="space-y-4">
-                       <div className="flex justify-between items-center text-xs font-mono text-zinc-400 uppercase pb-2 border-b border-[rgb(255_255_255/0.07)]">
-                         <span>Latest Bulletins</span>
-                         <span>2 NOTICES</span>
-                       </div>
-
-                       <div className="space-y-3">
-                         {mockNotices.map((notice, idx) => (
-                           <div key={idx} className="border border-[rgb(255_255_255/0.07)] p-3 hover:border-white/20 bg-[rgb(15_15_18)] transition-all rounded-xl">
-                             <div className="flex justify-between items-center mb-1.5">
-                               <h4 className="text-sm font-semibold text-white uppercase">{notice.title}</h4>
-                               <span className="font-mono text-[10px] font-semibold text-white bg-white/10 border border-white/20 px-1.5 py-0.5 uppercase tracking-wide rounded">
-                                 {notice.group}
-                               </span>
-                             </div>
-                             <p className="text-xs text-zinc-400 leading-relaxed font-light">{notice.body}</p>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-
-                   {/* Console Telemetry Row */}
-                   <div className="mt-6 pt-3 border-t border-[rgb(255_255_255/0.07)] flex justify-between items-center text-[11px] font-mono text-zinc-400 uppercase">
-                     <span className="flex items-center gap-1">
-                       <span className="w-1.5 h-1.5 bg-white/60 animate-ping rounded-full" />
-                       REAL_TIME DATA SIMULATION
-                     </span>
-                     <span className="text-zinc-500">ID: SBHS_SIM_001</span>
-                   </div>
-                 </div>
-              </motion.div>
-            </div>
-        </div>
-
-        {/* Modern Features Section */}
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-36"
-        >
-            <div className="flex flex-col mb-12">
-              <span className="font-mono text-xs text-zinc-500 uppercase tracking-wide mb-2">// CAPABILITIES</span>
-              <h2 className="text-3xl font-semibold uppercase text-white tracking-tight">ENGINEERED FOR EFFICIENCY</h2>
-            </div>
-
-            {/* Modern grid system */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-                {/* Feature 1 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 01 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <Clock size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Live Timetable</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Instantly see room adjustments, teacher subs, and schedule changes. Features a relative duration progress bar to tell you exactly how long is left in each class.
-                    </p>
-                </div>
-
-                {/* Feature 2 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 02 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <Shield size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Targeted Notices</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Say goodbye to noise. Notices are dynamically grouped and filtered, highlighting announcements specific to your cohort, year group, and extracurriculars.
-                    </p>
-                </div>
-
-                {/* Feature 3 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 03 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <Calendar size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Calendar Sync</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Consolidates standard, exam, and extracurricular schedules into a unified dashboard view. Never miss an assessment deadline or a timetable shift.
-                    </p>
-                </div>
-
-                {/* Feature 4 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 04 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <Award size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Award Scheme</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Track your progress in the Sydney Boys High School Award Scheme. Input and view your accumulated points, tasks, and certification levels.
-                    </p>
-                </div>
-
-                {/* Feature 5 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 05 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <LayoutDashboard size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Fast Dashboard</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Optimized asset delivery. Synchron bypasses heavy portal shells to load critical timetables and notices instantly, even on weak school cell coverage.
-                    </p>
-                </div>
-
-                {/* Feature 6 */}
-                <div className="relative-tile-wrapper p-6 bg-[rgb(15_15_18)] border border-[rgb(255_255_255/0.07)] rounded-2xl group hover:bg-[rgb(21_21_25)] transition-all duration-300">
-                    <span className="absolute top-4 right-6 font-mono text-xs text-zinc-500 group-hover:text-zinc-400 font-semibold transition-colors">[ 06 ]</span>
-                    <div className="w-11 h-11 border border-[rgb(255_255_255/0.1)] flex items-center justify-center mb-6 bg-[rgb(21_21_25)] text-zinc-400 group-hover:border-white/20 group-hover:bg-[rgb(28_28_33)] group-hover:text-white transition-all duration-300 rounded-xl">
-                        <Cpu size={18} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-3 uppercase group-hover:text-white transition-colors">Built for You</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
-                        Built by students, for students. Synchron integrates directly with official SBHS APIs while still being independently managed, even fitted with an inbuilt alert system.
-                    </p>
-                </div>
-
-            </div>
-        </motion.div>
-
-        {/* Supporters Wall Section */}
-        {supporters && supporters.length > 0 && (
-            <div className="mt-32 border border-[rgb(255_255_255/0.07)] p-8 bg-[rgb(15_15_18)] relative animate-in fade-in duration-500 rounded-2xl">
-                <div className="absolute top-0 left-0 bg-white/10 text-white font-mono text-xs px-3 py-1.5 uppercase font-semibold flex items-center gap-1.5 select-none rounded-tl-2xl">
-                    <Heart size={10} className="fill-white text-white" />
-                    Our Supporters
-                </div>
-                <div className="mt-4 space-y-3 text-left">
-                    <h3 className="text-xl font-semibold uppercase tracking-tight text-white">To our Synchron Pro supporters...</h3>
-                    <p className="text-sm text-zinc-400 max-w-xl font-light leading-relaxed">
-                        Kudos to you, the amazing individuals who support the development and hosting of Synchron.
-                    </p>
-                </div>
-            </div>
-        )}
-
-        {/* Technical Footer */}
-        <div className="mt-40 pt-10 border-t border-[rgb(255_255_255/0.07)] flex flex-col md:flex-row items-center justify-between text-xs font-mono text-zinc-400">
-            <div className="flex flex-col gap-1.5 text-center md:text-left">
-              <p>© {new Date().getFullYear()} SYNCHRON. UNOFFICIALLY THE OFFICIAL CLIENT FOR SYDNEY BOYS HIGH SCHOOL.</p>
-              <p className="text-zinc-500">Built independently, but its your Synchrotron.</p>
-            </div>
-
-            <div className="flex items-center gap-6 mt-6 md:mt-0">
-                <div className="hidden lg:flex items-center gap-4 text-zinc-500 text-[11px] uppercase">
-                  <span>LOC_ENV: PRODUCTION</span>
-                  <span>BUILD_TAG: A01_DEV</span>
-                </div>
-                <div className="flex gap-4">
-                  <a href="#" className="hover:text-white transition-colors uppercase">Privacy</a>
-                  <span className="text-zinc-600">/</span>
-                  <a href="#" className="hover:text-white transition-colors uppercase">Terms</a>
-                </div>
-            </div>
-        </div>
-
-      </main>
-    </div>
+        <footer className="relative z-10 mt-20 border-t border-m-line">
+          <div className="mx-auto flex max-w-5xl flex-col gap-1.5 px-5 sm:px-6 py-8 text-xs text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+            <span>© {now.getFullYear()} Synchron</span>
+            <span>Unofficially the official client for Sydney Boys High School.</span>
+          </div>
+        </footer>
+      </div>
+    </MotionConfig>
   );
 };
 

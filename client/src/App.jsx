@@ -555,9 +555,11 @@ function App() {
     }, [aiDisabled]);
 
     // Interface Theme Config
+    // The signed-out landing page is always shown in the modern design language.
+    const isSignedIn = !!user;
     useEffect(() => {
-        document.documentElement.setAttribute('data-ui', uiTheme);
-    }, [uiTheme]);
+        document.documentElement.setAttribute('data-ui', isSignedIn ? uiTheme : 'modern');
+    }, [uiTheme, isSignedIn]);
 
     useEffect(() => {
         if (uiThemePref) localStorage.setItem('ui_theme', uiThemePref);
@@ -591,10 +593,10 @@ function App() {
         const meta = document.querySelector('meta[name="theme-color"]');
         if (!meta) return;
         const styles = getComputedStyle(document.documentElement);
-        const token = uiTheme === 'modern' ? '--m-page' : (theme === 'dark' ? '--black' : '--zinc-50');
+        const token = (isSignedIn ? uiTheme : 'modern') === 'modern' ? '--m-page' : (theme === 'dark' ? '--black' : '--zinc-50');
         const rgb = styles.getPropertyValue(token).trim();
         if (rgb) meta.setAttribute('content', `rgb(${rgb.split(/\s+/).join(', ')})`);
-    }, [colorTheme, theme, uiTheme]);
+    }, [colorTheme, theme, uiTheme, isSignedIn]);
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -972,13 +974,21 @@ function App() {
 
     if (!user) {
         return (
-            <div className="transition-colors bg-white dark:bg-zinc-950">
+            <div className="transition-colors bg-m-page">
                 <Suspense fallback={
-                    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
-                        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                    <div className="min-h-screen flex items-center justify-center bg-m-page">
+                        <div className="w-6 h-6 border-2 border-accent/25 border-t-accent rounded-full animate-spin"></div>
                     </div>
                 }>
-                    <LandingPage authError={authError} clearAuthError={() => setAuthError(null)} supporters={supporters} uiTheme={uiTheme} />
+                    <LandingPage
+                        authError={authError}
+                        clearAuthError={() => setAuthError(null)}
+                        supporters={supporters}
+                        theme={theme}
+                        toggleTheme={toggleTheme}
+                        colorTheme={colorTheme}
+                        setColorTheme={setColorTheme}
+                    />
                 </Suspense>
             </div>
         );

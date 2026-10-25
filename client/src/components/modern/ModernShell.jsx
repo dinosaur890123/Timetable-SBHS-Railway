@@ -52,7 +52,7 @@ const isProUser = (user) => user?.role === 'Admin' || user?.subscriptionStatus =
 
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
-const BrandMark = ({ className = '' }) => (
+export const BrandMark = ({ className = '' }) => (
     <div className={`relative grid place-items-center w-7 h-7 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm ${className}`}>
         <span className="text-[13px] font-semibold leading-none">S</span>
         <span className="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page" />
