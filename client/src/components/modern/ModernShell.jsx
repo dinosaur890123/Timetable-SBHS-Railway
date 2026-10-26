@@ -54,8 +54,6 @@ const buildNavGroups = (isAdmin) => [
     }
 ];
 
-const isProUser = (user) => user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
 export const BrandMark = ({ className = '' }) => (
@@ -67,8 +65,8 @@ export const BrandMark = ({ className = '' }) => (
 
 export const ModernSidebar = ({ currentView, setView, user, notificationCount, defaultPage }) => {
     const groups = buildNavGroups(user?.role === 'Admin');
-    const plan = [isProUser(user) ? 'Pro' : 'Free', user?.role === 'Admin' ? 'Admin' : (user?.yearGroup ? `Year ${user.yearGroup}` : null)]
-        .filter(Boolean).join(' · ');
+    const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
+        .filter(Boolean).join(' · ') || 'Student';
 
     // Check if nav item is active
     const isItemActive = (itemId) => {

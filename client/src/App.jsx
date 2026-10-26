@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef, lazy, Suspense, useMemo } from 'rea
 import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
-import InterfaceThemePicker from './components/InterfaceThemePicker';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +16,7 @@ const ClipboardView = lazy(() => import('./components/ClipboardView'));
 const NotesView = lazy(() => import('./components/NotesView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
 const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
 const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
 import {
     fetchDayTimetable,
@@ -33,10 +33,9 @@ import {
     saveUserPreferences
 } from './services/api';
 import { registerUser } from './services/adminApi';
-import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
 import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X, WifiOff, Database } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, X, WifiOff, Database } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 
 function App() {
@@ -118,9 +117,6 @@ function App() {
     const [aiBriefing, setAiBriefing] = useState(null);
     const [aiLoading, setAiLoading] = useState(false);
 
-    // Billing State
-    const [billingMessage, setBillingMessage] = useState(null);
-    const [billingLoading, setBillingLoading] = useState(false);
 
     // Notification State
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
@@ -214,14 +210,6 @@ function App() {
             return cached ? JSON.parse(cached).maintenance : false;
         } catch {
             return false;
-        }
-    });
-    const [supporters, setSupporters] = useState(() => {
-        try {
-            const cached = localStorage.getItem('cached_system');
-            return cached ? (JSON.parse(cached).supporters || []) : [];
-        } catch {
-            return [];
         }
     });
     const [currentVersion, setCurrentVersion] = useState(() => {
@@ -398,7 +386,6 @@ function App() {
                     }
 
                     setMaintenance(systemData.maintenance);
-                    setSupporters(systemData.supporters || []);
                     applyUiConfig(systemData.uiThemes);
                 }
             } catch (e) {
@@ -410,74 +397,6 @@ function App() {
         const interval = setInterval(pollStatus, 30000);
         return () => clearInterval(interval);
     }, []);
-
-    // Handle billing query parameters and notifications
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const billingStatus = params.get('billing');
-
-        if (billingStatus) {
-            // Clean URL params without page reload
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-
-            if (billingStatus === 'success') {
-                setBillingMessage({
-                    type: 'success',
-                    text: 'Upgrade Successful! Thank you for subscribing to Synchron Pro. Your account features have been unlocked!'
-                });
-
-                // Re-trigger user sync/fetch user info to get the updated status from backend
-                if (user && user.studentId) {
-                    registerUser({
-                        id: user.studentId,
-                        name: `${user.givenName} ${user.surname}`,
-                        email: user.email,
-                        year: user.yearGroup
-                    }).then(dbSync => {
-                        if (dbSync) {
-                            if (dbSync.user) {
-                                setUser(prev => {
-                                    const merged = prev ? {
-                                        ...prev,
-                                        role: dbSync.user.role || prev.role,
-                                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                                        stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                        showSupporter: dbSync.user.showSupporter !== false,
-                                        blacklisted: dbSync.user.blacklisted || false
-                                    } : null;
-                                    if (merged) {
-                                        localStorage.setItem('cached_user', JSON.stringify(merged));
-                                    }
-                                    return merged;
-                                });
-                            }
-                            if (dbSync.resolvedFeedbacks && dbSync.resolvedFeedbacks.length > 0) {
-                                dbSync.resolvedFeedbacks.forEach(fb => {
-                                    addToast(
-                                        "Feedback Resolved",
-                                        `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
-                                        'resolved',
-                                        true
-                                    );
-                                });
-                            }
-                        }
-                    }).catch(e => console.error("Billing sync failed", e));
-                }
-            } else if (billingStatus === 'donation-success') {
-                setBillingMessage({
-                    type: 'success',
-                    text: 'Thank you! Your donation was processed successfully. We appreciate your support for Synchron!'
-                });
-            } else if (billingStatus === 'cancel') {
-                setBillingMessage({
-                    type: 'info',
-                    text: 'Checkout process cancelled. If you have any questions, feel free to contact support!'
-                });
-            }
-        }
-    }, [user?.studentId, completeTimetable]);
 
     const isSignedIn = !!user;
 
@@ -589,10 +508,7 @@ function App() {
                 setUser(prev => {
                     const merged = prev ? {
                         ...userData,
-                        role: prev.role || userData.role || 'Student',
-                        subscriptionStatus: prev.subscriptionStatus || userData.subscriptionStatus || null,
-                        stripeCustomerId: prev.stripeCustomerId || userData.stripeCustomerId || null,
-                        showSupporter: prev.showSupporter !== undefined ? prev.showSupporter : (userData.showSupporter !== false)
+                        role: prev.role || userData.role || 'Student'
                     } : userData;
                     localStorage.setItem('cached_user', JSON.stringify(merged));
                     return merged;
@@ -622,7 +538,6 @@ function App() {
                     }
 
                     setMaintenance(systemData.maintenance);
-                    setSupporters(systemData.supporters || []);
                     applyUiConfig(systemData.uiThemes);
                 }
 
@@ -640,9 +555,6 @@ function App() {
                                     const updated = prev ? {
                                         ...prev,
                                         role: dbSync.user.role || prev.role,
-                                        subscriptionStatus: dbSync.user.subscriptionStatus || null,
-                                        stripeCustomerId: dbSync.user.stripeCustomerId || null,
-                                        showSupporter: dbSync.user.showSupporter !== false,
                                         blacklisted: dbSync.user.blacklisted || false
                                     } : null;
                                     if (updated) {
@@ -849,9 +761,6 @@ function App() {
     useEffect(() => {
         if (aiDisabled || !user || !notices || !notices.notices || notices.notices.length === 0) return;
 
-        const isPro = user.role === 'Admin' || user.subscriptionStatus === 'active' || user.subscriptionStatus === 'pro';
-        if (!isPro) return;
-
         const getAiData = async () => {
             setAiLoading(true);
             try {
@@ -881,33 +790,6 @@ function App() {
         }
         lastViewRef.current = currentView;
     }, [currentView, defaultDate]);
-
-    const handleToggleSupporter = async (checked) => {
-        try {
-            const updated = await updateProfileSettings(checked);
-            const updatedUser = updated.user || updated;
-            setUser(prev => {
-                const merged = prev ? {
-                    ...prev,
-                    showSupporter: updatedUser.showSupporter !== false
-                } : null;
-                if (merged) {
-                    localStorage.setItem('cached_user', JSON.stringify(merged));
-                }
-                return merged;
-            });
-
-            // Refresh system status to get updated supporters list
-            const status = await fetchSystemStatus();
-            if (status && status.supporters) {
-                setSupporters(status.supporters);
-            }
-        } catch (e) {
-            console.error("Failed to update supporter setting:", e);
-            alert("Failed to update settings. Please try again.");
-        }
-    };
-
 
     if ((maintenance || user?.blacklisted) && currentView !== 'admin') {
         return (
@@ -948,7 +830,6 @@ function App() {
                     <LandingPage
                         authError={authError}
                         clearAuthError={() => setAuthError(null)}
-                        supporters={supporters}
                     />
                 </Suspense>
             </div>
@@ -1245,396 +1126,26 @@ function App() {
                         {currentView === 'admin' && <AdminPanel user={user} />}
 
                         {/* PROFILE VIEW (Simple placeholder) */}
-                        {currentView === 'profile' && (() => {
-                            const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-                            return (
-                                <div className="max-w-5xl mx-auto w-full px-4 flex flex-col md:flex-row gap-6 mt-6 pb-12">
-
-                                    {/* Left Third (Sticky Sidebar) */}
-                                    <div className="w-full md:w-1/3 flex flex-col gap-6 shrink-0 md:sticky md:top-[88px] self-start">
-                                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm flex flex-col">
-                                            <div>
-                                                <div className="relative w-24 h-24 mx-auto">
-                                                    <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
-                                                        {user?.givenName?.[0]}{user?.surname?.[0]}
-                                                    </div>
-                                                    {isProUser && (
-                                                        <span className="absolute -bottom-1 -right-1 bg-violet-600 text-white p-1.5 rounded-xl border-4 border-white dark:border-zinc-900 shadow-md animate-bounce" title="Synchron Pro Active">
-                                                            <Sparkles size={14} />
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="mt-6 flex flex-col items-center w-full">
-                                                    <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white flex flex-wrap items-center justify-center gap-2 text-center w-full break-words leading-tight">
-                                                        <span>{user?.givenName} {user?.surname}</span>
-                                                        {isProUser && (
-                                                            <span className="text-[11px] tracking-wider uppercase font-black px-2 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full animate-pulse shrink-0">Pro</span>
-                                                        )}
-                                                    </h2>
-                                                    <p className="text-[12px] text-zinc-500 mt-1 text-center w-full break-all px-2">{user?.email}</p>
-                                                </div>
-                                            </div>
-                                            <div className="pt-2">
-                                                <button
-                                                    onClick={logout}
-                                                    className="w-full py-3 font-medium text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-colors font-semibold"
-                                                >
-                                                    Sign Out
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Feedback Card */}
-                                        <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-white dark:bg-zinc-900 select-none space-y-3 shadow-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Mail size={16} className="text-blue-500 shrink-0" />
-                                                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Feedback</h3>
-                                            </div>
-                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                                Report an error or suggest an improvement. Please include as much detail as possible so it can be investigated quickly.
-                                            </p>
-                                            <button
-                                                onClick={() => setCurrentView('feedback')}
-                                                className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
-                                            >
-                                                Open Feedback Form
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Two-Thirds (Scrolls with page) */}
-                                    <div className="w-full md:w-2/3 flex flex-col gap-6">
-                                        {/* Billing Message Alert */}
-                                        {billingMessage && (
-                                            <div className={`p-4 rounded-2xl border flex items-start gap-3 text-sm select-none shadow-sm ${billingMessage.type === 'success'
-                                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                                : 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'
-                                                }`}>
-                                                <Info size={18} className="shrink-0 mt-0.5" />
-                                                <div className="flex-1">
-                                                    <p className="font-semibold">{billingMessage.type === 'success' ? 'Subscription Updated' : 'Notice'}</p>
-                                                    <p className="text-xs opacity-90 mt-0.5">{billingMessage.text}</p>
-                                                </div>
-                                                <button onClick={() => setBillingMessage(null)} className="text-xs opacity-50 hover:opacity-100 font-bold">Dismiss</button>
-                                            </div>
-                                        )}
-
-                                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center space-y-6 shadow-sm">
-
-                                            {/* Synchron Pro Premium Billing Section */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-6 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none relative overflow-hidden space-y-4">
-                                                {isProUser ? (
-                                                    <>
-                                                        <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl -z-10" />
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2.5 bg-violet-100 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400">
-                                                                <ShieldCheck size={22} />
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Synchron Pro Subscriber</h3>
-                                                                <p className="text-[12px] text-zinc-500 mt-0.5">Subscription active</p>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">
-                                                            Thank you for subscribing! Your premium account is fully unlocked. You have access to AI assistants, custom themes, and early updates.
-                                                        </p>
-                                                        {user?.stripeCustomerId && (
-                                                            <button
-                                                                disabled={billingLoading}
-                                                                onClick={async () => {
-                                                                    setBillingLoading(true);
-                                                                    try {
-                                                                        const session = await createPortalSession();
-                                                                        if (session.url) {
-                                                                            window.location.href = session.url;
-                                                                        }
-                                                                    } catch (e) {
-                                                                        alert(e.message || "Failed to load billing portal");
-                                                                    } finally {
-                                                                        setBillingLoading(false);
-                                                                    }
-                                                                }}
-                                                                className="w-full py-2.5 text-xs font-bold text-zinc-900 dark:text-white bg-white hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 rounded-xl transition flex items-center justify-center gap-2"
-                                                            >
-                                                                {billingLoading ? (
-                                                                    <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-zinc-650 dark:border-t-white rounded-full animate-spin" />
-                                                                ) : (
-                                                                    <>
-                                                                        <CreditCard size={14} />
-                                                                        Manage Subscription
-                                                                    </>
-                                                                )}
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -z-10 animate-pulse" />
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
-                                                                <Sparkles size={20} />
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Upgrade to Synchron Pro</h3>
-                                                                <p className="text-[12px] text-zinc-500 mt-0.5">$4.99 annually</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-1.5 pt-1">
-                                                            <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
-                                                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0 animate-pulse" />
-                                                                <span>AI-Powered daily briefings & schedule Q&A</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
-                                                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />
-                                                                <span>Unlimited access to custom theme colors</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 text-xs text-zinc-650 dark:text-zinc-400">
-                                                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />
-                                                                <span>Priority backend updates & fast load times</span>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            disabled={billingLoading}
-                                                            onClick={async () => {
-                                                                setBillingLoading(true);
-                                                                try {
-                                                                    const session = await createCheckoutSession();
-                                                                    if (session.url) {
-                                                                        window.location.href = session.url;
-                                                                    }
-                                                                } catch (e) {
-                                                                    alert(e.message || "Failed to start checkout");
-                                                                } finally {
-                                                                    setBillingLoading(false);
-                                                                }
-                                                            }}
-                                                            className="w-full py-2.5 text-xs font-bold text-white bg-black hover:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-zinc-100 rounded-xl transition flex items-center justify-center gap-2 shadow-sm font-space"
-                                                        >
-                                                            {billingLoading ? (
-                                                                <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-white dark:border-zinc-650 dark:border-t-black rounded-full animate-spin" />
-                                                            ) : (
-                                                                <>
-                                                                    <CreditCard size={14} />
-                                                                    Upgrade to Pro
-                                                                </>
-                                                            )}
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            {/* One-off Donations Section */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
-                                                <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                                                    <Sparkles size={16} className="text-amber-500 shrink-0" />
-                                                    Support Synchron
-                                                </h3>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                                    Synchron is free to use but costs to host. If it helps you get through the school day, consider supporting with a one-off donation!
-                                                </p>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { amount: '$1', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_1 },
-                                                        { amount: '$2', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_2 },
-                                                        { amount: '$3', priceId: import.meta.env.VITE_STRIPE_PRICE_DONATION_3 }
-                                                    ].map((d, index) => (
-                                                        <button
-                                                            key={index}
-                                                            disabled={billingLoading}
-                                                            onClick={async () => {
-                                                                setBillingLoading(true);
-                                                                try {
-                                                                    const session = await createCheckoutSession(d.priceId || null, 'payment');
-                                                                    if (session.url) {
-                                                                        window.location.href = session.url;
-                                                                    }
-                                                                } catch (e) {
-                                                                    alert(e.message || "Failed to start donation checkout");
-                                                                } finally {
-                                                                    setBillingLoading(false);
-                                                                }
-                                                            }}
-                                                            className="py-2 px-3 text-xs font-bold bg-white hover:bg-zinc-100 dark:bg-zinc-850 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl transition flex items-center justify-center gap-1 shadow-sm"
-                                                        >
-                                                            Donate {d.amount}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* AI Toggle Option */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-bold text-zinc-900 dark:text-white">AI Features</span>
-                                                    <button
-                                                        onClick={() => setAiDisabled(prev => !prev)}
-                                                        className={`px-3 py-1.5 text-xs font-extrabold uppercase border transition rounded-lg ${aiDisabled
-                                                            ? 'bg-zinc-200 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400'
-                                                            : 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                            }`}
-                                                    >
-                                                        {aiDisabled ? 'Disabled' : 'Enabled'}
-                                                    </button>
-                                                </div>
-                                                <p className="text-[12px] text-zinc-500">Enable or disable daily briefings and AI Q&A assistants across your schedule.</p>
-                                            </div>
-
-                                            {/* Supporter Toggle Option */}
-                                            {isProUser && (
-                                                <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-2 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm font-bold text-zinc-900 dark:text-white">Show Name as Supporter</span>
-                                                        <button
-                                                            onClick={() => handleToggleSupporter(user.showSupporter === false)}
-                                                            className={`px-3 py-1.5 text-xs font-extrabold uppercase border transition rounded-lg ${user.showSupporter === false
-                                                                ? 'bg-zinc-200 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400'
-                                                                : 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                                }`}
-                                                        >
-                                                            {user.showSupporter === false ? 'Hidden' : 'Shown'}
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-[12px] text-zinc-500">Display your name publicly in Settings under the supporter list (Shown by default).</p>
-                                                </div>
-                                            )}
-
-                                            {/* Interface Theme Section (only when an admin offers a choice) */}
-                                            {uiThemeOptions.length > 1 && (
-                                                <InterfaceThemePicker
-                                                    options={uiThemeOptions}
-                                                    value={uiTheme}
-                                                    defaultId={uiConfig.default}
-                                                    onChange={setUiThemePref}
-                                                />
-                                            )}
-
-                                            {/* Color Themes Section */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl">
-                                                <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Color Themes</span>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {[
-                                                        { id: 'zinc', name: 'Default', color: 'bg-zinc-900 border-zinc-900 dark:bg-zinc-100 dark:border-zinc-100' },
-                                                        { id: 'mint', name: 'Mint', color: 'bg-emerald-600 border-emerald-600' },
-                                                        { id: 'amber', name: 'Amber', color: 'bg-amber-500 border-amber-500' },
-                                                        { id: 'blue', name: 'Blue', color: 'bg-blue-600 border-blue-600' },
-                                                        { id: 'violet', name: 'Violet', color: 'bg-violet-500 border-violet-500' },
-                                                        { id: 'rose', name: 'Rose', color: 'bg-rose-500 border-rose-500' },
-                                                        { id: 'teal', name: 'Teal', color: 'bg-teal-600 border-teal-600' },
-                                                        { id: 'orange', name: 'Orange', color: 'bg-orange-500 border-orange-500' },
-                                                        { id: 'sky', name: 'Sky', color: 'bg-sky-500 border-sky-500' }
-                                                    ].map(t => (
-                                                        <button
-                                                            key={t.id}
-                                                            onClick={() => setColorTheme(t.id)}
-                                                            className={`px-3 py-1.5 text-xs font-black uppercase border transition-all flex items-center gap-1.5 rounded-lg ${colorTheme === t.id
-                                                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
-                                                                : 'bg-white hover:bg-zinc-50 text-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
-                                                                }`}
-                                                            title={t.name}
-                                                        >
-                                                            <span className={`w-3.5 h-3.5 border rounded-sm ${t.color}`} />
-                                                            {t.name}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Dark Mode Style Section (Classic interface only) */}
-                                            {!isModern && (
-                                            <div className={`border border-zinc-200 dark:border-zinc-800 p-4 text-left space-y-3 bg-zinc-50 dark:bg-zinc-950/20 select-none rounded-2xl transition ${theme !== 'dark' ? 'opacity-50 pointer-events-none grayscale-[0.5]' : ''}`}>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-zinc-900 dark:text-white font-space">Dark Theme Style</span>
-                                                    {theme !== 'dark' && <span className="text-[12px] text-zinc-500 mt-0.5">Switch to Dark Mode to use</span>}
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {/* True Black Option */}
-                                                    <button
-                                                        onClick={() => setDarkStyle('true-black')}
-                                                        className={`p-3 rounded-xl border-2 transition-all flex flex-col gap-2 ${darkStyle === 'true-black'
-                                                            ? 'border-blue-500 bg-blue-500/5'
-                                                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-[#000000]'
-                                                            }`}
-                                                    >
-                                                        <div className="w-full h-16 rounded-md bg-[#000000] border border-zinc-800 flex flex-col p-2 gap-1.5 overflow-hidden">
-                                                            <div className="w-full flex items-center justify-between">
-                                                                <div className="w-1/3 h-2 bg-zinc-800 rounded-sm"></div>
-                                                                <div className="w-4 h-4 bg-zinc-800 rounded-full"></div>
-                                                            </div>
-                                                            <div className="w-2/3 h-2 bg-zinc-800 rounded-sm mt-1"></div>
-                                                            <div className="w-full h-10 bg-zinc-900 rounded-md border border-zinc-800 mt-0.5"></div>
-                                                        </div>
-                                                        <span className="text-xs font-bold text-center w-full mt-1">True Black</span>
-                                                    </button>
-
-                                                    {/* Black Option */}
-                                                    <button
-                                                        onClick={() => setDarkStyle('black')}
-                                                        className={`p-3 rounded-xl border-2 transition-all flex flex-col gap-2 ${darkStyle === 'black'
-                                                            ? 'border-blue-500 bg-blue-500/5'
-                                                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-[#1C1C1C]'
-                                                            }`}
-                                                    >
-                                                        <div className="w-full h-16 rounded-md bg-[#1C1C1C] border border-zinc-800 flex flex-col p-2 gap-1.5 overflow-hidden">
-                                                            <div className="w-full flex items-center justify-between">
-                                                                <div className="w-1/3 h-2 bg-zinc-800 rounded-sm"></div>
-                                                                <div className="w-4 h-4 bg-zinc-800 rounded-full"></div>
-                                                            </div>
-                                                            <div className="w-2/3 h-2 bg-zinc-800 rounded-sm mt-1"></div>
-                                                            <div className="w-full h-10 bg-zinc-900 rounded-md border border-zinc-800 mt-0.5"></div>
-                                                        </div>
-                                                        <span className="text-xs font-bold text-center w-full mt-1">Black</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            )}
-
-                                            {/* Canvas Links Section */}
-                                            <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500 shrink-0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Canvas Links</h3>
-                                                </div>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                                    Add Canvas links for your classes. Click on any class in your timetable to open its Canvas page. Links are shared with classmates who have the same class.
-                                                </p>
-                                                <button
-                                                    onClick={() => setCurrentView('canvas-links')}
-                                                    className="w-full py-2.5 text-xs font-bold uppercase tracking-wider bg-black text-white dark:bg-white dark:text-black rounded-xl transition hover:opacity-90 shadow-sm"
-                                                >
-                                                    Manage Canvas Links
-                                                </button>
-                                            </div>
-
-                                            {/* Public Supporters Section */}
-                                            {supporters && supporters.length > 0 && (
-                                                <div className="border border-zinc-200 dark:border-zinc-800 p-5 text-left rounded-2xl bg-zinc-50 dark:bg-zinc-950/20 select-none space-y-3">
-                                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                                                        <Heart size={16} className="text-rose-500 fill-rose-500 shrink-0 animate-pulse" />
-                                                        Synchron Supporters
-                                                    </h3>
-                                                    <p className="text-xs text-zinc-555 dark:text-zinc-455 leading-relaxed">
-                                                        Special thanks to our amazing Pro supporters:
-                                                    </p>
-                                                    <div className="flex flex-wrap gap-2 pt-1">
-                                                        {supporters.map((supporter, idx) => (
-                                                            <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border border-violet-100 dark:border-violet-900/30">
-                                                                {supporter}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="text-center pt-4">
-                                                <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
-                                                    Synchron v{currentVersion}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        {currentView === 'profile' && (
+                            <SettingsView
+                                user={user}
+                                theme={theme}
+                                setTheme={setTheme}
+                                colorTheme={colorTheme}
+                                setColorTheme={setColorTheme}
+                                aiDisabled={aiDisabled}
+                                setAiDisabled={setAiDisabled}
+                                uiThemeOptions={uiThemeOptions}
+                                uiTheme={uiTheme}
+                                setUiThemePref={setUiThemePref}
+                                isModern={isModern}
+                                darkStyle={darkStyle}
+                                setDarkStyle={setDarkStyle}
+                                currentVersion={currentVersion}
+                                onSignOut={logout}
+                                setView={setCurrentView}
+                            />
+                        )}
 
                     </Suspense>
                 </div>
@@ -1665,29 +1176,6 @@ function App() {
 
                             {/* Body / Form */}
                             <div className="p-5 space-y-4">
-                                {!(user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro') ? (
-                                    <div className="space-y-4 py-2 text-center">
-                                        <div className="w-12 h-12 bg-violet-100 dark:bg-violet-955/40 text-violet-600 dark:text-violet-400 flex items-center justify-center rounded-full mx-auto animate-pulse">
-                                            <Sparkles size={24} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Unlock AI Schedule Assistant</h4>
-                                            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                                                Ask questions about your timetable, class timings, and room changes. Upgrade to Pro for $4.99 annually.
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setShowAiModal(false);
-                                                setCurrentView('profile');
-                                            }}
-                                            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold uppercase tracking-wider hover:from-violet-700 hover:to-indigo-700 transition active:scale-95 rounded-xl font-semibold"
-                                        >
-                                            Upgrade to Pro ($4.99)
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
                                         <div className="text-xs text-zinc-500 font-semibold mb-1">
                                             Ask questions about classes, rooms, teachers, or times
                                         </div>
@@ -1715,8 +1203,6 @@ function App() {
                                                 </p>
                                             </div>
                                         )}
-                                    </>
-                                )}
                             </div>
                         </div>
                     </div>

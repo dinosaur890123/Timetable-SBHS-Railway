@@ -7,11 +7,6 @@ const db = require('./db');
 
 dotenv.config();
 
-const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
-if (!stripe) {
-    console.warn('[billing] STRIPE_SECRET_KEY is not configured. Stripe billing routes will fail until configured.');
-}
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -35,102 +30,6 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token']
 }));
-
-// Stripe Webhook Endpoint (needs raw body parser before express.json)
-app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    if (!stripe) {
-        console.error('[webhook] Stripe is not configured.');
-        return res.status(500).json({ error: 'Stripe not configured' });
-    }
-
-    let event;
-
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } catch (err) {
-        console.error(`[webhook] Error verifying signature: ${err.message}`);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    console.log(`[webhook] Received event: ${event.type}`);
-
-    try {
-        switch (event.type) {
-            case 'checkout.session.completed': {
-                const session = event.data.object;
-                const studentId = session.client_reference_id || (session.metadata && session.metadata.studentId);
-                const stripeCustomerId = session.customer;
-                const stripeSubscriptionId = session.subscription;
-                
-                if (session.mode === 'payment') {
-                    // This is a one-off donation
-                    await addLog('DONATION', studentId || 'GUEST', `Processed successful one-off donation of ${(session.amount_total / 100).toFixed(2)} ${session.currency.toUpperCase()}`);
-                    console.log(`[webhook] Donation processed successfully for customer: ${stripeCustomerId}`);
-                } else {
-                    // Subscription checkout
-                    let subscriptionStatus = 'active';
-                    if (stripeSubscriptionId) {
-                        try {
-                            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-                            subscriptionStatus = subscription.status;
-                        } catch (subErr) {
-                            console.error('[webhook] Error retrieving subscription details:', subErr);
-                        }
-                    }
-
-                    if (studentId) {
-                        await updateUserSubscription(studentId, {
-                            stripeCustomerId,
-                            stripeSubscriptionId,
-                            subscriptionStatus
-                        });
-                        console.log(`[webhook] User subscription activated for studentId: ${studentId}`);
-                    } else {
-                        console.error('[webhook] No studentId found in checkout session metadata or client_reference_id');
-                    }
-                }
-                break;
-            }
-            case 'customer.subscription.updated': {
-                const subscription = event.data.object;
-                const stripeSubscriptionId = subscription.id;
-                const stripeCustomerId = subscription.customer;
-                const subscriptionStatus = subscription.status;
-
-                await updateUserSubscriptionByStripeId({
-                    stripeCustomerId,
-                    stripeSubscriptionId,
-                    subscriptionStatus
-                });
-                console.log(`[webhook] Subscription updated: ${stripeSubscriptionId} to status: ${subscriptionStatus}`);
-                break;
-            }
-            case 'customer.subscription.deleted': {
-                const subscription = event.data.object;
-                const stripeSubscriptionId = subscription.id;
-                const stripeCustomerId = subscription.customer;
-                const subscriptionStatus = 'canceled';
-
-                await updateUserSubscriptionByStripeId({
-                    stripeCustomerId,
-                    stripeSubscriptionId,
-                    subscriptionStatus
-                });
-                console.log(`[webhook] Subscription deleted: ${stripeSubscriptionId}`);
-                break;
-            }
-            default:
-                break;
-        }
-        res.json({ received: true });
-    } catch (err) {
-        console.error('[webhook] Error handling event:', err);
-        res.status(500).json({ error: 'Webhook handler failed' });
-    }
-});
 
 app.use(express.json());
 
@@ -730,103 +629,6 @@ async function getUserById(id) {
     };
 }
 
-// Update subscription status functions
-async function updateUserSubscription(studentId, { stripeCustomerId, stripeSubscriptionId, subscriptionStatus }) {
-    if (!isDbEnabled) {
-        const userIndex = users.findIndex(u => String(u.id) === String(studentId));
-        if (userIndex !== -1) {
-            if (stripeCustomerId !== undefined) users[userIndex].stripeCustomerId = stripeCustomerId;
-            if (stripeSubscriptionId !== undefined) users[userIndex].stripeSubscriptionId = stripeSubscriptionId;
-            if (subscriptionStatus !== undefined) users[userIndex].subscriptionStatus = subscriptionStatus;
-            return users[userIndex];
-        }
-        return null;
-    }
-
-    const sets = [];
-    const values = [];
-    let paramIndex = 2;
-
-    if (stripeCustomerId !== undefined) {
-        sets.push(`stripe_customer_id = $${paramIndex++}`);
-        values.push(stripeCustomerId);
-    }
-    if (stripeSubscriptionId !== undefined) {
-        sets.push(`stripe_subscription_id = $${paramIndex++}`);
-        values.push(stripeSubscriptionId);
-    }
-    if (subscriptionStatus !== undefined) {
-        sets.push(`subscription_status = $${paramIndex++}`);
-        values.push(subscriptionStatus);
-    }
-
-    if (sets.length === 0) return null;
-
-    values.unshift(String(studentId));
-    const result = await db.query(
-        `UPDATE app_users 
-         SET ${sets.join(', ')}
-         WHERE id = $1
-         RETURNING id, name, email, role, year, status, joined, last_seen, timetable, stripe_customer_id, stripe_subscription_id, subscription_status`,
-        values
-    );
-
-    if (result.rows.length === 0) return null;
-    const row = result.rows[0];
-    return {
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        role: row.role,
-        year: row.year,
-        status: row.status,
-        joined: toIso(row.joined),
-        lastSeen: toIso(row.last_seen),
-        timetable: row.timetable ?? null,
-        stripeCustomerId: row.stripe_customer_id,
-        stripeSubscriptionId: row.stripe_subscription_id,
-        subscriptionStatus: row.subscription_status
-    };
-}
-
-async function updateUserSubscriptionByStripeId({ stripeCustomerId, stripeSubscriptionId, subscriptionStatus }) {
-    if (!isDbEnabled) {
-        let userIndex = users.findIndex(u => u.stripeSubscriptionId === stripeSubscriptionId);
-        if (userIndex === -1 && stripeCustomerId) {
-            userIndex = users.findIndex(u => u.stripeCustomerId === stripeCustomerId);
-        }
-        if (userIndex !== -1) {
-            users[userIndex].subscriptionStatus = subscriptionStatus;
-            if (stripeSubscriptionId) users[userIndex].stripeSubscriptionId = stripeSubscriptionId;
-            return users[userIndex];
-        }
-        return null;
-    }
-
-    let result;
-    if (stripeSubscriptionId) {
-        result = await db.query(
-            `UPDATE app_users 
-             SET subscription_status = $2
-             WHERE stripe_subscription_id = $1
-             RETURNING id, name`,
-            [stripeSubscriptionId, subscriptionStatus]
-        );
-    }
-
-    if ((!result || result.rows.length === 0) && stripeCustomerId) {
-        result = await db.query(
-            `UPDATE app_users 
-             SET subscription_status = $2
-             WHERE stripe_customer_id = $1
-             RETURNING id, name`,
-            [stripeCustomerId, subscriptionStatus]
-        );
-    }
-
-    return result ? result.rows[0] : null;
-}
-
 // Require admin privilege (Only users with Admin role in DB, or bootstrap list if not configured in DB as Student)
 const requireAdminAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
@@ -934,57 +736,6 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });
-    }
-});
-
-// POST /api/users/profile - Update student settings (e.g. show_supporter toggle)
-app.post('/api/users/profile', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = req.user.studentId;
-        const { showSupporter } = req.body || {};
-
-        let updated;
-        if (!isDbEnabled) {
-            const userIndex = users.findIndex(u => String(u.id) === String(studentId));
-            if (userIndex !== -1) {
-                if (showSupporter !== undefined) {
-                    users[userIndex].showSupporter = Boolean(showSupporter);
-                }
-                updated = users[userIndex];
-            }
-        } else {
-            const result = await db.query(
-                `UPDATE app_users SET show_supporter = $1 WHERE id = $2
-                 RETURNING id, name, email, role, year, status, joined, last_seen, stripe_customer_id, stripe_subscription_id, subscription_status, show_supporter`,
-                [Boolean(showSupporter), String(studentId)]
-            );
-            if (result.rows.length > 0) {
-                const row = result.rows[0];
-                updated = {
-                    id: row.id,
-                    name: row.name,
-                    email: row.email,
-                    role: row.role,
-                    year: row.year,
-                    status: row.status,
-                    joined: toIso(row.joined),
-                    lastSeen: toIso(row.last_seen),
-                    stripeCustomerId: row.stripe_customer_id ?? null,
-                    stripeSubscriptionId: row.stripe_subscription_id ?? null,
-                    subscriptionStatus: row.subscription_status ?? null,
-                    showSupporter: row.show_supporter !== false
-                };
-            }
-        }
-
-        if (!updated) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        res.json({ success: true, user: updated });
-    } catch (e) {
-        console.error('Update profile error:', e);
-        res.status(500).json({ error: 'Failed to update settings' });
     }
 });
 
@@ -1516,14 +1267,9 @@ app.get('/api/assignments', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         
-        // Premium/Pro check
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
-        }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
         }
 
         if (!isDbEnabled) {
@@ -1560,14 +1306,9 @@ app.post('/api/assignments', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         
-        // Premium/Pro check
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
-        }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
         }
 
         const { id, title, subject, dueDate, status, priority, notes: taskNotes } = req.body || {};
@@ -1685,14 +1426,9 @@ app.delete('/api/assignments/:id', requireStudentAuth, async (req, res) => {
             return res.status(400).json({ error: 'Missing assignment ID' });
         }
 
-        // Premium/Pro check
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
-        }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: Homework Tracker requires a Synchron Pro subscription.' });
         }
 
         if (!isDbEnabled) {
@@ -1728,136 +1464,6 @@ app.delete('/api/assignments/:id', requireStudentAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to delete assignment' });
     }
 });
-
-// GET /api/billing/debug - Debug environment variables configuration
-app.get('/api/billing/debug', async (req, res) => {
-    res.json({
-        stripeInitialized: !!stripe,
-        envKeys: {
-            STRIPE_SECRET_KEY_defined: !!process.env.STRIPE_SECRET_KEY,
-            STRIPE_SECRET_KEY_length: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0,
-            STRIPE_SECRET_KEY_prefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) : null,
-            STRIPE_WEBHOOK_SECRET_defined: !!process.env.STRIPE_WEBHOOK_SECRET,
-            SYNCHRON_PRO_PRICE_ID_defined: !!process.env.SYNCHRON_PRO_PRICE_ID,
-            STRIPE_CLIENT_URL: process.env.STRIPE_CLIENT_URL || null,
-            NODE_ENV: process.env.NODE_ENV || null
-        }
-    });
-});
-
-// GET /api/billing/status - Fetch latest billing status for the logged-in student
-app.get('/api/billing/status', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        const dbUser = await getUserById(studentId);
-        if (!dbUser) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json({
-            stripeCustomerId: dbUser.stripeCustomerId || null,
-            stripeSubscriptionId: dbUser.stripeSubscriptionId || null,
-            subscriptionStatus: dbUser.subscriptionStatus || null
-        });
-    } catch (e) {
-        console.error('Fetch billing status error:', e);
-        res.status(500).json({ error: 'Failed to fetch billing status' });
-    }
-});
-
-// POST /api/billing/create-checkout-session - Start checkout flow
-app.post('/api/billing/create-checkout-session', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        const email = req.user.email;
-        const name = `${req.user.givenName} ${req.user.surname}`;
-
-        let { priceId, mode } = req.body || {};
-        if (!mode) mode = 'subscription';
-
-        if (!stripe) {
-            return res.status(500).json({ error: 'Stripe is not configured on the server. Please check your environment variables.' });
-        }
-
-        const dbUser = await getUserById(studentId);
-        let stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
-        if (stripeCustomerId && stripeCustomerId.startsWith('cus_mock_')) {
-            stripeCustomerId = null;
-        }
-
-        if (!stripeCustomerId) {
-            const customer = await stripe.customers.create({
-                email: email,
-                name: name,
-                metadata: { studentId }
-            });
-            stripeCustomerId = customer.id;
-            await updateUserSubscription(studentId, { stripeCustomerId });
-        }
-
-        const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-        
-        if (!priceId) {
-            priceId = process.env.SYNCHRON_PRO_PRICE_ID;
-        }
-
-        if (!priceId) {
-            return res.status(400).json({ error: 'Stripe Pro Price ID (SYNCHRON_PRO_PRICE_ID) is not configured on the server.' });
-        }
-
-        const session = await stripe.checkout.sessions.create({
-            customer: stripeCustomerId,
-            client_reference_id: studentId,
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
-            mode: mode,
-            success_url: mode === 'payment' ? `${clientUrl}/?billing=donation-success` : `${clientUrl}/?billing=success`,
-            cancel_url: `${clientUrl}/?billing=cancel`,
-            metadata: { studentId, type: mode === 'payment' ? 'donation' : 'subscription' }
-        });
-
-        res.json({ url: session.url });
-    } catch (e) {
-        console.error('Create checkout session error:', e);
-        res.status(500).json({ error: e.message || 'Failed to create checkout session' });
-    }
-});
-
-// POST /api/billing/create-portal-session - Manage subscription in Stripe Customer Portal
-app.post('/api/billing/create-portal-session', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-
-        if (!stripe) {
-            return res.status(500).json({ error: 'Stripe is not configured on the server. Please check your environment variables.' });
-        }
-
-        const dbUser = await getUserById(studentId);
-        let stripeCustomerId = dbUser ? dbUser.stripeCustomerId : null;
-        if (stripeCustomerId && stripeCustomerId.startsWith('cus_mock_')) {
-            stripeCustomerId = null;
-        }
-
-        if (!stripeCustomerId) {
-            return res.status(400).json({ error: 'No active billing profile found. Please subscribe first.' });
-        }
-
-        const clientUrl = process.env.STRIPE_CLIENT_URL || req.headers.origin || 'http://localhost:5173';
-        const session = await stripe.billingPortal.sessions.create({
-            customer: stripeCustomerId,
-            return_url: clientUrl,
-        });
-
-        res.json({ url: session.url });
-    } catch (e) {
-        console.error('Create portal session error:', e);
-        res.status(500).json({ error: e.message || 'Failed to create portal session' });
-    }
-});
-
 
 // POST /api/users/promote - Promote user to Admin by student ID
 app.post('/api/users/promote', requireAuth, async (req, res) => {
@@ -2138,37 +1744,16 @@ app.get('/api/broadcast', requireAuth, async (req, res) => {
     }
 });
 
-async function getSupporters() {
-    if (!isDbEnabled) {
-        return users
-            .filter(u => (u.subscriptionStatus === 'active' || u.subscriptionStatus === 'pro') && u.showSupporter !== false)
-            .map(u => u.name)
-            .filter(Boolean);
-    }
-    try {
-        const result = await db.query(
-            "SELECT name FROM app_users WHERE (subscription_status = 'active' OR subscription_status = 'pro') AND show_supporter = TRUE",
-            []
-        );
-        return result.rows.map(r => r.name).filter(Boolean);
-    } catch (err) {
-        console.error('Failed to fetch supporters:', err);
-        return [];
-    }
-}
-
 // GET /api/system/status (Public endpoint for client app)
 app.get('/api/system/status', (req, res) => {
     (async () => {
         try {
             const state = await getSystemState();
-            const supporters = await getSupporters();
             res.json({
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
                 version: state.version,
-                uiThemes: { default: state.uiDefaultTheme, enabled: state.uiEnabledThemes },
-                supporters
+                uiThemes: { default: state.uiDefaultTheme, enabled: state.uiEnabledThemes }
             });
         } catch (e) {
             console.error('System status error:', e);
@@ -2496,10 +2081,6 @@ app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
-        }
 
         const notices = req.body.notices || [];
         const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
@@ -2713,10 +2294,6 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, async (req, res) => {
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
-        }
 
         const { question, timetable, currentMinutes, completeTimetable } = req.body || {};
         if (!question) {
@@ -2905,10 +2482,6 @@ app.post('/api/ai/notes-summarise', requireStudentAuth, async (req, res) => {
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
-        }
 
         const { content, title } = req.body || {};
         if (!content) {
@@ -2937,10 +2510,6 @@ app.post('/api/ai/quiz-generate', requireStudentAuth, async (req, res) => {
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
-        }
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
-        if (!isPro) {
-            return res.status(403).json({ error: 'Forbidden: AI features require a Synchron Pro subscription.' });
         }
 
         const { source, noteContent, topic, count } = req.body || {};
@@ -3312,7 +2881,7 @@ registerRoutePair('/clipboard/teams/:id', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, `clipboard/teams/${id}`, () => null);
 });
 
-// 35. Transit departures API (Synchron Pro Feature)
+// 35. Transit departures API
 registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -3320,18 +2889,13 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
-        // Determine Pro user status
-        const isPro = dbUser.role === 'Admin' || dbUser.subscriptionStatus === 'active' || dbUser.subscriptionStatus === 'pro';
 
         const { stopName = 'Moore Park Light Rail' } = req.query;
-        
-        // Free users are restricted to the default school stop
-        const stopToQuery = isPro ? stopName : 'Moore Park Light Rail';
+        const stopToQuery = stopName;
         const apiKey = process.env.TRANSPORT_NSW_API_KEY;
 
         if (apiKey) {
-            console.log(`[transit] Querying TfNSW APIs for: "${stopToQuery}" (isPro: ${isPro})`);
+            console.log(`[transit] Querying TfNSW APIs for: "${stopToQuery}" `);
             
             // 1. Resolve stop name to ID using Stop Finder
             const stopFinderUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/stop_finder');
@@ -3407,7 +2971,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
             });
 
             // Free users get 6 (3 visible + 3 blurred), Pro gets 10
-            return res.json(departures.slice(0, isPro ? 10 : 6));
+            return res.json(departures.slice(0, 10));
         } else {
             // fallback to dynamic simulated mock data
             const nowMs = Date.now();
@@ -3446,7 +3010,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
             departures.sort((a, b) => a.minutes - b.minutes);
             
             // Free users get 6 (3 visible + 3 blurred), Pro gets all
-            return res.json(isPro ? departures : departures.slice(0, 6));
+            return res.json(departures);
         }
     } catch (e) {
         console.error('Transit API error:', e);

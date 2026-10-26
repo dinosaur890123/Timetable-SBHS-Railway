@@ -22,23 +22,18 @@ const CalendarView = ({ user }) => {
         const start = startOfMonth(currentDate);
         const end = endOfMonth(currentDate);
 
-        const isPro = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-
         const promises = [
           fetchCalendarEvents(start, end),
-          fetchDateInfo(currentDate).catch(() => null)
+          fetchDateInfo(currentDate).catch(() => null),
+          fetchAssignments().catch(() => ({ success: true, assignments: [] }))
         ];
-
-        if (isPro) {
-          promises.push(fetchAssignments().catch(() => ({ success: true, assignments: [] })));
-        }
 
         const [eventsData, daysData, assignmentsData] = await Promise.all(promises);
 
         let mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
         const userAssignments = assignmentsData?.assignments || [];
 
-        if (isPro && userAssignments.length > 0) {
+        if (userAssignments.length > 0) {
           userAssignments.forEach(assignment => {
             const dueDate = new Date(assignment.dueDate);
             if (dueDate >= start && dueDate <= end) {
