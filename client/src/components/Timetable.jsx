@@ -89,10 +89,25 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
+            const isBreak = isBreakBell(bellId, periodInfo);
+            // An empty Period 0 is just a gap before school starts.
+            if (isBreak && String(bellId) === '0') return null;
+
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
+                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
-        }).filter(Boolean);
+        }).filter(Boolean).reduce((rows, row) => {
+            // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            const prev = rows[rows.length - 1];
+            if (prev?.isBreak && row.isBreak && prev.label === row.label) {
+                prev.endMin = row.endMin;
+                prev.isCurrent = currentMinutes >= prev.startMin && currentMinutes < prev.endMin;
+                return rows;
+            }
+            rows.push({ ...row });
+            return rows;
+        }, []);
 
         // Timeline Progress Line Position
         if (currentMinutes >= firstMin && currentMinutes <= lastMin) {
@@ -293,36 +308,32 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         <div className="flex flex-col gap-3 w-full">
             {viewMode === 'daily' ? (
                 <>
-                <div className="bg-white dark:bg-zinc-950 p-2 sm:p-3 md:p-4 border border-zinc-200 dark:border-zinc-850 rounded-2xl">
-                    <div className="space-y-1.5">
-                        {routineData.map((data) => (
-                            <PeriodCard
-                                key={`${data.bellId}-${data.index}`}
-                                period={data.periodInfo}
-                                bell={data.bell}
-                                isCurrent={data.isCurrent}
-                                isNext={data.isNext}
-                                routineIndex={data.index}
-                                currentMinutes={currentMinutes}
-                                startMinutes={data.startMin}
-                                endMinutes={data.endMin}
-                                canvasLink={getLink(data.periodInfo.title)}
-                            />
-                        ))}
-                        {/* End of Day divider */}
-                        {routineData.length > 0 && (
-                            <div className="my-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
-                                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
-                                        End of Day
-                                    </span>
-                                    <div className="flex-1 h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.15)]" />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <ol className="-mx-3 space-y-0.5">
+                    {routineData.map((data) => (
+                        <PeriodCard
+                            key={`${data.bellId}-${data.index}`}
+                            period={data.periodInfo}
+                            bell={data.bell}
+                            label={data.label}
+                            isBreak={data.isBreak}
+                            isCurrent={data.isCurrent}
+                            isNext={data.isNext}
+                            routineIndex={data.index}
+                            currentMinutes={currentMinutes}
+                            startMinutes={data.startMin}
+                            endMinutes={data.endMin}
+                            canvasLink={getLink(data.periodInfo.title)}
+                        />
+                    ))}
+                    {routineData.length > 0 && (
+                        <li className="flex items-center gap-4 px-3 pt-3">
+                            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                                {routineData[routineData.length - 1].bell.endTime}
+                            </span>
+                            <span className="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
+                        </li>
+                    )}
+                </ol>
                 </>
             ) : (
                 renderCycleView()

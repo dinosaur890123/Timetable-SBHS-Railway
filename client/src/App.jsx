@@ -36,7 +36,7 @@ import { registerUser } from './services/adminApi';
 import { createCheckoutSession, createPortalSession, updateProfileSettings } from './services/billingApi';
 import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X, WifiOff, Database } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X, WifiOff, Database } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 
 function App() {
@@ -1071,60 +1071,55 @@ function App() {
                         </div>
                     }>
 
-                        {/* HOME VIEW: greeting + day overview above the timetable */}
+                        {/* HOME VIEW: greeting, the day's timetable and a side rail */}
                         {currentView === 'home' && (
-                            <div className="space-y-3">
-                                <div className="pb-5 mb-2 md:pb-7 md:mb-3 border-b border-zinc-200 dark:border-zinc-900">
-                                    <Home user={user} timetableData={timetable} viewDate={viewDate} />
-                                </div>
-                                {/* Date Controls & AI Button Row - only show in daily view */}
-                                {timetableViewMode === 'daily' && (
+                            <Home
+                                user={user}
+                                timetableData={timetable}
+                                viewDate={viewDate}
+                                isCycle={timetableViewMode === 'cycle'}
+                                dayNav={timetableViewMode === 'daily' && (
                                     <>
-                                    <div className="flex items-center justify-between gap-2 w-full bg-white dark:bg-zinc-900 p-1 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                                    <div className="flex items-center gap-1">
-                                        <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 sm:w-8 sm:h-8 grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronLeft size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => setShowDatePicker(!showDatePicker)}
-                                            aria-label="Choose date"
-                                            className="flex items-center gap-1.5 px-3 h-10 sm:h-8 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer min-w-0 sm:min-w-[132px] justify-center"
-                                        >
-                                            <span className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                                {format(viewDate, 'EEEE')}
-                                            </span>
-                                            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
-                                                {format(viewDate, 'd MMM')}
-                                            </span>
-                                        </button>
-                                        <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 sm:w-8 sm:h-8 grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-600 dark:text-zinc-400 shrink-0">
-                                            <ChevronRight size={18} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5 pr-0.5 shrink-0">
-                                        {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
-                                            <button
-                                                onClick={resetToday}
-                                                className="flex items-center gap-1 px-2.5 h-9 sm:h-7 text-xs font-semibold rounded-lg transition-colors text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                                            >
-                                                <CalendarIcon size={13} />
-                                                Today
+                                    <div className="flex items-center justify-between gap-3 mb-3">
+                                        <div className="flex items-center -ml-2 min-w-0">
+                                            <button onClick={prevDay} aria-label="Previous day" className="w-9 h-9 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                <ChevronLeft size={17} />
                                             </button>
-                                        )}
-                                        {!aiDisabled && (
                                             <button
-                                                onClick={() => setShowAiModal(true)}
-                                                aria-label="Ask AI about your timetable"
-                                                className="h-9 sm:h-7 px-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1"
+                                                onClick={() => setShowDatePicker(!showDatePicker)}
+                                                aria-label="Choose date"
+                                                className="flex items-baseline gap-2 px-2 h-9 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
                                             >
-                                                <Sparkles size={13} />
-                                                <span className="hidden min-[400px]:inline">Ask AI</span>
+                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white">{format(viewDate, 'EEEE')}</span>
+                                                <span className="text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
                                             </button>
-                                        )}
+                                            <button onClick={nextDay} aria-label="Next day" className="w-9 h-9 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                <ChevronRight size={17} />
+                                            </button>
+                                        </div>
+                        
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
+                                                <button
+                                                    onClick={resetToday}
+                                                    className="h-8 px-2.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                                                >
+                                                    Today
+                                                </button>
+                                            )}
+                                            {!aiDisabled && (
+                                                <button
+                                                    onClick={() => setShowAiModal(true)}
+                                                    aria-label="Ask AI about your timetable"
+                                                    className="h-8 px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
+                                                >
+                                                    <Sparkles size={14} className="text-accent" />
+                                                    <span className="hidden min-[400px]:inline">Ask AI</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-
+                        
                                 <AnimatePresence>
                                     {showDatePicker && (
                                         <div className="relative" ref={setCalendarPopupRef}>
@@ -1195,9 +1190,9 @@ function App() {
                                 </AnimatePresence>
                                 </>
                                 )}
-
+                            >
                                 <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
-                            </div>
+                            </Home>
                         )}
 
                         {/* CALENDAR VIEW */}

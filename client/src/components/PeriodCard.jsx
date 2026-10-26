@@ -1,172 +1,121 @@
 import React from 'react';
-import { MapPin, User as UserIcon, Clock, ExternalLink } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { isBreakBell } from '../utils/timetable';
-
-const CARD_STYLES = {
-    current:  'bg-white dark:bg-zinc-900 border-2 border-accent shadow-sm',
-    changed:  'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/60',
-    default:  'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/60',
-};
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
 
-const PeriodCard = ({ period, bell, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isHighlighted, canvasLink }) => {
+// Changes are marked by shape (a quiet tag and a struck-through old value) rather than
+// colour, so they read the same whichever accent colour theme is active.
+const ChangeTag = ({ children }) => (
+    <span className="shrink-0 px-1.5 py-px rounded-md border border-zinc-900/10 dark:border-white/10 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+        {children}
+    </span>
+);
+
+const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
     const { title, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
-    const { time } = bell;
+    const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
+    const minsLeft = Math.max(0, Math.ceil(endMinutes - currentMinutes));
+    // Applied inside the motion element: framer-motion's inline opacity would override it there.
+    const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity' : '';
 
-    const isBreak = isBreakBell(bell.bell, period);
-    const isPast  = currentMinutes !== -1 && currentMinutes >= endMinutes;
-    // Applied to inner elements: framer-motion's inline opacity would override it on the motion wrapper.
-    const dim = isPast ? 'opacity-50 group-hover:opacity-100' : '';
-
-    const hasCanvasLink = canvasLink && title && title !== 'Free Period' && !title.toLowerCase().includes('roll call');
-
-    const progress = isCurrent && startMinutes != null && endMinutes
-        ? Math.min(100, Math.max(0, ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100))
-        : 0;
-
-    const subjectBubble = isCurrent
-        ? 'bg-accent text-accent-contrast border border-accent'
-        : isHighlighted
-        ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-300 dark:border-violet-700'
-        : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800';
-
-    const cardStyle = isCurrent ? CARD_STYLES.current
-        : isHighlighted ? 'bg-violet-50/20 dark:bg-violet-950/10 border-2 border-violet-400 dark:border-violet-500'
-        : (isSubstituted || hasRoomChange) ? CARD_STYLES.changed
-        : CARD_STYLES.default;
-
-    // Left accent strip flags a change without tinting the whole card.
-    const changeStrip = !isCurrent && (hasRoomChange ? 'bg-amber-500' : isSubstituted ? 'bg-blue-500' : null);
-
-    // ── Break row ──────────────────────────────────────────────────────────
     if (isBreak) {
         return (
-            <motion.div
+            <motion.li
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: enterDelay(routineIndex) }}
-                className="relative flex items-center gap-3 py-0.5"
+                className="px-3 py-1.5"
             >
-                <div className={`w-11 sm:w-[50px] text-right shrink-0 ${dim}`}>
-                    <span className="text-xs font-medium tabular-nums text-zinc-400">{time}</span>
+                <div className={`flex items-center gap-4 ${dim}`}>
+                <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{bell.time}</span>
+                <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{label}</span>
+                <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
+                <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
+                    {isCurrent ? `${minsLeft}m left` : `${endMinutes - startMinutes} min`}
+                </span>
                 </div>
-                <div className={`flex-1 flex items-center gap-3 ${dim}`}>
-                    <span className={`text-xs font-semibold ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>
-                        {bell.bellDisplay}
-                    </span>
-                    <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-                    {isCurrent && (
-                        <span className="text-xs font-semibold text-accent tabular-nums">
-                            {Math.max(0, Math.ceil(endMinutes - currentMinutes))}m left
+            </motion.li>
+        );
+    }
+
+    const hasCanvasLink = canvasLink && title && title !== 'Free Period';
+    const progress = isCurrent
+        ? Math.min(100, Math.max(0, ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100))
+        : 0;
+    const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
+
+    const content = (
+        <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
+            {isCurrent && <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
+
+            <span className={`w-11 shrink-0 text-right text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>
+                {bell.time}
+            </span>
+
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{title || 'Free Period'}</h3>
+                    {hasCanvasLink && (
+                        <ArrowUpRight size={14} className="shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                    {isSubstituted && <ChangeTag>Cover</ChangeTag>}
+                    {movedFrom && <ChangeTag>Room change</ChangeTag>}
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+                    {isCurrent ? (
+                        <span className="shrink-0 font-medium text-accent tabular-nums">{minsLeft}m left</span>
+                    ) : isNext ? (
+                        <span className="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">Up next</span>
+                    ) : null}
+                    {(isCurrent || isNext) && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
+                    {fullTeacher && (
+                        <span className="truncate">
+                            {fullTeacher === 'No teacher' ? 'No teacher assigned' : fullTeacher}
+                            {isSubstituted && oldTeacher && <span className="text-zinc-400 dark:text-zinc-500"> for {oldTeacher}</span>}
                         </span>
                     )}
                 </div>
-            </motion.div>
-        );
-    }
+            </div>
 
-    const teacherChip = fullTeacher && (
-        <span className={`inline-flex items-center gap-1 min-w-0 ${isSubstituted ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-zinc-500 dark:text-zinc-400'}`}>
-            <UserIcon size={12} className="shrink-0" />
-            <span className="truncate">{fullTeacher}</span>
-            {isSubstituted && oldTeacher && (
-                <span className="font-normal text-zinc-400 dark:text-zinc-500 truncate">for {oldTeacher}</span>
+            {room && (
+                <div className="shrink-0 text-right leading-tight">
+                    <div className="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">{room}</div>
+                    {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
+                </div>
             )}
-        </span>
-    );
 
-    const roomChip = room && (
-        <span className={`inline-flex items-center gap-1 shrink-0 ${hasRoomChange ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-zinc-800 dark:text-zinc-200 font-semibold'}`}>
-            <MapPin size={12} className="shrink-0" />
-            <span>{room}</span>
-            {hasRoomChange && oldRoom && oldRoom !== room && (
-                <span className="font-normal text-zinc-400 dark:text-zinc-500">
-                    was <span className="line-through">{oldRoom}</span>
+            {isCurrent && (
+                <span aria-hidden className="absolute left-3 right-3 bottom-0 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06] overflow-hidden">
+                    <span className="block h-full bg-accent/70 transition-[width] duration-1000 ease-linear" style={{ width: `${progress}%` }} />
                 </span>
             )}
-        </span>
+        </div>
     );
 
-    // ── Period row ─────────────────────────────────────────────────────────
-    const cardContent = (
-        <motion.div
+    return (
+        <motion.li
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: enterDelay(routineIndex) }}
-            className="relative flex items-center gap-3 group"
+            className={`group rounded-xl transition-colors ${isCurrent
+                ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045]'
+                : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'}`}
         >
-            {/* Time column */}
-            <div className={`w-11 sm:w-[50px] text-right shrink-0 transition-opacity ${dim}`}>
-                <span className={`text-sm font-semibold tabular-nums ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}>{time}</span>
-            </div>
-
-            {/* Card */}
-            <div className={`flex-1 min-w-0 relative py-2.5 px-3 border rounded-xl transition-[background-color,opacity] overflow-hidden ${cardStyle} ${dim}`}>
-                {changeStrip && <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-1 ${changeStrip}`} />}
-
-                {/* Progress fill (current period only) */}
-                {isCurrent && (
-                    <div
-                        className="absolute top-0 left-0 bottom-0 bg-zinc-100 dark:bg-white/[0.04] pointer-events-none transition-[width] duration-1000 ease-linear"
-                        style={{ width: `${progress}%` }}
-                    />
-                )}
-
-                <div className="relative z-10 flex items-center gap-3">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold shrink-0 ${subjectBubble}`}>
-                        {bell.bell}
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-4 gap-y-1">
-                        {/* Title + status */}
-                        <div className="flex items-center gap-2 min-w-0">
-                            <h3 className={`text-sm font-semibold truncate ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-100'}`}>
-                                {title || 'Free Period'}
-                            </h3>
-                            {isCurrent && (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent shrink-0 tabular-nums">
-                                    <Clock size={12} /> {Math.max(0, Math.ceil(endMinutes - currentMinutes))}m left
-                                </span>
-                            )}
-                            {isNext && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[12px] font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shrink-0">
-                                    Up next
-                                </span>
-                            )}
-                            {hasCanvasLink && (
-                                <ExternalLink size={12} className="hidden sm:block shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            )}
-                        </div>
-
-                        {/* Teacher + room: below the title on phones, right-aligned on wider screens */}
-                        <div className="flex items-center gap-3 text-xs min-w-0 sm:justify-end">
-                            {teacherChip}
-                            {roomChip}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
+            {hasCanvasLink ? (
+                <a
+                    href={canvasLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label={`${title}, open in Canvas`}
+                >
+                    {content}
+                </a>
+            ) : content}
+        </motion.li>
     );
-
-    if (hasCanvasLink) {
-        return (
-            <a
-                href={canvasLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label={`${title} — open in Canvas`}
-            >
-                {cardContent}
-            </a>
-        );
-    }
-
-    return cardContent;
 };
 
 export default PeriodCard;

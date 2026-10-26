@@ -311,7 +311,7 @@ html.dark[class*="theme-"] .m-ambient {
 /* Stronger header glow in the modern main panel */
 html[class*="theme-"] .m-dots {
   background-image:
-    radial-gradient(700px circle at 50% -120px, hsl(var(--color-accent) / 0.16), transparent 70%),
+    radial-gradient(700px circle at 50% -120px, hsl(var(--color-accent) / 0.07), transparent 70%),
     radial-gradient(rgb(var(--m-line) / 0.09) 1px, transparent 1px);
 }
 

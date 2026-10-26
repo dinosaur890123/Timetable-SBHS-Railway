@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, MapPin, UserRound, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import { motion } from 'framer-motion';
 import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 
@@ -12,11 +11,11 @@ const getMinutes = (timeStr) => {
 };
 
 const getGreeting = (hour) => {
-    if (hour < 5) return 'Good Night';
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    if (hour < 22) return 'Good Evening';
-    return 'Good Night';
+    if (hour < 5) return 'Good night';
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    if (hour < 22) return 'Good evening';
+    return 'Good night';
 };
 
 const formatDuration = (mins) => {
@@ -61,12 +60,17 @@ const buildSlots = (timetableData) => {
     }).filter(Boolean);
 };
 
-const Card = ({ label, aside, children, className = '' }) => (
-    <section className={`relative flex flex-col min-w-0 rounded-2xl border border-m-line bg-m-card shadow-[var(--m-shadow)] p-4 md:p-5 ${className}`}>
-        <header className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">{label}</h2>
-            {aside}
-        </header>
+const isClass = (slot) => !slot.isBreak && slot.period.title && slot.period.title !== 'Free Period';
+
+const RailLabel = ({ children, aside }) => (
+    <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">{children}</span>
+        {aside}
+    </div>
+);
+
+const RailCard = ({ children }) => (
+    <section className="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-4">
         {children}
     </section>
 );
@@ -74,191 +78,137 @@ const Card = ({ label, aside, children, className = '' }) => (
 const ClassTitle = ({ title, className }) => {
     const { getLink } = useCanvasLinks();
     const link = getLink(title);
-    if (!link) return <h3 className={className}>{title}</h3>;
+    if (!link) return <div className={className}>{title}</div>;
     return (
-        <a href={link} target="_blank" rel="noopener noreferrer" className={`${className} block hover:text-accent transition-colors`}>
+        <a href={link} target="_blank" rel="noopener noreferrer" className={`${className} block hover:underline decoration-zinc-400/50 underline-offset-4`}>
             {title}
         </a>
     );
 };
 
-const VariationsCard = ({ slots, dayLabel }) => {
-    const changes = slots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
-
-    return (
-        <Card
-            label={`${dayLabel}'s variations`}
-            aside={changes.length > 0 && (
-                <span className="font-mono text-[11px] min-w-[20px] h-5 px-1.5 grid place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400">
-                    {changes.length}
-                </span>
-            )}
-        >
-            {changes.length === 0 ? (
-                <div className="flex-1 flex items-center gap-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-                    <CheckCircle2 size={18} className="shrink-0 text-emerald-500" />
-                    <span>No changes. All classes as usual.</span>
-                </div>
-            ) : (
-                <ul className="flex-1 -mx-1 space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
-                    {changes.map(({ bellId, period: p }) => (
-                        <li key={bellId} className="px-1 py-1 rounded-lg text-sm">
-                            <div className="flex items-baseline gap-2 min-w-0">
-                                <span className="font-mono text-[11px] text-zinc-400 shrink-0">P{bellId}</span>
-                                <span className="font-medium text-zinc-900 dark:text-white truncate">{p.title}</span>
-                            </div>
-                            <div className="pl-7 flex flex-col gap-0.5 text-[13px]">
-                                {p.hasRoomChange && (
-                                    <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 min-w-0">
-                                        <MapPin size={12} className="shrink-0" />
-                                        <span className="truncate">{p.oldRoom && p.oldRoom !== p.room ? `${p.oldRoom} → ${p.room}` : `Now in ${p.room}`}</span>
-                                    </span>
-                                )}
-                                {p.isSubstituted && (
-                                    <span className="inline-flex items-center gap-1.5 text-blue-700 dark:text-blue-400 min-w-0">
-                                        <UserRound size={12} className="shrink-0" />
-                                        <span className="truncate">{p.fullTeacher === 'No teacher' ? 'No teacher assigned' : `${p.fullTeacher} covering`}</span>
-                                    </span>
-                                )}
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </Card>
-    );
-};
-
-const ProgressBar = ({ value }) => (
-    <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.08] overflow-hidden">
-        <motion.div
-            className="h-full rounded-full bg-accent"
-            initial={false}
-            animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-        />
-    </div>
-);
-
-const Meta = ({ slot }) => (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-zinc-500 dark:text-zinc-400">
-        <span className="inline-flex items-center gap-1.5 tabular-nums">
-            <Clock size={13} /> {slot.bell.time}{slot.bell.endTime ? ` – ${slot.bell.endTime}` : ''}
-        </span>
+const Where = ({ slot }) => (
+    <div className="mt-1 flex items-center gap-3 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
+        <span className="tabular-nums shrink-0">{slot.bell.time}{slot.bell.endTime ? `–${slot.bell.endTime}` : ''}</span>
         {slot.period.room && (
-            <span className={`inline-flex items-center gap-1.5 ${slot.period.hasRoomChange ? 'text-amber-700 dark:text-amber-400 font-medium' : ''}`}>
-                <MapPin size={13} /> {slot.period.room}
-            </span>
+            <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />{slot.period.room}</span>
         )}
         {slot.period.fullTeacher && (
-            <span className={`inline-flex items-center gap-1.5 min-w-0 ${slot.period.isSubstituted ? 'text-blue-700 dark:text-blue-400 font-medium' : ''}`}>
-                <UserRound size={13} className="shrink-0" /> <span className="truncate">{slot.period.fullTeacher}</span>
-            </span>
+            <span className="inline-flex items-center gap-1 min-w-0"><UserRound size={12} className="shrink-0" /><span className="truncate">{slot.period.fullTeacher}</span></span>
         )}
     </div>
 );
 
-const UpNext = ({ slot, prefix }) => slot && (
-    <div className="mt-3 pt-3 border-t border-m-line flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
-        <ArrowRight size={13} className="shrink-0" />
+const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
+    <div className="mt-4 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
+        <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
-        <span className="font-medium text-zinc-900 dark:text-white truncate">{slot.period.title}</span>
-        {slot.period.room && <span className="shrink-0">· {slot.period.room}</span>}
+        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{slot.period.title}</span>
         <span className="ml-auto shrink-0 tabular-nums">{slot.bell.time}</span>
     </div>
 );
 
-const NowCard = ({ slots, now, nowMin, isLive, viewedDate }) => {
-    const classes = slots.filter(s => !s.isBreak && s.period.title && s.period.title !== 'Free Period');
-    const dayStart = slots[0]?.startMin;
-    const dayEnd = slots[slots.length - 1]?.endMin;
+const Countdown = ({ mins, caption }) => (
+    <div className="flex items-baseline gap-2">
+        <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">{formatCountdown(mins)}</span>
+        <span className="text-[13px] text-zinc-500">{caption}</span>
+    </div>
+);
 
-    if (classes.length === 0) {
+const Progress = ({ value }) => (
+    <div className="mt-4 h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
+        <div className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+    </div>
+);
+
+// What matters at this moment: the current class with a countdown, or what's first up.
+const NowCard = ({ slots, nowMin, isLive }) => {
+    const classes = slots.filter(isClass);
+    if (classes.length === 0) return null;
+
+    const dayStart = slots[0].startMin;
+    const dayEnd = slots[slots.length - 1].endMin;
+
+    if (!isLive || nowMin >= dayEnd) {
         return (
-            <Card label="Right now">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">No classes on this day.</p>
-            </Card>
+            <RailCard>
+                <RailLabel>First up</RailLabel>
+                <ClassTitle title={classes[0].period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
+                <Where slot={classes[0]} />
+                <ThenLine slot={classes[1]} />
+            </RailCard>
         );
     }
 
-    // Not today: preview how the viewed day starts.
-    if (!isLive || nowMin >= dayEnd) {
-        const first = classes[0];
-        const isTomorrow = viewedDate && format(viewedDate, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
-        const when = !viewedDate ? 'Next day' : isTomorrow ? 'Tomorrow' : format(viewedDate, 'EEEE');
+    if (nowMin < dayStart) {
         return (
-            <Card
-                label={isLive ? 'School’s out' : `First up · ${when}`}
-                aside={<span className="text-[12px] text-zinc-400 tabular-nums">{classes.length} classes</span>}
-            >
-                {isLive && <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">That’s the day done. First up next time:</p>}
-                <ClassTitle title={first.period.title} className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
-                <div className="mt-1.5"><Meta slot={first} /></div>
-                <UpNext slot={classes[1]} prefix="Then" />
-            </Card>
+            <RailCard>
+                <RailLabel>Before school</RailLabel>
+                <Countdown mins={classes[0].startMin - nowMin} caption="until first class" />
+                <ThenLine slot={classes[0]} prefix="First" />
+            </RailCard>
         );
     }
 
     const current = slots.find(s => nowMin >= s.startMin && nowMin < s.endMin);
     const next = classes.find(s => s.startMin >= (current ? current.endMin : nowMin));
+    const schoolLeft = <span className="text-[12px] text-zinc-400 tabular-nums">{formatDuration(dayEnd - nowMin)} left today</span>;
 
-    // Before school.
-    if (nowMin < dayStart) {
-        const first = classes[0];
+    if (!current || !isClass(current)) {
+        const end = current ? current.endMin : (next?.startMin ?? dayEnd);
+        const start = current ? current.startMin : nowMin;
         return (
-            <Card label="Before school" aside={<span className="text-[12px] text-zinc-400">Starts {slots[0].bell.time}</span>}>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">{formatDuration(first.startMin - nowMin)}</span>
-                    <span className="text-sm text-zinc-500">until first class</span>
-                </div>
-                <UpNext slot={first} prefix="First" />
-            </Card>
+            <RailCard>
+                <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
+                <Countdown mins={end - nowMin} caption="left" />
+                <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
+                <ThenLine slot={next} prefix="Next" />
+            </RailCard>
         );
     }
 
-    // Recess, lunch, or a gap between periods.
-    if (!current || current.isBreak || !classes.includes(current)) {
-        const breakEnd = current ? current.endMin : (next?.startMin ?? dayEnd);
-        const breakStart = current ? current.startMin : nowMin;
-        return (
-            <Card label={current ? current.period.title : 'Between classes'} aside={<span className="text-[12px] text-zinc-400">{formatDuration(dayEnd - nowMin)} of school left</span>}>
-                <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-3xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">{formatCountdown(breakEnd - nowMin)}</span>
-                    <span className="text-sm text-zinc-500">left</span>
-                </div>
-                <ProgressBar value={((nowMin - breakStart) / Math.max(1, breakEnd - breakStart)) * 100} />
-                <UpNext slot={next} prefix="Next" />
-            </Card>
-        );
-    }
-
-    // In class.
-    const progress = ((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100;
     return (
-        <Card
-            label={`Now · ${current.bell.bellDisplay || `Period ${current.bellId}`}`}
-            aside={<span className="text-[12px] text-zinc-400">{formatDuration(dayEnd - nowMin)} of school left</span>}
-        >
-            <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                    <ClassTitle title={current.period.title} className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
-                    <div className="mt-1.5"><Meta slot={current} /></div>
-                </div>
-                <div className="text-right shrink-0">
-                    <div className="text-2xl md:text-3xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
-                        {formatCountdown(current.endMin - nowMin)}
-                    </div>
-                    <div className="text-[12px] text-zinc-400 mt-1">left</div>
-                </div>
-            </div>
-            <div className="mt-4"><ProgressBar value={progress} /></div>
-            <UpNext slot={next} prefix="Next" />
-        </Card>
+        <RailCard>
+            <RailLabel aside={schoolLeft}>Now · P{current.bellId}</RailLabel>
+            <ClassTitle title={current.period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
+            <Where slot={current} />
+            <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
+            <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} />
+            <ThenLine slot={next} prefix="Next" />
+        </RailCard>
     );
 };
 
-// The top of "My Synchron": greeting, the viewed day's variations, and a live countdown for the current class.
-const Home = ({ user, timetableData, viewDate }) => {
+const ChangesCard = ({ changes }) => changes.length > 0 && (
+    <RailCard>
+        <RailLabel>{changes.length === 1 ? '1 change' : `${changes.length} changes`}</RailLabel>
+        <ul className="space-y-3">
+            {changes.map(({ bellId, period: p }) => (
+                <li key={bellId} className="text-[13px] min-w-0">
+                    <div className="flex items-baseline gap-2 min-w-0">
+                        <span className="font-mono text-[11px] text-zinc-400 shrink-0">P{bellId}</span>
+                        <span className="font-medium text-zinc-900 dark:text-white truncate">{p.title}</span>
+                    </div>
+                    {p.hasRoomChange && (
+                        <div className="pl-7 text-zinc-500 dark:text-zinc-400 tabular-nums">
+                            Room {p.oldRoom && p.oldRoom !== p.room
+                                ? <><span className="line-through">{p.oldRoom}</span> → <span className="text-zinc-900 dark:text-white">{p.room}</span></>
+                                : <span className="text-zinc-900 dark:text-white">{p.room}</span>}
+                        </div>
+                    )}
+                    {p.isSubstituted && (
+                        <div className="pl-7 text-zinc-500 dark:text-zinc-400 truncate">
+                            {p.fullTeacher === 'No teacher' ? 'No teacher assigned' : <><span className="text-zinc-900 dark:text-white">{p.fullTeacher}</span> covering</>}
+                        </div>
+                    )}
+                </li>
+            ))}
+        </ul>
+    </RailCard>
+);
+
+// My Synchron: a one-line greeting, the day's timetable, and a side rail with the
+// live countdown and any changes. In cycle view the timetable takes the full width.
+const Home = ({ user, timetableData, viewDate, isCycle, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -272,35 +222,43 @@ const Home = ({ user, timetableData, viewDate }) => {
     const viewedKey = timetableData?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = viewedKey === todayKey;
     const isTomorrow = viewedKey === format(addDays(now, 1), 'yyyy-MM-dd');
-    const viewedDate = viewDate || null;
     const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
 
-    const dayLabel = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : viewedDate ? format(viewedDate, 'EEEE') : 'Today';
-    const dayChip = inner?.dayname && (
-        isLive ? `Today is ${inner.dayname}` : `${dayLabel} is ${inner.dayname}`
+    const classCount = slots.filter(isClass).length;
+    const changes = slots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
+    const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : viewDate ? format(viewDate, 'EEEE') : 'Today';
+
+    const status = [
+        inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
+        classCount ? `${classCount} classes` : null,
+        changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : (classCount ? 'no changes' : null)
+    ].filter(Boolean).join(' · ');
+
+    // On phones the row tags already mark changes, so only the countdown sits above the list.
+    const rail = (withChanges) => !isCycle && (
+        <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
+            <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />
+            {withChanges && <ChangesCard changes={changes} />}
+        </aside>
     );
 
     return (
-        <div className="grid gap-5 xl:gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1.4fr)] xl:items-center">
-            <div className="min-w-0">
-                <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-white leading-[1.05]">
-                    {getGreeting(now.getHours())},{' '}
-                    <span className="text-accent">{user?.givenName || 'Student'}</span>
+        <div className="mx-auto max-w-6xl">
+            <header className="mb-8 md:mb-10">
+                <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
+                    {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                 </h1>
-                <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm md:text-base text-zinc-500 dark:text-zinc-400">
-                    <CalendarIcon size={16} className="text-zinc-400 dark:text-zinc-500" />
-                    <span>{format(now, 'EEEE, d MMMM yyyy')}</span>
-                    {dayChip && (
-                        <span className="px-2 py-0.5 rounded-md border border-m-line bg-zinc-900/[0.04] dark:bg-white/[0.06] text-zinc-800 dark:text-zinc-200 text-xs md:text-sm font-medium">
-                            {dayChip}
-                        </span>
-                    )}
-                </p>
-            </div>
+                {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
+            </header>
 
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
-                <VariationsCard slots={slots} dayLabel={dayLabel} />
-                <NowCard slots={slots} now={now} nowMin={nowMin} isLive={isLive} viewedDate={viewedDate} />
+            <div className={isCycle ? '' : 'grid gap-6 lg:gap-12 lg:grid-cols-[minmax(0,1fr)_300px]'}>
+                {/* On phones the rail sits above the list so the countdown is seen first */}
+                <div className="lg:hidden">{rail(false)}</div>
+                <section className="min-w-0">
+                    {dayNav}
+                    {children}
+                </section>
+                <div className="hidden lg:block">{rail(true)}</div>
             </div>
         </div>
     );
