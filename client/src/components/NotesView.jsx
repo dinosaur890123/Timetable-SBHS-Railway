@@ -2968,47 +2968,8 @@ const NoteFlowPromo = () => (
 // MAIN STUDY HUB (NotesView)
 // =============================================
 const NotesView = ({ user, timetableData, setView }) => {
-    const isProUser = user?.role === 'Admin' || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'pro';
-
     // Which tool is active: null = hub landing, 'notes' | 'flashcards' | 'pomodoro' | 'quiz'
     const [activeTool, setActiveTool] = useState(null);
-
-    if (!isProUser) {
-        return (
-            <div className="p-6 max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <StudyPageHeader />
-
-                <NoteFlowPromo />
-
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm">
-                    <div className="flex flex-col md:flex-row md:items-start gap-5">
-                        <div className="w-12 h-12 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center">
-                            <GraduationCap size={22} />
-                        </div>
-                        <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs font-bold uppercase tracking-widest">
-                                Pro feature
-                            </div>
-                            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Built-in basics</h2>
-                            <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                Notes, flashcards, homework tracking, a Pomodoro timer and quick quizzes,
-                                tied to your timetable. Pro unlocks them here &mdash; or use NoteFlow above
-                                for the full workspace, free.
-                            </p>
-                            <div className="pt-2">
-                                <button
-                                    onClick={() => setView && setView('profile')}
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-black dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
-                                >
-                                    Upgrade to Pro ($4.99 annually)
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // Render active tool
     if (activeTool === 'notes') {

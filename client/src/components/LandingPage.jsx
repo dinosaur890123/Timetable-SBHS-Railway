@@ -265,7 +265,7 @@ const AuthErrorDialog = ({ authError, onDismiss }) => {
   );
 };
 
-const LandingPage = ({ authError, clearAuthError, supporters }) => {
+const LandingPage = ({ authError, clearAuthError }) => {
   // Easter egg: three clicks on the logo bring back the original four-square mark.
   const [logoClicks, setLogoClicks] = useState(0);
   const [useOriginalMark, setUseOriginalMark] = useState(false);
@@ -387,10 +387,7 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
           <footer className="border-t border-m-line">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-1.5 px-5 py-5 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-600 sm:flex-row sm:justify-between sm:px-8">
               <span>© {new Date().getFullYear()} Synchron</span>
-              <span>
-                Built independently for SBHS
-                {supporters && supporters.length > 0 && ' · Thanks to our Pro supporters'}
-              </span>
+              <span>Built independently for SBHS</span>
             </div>
           </footer>
         </div>

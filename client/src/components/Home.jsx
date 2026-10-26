@@ -121,28 +121,19 @@ const Progress = ({ value }) => (
 );
 
 // What matters at this moment: the current class with a countdown, or what's first up.
-const NowCard = ({ slots, nowMin, isLive, dayLabel }) => {
+const NowCard = ({ slots, nowMin, isLive }) => {
     const classes = slots.filter(isClass);
     if (classes.length === 0) return null;
 
     const dayStart = slots[0].startMin;
     const dayEnd = slots[slots.length - 1].endMin;
 
-    if (!isLive || nowMin >= dayEnd) {
-        return (
-            <RailCard>
-                <RailLabel>{dayLabel === 'Today' ? 'First up' : `${dayLabel}: First up`}</RailLabel>
-                <ClassTitle title={classes[0].period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
-                <Where slot={classes[0]} />
-                <ThenLine slot={classes[1]} />
-            </RailCard>
-        );
-    }
+    if (!isLive || nowMin >= dayEnd) return null;
 
     if (nowMin < dayStart) {
         return (
             <RailCard>
-                <RailLabel>{dayLabel === 'Today' ? 'Before school' : `${dayLabel}: Before school`}</RailLabel>
+                <RailLabel>Before school</RailLabel>
                 <Countdown mins={classes[0].startMin - nowMin} caption="until first class" />
                 <ThenLine slot={classes[0]} prefix="First" />
             </RailCard>
@@ -158,7 +149,7 @@ const NowCard = ({ slots, nowMin, isLive, dayLabel }) => {
         const start = current ? current.startMin : nowMin;
         return (
             <RailCard>
-                <RailLabel aside={schoolLeft}>{dayLabel === 'Today' ? (current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes') : `${dayLabel}: ${current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}`}</RailLabel>
+                <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
                 <Countdown mins={end - nowMin} caption="left" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />
@@ -168,7 +159,7 @@ const NowCard = ({ slots, nowMin, isLive, dayLabel }) => {
 
     return (
         <RailCard>
-            <RailLabel aside={schoolLeft}>{dayLabel === 'Today' ? `Now · P${current.bellId}` : `${dayLabel}: Now · P${current.bellId}`}</RailLabel>
+            <RailLabel aside={schoolLeft}>Now · P{current.bellId}</RailLabel>
             <ClassTitle title={current.period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
             <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
@@ -178,36 +169,8 @@ const NowCard = ({ slots, nowMin, isLive, dayLabel }) => {
     );
 };
 
-const ChangesCard = ({ changes, dayLabel }) => changes.length > 0 && (
-    <RailCard>
-        <RailLabel>{dayLabel === 'Today' ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : `${dayLabel}: ${changes.length === 1 ? '1 change' : `${changes.length} changes`}`}</RailLabel>
-        <ul className="space-y-3">
-            {changes.map(({ bellId, period: p }) => (
-                <li key={bellId} className="text-[13px] min-w-0">
-                    <div className="flex items-baseline gap-2 min-w-0">
-                        <span className="font-mono text-[11px] text-zinc-400 shrink-0">P{bellId}</span>
-                        <span className="font-medium text-zinc-900 dark:text-white truncate">{p.title}</span>
-                    </div>
-                    {p.hasRoomChange && (
-                        <div className="pl-7 text-zinc-500 dark:text-zinc-400 tabular-nums">
-                            Room {p.oldRoom && p.oldRoom !== p.room
-                                ? <><span className="line-through">{p.oldRoom}</span> → <span className="text-zinc-900 dark:text-white">{p.room}</span></>
-                                : <span className="text-zinc-900 dark:text-white">{p.room}</span>}
-                        </div>
-                    )}
-                    {p.isSubstituted && (
-                        <div className="pl-7 text-zinc-500 dark:text-zinc-400 truncate">
-                            {p.fullTeacher === 'No teacher' ? 'No teacher assigned' : <><span className="text-zinc-900 dark:text-white">{p.fullTeacher}</span> covering</>}
-                        </div>
-                    )}
-                </li>
-            ))}
-        </ul>
-    </RailCard>
-);
-
-// My Synchron: a one-line greeting, the day's timetable, and a side rail with the
-// live countdown and any changes. In cycle view the timetable takes the full width.
+// My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
+// live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
@@ -216,37 +179,40 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, c
         return () => clearInterval(timer);
     }, []);
 
-    const slots = buildSlots(timetableData);
-    const inner = timetableData?.timetable?.timetable || timetableData?.timetable;
+    // The greeting and rail describe the real school day (today, or the next one after
+    // school), not whichever day is being browsed below. Falls back to the viewed day
+    // until that's loaded.
+    const day = railTimetable || timetableData;
+    const slots = buildSlots(day);
+    const inner = day?.timetable?.timetable || day?.timetable;
     const todayKey = format(now, 'yyyy-MM-dd');
-    const viewedKey = timetableData?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
-    const isLive = viewedKey === todayKey;
-    const isTomorrow = viewedKey === format(addDays(now, 1), 'yyyy-MM-dd');
+    const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
+    const isLive = dayKey === todayKey;
+    const isTomorrow = dayKey === format(addDays(now, 1), 'yyyy-MM-dd');
     const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
 
-    // Build rail data from railTimetable
-    const railSlots = railTimetable ? buildSlots(railTimetable) : [];
-    const railInner = railTimetable?.timetable?.timetable || railTimetable?.timetable;
-    const railDateKey = railTimetable?.date || (railTimetable ? format(new Date(), 'yyyy-MM-dd') : todayKey);
-    const railIsLive = railDateKey === todayKey;
-    const railIsTomorrow = railDateKey === format(addDays(now, 1), 'yyyy-MM-dd');
-    const railDayWord = railIsLive ? 'Today' : railIsTomorrow ? 'Tomorrow' : railTimetable ? format(new Date(railDateKey), 'EEEE') : 'Today';
-    const railDayLabel = railIsLive ? 'Today' : (railIsTomorrow ? 'Tomorrow' : `This ${railDayWord}`);
+    const classCount = slots.filter(isClass).length;
+    const changes = slots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
+    const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : format(new Date(`${dayKey}T00:00`), 'EEEE');
 
-    const status = railInner?.dayname ? `${railIsLive ? 'Today' : 'Tomorrow'} is ${railInner.dayname}` : null;
+    const firstClass = slots.find(isClass);
+    const dayStart = slots[0]?.startMin;
+    const dayEnd = slots[slots.length - 1]?.endMin;
+    // The side rail only earns its place while the day is happening: up to two hours
+    // before the first bell until the last one.
+    const showRail = !isCycle && isLive && classCount > 0 && nowMin >= dayStart - 120 && nowMin < dayEnd;
 
-    const railChanges = railSlots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
+    const status = [
+        inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
+        classCount ? `${classCount} classes` : null,
+        !showRail && firstClass ? `starts ${firstClass.bell.time}` : null,
+        changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : null
+    ].filter(Boolean).join(' · ');
 
-    // On phones the row tags already mark changes, so only the countdown sits above the list.
-    const rail = (withChanges) => !isCycle && (
-        <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-            <NowCard slots={railSlots} nowMin={nowMin} isLive={railIsLive} dayLabel={railDayLabel} />
-            {withChanges && <ChangesCard changes={railChanges} dayLabel={railDayLabel} />}
-        </aside>
-    );
+    const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />;
 
     return (
-        <div className="mx-auto max-w-6xl">
+        <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
             <header className="mb-8 md:mb-10">
                 <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                     {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
@@ -254,14 +220,18 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, c
                 {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
             </header>
 
-            <div className={isCycle ? '' : 'grid gap-6 lg:gap-12 lg:grid-cols-[minmax(0,1fr)_300px]'}>
-                {/* On phones the rail sits above the list so the countdown is seen first */}
-                <div className="lg:hidden">{rail(false)}</div>
+            <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
+                {/* On phones the countdown sits above the list so it's seen first */}
+                {rail && <div className="lg:hidden">{rail}</div>}
                 <section className="min-w-0">
                     {dayNav}
                     {children}
                 </section>
-                <div className="hidden lg:block">{rail(true)}</div>
+                {rail && (
+                    <div className="hidden lg:block">
+                        <div className="lg:sticky lg:top-20">{rail}</div>
+                    </div>
+                )}
             </div>
         </div>
     );
