@@ -71,7 +71,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                     ) : null}
                     {(isCurrent || isNext) && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
                     {fullTeacher && (
-                        <span className="truncate">
+                        <span className={`truncate ${isSubstituted ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : ''}`}>
                             {fullTeacher === 'No teacher' ? 'No teacher assigned' : fullTeacher}
                             {isSubstituted && oldTeacher && <span className="text-zinc-400 dark:text-zinc-500"> for {oldTeacher}</span>}
                         </span>
@@ -81,7 +81,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
 
             {room && (
                 <div className="shrink-0 text-right leading-tight">
-                    <div className="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">{room}</div>
+                    <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
                 </div>
             )}

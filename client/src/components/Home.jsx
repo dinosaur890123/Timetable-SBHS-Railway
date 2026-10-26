@@ -121,7 +121,7 @@ const Progress = ({ value }) => (
 );
 
 // What matters at this moment: the current class with a countdown, or what's first up.
-const NowCard = ({ slots, nowMin, isLive }) => {
+const NowCard = ({ slots, nowMin, isLive, dayLabel }) => {
     const classes = slots.filter(isClass);
     if (classes.length === 0) return null;
 
@@ -131,7 +131,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
     if (!isLive || nowMin >= dayEnd) {
         return (
             <RailCard>
-                <RailLabel>First up</RailLabel>
+                <RailLabel>{dayLabel === 'Today' ? 'First up' : `${dayLabel}: First up`}</RailLabel>
                 <ClassTitle title={classes[0].period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
                 <Where slot={classes[0]} />
                 <ThenLine slot={classes[1]} />
@@ -142,7 +142,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
     if (nowMin < dayStart) {
         return (
             <RailCard>
-                <RailLabel>Before school</RailLabel>
+                <RailLabel>{dayLabel === 'Today' ? 'Before school' : `${dayLabel}: Before school`}</RailLabel>
                 <Countdown mins={classes[0].startMin - nowMin} caption="until first class" />
                 <ThenLine slot={classes[0]} prefix="First" />
             </RailCard>
@@ -158,7 +158,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
         const start = current ? current.startMin : nowMin;
         return (
             <RailCard>
-                <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
+                <RailLabel aside={schoolLeft}>{dayLabel === 'Today' ? (current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes') : `${dayLabel}: ${current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}`}</RailLabel>
                 <Countdown mins={end - nowMin} caption="left" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />
@@ -168,7 +168,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
 
     return (
         <RailCard>
-            <RailLabel aside={schoolLeft}>Now · P{current.bellId}</RailLabel>
+            <RailLabel aside={schoolLeft}>{dayLabel === 'Today' ? `Now · P${current.bellId}` : `${dayLabel}: Now · P${current.bellId}`}</RailLabel>
             <ClassTitle title={current.period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
             <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
@@ -178,9 +178,9 @@ const NowCard = ({ slots, nowMin, isLive }) => {
     );
 };
 
-const ChangesCard = ({ changes }) => changes.length > 0 && (
+const ChangesCard = ({ changes, dayLabel }) => changes.length > 0 && (
     <RailCard>
-        <RailLabel>{changes.length === 1 ? '1 change' : `${changes.length} changes`}</RailLabel>
+        <RailLabel>{dayLabel === 'Today' ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : `${dayLabel}: ${changes.length === 1 ? '1 change' : `${changes.length} changes`}`}</RailLabel>
         <ul className="space-y-3">
             {changes.map(({ bellId, period: p }) => (
                 <li key={bellId} className="text-[13px] min-w-0">
@@ -208,7 +208,7 @@ const ChangesCard = ({ changes }) => changes.length > 0 && (
 
 // My Synchron: a one-line greeting, the day's timetable, and a side rail with the
 // live countdown and any changes. In cycle view the timetable takes the full width.
-const Home = ({ user, timetableData, viewDate, isCycle, dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -224,21 +224,24 @@ const Home = ({ user, timetableData, viewDate, isCycle, dayNav, children }) => {
     const isTomorrow = viewedKey === format(addDays(now, 1), 'yyyy-MM-dd');
     const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
 
-    const classCount = slots.filter(isClass).length;
-    const changes = slots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
-    const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : viewDate ? format(viewDate, 'EEEE') : 'Today';
+    // Build rail data from railTimetable
+    const railSlots = railTimetable ? buildSlots(railTimetable) : [];
+    const railInner = railTimetable?.timetable?.timetable || railTimetable?.timetable;
+    const railDateKey = railTimetable?.date || (railTimetable ? format(new Date(), 'yyyy-MM-dd') : todayKey);
+    const railIsLive = railDateKey === todayKey;
+    const railIsTomorrow = railDateKey === format(addDays(now, 1), 'yyyy-MM-dd');
+    const railDayWord = railIsLive ? 'Today' : railIsTomorrow ? 'Tomorrow' : railTimetable ? format(new Date(railDateKey), 'EEEE') : 'Today';
+    const railDayLabel = railIsLive ? 'Today' : (railIsTomorrow ? 'Tomorrow' : `This ${railDayWord}`);
 
-    const status = [
-        inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
-        classCount ? `${classCount} classes` : null,
-        changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : (classCount ? 'no changes' : null)
-    ].filter(Boolean).join(' · ');
+    const status = railInner?.dayname ? `${railIsLive ? 'Today' : 'Tomorrow'} is ${railInner.dayname}` : null;
+
+    const railChanges = railSlots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
 
     // On phones the row tags already mark changes, so only the countdown sits above the list.
     const rail = (withChanges) => !isCycle && (
         <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-            <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />
-            {withChanges && <ChangesCard changes={changes} />}
+            <NowCard slots={railSlots} nowMin={nowMin} isLive={railIsLive} dayLabel={railDayLabel} />
+            {withChanges && <ChangesCard changes={railChanges} dayLabel={railDayLabel} />}
         </aside>
     );
 

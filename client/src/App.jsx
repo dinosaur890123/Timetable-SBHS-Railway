@@ -63,6 +63,7 @@ function App() {
             return null;
         }
     });
+    const [railTimetable, setRailTimetable] = useState(null);
     const [completeTimetable, setCompleteTimetable] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_complete_timetable');
@@ -827,6 +828,33 @@ function App() {
         loadTimetable();
     }, [viewDate, user]);
 
+    // Fetch rail timetable for RHS - always shows current school day (if before end) or next school day
+    useEffect(() => {
+        if (!isAuthenticated()) return;
+
+        const loadRailTimetable = async () => {
+            try {
+                const now = new Date();
+                const nowMin = now.getHours() * 60 + now.getMinutes();
+                // Assume school ends around 3:30 PM (930 minutes)
+                const schoolEndMin = 15 * 60 + 30; // 3:30 PM
+
+                let railDate;
+                if (nowMin < schoolEndMin) {
+                    railDate = now; // Current school day
+                } else {
+                    railDate = addDays(now, 1); // Next school day
+                }
+
+                const data = await fetchDayTimetable(railDate);
+                setRailTimetable(data);
+            } catch (err) {
+                console.error("Failed to fetch rail timetable", err);
+            }
+        };
+        loadRailTimetable();
+    }, [user]);
+
     // Fetch AI Briefing in background once notices are loaded
     useEffect(() => {
         if (aiDisabled || !user || !notices || !notices.notices || notices.notices.length === 0) return;
@@ -1076,6 +1104,7 @@ function App() {
                             <Home
                                 user={user}
                                 timetableData={timetable}
+                                railTimetable={railTimetable}
                                 viewDate={viewDate}
                                 isCycle={timetableViewMode === 'cycle'}
                                 dayNav={timetableViewMode === 'daily' && (
