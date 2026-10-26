@@ -478,17 +478,18 @@ function App() {
         }
     }, [user?.studentId, completeTimetable]);
 
+    const isSignedIn = !!user;
+
     // Theme Config
     useEffect(() => {
-        const root = window.document.documentElement;
-        if (theme === 'dark') {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
         localStorage.setItem('theme', theme);
         savePreferences();
     }, [theme]);
+
+    // The signed-out landing page is always dark; the saved preference applies once signed in.
+    useEffect(() => {
+        document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
+    }, [theme, isSignedIn]);
 
     // Dark Style Config
     useEffect(() => {
@@ -505,7 +506,6 @@ function App() {
 
     // Interface Theme Config
     // The signed-out landing page is always shown in the modern design language.
-    const isSignedIn = !!user;
     useEffect(() => {
         document.documentElement.setAttribute('data-ui', isSignedIn ? uiTheme : 'modern');
     }, [uiTheme, isSignedIn]);
@@ -931,10 +931,6 @@ function App() {
                         authError={authError}
                         clearAuthError={() => setAuthError(null)}
                         supporters={supporters}
-                        theme={theme}
-                        toggleTheme={toggleTheme}
-                        colorTheme={colorTheme}
-                        setColorTheme={setColorTheme}
                     />
                 </Suspense>
             </div>
