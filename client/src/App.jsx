@@ -121,24 +121,6 @@ function App() {
     const [billingMessage, setBillingMessage] = useState(null);
     const [billingLoading, setBillingLoading] = useState(false);
 
-    // Dashboard Layout State
-    const [dashboardLayoutMobile, setDashboardLayoutMobile] = useState(() => {
-        try {
-            const saved = localStorage.getItem('dashboard_layout_mobile');
-            return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
-        }
-    });
-    const [dashboardLayoutDesktop, setDashboardLayoutDesktop] = useState(() => {
-        try {
-            const saved = localStorage.getItem('dashboard_layout_desktop');
-            return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
-        }
-    });
-
     // Notification State
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -359,39 +341,6 @@ function App() {
         }, 1000); // Debounce for 1 second
     };
 
-    const handleLayoutChange = (layout) => {
-        if (!user?.studentId || !syncPreferencesToServer.current) return;
-
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-            setDashboardLayoutMobile(layout);
-        } else {
-            setDashboardLayoutDesktop(layout);
-        }
-
-        if (savePreferencesTimeout.current) {
-            clearTimeout(savePreferencesTimeout.current);
-        }
-
-        savePreferencesTimeout.current = setTimeout(() => {
-            const preferences = {
-                theme,
-                colorTheme,
-                darkStyle,
-                aiDisabled,
-                uiTheme: uiThemePref,
-                dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
-                dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
-                clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
-                scratchpadContent: localStorage.getItem('scratchpad_content') || '',
-                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
-            };
-
-            saveUserPreferences(user.studentId, preferences).catch(e => {
-                console.log("Failed to save preferences to server:", e);
-            });
-        }, 1000);
-    };
 
     const addToast = (title, message, type = 'success', persistent = false) => {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
@@ -740,14 +689,12 @@ function App() {
                                 setUiThemePref(prefs.uiTheme || null);
                             }
                             
-                            // Apply dashboard layouts (separate for mobile/desktop)
+                            // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
-                                setDashboardLayoutMobile(prefs.dashboardLayoutMobile);
                             }
                             if (prefs.dashboardLayoutDesktop) {
                                 localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
-                                setDashboardLayoutDesktop(prefs.dashboardLayoutDesktop);
                             }
                             
                             // Apply other widget-specific preferences
@@ -909,9 +856,9 @@ function App() {
         setViewDate(schoolDay);
     };
 
-    // Reset date when leaving timetable view
+    // Reset date when leaving the home timetable
     useEffect(() => {
-        if (lastViewRef.current === 'timetable' && currentView !== 'timetable' && defaultDate) {
+        if (lastViewRef.current === 'home' && currentView !== 'home' && defaultDate) {
             setViewDate(defaultDate);
         }
         lastViewRef.current = currentView;
@@ -1034,7 +981,7 @@ function App() {
                         <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
                             {currentView}
                         </h1>
-                        {currentView === 'timetable' && (
+                        {currentView === 'home' && (
                             <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
                                 <button
                                     onClick={() => setTimetableViewMode('daily')}
@@ -1128,27 +1075,12 @@ function App() {
                         </div>
                     }>
 
-                        {/* HOME VIEW */}
+                        {/* HOME VIEW: greeting + day overview above the timetable */}
                         {currentView === 'home' && (
-                            <Home
-                                user={user}
-                                timetableData={timetable}
-                                notices={notices}
-                                setView={setCurrentView}
-                                aiBriefing={aiBriefing}
-                                aiLoading={aiLoading}
-                                theme={theme}
-                                toggleTheme={toggleTheme}
-                                aiDisabled={aiDisabled}
-                                onLayoutChange={handleLayoutChange}
-                                dashboardLayoutMobile={dashboardLayoutMobile}
-                                dashboardLayoutDesktop={dashboardLayoutDesktop}
-                            />
-                        )}
-
-                        {/* TIMETABLE VIEW */}
-                        {currentView === 'timetable' && (
                             <div className="space-y-3">
+                                <div className="pb-5 mb-2 md:pb-7 md:mb-3 border-b border-zinc-200 dark:border-zinc-900">
+                                    <Home user={user} timetableData={timetable} viewDate={viewDate} />
+                                </div>
                                 {/* Date Controls & AI Button Row - only show in daily view */}
                                 {timetableViewMode === 'daily' && (
                                     <>
@@ -1805,7 +1737,7 @@ function App() {
                             setView: setCurrentView,
                             theme,
                             toggleTheme,
-                            onAskAi: aiDisabled ? null : () => { setCurrentView('timetable'); setShowAiModal(true); },
+                            onAskAi: aiDisabled ? null : () => { setCurrentView('home'); setShowAiModal(true); },
                             uiThemeOptions,
                             currentUiTheme: uiTheme,
                             onSelectUiTheme: setUiThemePref,

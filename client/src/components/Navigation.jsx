@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutGrid, CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap, Bell } from 'lucide-react';
+import { CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap, Bell } from 'lucide-react';
 
 const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notificationCount, useFixedHeight }) => (
   <button
@@ -41,7 +41,6 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
 
   const items = [
     { id: 'home', icon: Home, label: 'My Synchron'},
-    { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
     { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'awards', icon: Award, label: 'Awards' },

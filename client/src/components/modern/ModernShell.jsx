@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Home, LayoutGrid, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
+    Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
-    CornerDownLeft, WifiOff, Database, Palette, BookOpen
+    CornerDownLeft, WifiOff, Database, Palette, BookOpen, Globe, ArrowUpRight
 } from 'lucide-react';
 
 export const VIEW_LABELS = {
@@ -20,12 +20,17 @@ export const VIEW_LABELS = {
     admin: 'Admin'
 };
 
+// External school sites shown alongside the School pages.
+const QUICK_LINKS = [
+    { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
+    { id: 'link-canvas', label: 'Canvas', icon: BookOpen, href: 'https://canvas.sbhs.net.au' }
+];
+
 const buildNavGroups = (isAdmin) => [
     {
         label: 'Workspace',
         items: [
             { id: 'home', icon: Home },
-            { id: 'timetable', icon: LayoutGrid },
             { id: 'calendar', icon: CalendarDays },
             { id: 'notices', icon: Newspaper }
         ]
@@ -35,7 +40,8 @@ const buildNavGroups = (isAdmin) => [
         items: [
             { id: 'awards', icon: Award },
             { id: 'clipboard', icon: Clipboard },
-            { id: 'notes', icon: GraduationCap, badge: 'notifications' }
+            { id: 'notes', icon: GraduationCap, badge: 'notifications' },
+            ...QUICK_LINKS
         ]
     },
     {
@@ -86,7 +92,23 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount, d
                             {group.label}
                         </div>
                         <ul className="space-y-0.5">
-                            {group.items.map(({ id, icon: Icon, badge }) => {
+                            {group.items.map(({ id, icon: Icon, badge, href, label }) => {
+                                if (href) {
+                                    return (
+                                        <li key={id}>
+                                            <a
+                                                href={href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="group relative w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13.5px] transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04]"
+                                            >
+                                                <Icon size={16} strokeWidth={1.8} className="shrink-0" />
+                                                <span className="flex-1 text-left font-medium">{label}</span>
+                                                <ArrowUpRight size={13} className="opacity-0 -translate-x-0.5 group-hover:opacity-60 group-hover:translate-x-0 transition" />
+                                            </a>
+                                        </li>
+                                    );
+                                }
                                 const active = isItemActive(id);
                                 const count = badge === 'notifications' ? notificationCount : 0;
                                 return (
@@ -170,7 +192,7 @@ export const ModernTopbar = ({
                     {VIEW_LABELS[currentView] || currentView}
                 </h1>
 
-                {currentView === 'timetable' && (
+                {currentView === 'home' && (
                     <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
                         {['daily', 'cycle'].map(mode => (
                             <button
@@ -239,7 +261,6 @@ export const ModernTopbar = ({
 export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
-        { id: 'timetable', icon: LayoutGrid, label: 'Timetable' },
         { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
         { id: 'notes', icon: GraduationCap, label: 'Study', badge: notificationCount }
@@ -408,17 +429,19 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 // Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiThemeOptions, currentUiTheme, onSelectUiTheme, onSignOut }) => {
     // Navigation commands
+    // Pages first, then external links, so each group heading appears once
     const navCommands = buildNavGroups(user?.role === 'Admin')
         .flatMap(g => g.items)
+        .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({
             id: `nav-${item.id}`,
-            group: 'Go to',
-            label: VIEW_LABELS[item.id],
+            group: item.href ? 'Links' : 'Go to',
+            label: item.label || VIEW_LABELS[item.id],
             icon: item.icon,
-            run: () => setView(item.id)
+            run: item.href ? () => window.open(item.href, '_blank', 'noopener') : () => setView(item.id)
         }));
     
-    navCommands.push({ 
+    navCommands.splice(navCommands.findIndex(c => c.group === 'Links'), 0, {
         id: 'nav-canvas-links', 
         group: 'Go to', 
         label: 'Canvas Links', 
