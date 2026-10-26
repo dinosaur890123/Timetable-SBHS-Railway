@@ -1,16 +1,177 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import { ArrowRight, AlertOctagon, X } from 'lucide-react';
+import {
+  ArrowRight, AlertOctagon, X, MapPin, UserRound, Clock, Home, CalendarDays, Newspaper,
+  Award, Clipboard, GraduationCap
+} from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
 import { BrandMark } from './modern/ModernShell';
 
 // App keeps html.dark set while signed out, so this page is always dark.
 
-const PREVIEW = [
-  { time: '9:00', title: 'English', detail: 'Ms R · 203', state: 'past' },
-  { time: '10:05', title: 'Physics', detail: 'Mr H for Mrs S · 307', state: 'current' },
-  { time: '11:25', title: 'Design & Technology', detail: 'Mr G · 502, was 102', state: 'changed' },
-  { time: '12:30', title: 'Mathematics Ext. 2', detail: 'Mr J · 105' }
+const ease = [0.2, 0.8, 0.2, 1];
+
+const Label = ({ children, className = '' }) => (
+  <div className={`font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500 ${className}`}>
+    {children}
+  </div>
+);
+
+const PREVIEW_ROWS = [
+  { time: '9:00', period: '1', title: 'English', meta: 'Ms Reid · 203', state: 'past' },
+  { time: '10:05', period: '2', title: 'Physics', meta: 'Mr Hall for Mrs Shah · 307', state: 'current', sub: true },
+  { break: 'Recess', time: '11:05' },
+  { time: '11:25', period: '3', title: 'Design & Technology', meta: 'Mr Gray · 502, was 102', room: true },
+  { time: '12:30', period: '4', title: 'Mathematics Ext. 2', meta: 'Mr Jones · 105' }
+];
+
+// A period is 60 minutes; the preview counts down through the back half of one and loops.
+const PERIOD_SECONDS = 60 * 60;
+const START_REMAINING = 24 * 60 + 13;
+
+const useDemoCountdown = () => {
+  const [remaining, setRemaining] = useState(START_REMAINING);
+  useEffect(() => {
+    const timer = setInterval(() => setRemaining(r => (r <= 60 ? START_REMAINING : r - 1)), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return remaining;
+};
+
+const formatClock = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
+// A faithful miniature of the signed-in home page, built from the same pieces.
+const ProductPreview = () => {
+  const remaining = useDemoCountdown();
+  const progress = ((PERIOD_SECONDS - remaining) / PERIOD_SECONDS) * 100;
+
+  return (
+    <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
+      <div className="flex items-center justify-between h-11 px-4 border-b border-m-line">
+        <span className="text-[13px] font-medium text-zinc-900 dark:text-white">My Synchron</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Synced
+        </span>
+      </div>
+
+      <div className="relative p-4 sm:p-5 space-y-4">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots" />
+
+        <div className="relative">
+          <div className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+            Good Morning, <span className="text-accent">Sam</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-2 text-[12px] text-zinc-500 dark:text-zinc-400">
+            <span>Tuesday, 3 March</span>
+            <span className="px-1.5 py-px rounded-md border border-m-line bg-white/[0.04] text-zinc-700 dark:text-zinc-200">Today is TueA</span>
+          </div>
+        </div>
+
+        <div className="relative grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+          <div className="rounded-xl border border-m-line bg-m-card p-3.5">
+            <div className="flex items-center justify-between mb-2.5">
+              <Label>Today’s variations</Label>
+              <span className="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400">2</span>
+            </div>
+            <ul className="space-y-2 text-[12.5px]">
+              <li>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-[10px] text-zinc-500">P2</span>
+                  <span className="font-medium text-zinc-900 dark:text-white">Physics</span>
+                </div>
+                <div className="pl-5 flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                  <UserRound size={11} /> Mr Hall covering
+                </div>
+              </li>
+              <li>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-[10px] text-zinc-500">P3</span>
+                  <span className="font-medium text-zinc-900 dark:text-white truncate">Design &amp; Technology</span>
+                </div>
+                <div className="pl-5 flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <MapPin size={11} /> 102 → 502
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
+            <div className="flex items-center justify-between mb-2.5">
+              <Label>Now · Period 2</Label>
+              <span className="text-[11px] text-zinc-400 hidden sm:inline">Next: Recess</span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[15px] font-semibold text-zinc-900 dark:text-white">Physics</div>
+                <div className="mt-1 flex items-center gap-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  <span className="inline-flex items-center gap-1"><Clock size={11} /> 10:05</span>
+                  <span className="inline-flex items-center gap-1"><MapPin size={11} /> 307</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
+                  {formatClock(remaining)}
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-1">left</div>
+              </div>
+            </div>
+            <div className="mt-auto pt-3">
+              <div className="h-1 rounded-full bg-white/[0.08] overflow-hidden">
+                <div className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ol className="relative rounded-xl border border-m-line bg-m-card p-1.5 space-y-0.5" aria-label="Example timetable">
+          {PREVIEW_ROWS.map((row) => row.break ? (
+            <li key={row.break} className="flex items-center gap-3 px-2 py-1">
+              <span className="w-10 text-right text-[11px] tabular-nums text-zinc-500">{row.time}</span>
+              <span className="text-[11px] font-medium text-zinc-500">{row.break}</span>
+              <span className="flex-1 h-px bg-white/[0.07]" />
+            </li>
+          ) : (
+            <li
+              key={row.period}
+              className={`flex items-center gap-3 rounded-lg px-2 py-2 ${row.state === 'current' ? 'bg-white/[0.05] ring-1 ring-accent/60' : ''} ${row.state === 'past' ? 'opacity-45' : ''}`}
+            >
+              <span className={`w-10 text-right text-[12px] tabular-nums ${row.state === 'current' ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500'}`}>{row.time}</span>
+              <span className={`w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium ${row.state === 'current' ? 'bg-accent text-accent-contrast' : 'bg-white/[0.06] text-zinc-400'}`}>
+                {row.period}
+              </span>
+              <div className="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                <span className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{row.title}</span>
+                <span className={`hidden sm:block truncate text-[11.5px] ${row.room ? 'text-amber-600 dark:text-amber-400' : row.sub ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-500'}`}>
+                  {row.meta}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+};
+
+// Mirrors the signed-in sidebar, so the page doubles as a map of the app.
+const SECTIONS = [
+  {
+    label: 'Workspace',
+    items: [
+      { icon: Home, title: 'My Synchron', body: 'Today’s timetable with substitutes and room moves already applied, and a countdown to the bell.' },
+      { icon: CalendarDays, title: 'Calendar', body: 'Term dates, events and which week of the cycle you’re in.' },
+      { icon: Newspaper, title: 'Notices', body: 'The daily notices, readable on a phone.' }
+    ]
+  },
+  {
+    label: 'School',
+    items: [
+      { icon: Award, title: 'Awards', body: 'Your award scheme points and badges.' },
+      { icon: Clipboard, title: 'Clipboard', body: 'Sport and training sessions from Clipboard.' },
+      { icon: GraduationCap, title: 'Study', body: 'Notes for each of your subjects.' }
+    ]
+  }
 ];
 
 const AuthErrorDialog = ({ authError, onDismiss }) => {
@@ -121,83 +282,118 @@ const LandingPage = ({ authError, clearAuthError, supporters }) => {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="flex min-h-[100dvh] flex-col bg-m-page text-zinc-100">
+      <div className="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
         <AnimatePresence>
           {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
         </AnimatePresence>
 
-        <header className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-5 sm:px-8">
-          <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label="Synchron">
-            {useOriginalMark ? (
-              <span className="grid grid-cols-2 gap-0.5 p-1.5 rounded-lg bg-white">
-                {[0, 1, 2, 3].map(i => <span key={i} className="w-1.5 h-1.5 rounded-[2px] bg-zinc-900" />)}
-              </span>
-            ) : (
-              <BrandMark />
-            )}
-            <span className="text-[15px] font-semibold tracking-tight text-white">Synchron</span>
-          </button>
-          <button onClick={performLogin} className="text-sm text-zinc-400 hover:text-white transition-colors">
-            Sign in
-          </button>
-        </header>
-
-        <main className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-14 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:gap-20">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
-          >
-            <h1 className="text-4xl sm:text-5xl font-semibold leading-[1.08] tracking-[-0.03em] text-white">
-              Your timetable,
-              <br />
-              live.
-            </h1>
-            <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-zinc-400">
-              Periods, room changes, substitutes and notices for Sydney Boys High, in one fast app.
-            </p>
-            <button
-              onClick={performLogin}
-              className="group mt-8 inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-sm font-medium text-zinc-950 hover:bg-zinc-200 transition-colors"
-            >
-              Sign in with SBHS
-              <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-            </button>
-            <p className="mt-4 max-w-sm text-xs leading-relaxed text-zinc-500">
-              Your browser may ask for Local network access when you sign in. Choose Allow so Synchron can sync.
-            </p>
-          </motion.div>
-
-          <motion.ol
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            aria-label="Example timetable"
-            className="rounded-2xl border border-m-line bg-m-panel p-2"
-          >
-            {PREVIEW.map(({ time, title, detail, state }) => (
-              <li
-                key={time}
-                className={`flex items-center gap-4 rounded-xl px-3.5 py-3 ${state === 'current' ? 'bg-white/[0.06]' : ''} ${state === 'past' ? 'opacity-40' : ''}`}
+        {/* The same inset panel the signed-in app lives in */}
+        <div className="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
+          <header className="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+            <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
+              <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label="Synchron">
+                {useOriginalMark ? (
+                  <span className="grid grid-cols-2 gap-0.5 p-1.5 rounded-lg bg-white">
+                    {[0, 1, 2, 3].map(i => <span key={i} className="w-1.5 h-1.5 rounded-[2px] bg-zinc-900" />)}
+                  </span>
+                ) : (
+                  <BrandMark />
+                )}
+                <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+              </button>
+              <button
+                onClick={performLogin}
+                className="h-8 px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
-                <span className="w-11 shrink-0 text-sm tabular-nums text-zinc-500">{time}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-zinc-100">{title}</div>
-                  <div className={`truncate text-xs ${state === 'changed' ? 'text-amber-400' : 'text-zinc-500'}`}>{detail}</div>
-                </div>
-                {state === 'current' && <span className="shrink-0 text-xs tabular-nums text-zinc-300">24m left</span>}
-              </li>
-            ))}
-          </motion.ol>
-        </main>
+                Sign in
+              </button>
+            </div>
+          </header>
 
-        <footer className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-5 py-6 text-xs text-zinc-600 sm:flex-row sm:justify-between sm:px-8">
-          <span>© {new Date().getFullYear()} Synchron</span>
-          <span>
-            Built independently for Sydney Boys High School.
-            {supporters && supporters.length > 0 && ' Thanks to our Pro supporters.'}
-          </span>
-        </footer>
+          <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots" />
+
+          <main className="flex-1">
+            <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:pb-24">
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease }}
+              >
+                <Label className="mb-5">Sydney Boys High School</Label>
+                <h1 className="text-[2.6rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
+                  Your timetable,
+                  <br />
+                  <span className="text-accent">live.</span>
+                </h1>
+                <p className="mt-6 max-w-md text-[15px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  Your periods, with substitutes and room changes already applied. Notices and the school calendar are in the same place. Sign in with your school account and it’s all there.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+                  <button
+                    onClick={performLogin}
+                    className="group inline-flex h-11 items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-5 text-sm font-medium text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                  >
+                    Sign in with SBHS
+                    <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                  <span className="text-xs text-zinc-500">Free. Uses your student portal login.</span>
+                </div>
+                <p className="mt-6 max-w-sm text-xs leading-relaxed text-zinc-500 dark:text-zinc-600">
+                  Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.12, ease }}
+              >
+                <ProductPreview />
+              </motion.div>
+            </section>
+
+            <section className="border-t border-m-line">
+              <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 md:py-20">
+                <div className="grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] md:gap-16">
+                  <div>
+                    <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
+                    <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
+                      The same pages you’ll see in the sidebar once you sign in.
+                    </p>
+                  </div>
+                  <div className="grid gap-10 sm:grid-cols-2">
+                    {SECTIONS.map(section => (
+                      <div key={section.label}>
+                        <Label className="mb-3">{section.label}</Label>
+                        <ul className="divide-y divide-white/[0.06] border-y border-m-line">
+                          {section.items.map(({ icon: Icon, title, body }) => (
+                            <li key={title} className="flex gap-3 py-3.5">
+                              <Icon size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-zinc-400" />
+                              <div>
+                                <div className="text-sm font-medium text-zinc-900 dark:text-white">{title}</div>
+                                <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500">{body}</p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <footer className="border-t border-m-line">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-1.5 px-5 py-5 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-600 sm:flex-row sm:justify-between sm:px-8">
+              <span>© {new Date().getFullYear()} Synchron</span>
+              <span>
+                Built independently for SBHS
+                {supporters && supporters.length > 0 && ' · Thanks to our Pro supporters'}
+              </span>
+            </div>
+          </footer>
+        </div>
       </div>
     </MotionConfig>
   );
