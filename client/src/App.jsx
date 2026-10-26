@@ -45,6 +45,7 @@ function App() {
     const [viewDate, setViewDate] = useState(new Date());
     const [defaultDate, setDefaultDate] = useState(null);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
+    const lastViewRef = useRef('home');
 
     useEffect(() => {
         // Check if user is navigating exactly to /admin
@@ -904,6 +905,14 @@ function App() {
         const schoolDay = await findNextSchoolDay();
         setViewDate(schoolDay);
     };
+
+    // Reset date when leaving timetable view
+    useEffect(() => {
+        if (lastViewRef.current === 'timetable' && currentView !== 'timetable' && defaultDate) {
+            setViewDate(defaultDate);
+        }
+        lastViewRef.current = currentView;
+    }, [currentView, defaultDate]);
 
     const handleToggleSupporter = async (checked) => {
         try {
