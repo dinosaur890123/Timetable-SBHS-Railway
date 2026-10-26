@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarDays, Newspaper, UserCircle, Home, ShieldCheck, Award, Clipboard, GraduationCap, Bell } from 'lucide-react';
 
-const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notificationCount, useFixedHeight }) => (
+const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, useFixedHeight }) => (
   <button
     onClick={onClick}
     className={`flex items-center justify-center md:flex-col gap-1 md:gap-1 px-1 py-3 md:px-2 md:py-1.5 border transition-all ${useFixedHeight ? 'md:h-14' : 'flex-1'} md:w-full md:rounded-xl text-center relative
@@ -14,16 +14,11 @@ const NavItem = ({ icon: Icon, label, isActive, onClick, isSpecialAdmin, notific
       }`}
   >
     <Icon size={18} className="shrink-0" />
-    {notificationCount > 0 && (
-      <span className="absolute top-1 right-1 md:top-0 md:right-0 bg-red-500 text-white text-[11px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-        {notificationCount > 9 ? '9+' : notificationCount}
-      </span>
-    )}
     <span className="hidden md:block text-[12px] font-medium leading-tight whitespace-nowrap">{label}</span>
   </button>
 );
 
-const Navigation = ({ currentView, setView, user, notificationCount }) => {
+const Navigation = ({ currentView, setView, user }) => {
   const isAdmin = user && user.role === 'Admin';
   const [useFixedHeight, setUseFixedHeight] = useState(true);
 
@@ -45,7 +40,7 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
     { id: 'notices', icon: Newspaper, label: 'Notices' },
     { id: 'awards', icon: Award, label: 'Awards' },
     { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
-    { id: 'notes', icon: GraduationCap, label: 'NoteFlow Lite', showNotification: true },
+    { id: 'notes', icon: GraduationCap, label: 'Study' },
   ];
 
   if (isAdmin) {
@@ -69,7 +64,6 @@ const Navigation = ({ currentView, setView, user, notificationCount }) => {
                 isActive={currentView === item.id}
                 onClick={() => setView(item.id)}
                 isSpecialAdmin={item.id === 'admin'}
-                notificationCount={item.showNotification ? notificationCount : 0}
                 useFixedHeight={useFixedHeight}
             />
          ))}

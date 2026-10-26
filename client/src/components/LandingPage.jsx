@@ -169,7 +169,7 @@ const SECTIONS = [
     items: [
       { icon: Award, title: 'Awards', body: 'Your award scheme points and badges.' },
       { icon: Clipboard, title: 'Clipboard', body: 'Sport and training sessions from Clipboard.' },
-      { icon: GraduationCap, title: 'Study', body: 'Notes for each of your subjects.' }
+      { icon: GraduationCap, title: 'Study', body: 'NoteFlow, the all-in-one study app with an AI tutor.' }
     ]
   }
 ];

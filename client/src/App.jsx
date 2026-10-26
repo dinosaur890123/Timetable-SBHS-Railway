@@ -13,7 +13,7 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const AwardSchemeView = lazy(() => import('./components/AwardSchemeView'));
 const ClipboardView = lazy(() => import('./components/ClipboardView'));
-const NotesView = lazy(() => import('./components/NotesView'));
+const StudyView = lazy(() => import('./components/StudyView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
 const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
@@ -33,7 +33,6 @@ import {
     saveUserPreferences
 } from './services/api';
 import { registerUser } from './services/adminApi';
-import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, X, WifiOff, Database } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
@@ -118,34 +117,12 @@ function App() {
     const [aiLoading, setAiLoading] = useState(false);
 
 
-    // Notification State
-    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-
     // Welcome Modal State
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
     // Offline State
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [usingCachedData, setUsingCachedData] = useState(false);
-
-    // Fetch unread notification count periodically
-    useEffect(() => {
-        if (!user?.studentId) return;
-
-        const fetchNotificationCount = async () => {
-            try {
-                const data = await getUnreadNotificationCount();
-                setUnreadNotificationCount(data.count || 0);
-            } catch (error) {
-                console.error('Failed to fetch notification count:', error);
-            }
-        };
-
-        fetchNotificationCount();
-        const interval = setInterval(fetchNotificationCount, 30000); // Poll every 30 seconds
-
-        return () => clearInterval(interval);
-    }, [user?.studentId]);
 
     // Offline detection
     useEffect(() => {
@@ -844,9 +821,9 @@ function App() {
             ? 'flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100'
             : 'flex min-h-screen bg-zinc-50 dark:bg-black m-ambient text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
             {isModern ? (
-                <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
+                <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} />
             ) : (
-                <Navigation currentView={currentView} setView={setCurrentView} user={user} notificationCount={unreadNotificationCount} />
+                <Navigation currentView={currentView} setView={setCurrentView} user={user} />
             )}
 
             <main className={isModern
@@ -1110,7 +1087,7 @@ function App() {
                         {currentView === 'clipboard' && <ClipboardView user={user} />}
 
                         {/* NOTES VIEW */}
-                        {currentView === 'notes' && <NotesView user={user} timetableData={timetable} setView={setCurrentView} />}
+                        {currentView === 'notes' && <StudyView />}
 
                         {/* FEEDBACK VIEW */}
                         {currentView === 'feedback' && (
@@ -1222,7 +1199,6 @@ function App() {
                     <ModernDock
                         currentView={currentView}
                         setView={setCurrentView}
-                        notificationCount={unreadNotificationCount}
                         onOpenPalette={() => setPaletteOpen(true)}
                     />
                     <CommandPalette

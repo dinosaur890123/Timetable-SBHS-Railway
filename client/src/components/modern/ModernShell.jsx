@@ -40,7 +40,7 @@ const buildNavGroups = (isAdmin) => [
         items: [
             { id: 'awards', icon: Award },
             { id: 'clipboard', icon: Clipboard },
-            { id: 'notes', icon: GraduationCap, badge: 'notifications' },
+            { id: 'notes', icon: GraduationCap },
             ...QUICK_LINKS
         ]
     },
@@ -63,7 +63,7 @@ export const BrandMark = ({ className = '' }) => (
     </div>
 );
 
-export const ModernSidebar = ({ currentView, setView, user, notificationCount, defaultPage }) => {
+export const ModernSidebar = ({ currentView, setView, user }) => {
     const groups = buildNavGroups(user?.role === 'Admin');
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
@@ -90,7 +90,7 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount, d
                             {group.label}
                         </div>
                         <ul className="space-y-0.5">
-                            {group.items.map(({ id, icon: Icon, badge, href, label }) => {
+                            {group.items.map(({ id, icon: Icon, href, label }) => {
                                 if (href) {
                                     return (
                                         <li key={id}>
@@ -108,7 +108,6 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount, d
                                     );
                                 }
                                 const active = isItemActive(id);
-                                const count = badge === 'notifications' ? notificationCount : 0;
                                 return (
                                     <li key={id}>
                                         <button
@@ -127,11 +126,6 @@ export const ModernSidebar = ({ currentView, setView, user, notificationCount, d
                                             )}
                                             <Icon size={16} strokeWidth={active ? 2.1 : 1.8} className={`relative shrink-0 ${active ? 'text-accent' : ''}`} />
                                             <span className="relative flex-1 text-left font-medium">{VIEW_LABELS[id]}</span>
-                                            {count > 0 && (
-                                                <span className="relative font-mono text-[11px] min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-accent text-accent-contrast">
-                                                    {count > 9 ? '9+' : count}
-                                                </span>
-                                            )}
                                         </button>
                                     </li>
                                 );
@@ -256,12 +250,12 @@ export const ModernTopbar = ({
 };
 
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
-export const ModernDock = ({ currentView, setView, notificationCount, onOpenPalette }) => {
+export const ModernDock = ({ currentView, setView, onOpenPalette }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
-        { id: 'notes', icon: GraduationCap, label: 'Study', badge: notificationCount }
+        { id: 'notes', icon: GraduationCap, label: 'Study' }
     ];
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
@@ -269,7 +263,7 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
     return (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
             <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/80 backdrop-blur-xl m-shadow-lg">
-                {items.map(({ id, icon: Icon, label, badge }) => {
+                {items.map(({ id, icon: Icon, label }) => {
                     const active = currentView === id;
                     return (
                         <button
@@ -288,7 +282,6 @@ export const ModernDock = ({ currentView, setView, notificationCount, onOpenPale
                             )}
                             <Icon size={19} strokeWidth={active ? 2.1 : 1.8} className={`relative ${active ? 'text-accent' : ''}`} />
                             <span className="relative text-[12px] font-medium leading-none px-0.5 whitespace-nowrap">{label}</span>
-                            {badge > 0 && <span className="absolute top-1.5 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-accent" />}
                         </button>
                     );
                 })}
