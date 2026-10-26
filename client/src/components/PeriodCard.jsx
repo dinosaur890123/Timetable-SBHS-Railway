@@ -99,7 +99,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: enterDelay(routineIndex) }}
-            className={`group rounded-xl transition-colors ${isCurrent
+            className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors ${isCurrent
                 ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045]'
                 : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'}`}
         >
