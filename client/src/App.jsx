@@ -834,18 +834,8 @@ function App() {
 
         const loadRailTimetable = async () => {
             try {
-                const now = new Date();
-                const nowMin = now.getHours() * 60 + now.getMinutes();
-                // Assume school ends around 3:30 PM (930 minutes)
-                const schoolEndMin = 15 * 60 + 30; // 3:30 PM
-
-                let railDate;
-                if (nowMin < schoolEndMin) {
-                    railDate = now; // Current school day
-                } else {
-                    railDate = addDays(now, 1); // Next school day
-                }
-
+                // Today until its last bell, then the next school day (skipping weekends)
+                const railDate = await findNextSchoolDay();
                 const data = await fetchDayTimetable(railDate);
                 setRailTimetable(data);
             } catch (err) {

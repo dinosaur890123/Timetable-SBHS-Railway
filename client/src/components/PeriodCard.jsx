@@ -16,7 +16,6 @@ const ChangeTag = ({ children }) => (
 const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
     const { title, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
-    const minsLeft = Math.max(0, Math.ceil(endMinutes - currentMinutes));
     // Applied inside the motion element: framer-motion's inline opacity would override it there.
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity' : '';
 
@@ -33,7 +32,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                 <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{label}</span>
                 <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
                 <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
-                    {isCurrent ? `${minsLeft}m left` : `${endMinutes - startMinutes} min`}
+                    {isCurrent ? 'Now' : `${endMinutes - startMinutes} min`}
                 </span>
                 </div>
             </motion.li>
@@ -41,18 +40,16 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
     }
 
     const hasCanvasLink = canvasLink && title && title !== 'Free Period';
-    const progress = isCurrent
-        ? Math.min(100, Math.max(0, ((currentMinutes - startMinutes) / (endMinutes - startMinutes)) * 100))
-        : 0;
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
             {isCurrent && <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
 
-            <span className={`w-11 shrink-0 text-right text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>
-                {bell.time}
-            </span>
+            <div className="w-11 shrink-0 text-right leading-tight">
+                <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{bell.time}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P{bell.bell}</div>
+            </div>
 
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
@@ -65,7 +62,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
-                        <span className="shrink-0 font-medium text-accent tabular-nums">{minsLeft}m left</span>
+                        <span className="shrink-0 font-medium text-accent">Now</span>
                     ) : isNext ? (
                         <span className="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">Up next</span>
                     ) : null}
@@ -84,12 +81,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                     <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
                 </div>
-            )}
-
-            {isCurrent && (
-                <span aria-hidden className="absolute left-3 right-3 bottom-0 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06] overflow-hidden">
-                    <span className="block h-full bg-accent/70 transition-[width] duration-1000 ease-linear" style={{ width: `${progress}%` }} />
-                </span>
             )}
         </div>
     );
