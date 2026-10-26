@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X } from 'lucide-react';
+import { useCanvasLinks } from '../context/CanvasLinksContext';
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
-  const [courses, setCourses] = useState({}); // className -> { url }
+  const { canvasLinks, saveLinks, getLink } = useCanvasLinks();
   const [drafts, setDrafts] = useState({}); // className -> input value
   const [editingClass, setEditingClass] = useState(null); // className being edited
   const [savingClass, setSavingClass] = useState(null);
@@ -56,21 +57,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     return Array.from(classes).sort();
   }, [timetableData, completeTimetable]);
 
-  const loadCourses = useCallback(() => {
-    try {
-      const stored = localStorage.getItem('canvas_links');
-      if (stored) {
-        setCourses(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.warn('Failed to load Canvas courses from localStorage:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadCourses();
-  }, [loadCourses]);
-
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2500);
@@ -86,9 +72,8 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     setErrors(prev => ({ ...prev, [className]: '' }));
 
     try {
-      const updatedCourses = { ...courses, [className]: { url: value } };
-      localStorage.setItem('canvas_links', JSON.stringify(updatedCourses));
-      setCourses(updatedCourses);
+      const updatedCourses = { ...canvasLinks, [className]: { url: value } };
+      await saveLinks(updatedCourses);
       setDrafts(prev => ({ ...prev, [className]: '' }));
       setEditingClass(null);
       setSavingClass(null);
@@ -101,7 +86,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   };
 
   const startEdit = (className) => {
-    const currentUrl = courses[className]?.url || '';
+    const currentUrl = getLink(className) || '';
     setDrafts(prev => ({ ...prev, [className]: currentUrl }));
     setEditingClass(className);
     setErrors(prev => ({ ...prev, [className]: '' }));
@@ -128,7 +113,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
           </div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Canvas course links</h1>
           <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            Add Canvas links for your classes. These links are stored locally on your device and will be used to
+            Add Canvas links for your classes. These links are saved to your account and will be used to
             hyperlink class names throughout the app.
           </p>
         </div>
@@ -148,8 +133,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         ) : (
           <div className="space-y-4">
             {classes.map(className => {
-              const course = courses[className];
-              const hasLink = Boolean(course?.url);
+              const hasLink = Boolean(getLink(className));
               const isEditing = editingClass === className;
 
               return (
@@ -201,13 +185,13 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                   ) : hasLink ? (
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                       <a
-                        href={course.url}
+                        href={getLink(className)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-1 inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2.5 text-zinc-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors truncate"
                       >
                         <ExternalLink size={15} className="shrink-0" />
-                        <span className="truncate">{course.url}</span>
+                        <span className="truncate">{getLink(className)}</span>
                       </a>
                     </div>
                   ) : (

@@ -37,6 +37,7 @@ import { createCheckoutSession, createPortalSession, updateProfileSettings } fro
 import { getUnreadNotificationCount } from './services/resourceSharingApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, CreditCard, ShieldCheck, Heart, Mail, X, WifiOff, Database } from 'lucide-react';
+import { CanvasLinksProvider } from './context/CanvasLinksContext';
 
 function App() {
     // State
@@ -986,7 +987,8 @@ function App() {
     const uiThemeOptions = uiConfig.enabled.map(id => UI_THEMES[id]);
 
     return (
-        <div className={isModern
+        <CanvasLinksProvider>
+            <div className={isModern
             ? 'flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100'
             : 'flex min-h-screen bg-zinc-50 dark:bg-black m-ambient text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
             {isModern ? (
@@ -1830,6 +1832,7 @@ function App() {
                 </div>
             )}
         </div>
+        </CanvasLinksProvider>
     );
 }
 

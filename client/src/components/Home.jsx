@@ -6,7 +6,8 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
-import { applyPeriodVariations, isBreakBell, getCanvasLink } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { useCanvasLinks } from '../context/CanvasLinksContext';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
@@ -260,7 +261,7 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                             );
                         }
 
-                        const canvasLink = getCanvasLink(title);
+                        const canvasLink = getLink(title);
 
                         return (
                             <div key={idx}>
@@ -648,6 +649,7 @@ const TransitWidget = ({ user, setView, onPreferenceChange }) => {
 
 // Main Home Component
 const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, theme, toggleTheme, aiDisabled, onLayoutChange, dashboardLayoutMobile, dashboardLayoutDesktop }) => {
+    const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [isAiBriefingExpanded, setIsAiBriefingExpanded] = useState(false);
@@ -1199,7 +1201,7 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                     </div>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
                                         {(() => {
-                                            const canvasLink = getCanvasLink(currentClass.title);
+                                            const canvasLink = getLink(currentClass.title);
                                             if (canvasLink) {
                                                 return (
                                                     <a

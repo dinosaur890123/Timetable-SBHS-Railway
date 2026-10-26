@@ -3,9 +3,11 @@ import PeriodCard from './PeriodCard';
 import { MotionConfig } from 'framer-motion';
 import { format } from 'date-fns';
 import { MapPin, UserRound } from 'lucide-react';
-import { applyPeriodVariations, isBreakBell, getCanvasLink } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { useCanvasLinks } from '../context/CanvasLinksContext';
 
 const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
+    const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
 
@@ -212,7 +214,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                 );
                                             }
                                             
-                                            const canvasLink = getCanvasLink(classInfo.title);
+                                            const canvasLink = getLink(classInfo.title);
 
                                             return (
                                                 <td key={dayIndex} className="px-2 py-2">
@@ -332,7 +334,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 currentMinutes={currentMinutes}
                                 startMinutes={data.startMin}
                                 endMinutes={data.endMin}
-                                canvasLink={getCanvasLink(data.periodInfo.title)}
+                                canvasLink={getLink(data.periodInfo.title)}
                             />
                         ))}
                         {/* End of Day divider */}

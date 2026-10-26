@@ -66,17 +66,3 @@ export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, 
 
     return enriched;
 };
-
-// Get canvas link for a class from localStorage
-export const getCanvasLink = (className) => {
-    try {
-        const stored = localStorage.getItem('canvas_links');
-        if (stored) {
-            const links = JSON.parse(stored);
-            return links[className]?.url || null;
-        }
-    } catch (e) {
-        console.warn('Failed to get canvas link from localStorage:', e);
-    }
-    return null;
-};
