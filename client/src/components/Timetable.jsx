@@ -3,9 +3,9 @@ import PeriodCard from './PeriodCard';
 import { MotionConfig } from 'framer-motion';
 import { format } from 'date-fns';
 import { MapPin, UserRound } from 'lucide-react';
-import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell, getCanvasLink } from '../utils/timetable';
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, canvasLinks = {}, sharedLinks = {} }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
 
@@ -212,31 +212,67 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                 );
                                             }
                                             
+                                            const canvasLink = getCanvasLink(classInfo.title);
+
                                             return (
                                                 <td key={dayIndex} className="px-2 py-2">
-                                                    <div
-                                                        onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
-                                                        className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
-                                                            classInfo.isSelected
-                                                                ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
-                                                                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                                                        }`}
-                                                    >
-                                                        <span className={`text-xs font-bold truncate ${
-                                                            classInfo.isSelected
-                                                                ? 'text-violet-700 dark:text-violet-300'
-                                                                : 'text-zinc-900 dark:text-white'
-                                                        }`}>
-                                                            {classInfo.title}
-                                                        </span>
-                                                        <div className="flex items-center gap-1 mt-0.5">
-                                                            {classInfo.room && (
-                                                                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                                                                    {classInfo.room}
+                                                    {canvasLink ? (
+                                                        <a
+                                                            href={canvasLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="block h-12"
+                                                        >
+                                                            <div
+                                                                onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
+                                                                className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+                                                                    classInfo.isSelected
+                                                                        ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
+                                                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                                                                }`}
+                                                            >
+                                                                <span className={`text-xs font-bold truncate ${
+                                                                    classInfo.isSelected
+                                                                        ? 'text-violet-700 dark:text-violet-300'
+                                                                        : 'text-zinc-900 dark:text-white'
+                                                                }`}>
+                                                                    {classInfo.title}
                                                                 </span>
-                                                            )}
+                                                                <div className="flex items-center gap-1 mt-0.5">
+                                                                    {classInfo.room && (
+                                                                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                                                                            {classInfo.room}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    ) : (
+                                                        <div
+                                                            onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
+                                                            className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+                                                                classInfo.isSelected
+                                                                    ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
+                                                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                                                            }`}
+                                                        >
+                                                            <span className={`text-xs font-bold truncate ${
+                                                                classInfo.isSelected
+                                                                    ? 'text-violet-700 dark:text-violet-300'
+                                                                    : 'text-zinc-900 dark:text-white'
+                                                            }`}>
+                                                                {classInfo.title}
+                                                            </span>
+                                                            <div className="flex items-center gap-1 mt-0.5">
+                                                                {classInfo.room && (
+                                                                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                                                                        {classInfo.room}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </td>
                                             );
                                         })}
@@ -296,7 +332,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 currentMinutes={currentMinutes}
                                 startMinutes={data.startMin}
                                 endMinutes={data.endMin}
-                                canvasLink={canvasLinks[data.periodInfo.title] || sharedLinks[data.periodInfo.title] || null}
+                                canvasLink={getCanvasLink(data.periodInfo.title)}
                             />
                         ))}
                         {/* End of Day divider */}

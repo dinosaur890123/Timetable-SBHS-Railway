@@ -6,7 +6,7 @@ import {
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { fetchStudentAwards, fetchStudentBadges, fetchStudentClipboardSessions, fetchTransitDepartures } from '../services/api';
-import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { applyPeriodVariations, isBreakBell, getCanvasLink } from '../utils/timetable';
 
 // Default layout configuration (removed greeting tile as it is now fixed at the top)
 const DEFAULT_LAYOUT = [
@@ -260,33 +260,66 @@ const TimetablePreviewWidget = ({ bells, periods, routine, currentTime }) => {
                             );
                         }
 
+                        const canvasLink = getCanvasLink(title);
+
                         return (
                             <div key={idx}>
-                                <div
-                                    className={`flex items-center gap-2 py-1 px-2 rounded-lg text-xs ${isCurrent
-                                            ? 'bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white'
-                                            : 'text-zinc-700 dark:text-zinc-300'
-                                        }`}
-                                >
-                                    <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
-                                        {title}
-                                    </span>
-                                    {periodInfo.fullTeacher && (
-                                        <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
-                                            {periodInfo.fullTeacher}
+                                {canvasLink ? (
+                                    <a
+                                        href={canvasLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-2 py-1 px-2 rounded-lg text-xs block ${isCurrent
+                                                ? 'bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white'
+                                                : 'text-zinc-700 dark:text-zinc-300'
+                                            }`}
+                                    >
+                                        <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                                            {title}
                                         </span>
-                                    )}
-                                    {periodInfo.room && (
-                                        <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
-                                            {periodInfo.room}
+                                        {periodInfo.fullTeacher && (
+                                            <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                                {periodInfo.fullTeacher}
+                                            </span>
+                                        )}
+                                        {periodInfo.room && (
+                                            <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                                {periodInfo.room}
+                                            </span>
+                                        )}
+                                        {isCurrent && (
+                                            <span className="text-zinc-600 dark:text-white/60 text-[11px] font-medium shrink-0">
+                                                {Math.max(0, Math.ceil(endMin - currentMinutes))}m
+                                            </span>
+                                        )}
+                                    </a>
+                                ) : (
+                                    <div
+                                        className={`flex items-center gap-2 py-1 px-2 rounded-lg text-xs ${isCurrent
+                                                ? 'bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-white'
+                                                : 'text-zinc-700 dark:text-zinc-300'
+                                            }`}
+                                    >
+                                        <span className={`font-semibold truncate flex-1 ${isCurrent ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                                            {title}
                                         </span>
-                                    )}
-                                    {isCurrent && (
-                                        <span className="text-zinc-600 dark:text-white/60 text-[11px] font-medium shrink-0">
-                                            {Math.max(0, Math.ceil(endMin - currentMinutes))}m
-                                        </span>
-                                    )}
-                                </div>
+                                        {periodInfo.fullTeacher && (
+                                            <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                                {periodInfo.fullTeacher}
+                                            </span>
+                                        )}
+                                        {periodInfo.room && (
+                                            <span className={`text-[11px] shrink-0 ${isCurrent ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                                                {periodInfo.room}
+                                            </span>
+                                        )}
+                                        {isCurrent && (
+                                            <span className="text-zinc-600 dark:text-white/60 text-[11px] font-medium shrink-0">
+                                                {Math.max(0, Math.ceil(endMin - currentMinutes))}m
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                                 {idx < filteredRoutine.length - 1 && (
                                     <div className="h-px bg-zinc-200 dark:bg-[rgb(255_255_255/0.05)] mx-2" />
                                 )}
@@ -1165,9 +1198,26 @@ const Home = ({ user, timetableData, notices, setView, aiBriefing, aiLoading, th
                                         Period {currentClass.bell}
                                     </div>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                                        <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white leading-tight">
-                                            {currentClass.title || "Free Period"}
-                                        </h3>
+                                        {(() => {
+                                            const canvasLink = getCanvasLink(currentClass.title);
+                                            if (canvasLink) {
+                                                return (
+                                                    <a
+                                                        href={canvasLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white leading-tight hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                                                    >
+                                                        {currentClass.title || "Free Period"}
+                                                    </a>
+                                                );
+                                            }
+                                            return (
+                                                <h3 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white leading-tight">
+                                                    {currentClass.title || "Free Period"}
+                                                </h3>
+                                            );
+                                        })()}
                                         {currentClass.isSubstituted && (
                                             <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/45 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
                                                 Substitution
