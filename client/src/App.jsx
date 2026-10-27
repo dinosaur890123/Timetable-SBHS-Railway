@@ -189,26 +189,6 @@ function App() {
             return false;
         }
     });
-    const [currentVersion, setCurrentVersion] = useState(() => {
-        try {
-            return localStorage.getItem('app_version') || '1.0.0';
-        } catch {
-            return '1.0.0';
-        }
-    });
-
-    // Helper function to compare semantic versions
-    const compareVersions = (v1, v2) => {
-        const parts1 = v1.split('.').map(Number);
-        const parts2 = v2.split('.').map(Number);
-        for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-            const p1 = parts1[i] || 0;
-            const p2 = parts2[i] || 0;
-            if (p1 > p2) return 1;
-            if (p1 < p2) return -1;
-        }
-        return 0;
-    };
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
@@ -344,23 +324,7 @@ function App() {
             try {
                 const systemData = await fetchSystemStatus();
                 if (systemData) {
-                    // Version-based update check
-                    if (systemData.version && systemData.version !== currentVersion) {
-                        localStorage.setItem('app_version', systemData.version);
-                        setCurrentVersion(systemData.version);
-                    }
-
-                    // Show broadcast if it's an update and version is newer
-                    if (systemData.broadcast?.type === 'update') {
-                        const serverVersion = systemData.broadcast.version || systemData.version;
-                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
-                            setBroadcast(systemData.broadcast);
-                        } else {
-                            setBroadcast(null);
-                        }
-                    } else {
-                        setBroadcast(systemData.broadcast);
-                    }
+                    setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
                     applyUiConfig(systemData.uiThemes);
@@ -496,23 +460,7 @@ function App() {
                 if (systemData) {
                     localStorage.setItem('cached_system', JSON.stringify(systemData));
 
-                    // Version-based update check
-                    if (systemData.version && systemData.version !== currentVersion) {
-                        localStorage.setItem('app_version', systemData.version);
-                        setCurrentVersion(systemData.version);
-                    }
-
-                    // Show broadcast if it's an update and version is newer
-                    if (systemData.broadcast?.type === 'update') {
-                        const serverVersion = systemData.broadcast.version || systemData.version;
-                        if (serverVersion && compareVersions(serverVersion, currentVersion) > 0) {
-                            setBroadcast(systemData.broadcast);
-                        } else {
-                            setBroadcast(null);
-                        }
-                    } else {
-                        setBroadcast(systemData.broadcast);
-                    }
+                    setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
                     applyUiConfig(systemData.uiThemes);
@@ -917,25 +865,9 @@ function App() {
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' :
                             broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' :
-                                broadcast.type === 'update' ? 'bg-green-500/10 text-green-700 border-green-500/20 dark:bg-green-500/20 dark:text-green-400' :
-                                    'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
+                                'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                         <Info size={18} className="shrink-0" />
                         <span className="flex-1">{broadcast.message}</span>
-
-                        {broadcast.type === 'update' && (
-                            <button
-                                onClick={() => {
-                                    const newVersion = broadcast.version || currentVersion;
-                                    localStorage.setItem('app_version', newVersion);
-                                    setCurrentVersion(newVersion);
-                                    setBroadcast(null);
-                                    logout(true);
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm ml-auto shrink-0"
-                            >
-                                Update
-                            </button>
-                        )}
                     </div>
                 )}
 
@@ -1118,7 +1050,6 @@ function App() {
                                 isModern={isModern}
                                 darkStyle={darkStyle}
                                 setDarkStyle={setDarkStyle}
-                                currentVersion={currentVersion}
                                 onSignOut={logout}
                                 setView={setCurrentView}
                             />

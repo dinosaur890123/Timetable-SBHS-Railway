@@ -47,7 +47,6 @@ let systemState = {
     broadcast: null, // { message: "...", type: "info/warning/error" }
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b',
-    version: '1.0.0',
     uiDefaultTheme: 'modern',
     uiEnabledThemes: ['modern', 'classic']
 };
@@ -176,23 +175,21 @@ async function getSystemState() {
     if (!isDbEnabled) {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
-        if (!systemState.version) systemState.version = '1.0.0';
         Object.assign(systemState, normalizeUiThemeConfig(systemState.uiDefaultTheme, systemState.uiEnabledThemes));
         return systemState;
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, version, ui_default_theme, ui_enabled_themes, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, ui_default_theme, ui_enabled_themes, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', version: '1.0.0', ui_default_theme: 'modern', ui_enabled_themes: 'modern,classic', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ui_default_theme: 'modern', ui_enabled_themes: 'modern,classic', updated_at: null };
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b',
-        version: row.version || '1.0.0',
         ...normalizeUiThemeConfig(row.ui_default_theme, row.ui_enabled_themes)
     };
 }
@@ -237,45 +234,11 @@ async function setAiModel(model) {
     return res.aiModel;
 }
 
-function incrementVersion(currentVersion) {
-    const parts = currentVersion.split('.').map(Number);
-    parts[2] = (parts[2] || 0) + 1;
-    return parts.join('.');
-}
-
-async function setVersion(newVersion) {
-    if (!isDbEnabled) {
-        systemState.version = newVersion;
-        return systemState.version;
-    }
-
-    await db.query(
-        'UPDATE system_state SET version = $1, updated_at = NOW() WHERE id = 1',
-        [newVersion]
-    );
-
-    return newVersion;
-}
-
-async function setBroadcast(message, type, targetVersion = null) {
+async function setBroadcast(message, type) {
     if (!isDbEnabled) {
         const ts = new Date().toISOString();
-        if (type === 'update' && message) {
-            if (targetVersion) {
-                systemState.version = targetVersion;
-            } else {
-                systemState.version = incrementVersion(systemState.version);
-            }
-        }
         systemState.broadcast = message ? { message, type: type || 'info', id: ts } : null;
         return systemState.broadcast;
-    }
-
-    let newVersion = null;
-    if (type === 'update' && message) {
-        const currentState = await getSystemState();
-        newVersion = targetVersion || incrementVersion(currentState.version);
-        await setVersion(newVersion);
     }
 
     const res = await db.query(
@@ -284,7 +247,7 @@ async function setBroadcast(message, type, targetVersion = null) {
     );
 
     const ts = res.rows[0]?.updated_at;
-    return message ? { message, type: type || 'info', id: ts, version: newVersion } : null;
+    return message ? { message, type: type || 'info', id: ts } : null;
 }
 
 async function setMaintenance(maintenance) {
@@ -1719,10 +1682,10 @@ app.get('/api/logs', requireAuth, async (req, res) => {
 // POST /api/broadcast
 app.post('/api/broadcast', requireAuth, async (req, res) => {
     try {
-        const { message, type, targetVersion } = req.body || {};
-        const broadcast = await setBroadcast(message, type, targetVersion);
+        const { message, type } = req.body || {};
+        const broadcast = await setBroadcast(message, type);
 
-        if (message) await addLog('BROADCAST', 'ADMIN', `Global alert: "${message}" (version: ${broadcast?.version || 'N/A'})`);
+        if (message) await addLog('BROADCAST', 'ADMIN', `Global alert: "${message}"`);
         else await addLog('BROADCAST', 'ADMIN', 'Cleared global alert');
 
         res.json({ success: true, broadcast });
@@ -1752,7 +1715,6 @@ app.get('/api/system/status', (req, res) => {
             res.json({
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
-                version: state.version,
                 uiThemes: { default: state.uiDefaultTheme, enabled: state.uiEnabledThemes }
             });
         } catch (e) {

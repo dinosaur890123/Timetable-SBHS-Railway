@@ -89,7 +89,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled,
     uiThemeOptions, uiTheme, setUiThemePref, isModern, darkStyle, setDarkStyle,
-    currentVersion, onSignOut, setView
+    onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -187,7 +187,7 @@ const SettingsView = ({
             </Section>
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-                Synchron v{currentVersion}
+                Synchron · build {__APP_BUILD__.sha}
             </p>
         </div>
     );

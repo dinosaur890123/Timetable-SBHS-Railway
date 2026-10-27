@@ -110,12 +110,12 @@ export const fetchLogs = async () => {
     }
 };
 
-export const setBroadcast = async (message, type = 'info', targetVersion = null) => {
+export const setBroadcast = async (message, type = 'info') => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/broadcast`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ message, type, targetVersion })
+            body: JSON.stringify({ message, type })
         });
         if (!response.ok) throw new Error('Failed to set broadcast');
         return await response.json();

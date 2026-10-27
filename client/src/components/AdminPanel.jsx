@@ -20,7 +20,6 @@ const AdminPanel = ({ user }) => {
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
-    const [targetVersion, setTargetVersion] = useState('');
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -393,10 +392,9 @@ const AdminPanel = ({ user }) => {
     const handleBroadcast = async (e) => {
         e.preventDefault();
         try {
-            await setBroadcast(broadcastMsg, broadcastType, targetVersion || null);
+            await setBroadcast(broadcastMsg, broadcastType);
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
-            setTargetVersion('');
             loadData(); // Refresh logs
         } catch (err) {
             alert("Failed to set broadcast");
@@ -979,7 +977,6 @@ const AdminPanel = ({ user }) => {
                 <div className={`mb-6 p-4 border rounded-xl ${
                     currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
                     currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
-                    currentBroadcast.type === 'update' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400' :
                     'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
                 }`}>
                     <div className="flex items-center gap-2 mb-1">
@@ -1004,21 +1001,15 @@ const AdminPanel = ({ user }) => {
 
                 <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {['info', 'warning', 'error', 'update'].map((type) => (
+                    <div className="grid grid-cols-3 gap-4">
+                        {['info', 'warning', 'error'].map((type) => (
                             <button
                                 key={type}
                                 type="button"
-                                onClick={() => {
-                                    setBroadcastType(type);
-                                    if (type === 'update' && (!broadcastMsg || broadcastMsg.trim() === '')) {
-                                        setBroadcastMsg('A new version of Synchron is available!');
-                                    }
-                                }}
+                                onClick={() => setBroadcastType(type)}
                                 className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
                                     ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                                         : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                                        : type === 'update' ? 'bg-green-50 border-green-500 text-green-700 dark:bg-green-900/20 dark:text-green-400'
                                             : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
                                     : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                                     }`}
@@ -1029,20 +1020,6 @@ const AdminPanel = ({ user }) => {
                     </div>
                 </div>
 
-                {broadcastType === 'update' && (
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Target Version (optional - leave empty to auto-increment)</label>
-                        <input
-                            type="text"
-                            value={targetVersion}
-                            onChange={(e) => setTargetVersion(e.target.value)}
-                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white"
-                            placeholder="e.g., 1.2.0 (leave empty to auto-increment)"
-                            pattern="\d+\.\d+\.\d+"
-                        />
-                        <p className="text-xs text-zinc-500 mt-1">Current version: {stats?.version || '1.0.0'}</p>
-                    </div>
-                )}
 
                 <div className="pt-4 flex gap-4">
                     {currentBroadcast && (
