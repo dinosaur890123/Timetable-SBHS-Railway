@@ -245,15 +245,15 @@ const CalendarView = ({ user }) => {
           <p className="text-zinc-500 dark:text-zinc-400">Loading events...</p>
         </motion.div>
       ) : (
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Calendar Grid */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
               {/* Day Headers */}
               <div className="grid grid-cols-8 border-b border-zinc-200 dark:border-zinc-800">
-                <div className="px-2 py-3 bg-zinc-50 dark:bg-zinc-950"></div>
+                <div className="px-1 py-2 sm:px-2 sm:py-3 bg-zinc-50 dark:bg-zinc-950"></div>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="px-2 py-3 text-center text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <div key={day} className="px-1 py-2 sm:px-2 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     {day}
                   </div>
                 ))}
@@ -271,7 +271,7 @@ const CalendarView = ({ user }) => {
 
                   // Empty cells for days before the first day of the month
                   for (let i = 0; i < firstDayOfWeek; i++) {
-                    cells.push(<div key={`empty-${i}`} className="bg-zinc-50 dark:bg-zinc-950 min-h-[100px]" />);
+                    cells.push(<div key={`empty-${i}`} className="bg-zinc-50 dark:bg-zinc-950 min-h-[60px] sm:min-h-[100px]" />);
                   }
 
                   // Days of the month
@@ -286,13 +286,13 @@ const CalendarView = ({ user }) => {
                       <button
                         key={day}
                         onClick={() => handleDateClick(date)}
-                        className={`relative min-h-[100px] p-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                        className={`relative min-h-[60px] sm:min-h-[100px] p-1 sm:p-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
                           isTodayDate
                             ? 'bg-zinc-100 dark:bg-zinc-800'
                             : 'bg-white dark:bg-zinc-900'
                         }`}
                       >
-                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold ${
+                        <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-semibold ${
                           isTodayDate
                             ? 'bg-black text-white dark:bg-white dark:text-black'
                             : 'text-zinc-900 dark:text-white'
@@ -300,18 +300,18 @@ const CalendarView = ({ user }) => {
                           {day}
                         </span>
                         {hasEvents && (
-                          <div className="mt-2 space-y-1">
-                            {eventsForDate.items.slice(0, 3).map((event, i) => (
+                          <div className="mt-1 sm:mt-2 space-y-0.5 sm:space-y-1">
+                            {eventsForDate.items.slice(0, 2).map((event, i) => (
                               <div
                                 key={i}
-                                className={`px-1.5 py-0.5 text-[10px] font-medium truncate rounded ${getEventTypeColor(event.type)}`}
+                                className={`px-1 py-0.5 sm:px-1.5 sm:py-0.5 text-[9px] sm:text-[10px] font-medium truncate rounded ${getEventTypeColor(event.type)}`}
                               >
                                 {event.title}
                               </div>
                             ))}
-                            {eventsForDate.items.length > 3 && (
-                              <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                                +{eventsForDate.items.length - 3} more
+                            {eventsForDate.items.length > 2 && (
+                              <div className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400">
+                                +{eventsForDate.items.length - 2} more
                               </div>
                             )}
                           </div>
@@ -344,23 +344,23 @@ const CalendarView = ({ user }) => {
                     rows.push(
                       <React.Fragment key={row}>
                         {/* Week indicator cell */}
-                        <div className="bg-zinc-50 dark:bg-zinc-950 min-h-[100px] flex flex-col items-center justify-center border-r border-zinc-200 dark:border-zinc-800">
+                        <div className="bg-zinc-50 dark:bg-zinc-950 min-h-[60px] sm:min-h-[100px] flex flex-col items-center justify-center border-r border-zinc-200 dark:border-zinc-800 w-8 sm:w-auto">
                           {weekInfo ? (
-                            <div className="text-center">
-                              <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                            <div className="text-center px-0.5">
+                              <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                                 T{weekInfo.term}
                               </div>
-                              <div className="text-xs font-semibold text-zinc-900 dark:text-white mt-0.5">
+                              <div className="text-[10px] sm:text-xs font-semibold text-zinc-900 dark:text-white mt-0.5">
                                 W{weekInfo.week}
                               </div>
                               {weekInfo.weekType && (
-                                <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                <div className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                                   {weekInfo.weekType}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="text-zinc-300 dark:text-zinc-700 text-xs">—</div>
+                            <div className="text-zinc-300 dark:text-zinc-700 text-[10px] sm:text-xs">—</div>
                           )}
                         </div>
                         {/* Day cells */}
@@ -383,11 +383,11 @@ const CalendarView = ({ user }) => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.2 }}
-                className="w-96 shrink-0"
+                className="w-full lg:w-96 shrink-0 order-first lg:order-last"
               >
-                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden sticky top-8">
+                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden sticky top-4 lg:top-8">
                   {/* Flyout Header */}
-                  <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hidden sm:block">
@@ -396,7 +396,7 @@ const CalendarView = ({ user }) => {
                         <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:hidden">
                           {format(selectedDate, 'EEE')}
                         </div>
-                        <div className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
+                        <div className="text-xl sm:text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
                           {format(selectedDate, 'd MMMM yyyy')}
                         </div>
                       </div>
@@ -410,7 +410,7 @@ const CalendarView = ({ user }) => {
                   </div>
 
                   {/* Events List */}
-                  <div className="max-h-[600px] overflow-y-auto">
+                  <div className="max-h-[400px] sm:max-h-[600px] overflow-y-auto">
                     {(() => {
                       const eventsForDate = getEventsForDate(selectedDate);
                       if (!eventsForDate || !eventsForDate.items || eventsForDate.items.length === 0) {
@@ -430,16 +430,16 @@ const CalendarView = ({ user }) => {
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               transition={{ delay: i * 0.05 }}
-                              className="px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                              className="px-4 py-3 sm:px-5 sm:py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                             >
-                              <div className="flex items-start gap-4">
+                              <div className="flex items-start gap-3 sm:gap-4">
                                 <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-3 mb-2">
+                                  <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2">
                                     <h3 className={`font-semibold text-zinc-900 dark:text-zinc-100 text-sm leading-tight ${event.status === 'Completed' ? 'line-through opacity-50' : ''}`}>
                                       {event.title}
                                     </h3>
-                                    <span className={`shrink-0 px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
+                                    <span className={`shrink-0 px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs font-semibold uppercase tracking-wider rounded border ${getEventTypeColor(event.type)}`}>
                                       {event.type}
                                     </span>
                                   </div>
