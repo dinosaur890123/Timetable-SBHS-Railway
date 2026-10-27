@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
-    CornerDownLeft, WifiOff, Database, Palette, BookOpen, Globe, ArrowUpRight
+    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight
 } from 'lucide-react';
 
 export const VIEW_LABELS = {
@@ -418,7 +418,7 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 };
 
 // Builds the palette's command list from app-level actions.
-export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiThemeOptions, currentUiTheme, onSelectUiTheme, onSignOut }) => {
+export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut }) => {
     // Navigation commands
     // Pages first, then external links, so each group heading appears once
     const navCommands = buildNavGroups(user?.role === 'Admin')
@@ -458,17 +458,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiTh
             icon: Sparkles, 
             run: onAskAi 
         }] : []),
-        ...uiThemeOptions
-            .filter(t => t.id !== currentUiTheme)
-            .map(t => ({
-                id: `ui-${t.id}`,
-                group: 'Actions',
-                label: `Use ${t.name} interface`,
-                keywords: 'interface style theme layout',
-                icon: Palette,
-                run: () => onSelectUiTheme(t.id)
-            })),
-        { 
+        {
             id: 'sign-out', 
             group: 'Account', 
             label: 'Sign out', 
@@ -481,10 +471,8 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, uiTh
 };
 
 // Shell-level behaviour: Ctrl/Cmd+K shortcut and pointer-tracked spotlight on dashboard tiles.
-export const useModernShellEffects = (enabled, setPaletteOpen) => {
+export const useModernShellEffects = (setPaletteOpen) => {
     useEffect(() => {
-        if (!enabled) return;
-
         const handleKeyboardShortcut = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
@@ -507,5 +495,5 @@ export const useModernShellEffects = (enabled, setPaletteOpen) => {
             window.removeEventListener('keydown', handleKeyboardShortcut);
             document.removeEventListener('pointermove', handlePointerMove);
         };
-    }, [enabled, setPaletteOpen]);
+    }, [setPaletteOpen]);
 };

@@ -21,9 +21,9 @@
   --black: 0 0 0;
   --white: 255 255 255;
 
-  --font-sans: "Plus Jakarta Sans";
-  --font-display: "Space Grotesk";
-  --font-mono: "JetBrains Mono";
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui;
+  --font-display: "Geist", "Inter", ui-sans-serif, system-ui;
+  --font-mono: "Geist Mono", ui-monospace;
 }
 
 .dark {
@@ -73,79 +73,13 @@
 }
 
 @layer base {
-  /* Classic (brutalist) interface: square everything */
-  html:not([data-ui="modern"]) *,
-  html:not([data-ui="modern"]) *::before,
-  html:not([data-ui="modern"]) *::after {
-    border-radius: 0px !important;
-  }
-
   body {
     @apply bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50 antialiased;
-  }
-
-  html:not([data-ui="modern"]) body {
-    zoom: 0.96;
   }
 
   ::selection {
     @apply bg-accent text-accent-contrast;
   }
-}
-
-/* Dark Mode Style Overrides (Classic interface only) */
-html.dark[data-dark-style="black"]:not([data-ui="modern"]) body {
-  @apply bg-[#1C1C1C];
-}
-html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black {
-  @apply bg-[#1C1C1C] !important;
-}
-html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black\/80 {
-  @apply bg-[#1C1C1C]/80 !important;
-}
-html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black\/85 {
-  @apply bg-[#1C1C1C]/85 !important;
-}
-html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black\/50 {
-  @apply bg-[#1C1C1C]/50 !important;
-}
-
-/* Custom Brutalist Scrollbars */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-zinc-100 dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-black dark:bg-white border-2 border-zinc-100 dark:border-zinc-900;
-}
-
-/* Custom Technical Aesthetics */
-.bg-grid {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(63, 63, 70, 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(63, 63, 70, 0.12) 1px, transparent 1px);
-}
-
-.bg-grid-glow {
-  background: radial-gradient(circle 600px at 50% 20%, rgba(59, 130, 246, 0.08), transparent 80%);
-}
-
-.bg-grid-glow-bw {
-  background: radial-gradient(circle 600px at 50% 20%, rgba(255, 255, 255, 0.06), transparent 80%);
-}
-
-.text-stroke-white {
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.85);
-}
-
-.text-stroke-zinc {
-  -webkit-text-stroke: 1px rgba(113, 113, 122, 0.5);
 }
 
 @keyframes pulse-subtle {
@@ -157,8 +91,7 @@ html.dark[data-dark-style="black"]:not([data-ui="modern"]) .dark\:bg-black\/50 {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Entrance animations are decorative: skip them for reduced-motion users in every interface
-   (modern.css only covers data-ui="modern"). */
+/* Entrance animations are decorative: skip them for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .animate-in {
     animation: none;

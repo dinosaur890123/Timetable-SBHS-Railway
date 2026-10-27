@@ -1,16 +1,12 @@
 /* ==========================================================================
-   Modern interface theme
-   Activated by <html data-ui="modern">. Retunes the shared neutral scale,
+   Modern interface (Synchron's only design language; see DESIGN.md)
+   <html data-ui="modern"> is set statically in index.html. Retunes the shared neutral scale,
    typography, radii and surfaces so existing views pick up the look without
    per-component forks. Shell-specific pieces (sidebar, dock, command palette)
    live in components/modern/.
    ========================================================================== */
 
 html[data-ui="modern"] {
-  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui;
-  --font-display: "Geist", "Inter", ui-sans-serif, system-ui;
-  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace;
-
   /* Light: warm paper neutrals */
   --zinc-50: 249 249 247;
   --zinc-100: 243 243 240;

@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useRef, lazy, Suspense, useMemo } from 'react';
-import Navigation from './components/Navigation';
-import ThemeToggle from './components/ThemeToggle';
 import Home from './components/Home';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
-import { UI_THEMES, normalizeUiConfig, resolveUiTheme, readCachedUiConfig, readUiThemePreference } from './theme/uiThemes';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Timetable = lazy(() => import('./components/Timetable'));
@@ -34,7 +31,7 @@ import {
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Settings, Sparkles, X, WifiOff, Database } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 
 function App() {
@@ -71,23 +68,17 @@ function App() {
         }
     });
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
-    const [darkStyle, setDarkStyle] = useState(() => localStorage.getItem('dark_style') || 'true-black');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
 
-    // Interface theme: admin decides which are offered + the default; user may pick among them
-    const [uiConfig, setUiConfig] = useState(readCachedUiConfig);
-    const [uiThemePref, setUiThemePref] = useState(readUiThemePreference);
-    const uiTheme = resolveUiTheme(uiThemePref, uiConfig);
-    const isModern = uiTheme === 'modern';
     const [paletteOpen, setPaletteOpen] = useState(false);
-    useModernShellEffects(isModern, setPaletteOpen);
+    useModernShellEffects(setPaletteOpen);
 
-    const applyUiConfig = (config) => {
-        if (!config) return;
-        const normalized = normalizeUiConfig(config);
-        localStorage.setItem('ui_config', JSON.stringify(normalized));
-        setUiConfig(normalized);
-    };
+    // Drop settings left behind by the retired Classic interface
+    useEffect(() => {
+        try {
+            ['ui_theme', 'ui_config', 'dark_style'].forEach(key => localStorage.removeItem(key));
+        } catch { /* storage unavailable */ }
+    }, []);
     const [notices, setNotices] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_notices');
@@ -271,9 +262,7 @@ function App() {
             const preferences = {
                 theme,
                 colorTheme,
-                darkStyle,
                 aiDisabled,
-                uiTheme: uiThemePref,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -327,7 +316,6 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
-                    applyUiConfig(systemData.uiThemes);
                 }
             } catch (e) {
                 console.error("Failed to poll system status", e);
@@ -352,30 +340,10 @@ function App() {
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
 
-    // Dark Style Config
-    useEffect(() => {
-        const root = window.document.documentElement;
-        root.setAttribute('data-dark-style', darkStyle);
-        localStorage.setItem('dark_style', darkStyle);
-        savePreferences();
-    }, [darkStyle]);
-
     useEffect(() => {
         localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
         savePreferences();
     }, [aiDisabled]);
-
-    // Interface Theme Config
-    // The signed-out landing page is always shown in the modern design language.
-    useEffect(() => {
-        document.documentElement.setAttribute('data-ui', isSignedIn ? uiTheme : 'modern');
-    }, [uiTheme, isSignedIn]);
-
-    useEffect(() => {
-        if (uiThemePref) localStorage.setItem('ui_theme', uiThemePref);
-        else localStorage.removeItem('ui_theme');
-        savePreferences();
-    }, [uiThemePref]);
 
     // Color Theme Config
     useEffect(() => {
@@ -403,10 +371,9 @@ function App() {
         const meta = document.querySelector('meta[name="theme-color"]');
         if (!meta) return;
         const styles = getComputedStyle(document.documentElement);
-        const token = (isSignedIn ? uiTheme : 'modern') === 'modern' ? '--m-page' : (theme === 'dark' ? '--black' : '--zinc-50');
-        const rgb = styles.getPropertyValue(token).trim();
+        const rgb = styles.getPropertyValue('--m-page').trim();
         if (rgb) meta.setAttribute('content', `rgb(${rgb.split(/\s+/).join(', ')})`);
-    }, [colorTheme, theme, uiTheme, isSignedIn]);
+    }, [colorTheme, theme, isSignedIn]);
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -463,7 +430,6 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
-                    applyUiConfig(systemData.uiThemes);
                 }
 
                 // Attempt to register/update user in Admin Panel in background
@@ -515,16 +481,9 @@ function App() {
                                 setColorTheme(prefs.colorTheme);
                                 localStorage.setItem('color_theme', prefs.colorTheme);
                             }
-                            if (prefs.darkStyle) {
-                                setDarkStyle(prefs.darkStyle);
-                                localStorage.setItem('dark_style', prefs.darkStyle);
-                            }
                             if (prefs.aiDisabled !== undefined) {
                                 setAiDisabled(prefs.aiDisabled);
                                 localStorage.setItem('ai_disabled', prefs.aiDisabled ? 'true' : 'false');
-                            }
-                            if (prefs.uiTheme !== undefined) {
-                                setUiThemePref(prefs.uiTheme || null);
                             }
                             
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
@@ -761,105 +720,24 @@ function App() {
         );
     }
 
-    const uiThemeOptions = uiConfig.enabled.map(id => UI_THEMES[id]);
-
     return (
         <CanvasLinksProvider>
-            <div className={isModern
-            ? 'flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100'
-            : 'flex min-h-screen bg-zinc-50 dark:bg-black m-ambient text-zinc-900 dark:text-zinc-100 transition-colors duration-300'}>
-            {isModern ? (
-                <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} />
-            ) : (
-                <Navigation currentView={currentView} setView={setCurrentView} user={user} />
-            )}
+            <div className="flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
+            <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} />
 
-            <main className={isModern
-                ? 'relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]'
-                : 'flex-1 overflow-x-hidden overflow-y-auto'}>
-                {isModern && (
-                    <ModernTopbar
-                        currentView={currentView}
-                        setView={setCurrentView}
-                        theme={theme}
-                        toggleTheme={toggleTheme}
-                        onOpenPalette={() => setPaletteOpen(true)}
-                        isOffline={isOffline}
-                        usingCachedData={usingCachedData}
-                        timetableViewMode={timetableViewMode}
-                        setTimetableViewMode={setTimetableViewMode}
-                    />
-                )}
-                {isModern && (
-                    <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
-                )}
-
-                {/* Top Header */}
-                {!isModern && (
-                <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-900">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
-                            {currentView}
-                        </h1>
-                        {currentView === 'home' && (
-                            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
-                                <button
-                                    onClick={() => setTimetableViewMode('daily')}
-                                    className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
-                                        timetableViewMode === 'daily'
-                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                    }`}
-                                >
-                                    Daily
-                                </button>
-                                <button
-                                    onClick={() => setTimetableViewMode('cycle')}
-                                    className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
-                                        timetableViewMode === 'cycle'
-                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                    }`}
-                                >
-                                    Cycle
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        {/* Offline Indicator */}
-                        {(isOffline || usingCachedData) && (
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
-                                isOffline 
-                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' 
-                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50'
-                            }`}>
-                                {isOffline ? <WifiOff size={14} /> : <Database size={14} />}
-                                <span>{isOffline ? 'Offline' : 'Using Cached Data'}</span>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-4">
-                            <div className="hidden md:flex flex-col items-end">
-                                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{user?.givenName} {user?.surname}</span>
-                                <span className="text-xs text-zinc-500">{user?.studentId || 'Staff'}</span>
-                            </div>
-                            <ThemeToggle isDark={theme === 'dark'} toggleTheme={toggleTheme} />
-                        </div>
-
-                        <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800"></div>
-
-                        <button
-                            onClick={() => setCurrentView('profile')}
-                            className={`p-2 rounded-xl transition-colors ${currentView === 'profile' ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 dark:text-zinc-400 dark:hover:text-white'}`}
-                            title="Settings"
-                        >
-                            <Settings size={20} />
-                        </button>
-                    </div>
-                </header>
-                )}
+            <main className="relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+                <ModernTopbar
+                    currentView={currentView}
+                    setView={setCurrentView}
+                    theme={theme}
+                    toggleTheme={toggleTheme}
+                    onOpenPalette={() => setPaletteOpen(true)}
+                    isOffline={isOffline}
+                    usingCachedData={usingCachedData}
+                    timetableViewMode={timetableViewMode}
+                    setTimetableViewMode={setTimetableViewMode}
+                />
+                <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
 
                 {broadcast && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
@@ -871,7 +749,7 @@ function App() {
                     </div>
                 )}
 
-                <div className={isModern ? 'relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto' : 'p-4 md:p-8 max-w-7xl mx-auto'}>
+                <div className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto">
                     <Suspense fallback={
                         <div className="flex flex-col items-center justify-center p-12 gap-4">
                             <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -1044,12 +922,6 @@ function App() {
                                 setColorTheme={setColorTheme}
                                 aiDisabled={aiDisabled}
                                 setAiDisabled={setAiDisabled}
-                                uiThemeOptions={uiThemeOptions}
-                                uiTheme={uiTheme}
-                                setUiThemePref={setUiThemePref}
-                                isModern={isModern}
-                                darkStyle={darkStyle}
-                                setDarkStyle={setDarkStyle}
                                 onSignOut={logout}
                                 setView={setCurrentView}
                             />
@@ -1125,30 +997,23 @@ function App() {
                 </Suspense>
             </main>
 
-            {isModern && (
-                <>
-                    <ModernDock
-                        currentView={currentView}
-                        setView={setCurrentView}
-                        onOpenPalette={() => setPaletteOpen(true)}
-                    />
-                    <CommandPalette
-                        open={paletteOpen}
-                        onClose={() => setPaletteOpen(false)}
-                        commands={buildCommands({
-                            user,
-                            setView: setCurrentView,
-                            theme,
-                            toggleTheme,
-                            onAskAi: aiDisabled ? null : () => { setCurrentView('home'); setShowAiModal(true); },
-                            uiThemeOptions,
-                            currentUiTheme: uiTheme,
-                            onSelectUiTheme: setUiThemePref,
-                            onSignOut: logout
-                        })}
-                    />
-                </>
-            )}
+            <ModernDock
+                currentView={currentView}
+                setView={setCurrentView}
+                onOpenPalette={() => setPaletteOpen(true)}
+            />
+            <CommandPalette
+                open={paletteOpen}
+                onClose={() => setPaletteOpen(false)}
+                commands={buildCommands({
+                    user,
+                    setView: setCurrentView,
+                    theme,
+                    toggleTheme,
+                    onAskAi: aiDisabled ? null : () => { setCurrentView('home'); setShowAiModal(true); },
+                    onSignOut: logout
+                })}
+            />
 
             {/* Toast Notifications */}
             {toasts.length > 0 && (

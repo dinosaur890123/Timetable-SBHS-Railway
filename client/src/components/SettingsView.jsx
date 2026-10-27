@@ -88,7 +88,6 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled,
-    uiThemeOptions, uiTheme, setUiThemePref, isModern, darkStyle, setDarkStyle,
     onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
@@ -143,26 +142,6 @@ const SettingsView = ({
                         ))}
                     </div>
                 </Row>
-                {uiThemeOptions.length > 1 && (
-                    <Row title="Interface" description={uiThemeOptions.find(o => o.id === uiTheme)?.description}>
-                        <Segmented
-                            id="ui"
-                            value={uiTheme}
-                            onChange={setUiThemePref}
-                            options={uiThemeOptions.map(o => ({ value: o.id, label: o.name }))}
-                        />
-                    </Row>
-                )}
-                {!isModern && theme === 'dark' && (
-                    <Row title="Dark style" description="How deep the dark background goes.">
-                        <Segmented
-                            id="dark-style"
-                            value={darkStyle}
-                            onChange={setDarkStyle}
-                            options={[{ value: 'true-black', label: 'True black' }, { value: 'black', label: 'Soft black' }]}
-                        />
-                    </Row>
-                )}
             </Section>
 
             <Section label="Features">
