@@ -5,9 +5,10 @@ import { format } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 
-// One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines.
+// One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
+// on desktop, abbreviated on mobile.
 const CycleCell = ({ classInfo, onSelect }) => {
-    const { name, room, colour, isSelected } = classInfo;
+    const { name, title, room, colour, isSelected } = classInfo;
     const tinted = colour && !isSelected;
     return (
         <div
@@ -23,7 +24,8 @@ const CycleCell = ({ classInfo, onSelect }) => {
             <span className={`text-xs font-bold leading-tight line-clamp-2 ${
                 isSelected ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-900 dark:text-white'
             }`}>
-                {name}
+                <span className="lg:hidden">{title}</span>
+                <span className="hidden lg:inline">{name}</span>
             </span>
             {room && (
                 <span className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{room}</span>

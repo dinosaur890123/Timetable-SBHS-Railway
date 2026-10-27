@@ -84,19 +84,27 @@ const SubjectDot = ({ colour }) => colour
     ? <span aria-hidden className="inline-block w-2 h-2 shrink-0 rounded-full subject-fill" {...subjectInk(colour)} />
     : null;
 
-// Canvas links are keyed by the short class code; the full name is what's shown.
+// Canvas links are keyed by the short class code; the full name is what's shown on desktop,
+// abbreviated on mobile.
 const ClassTitle = ({ period, className }) => {
     const { getLink } = useCanvasLinks();
     const link = getLink(period.title);
     const name = period.fullTitle || period.title;
+    const shortName = period.title;
     return (
         <div className="flex items-center gap-2 min-w-0">
             <SubjectDot colour={period.colour} />
             {link ? (
                 <a href={link} target="_blank" rel="noopener noreferrer" className={`${className} block hover:underline decoration-zinc-400/50 underline-offset-4`}>
-                    {name}
+                    <span className="lg:hidden">{shortName}</span>
+                    <span className="hidden lg:inline">{name}</span>
                 </a>
-            ) : <div className={className}>{name}</div>}
+            ) : (
+                <div className={className}>
+                    <span className="lg:hidden">{shortName}</span>
+                    <span className="hidden lg:inline">{name}</span>
+                </div>
+            )}
         </div>
     );
 };
@@ -118,7 +126,10 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
         <SubjectDot colour={slot.period.colour} />
-        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{slot.period.fullTitle || slot.period.title}</span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
+            <span className="lg:hidden">{slot.period.title}</span>
+            <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
+        </span>
         <span className="ml-auto shrink-0 tabular-nums">{slot.bell.time}</span>
     </div>
 );
