@@ -12,16 +12,71 @@ drawing attention to itself.
 
 ## Principles
 
-1. **Content first, chrome second.** The timetable and the notices are what students came for. Shell elements
-   (sidebar, topbar, dock) use muted neutrals and stay out of the way.
-2. **One accent, used for meaning.** The accent marks *where you are* and *what's live*: the active nav icon, focus
-   rings, the current period, selection. It is never decoration on its own.
-3. **Depth through layers, not lines.** Separate regions with surface steps (page → panel → card) and soft shadows.
-   Borders are hairlines at 7–8% opacity, never solid black or white.
-4. **Quiet type.** Medium and semibold weights, tight tracking on large sizes. Nothing heavier than 650.
-5. **Motion confirms.** Springs for state changes, short fades for overlays. Respect `prefers-reduced-motion` every
-   time.
-6. **Keyboard-complete.** Every destination can be reached from the command palette (`Ctrl/⌘ K`).
+Screenshots are from the local dev build with sample data (`client/src/services/mockData.js`), with the clock set
+to 10:30 so a period is live. Images live in [`docs/design/`](docs/design/).
+
+### 1. Content first, chrome second
+
+The timetable and the notices are what students came for. Shell elements (sidebar, topbar, dock) use muted
+neutrals and stay out of the way.
+
+![Home view: the day's timetable and the live-period card fill the main panel while the sidebar and topbar stay muted](docs/design/01-content-first.png)
+
+*The timetable and the live "Now" card carry all the contrast. Past periods dim, and the sidebar is grey text on
+the page surface.*
+
+### 2. One accent, used for meaning
+
+The accent marks *where you are* and *what's live*: the active nav icon, focus rings, the current period,
+selection. It is never decoration on its own.
+
+![Settings with the blue accent: only the active nav icon, the selected swatch, the switch and the avatar pick it up](docs/design/02-one-accent.png)
+
+*With the blue accent, colour appears only on the active Settings icon, the selected swatch, the "on" switch, the
+avatar initials and the brand-mark dot. Everything else stays neutral, apart from a faint ambient wash.*
+
+### 3. Depth through layers, not lines
+
+Separate regions with surface steps (page → panel → card) and soft shadows. Borders are hairlines at 7–8% opacity,
+never solid black or white.
+
+![Settings in dark mode: graphite page, slightly lighter panel, and cards a step lighter again](docs/design/03-depth-through-layers.png)
+
+*Dark mode is three graphite steps: `m-page` behind the sidebar, `m-panel` for the main area, and `m-card` for the
+grouped rows. It never goes pure black, and every edge is a 7% white hairline.*
+
+### 4. Quiet type
+
+Medium and semibold weights, tight tracking on large sizes. Nothing heavier than 650.
+
+![Header of the home view: a large semibold greeting with tight tracking over a light grey status line](docs/design/04-quiet-type.png)
+
+*Geist throughout. The greeting is semibold with −0.03em tracking, and secondary text drops to zinc-500 rather than a
+lighter weight. The mono eyebrow ("NOW · P2") marks metadata.*
+
+### 5. Motion confirms
+
+Springs for state changes, short fades for overlays. Respect `prefers-reduced-motion` every time.
+
+![Sidebar and topbar close-up in dark violet: the active nav pill and the Daily segment are shared-layout springs](docs/design/05-motion-confirms.png)
+
+*The active nav pill and the Daily/Cycle segment are one element each that springs between positions
+(`stiffness 500, damping 40`). Nothing animates without a state change behind it.*
+
+### 6. Keyboard-complete
+
+Every destination can be reached from the command palette (`Ctrl/⌘ K`).
+
+![Command palette open over a dimmed, blurred home view, listing every page under "Go to"](docs/design/06-keyboard-complete.png)
+
+*`Ctrl/⌘ K` opens the palette over a soft scrim. Every page, external link and global action is listed, and arrow
+keys plus Enter are all you need.*
+
+#### On small screens
+
+![Mobile home view with the mint accent: live card on top, timetable below, floating dock at the bottom](docs/design/07-mobile-dock.png)
+
+*Below `md` the sidebar becomes a floating dock, and "More" opens the same command palette.*
 
 ---
 
