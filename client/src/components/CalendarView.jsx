@@ -209,7 +209,7 @@ const CalendarView = ({ user }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentDate(d => addDays(d, -30))}
-            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
+            className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
             aria-label="Previous month"
           >
             <ChevronLeft size={20} />
@@ -217,7 +217,7 @@ const CalendarView = ({ user }) => {
 
           <button
             onClick={handleReset}
-            className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-0"
           >
             <RotateCcw size={14} />
             {format(currentDate, 'MMMM yyyy')}
@@ -225,7 +225,7 @@ const CalendarView = ({ user }) => {
 
           <button
             onClick={() => setCurrentDate(d => addDays(d, 30))}
-            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
+            className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
             aria-label="Next month"
           >
             <ChevronRight size={20} />
