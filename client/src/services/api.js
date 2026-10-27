@@ -62,11 +62,7 @@ export const exchangeToken = async (code) => {
     }
 
     const data = await response.json();
-    
-    localStorage.setItem('sbhs_access_token', data.access_token);
-    if(data.refresh_token) localStorage.setItem('sbhs_refresh_token', data.refresh_token);
-    localStorage.setItem('sbhs_token_expiry', new Date().getTime() + (data.expires_in * 1000));
-    
+    storeTokens(data);
     return data;
   } catch (error) {
     console.error("Auth Error:", error);
@@ -75,6 +71,63 @@ export const exchangeToken = async (code) => {
 };
 
 const getAccessToken = () => localStorage.getItem('sbhs_access_token');
+
+const storeTokens = (data) => {
+    localStorage.setItem('sbhs_access_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('sbhs_refresh_token', data.refresh_token);
+    localStorage.setItem('sbhs_token_expiry', String(Date.now() + data.expires_in * 1000));
+};
+
+const clearTokens = () => {
+    ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry'].forEach(key => localStorage.removeItem(key));
+};
+
+// Treat a token as expired a minute early so it can't lapse mid-request.
+const hasFreshToken = () => {
+    const expiry = parseInt(localStorage.getItem('sbhs_token_expiry'), 10);
+    return !!getAccessToken() && Date.now() < expiry - 60 * 1000;
+};
+
+// SBHS access tokens last an hour; the 90-day refresh token gets a new pair.
+// Refresh tokens are single-use, so concurrent callers share one refresh.
+let refreshInFlight = null;
+
+export const refreshAccessToken = () => {
+    if (refreshInFlight) return refreshInFlight;
+    const refreshToken = localStorage.getItem('sbhs_refresh_token');
+    if (!refreshToken || !CLIENT_ID) return Promise.resolve(null);
+
+    refreshInFlight = (async () => {
+        try {
+            const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: CLIENT_ID });
+            if (CLIENT_SECRET) body.set('client_secret', CLIENT_SECRET);
+            const response = await fetch(TOKEN_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
+            });
+            if (!response.ok) {
+                // Another tab may have spent this refresh token first; use the pair it stored.
+                if (localStorage.getItem('sbhs_refresh_token') !== refreshToken && hasFreshToken()) return getAccessToken();
+                if (response.status === 400 || response.status === 401) clearTokens();
+                return null;
+            }
+            const data = await response.json();
+            storeTokens(data);
+            return data.access_token;
+        } catch (error) {
+            // Offline or SBHS unreachable: keep the tokens and try again next time.
+            console.error('Token refresh failed:', error);
+            return null;
+        } finally {
+            refreshInFlight = null;
+        }
+    })();
+    return refreshInFlight;
+};
+
+// The current access token, refreshed first if it has expired. Null when signed out.
+export const getValidAccessToken = async () => (hasFreshToken() ? getAccessToken() : refreshAccessToken());
 
 export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
@@ -87,21 +140,23 @@ export const logout = (redirectToLogin = false) => {
     }
 };
 
-export const isAuthenticated = () => {
-    const token = getAccessToken();
-    const expiry = localStorage.getItem('sbhs_token_expiry');
-    return token && expiry && new Date().getTime() < parseInt(expiry);
-};
+// Signed in if the access token is still good, or can be renewed with the refresh token.
+export const isAuthenticated = () => hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token'));
 
 // --- API Client ---
 
 async function fetchWithAuth(endpoint) {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     if (!token) throw new Error("No access token");
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+    const send = (bearer) => fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${bearer}` }
     });
+    let response = await send(token);
+    if (response.status === 401) {
+        const fresh = await refreshAccessToken();
+        if (fresh) response = await send(fresh);
+    }
 
     if (!response.ok) {
         if (response.status === 401) logout();
@@ -161,7 +216,7 @@ export const fetchSystemStatus = async () => {
 };
 
 export const fetchAiBriefing = async (notices) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const response = await fetch(`${SYSTEM_API_URL}/ai/briefing`, {
         method: 'POST',
         headers: {
@@ -177,7 +232,7 @@ export const fetchAiBriefing = async (notices) => {
 };
 
 export const fetchTimetableQa = async (question, timetable, currentMinutes, completeTimetable) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const response = await fetch(`${SYSTEM_API_URL}/ai/timetable-qa`, {
         method: 'POST',
         headers: {
@@ -193,7 +248,7 @@ export const fetchTimetableQa = async (question, timetable, currentMinutes, comp
 };
 
 export const fetchAiNotesSummarise = async (content, title) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const response = await fetch(`${SYSTEM_API_URL}/ai/notes-summarise`, {
         method: 'POST',
         headers: {
@@ -210,7 +265,7 @@ export const fetchAiNotesSummarise = async (content, title) => {
 };
 
 export const fetchAiQuizGenerate = async (payload) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const response = await fetch(`${SYSTEM_API_URL}/ai/quiz-generate`, {
         method: 'POST',
         headers: {
@@ -227,7 +282,7 @@ export const fetchAiQuizGenerate = async (payload) => {
 };
 
 async function fetchFromBackend(endpoint) {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -638,7 +693,7 @@ export const fetchTransitDepartures = (stopName) =>
 export const fetchAssignments = () => fetchFromBackend('/assignments');
 
 export const saveAssignment = async (assignment) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -655,7 +710,7 @@ export const saveAssignment = async (assignment) => {
 };
 
 export const deleteAssignment = async (id) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -672,7 +727,7 @@ export const deleteAssignment = async (id) => {
 
 // User Preferences API
 export const fetchUserPreferences = async (studentId) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -685,7 +740,7 @@ export const fetchUserPreferences = async (studentId) => {
 };
 
 export const saveUserPreferences = async (studentId, preferences) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -703,7 +758,7 @@ export const saveUserPreferences = async (studentId, preferences) => {
 
 // Canvas Links API
 export const fetchCanvasLinks = async () => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -716,7 +771,7 @@ export const fetchCanvasLinks = async () => {
 };
 
 export const saveCanvasLinks = async (links) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -733,7 +788,7 @@ export const saveCanvasLinks = async (links) => {
 };
 
 export const fetchSharedCanvasLink = async (className) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -747,7 +802,7 @@ export const fetchSharedCanvasLink = async (className) => {
 
 // Shared Canvas Courses API (one canonical course ID per class, school-wide)
 export const fetchCanvasCourses = async () => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -766,7 +821,7 @@ export const fetchCanvasCourses = async () => {
 
 // Set the shared Canvas ID for a class. Resolves with { ok, alreadySet, course, error }.
 export const setCanvasCourse = async (className, courseId) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -793,7 +848,7 @@ export const setCanvasCourse = async (className, courseId) => {
 
 // Report an incorrect shared Canvas ID. Resolves with { ok, message, error }.
 export const reportCanvasCourse = async (className, suggestedCourseId, justification) => {
-    const token = getAccessToken();
+    const token = await getValidAccessToken();
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;

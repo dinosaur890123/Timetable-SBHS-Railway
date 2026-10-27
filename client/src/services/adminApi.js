@@ -1,3 +1,5 @@
+import { getValidAccessToken, refreshAccessToken } from './api';
+
 const ADMIN_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
 // Requests that never settle leave the UI stuck on its loading state forever,
@@ -5,11 +7,19 @@ const ADMIN_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 const REQUEST_TIMEOUT_MS = 20000;
 
 const apiFetch = async (url, options = {}) => {
-    const { timeout = REQUEST_TIMEOUT_MS, ...init } = options;
+    const { timeout = REQUEST_TIMEOUT_MS, retried = false, ...init } = options;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-        return await fetch(url, { ...init, signal: controller.signal });
+        const response = await fetch(url, { ...init, signal: controller.signal });
+        // A token SBHS revoked early still looks fresh here: renew it once and retry.
+        if (response.status === 401 && !retried && init.headers?.Authorization) {
+            const fresh = await refreshAccessToken();
+            if (fresh) {
+                return apiFetch(url, { ...options, retried: true, headers: { ...init.headers, Authorization: `Bearer ${fresh}` } });
+            }
+        }
+        return response;
     } catch (error) {
         if (error.name === 'AbortError') {
             throw new Error(`Request timed out after ${Math.round(timeout / 1000)}s: ${url}`);
@@ -20,8 +30,8 @@ const apiFetch = async (url, options = {}) => {
     }
 };
 
-const getHeaders = () => {
-    const token = localStorage.getItem('sbhs_access_token');
+const getHeaders = async () => {
+    const token = await getValidAccessToken();
     return {
         'Content-Type': 'application/json',
         'Authorization': token ? `Bearer ${token}` : ''
@@ -31,7 +41,7 @@ const getHeaders = () => {
 export const fetchAdminStats = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/stats`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error(`Failed to fetch stats (HTTP ${response.status})`);
         return await response.json();
@@ -44,7 +54,7 @@ export const fetchAdminStats = async () => {
 export const fetchUsers = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error(`Failed to fetch users (HTTP ${response.status})`);
         return await response.json();
@@ -58,7 +68,7 @@ export const deleteUser = async (userId) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
              method: 'DELETE',
-             headers: getHeaders()
+             headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to delete user');
         return await response.json();
@@ -72,7 +82,7 @@ export const updateUser = async (userId, updates) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
             method: 'PUT',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify(updates)
         });
         if (!response.ok) throw new Error('Failed to update user');
@@ -87,7 +97,7 @@ export const clearServerCache = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/cache/clear`, {
             method: 'POST',
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to clear server cache');
         return await response.json();
@@ -100,7 +110,7 @@ export const clearServerCache = async () => {
 export const fetchLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/logs`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error(`Failed to fetch logs (HTTP ${response.status})`);
         return await response.json();
@@ -114,7 +124,7 @@ export const setBroadcast = async (message, type = 'info') => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/broadcast`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ message, type })
         });
         if (!response.ok) throw new Error('Failed to set broadcast');
@@ -129,7 +139,7 @@ export const setMaintenanceMode = async (enabled) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/maintenance`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ maintenance: enabled })
         });
         if (!response.ok) throw new Error('Failed to toggle maintenance');
@@ -144,7 +154,7 @@ export const registerUser = async (user) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/register`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify(user)
         });
         
@@ -164,7 +174,7 @@ export const promoteUserToAdmin = async (studentId) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users/promote`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ studentId })
         });
         if (!response.ok) {
@@ -183,7 +193,7 @@ export const pruneOldLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/maintenance/prune-logs`, {
             method: 'POST',
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to prune old logs');
         return await response.json();
@@ -198,7 +208,7 @@ export const updateAiConfig = async (provider, model) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/system/ai-config`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ provider, model })
         });
         if (!response.ok) throw new Error('Failed to update AI configuration');
@@ -212,9 +222,9 @@ export const updateAiConfig = async (provider, model) => {
 export const fetchAiLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/ai/logs`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch AI logs');
+        if (!response.ok) throw new Error(`Failed to fetch AI logs (HTTP ${response.status})`);
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -226,7 +236,7 @@ export const clearAiCache = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/ai/cache/clear`, {
             method: 'POST',
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to clear AI cache');
         return await response.json();
@@ -239,9 +249,9 @@ export const clearAiCache = async () => {
 export const fetchAdminFeedback = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch feedback entries');
+        if (!response.ok) throw new Error(`Failed to fetch feedback entries (HTTP ${response.status})`);
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);
@@ -253,7 +263,7 @@ export const updateFeedbackStatus = async (feedbackId, status) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
             method: 'PUT',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ status })
         });
         if (!response.ok) throw new Error('Failed to update feedback status');
@@ -268,7 +278,7 @@ export const deleteFeedback = async (feedbackId) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/${feedbackId}`, {
             method: 'DELETE',
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to delete feedback');
         return await response.json();
@@ -282,7 +292,7 @@ export const bulkUpdateFeedbackStatus = async (feedbackIds, status) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
             method: 'PUT',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ ids: feedbackIds, status })
         });
         if (!response.ok) throw new Error('Failed to bulk update feedback status');
@@ -297,7 +307,7 @@ export const bulkDeleteFeedback = async (feedbackIds) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/feedback/bulk`, {
             method: 'DELETE',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ ids: feedbackIds })
         });
         if (!response.ok) throw new Error('Failed to bulk delete feedback');
@@ -312,7 +322,7 @@ export const toggleUserBlacklist = async (userId, blacklisted) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {
             method: 'PUT',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify({ blacklisted })
         });
         if (!response.ok) throw new Error('Failed to update user blacklist status');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
-import { fetchSystemStatus } from '../services/api';
+import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 
 const AdminPanel = ({ user }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,6 +15,7 @@ const AdminPanel = ({ user }) => {
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
+    const [sessionExpired, setSessionExpired] = useState(false);
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
@@ -90,8 +91,13 @@ const AdminPanel = ({ user }) => {
 
         if (failed.length) {
             failed.forEach(({ label, reason }) => console.error(`Admin: failed to load ${label}:`, reason));
+            // A 401 that survives a token refresh means the SBHS sign-in itself has lapsed.
+            const signedOut = !isSignedIn() || failed.some(f => /HTTP 401/.test(f.reason?.message || ''));
+            setSessionExpired(signedOut);
             const detail = failed[0].reason?.message || 'Unknown error';
             setApiError(`Failed to load ${failed.map(f => f.label).join(', ')}. ${detail}`);
+        } else {
+            setSessionExpired(false);
         }
 
         setLoading(false);
@@ -485,12 +491,23 @@ const AdminPanel = ({ user }) => {
                 </div>
             </header>
 
-            {apiError && (
+            {apiError && (sessionExpired ? (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl flex flex-wrap items-center gap-3">
+                    <AlertCircle size={20} />
+                    <span className="flex-1">Your SBHS sign-in has expired, so the admin data can't load. Sign in again to continue.</span>
+                    <button
+                        onClick={() => performLogin()}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"
+                    >
+                        Sign in again
+                    </button>
+                </div>
+            ) : (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl flex items-center gap-3">
                     <AlertCircle size={20} />
                     {apiError}
                 </div>
-            )}
+            ))}
 
         {activeTab === 'overview' && (
             <div className="space-y-6">

@@ -1,7 +1,9 @@
+import { getValidAccessToken } from './api';
+
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-const getHeaders = () => {
-    const token = localStorage.getItem('sbhs_access_token');
+const getHeaders = async () => {
+    const token = await getValidAccessToken();
     return {
         'Content-Type': 'application/json',
         'Authorization': token ? `Bearer ${token}` : ''
@@ -11,7 +13,7 @@ const getHeaders = () => {
 export const fetchNotes = async () => {
     try {
         const response = await fetch(`${API_URL}/notes`, {
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch notes');
         const data = await response.json();
@@ -26,7 +28,7 @@ export const saveNote = async (note) => {
     try {
         const response = await fetch(`${API_URL}/notes`, {
             method: 'POST',
-            headers: getHeaders(),
+            headers: await getHeaders(),
             body: JSON.stringify(note)
         });
         if (!response.ok) throw new Error('Failed to save note');
@@ -42,7 +44,7 @@ export const deleteNote = async (noteId) => {
     try {
         const response = await fetch(`${API_URL}/notes/${noteId}`, {
             method: 'DELETE',
-            headers: getHeaders()
+            headers: await getHeaders()
         });
         if (!response.ok) throw new Error('Failed to delete note');
         return await response.json();
