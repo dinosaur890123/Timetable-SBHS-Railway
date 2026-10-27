@@ -7,8 +7,8 @@ const enterDelay = (index) => Math.min(index, 8) * 0.03;
 
 // Changes are marked by shape (a quiet tag and a struck-through old value) rather than
 // colour, so they read the same whichever accent colour theme is active.
-const ChangeTag = ({ children }) => (
-    <span className="shrink-0 px-1.5 py-px rounded-md border border-zinc-900/10 dark:border-white/10 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+const ChangeTag = ({ children, className = '' }) => (
+    <span className={`shrink-0 px-1.5 py-px rounded-md border border-zinc-900/10 dark:border-white/10 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 ${className}`}>
         {children}
     </span>
 );
@@ -57,8 +57,8 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                     {hasCanvasLink && (
                         <ArrowUpRight size={14} className="shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
-                    {isSubstituted && <ChangeTag>Cover</ChangeTag>}
-                    {movedFrom && <ChangeTag>Room change</ChangeTag>}
+                    {isSubstituted && <ChangeTag className="hidden sm:inline">Cover</ChangeTag>}
+                    {movedFrom && <ChangeTag className="hidden sm:inline">Room change</ChangeTag>}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
@@ -68,7 +68,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                     ) : null}
                     {(isCurrent || isNext) && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
                     {fullTeacher && (
-                        <span className={`truncate ${isSubstituted ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                        <span className={`truncate hidden sm:inline ${isSubstituted ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : ''}`}>
                             {fullTeacher === 'No teacher' ? 'No teacher assigned' : fullTeacher}
                             {isSubstituted && oldTeacher && <span className="text-zinc-400 dark:text-zinc-500"> for {oldTeacher}</span>}
                         </span>
@@ -78,7 +78,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
 
             {room && (
                 <div className="shrink-0 text-right leading-tight">
-                    <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                    <div className="flex items-center gap-1.5 justify-end">
+                        {fullTeacher && (
+                            <span className={`truncate text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden max-w-[60px] ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                                {fullTeacher === 'No teacher' ? 'No teacher' : fullTeacher}
+                            </span>
+                        )}
+                        <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                    </div>
                     {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
                 </div>
             )}

@@ -206,7 +206,7 @@ const CalendarView = ({ user }) => {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Events and important dates</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setCurrentDate(d => addDays(d, -30))}
             className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
@@ -390,8 +390,11 @@ const CalendarView = ({ user }) => {
                   <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hidden sm:block">
                           {format(selectedDate, 'EEEE')}
+                        </div>
+                        <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:hidden">
+                          {format(selectedDate, 'EEE')}
                         </div>
                         <div className="text-2xl font-bold dark:text-white text-zinc-900 mt-0.5">
                           {format(selectedDate, 'd MMMM yyyy')}
@@ -399,7 +402,7 @@ const CalendarView = ({ user }) => {
                       </div>
                       <button
                         onClick={() => setShowFlyout(false)}
-                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                        className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
                       >
                         <X size={18} className="text-zinc-500 dark:text-zinc-400" />
                       </button>

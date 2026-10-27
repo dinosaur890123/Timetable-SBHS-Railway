@@ -768,19 +768,20 @@ function App() {
                                 dayNav={timetableViewMode === 'daily' && (
                                     <>
                                     <div className="flex items-center justify-between gap-3 mb-3">
-                                        <div className="flex items-center min-w-0">
-                                            <button onClick={prevDay} aria-label="Previous day" className="w-9 h-9 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                        <div className="flex items-center min-w-0 gap-1">
+                                            <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                 <ChevronLeft size={17} />
                                             </button>
                                             <button
                                                 onClick={() => setShowDatePicker(!showDatePicker)}
                                                 aria-label="Choose date"
-                                                className="flex items-center gap-2 px-2 h-9 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
+                                                className="flex items-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
                                             >
-                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white">{format(viewDate, 'EEEE')}</span>
+                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
+                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
                                                 <span className="text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
                                             </button>
-                                            <button onClick={nextDay} aria-label="Next day" className="w-9 h-9 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                            <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                 <ChevronRight size={17} />
                                             </button>
                                         </div>
@@ -817,10 +818,10 @@ function App() {
                                                 transition={{ duration: 0.15 }}
                                                 className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
                                             >
-                                                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between">
+                                                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between gap-1">
                                                     <button
                                                         onClick={() => navigateMonth(-1)}
-                                                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                        className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
                                                     >
                                                         <ChevronLeft size={14} className="text-zinc-500 dark:text-zinc-400" />
                                                     </button>
@@ -829,7 +830,7 @@ function App() {
                                                     </span>
                                                     <button
                                                         onClick={() => navigateMonth(1)}
-                                                        className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                        className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
                                                     >
                                                         <ChevronRight size={14} className="text-zinc-500 dark:text-zinc-400" />
                                                     </button>
