@@ -241,6 +241,14 @@ Defined in `client/src/components/modern/ModernShell.jsx`.
 - **Brand mark**: a 28px rounded square in zinc-900 (dark: white) with an "S", plus an accent dot at the corner
   ringed in `m-page`.
 
+### The one exception: Study
+
+The Study page promotes NoteFlow, a separate app, so its content is drawn in **NoteFlow's** design language (ink on
+warm paper, Instrument Sans and Serif, one violet highlighter swipe, a red pen for results) inside the Modern shell.
+Its tokens are scoped to `.nf` in `client/src/components/study/noteflow.css`, and Synchron's accent never reaches it.
+Keep NoteFlow's rules there (no uppercase eyebrows, one swipe at a time, motion that plays once) and don't reuse
+`.nf` anywhere else.
+
 ---
 
 ## Components
