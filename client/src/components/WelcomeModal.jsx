@@ -12,7 +12,7 @@ const WelcomeModal = ({ isOpen, onClose }) => {
         {
             icon: <Bell size={20} />,
             title: 'Daily Notices',
-            description: 'Filtered school notices tailored to your year group'
+            description: 'AI Filtered school notices tailored to your year group'
         },
         {
             icon: <BookOpen size={20} />,
@@ -21,18 +21,18 @@ const WelcomeModal = ({ isOpen, onClose }) => {
         },
         {
             icon: <Zap size={20} />,
-            title: 'AI Briefing',
-            description: 'Smart daily summary powered by artificial intelligence'
+            title: 'Built for speed',
+            description: '2x faster than other "fast and reliable timetable apps"'
         },
         {
             icon: <Clock size={20} />,
-            title: 'Transit Widget',
-            description: 'Live public transport departures from your chosen stop'
+            title: 'Clipboard & Award Scheme',
+            description: 'Coming soon...'
         },
         {
             icon: <LayoutGrid size={20} />,
-            title: 'Custom Dashboard',
-            description: 'Personalize your home screen with draggable widgets'
+            title: 'Built for you',
+            description: 'Customized for your year group and needs'
         }
     ];
 
