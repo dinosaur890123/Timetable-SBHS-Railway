@@ -143,7 +143,6 @@ const MonthGrid = ({ month, events, selectedDate, onSelect }) => {
         <motion.button
           key={day}
           onClick={() => onSelect(date)}
-          whileTap={{ scale: 0.97 }}
           transition={SPRING}
           aria-pressed={isSelected}
           className={`relative ${CELL_HEIGHT} p-1 sm:p-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
@@ -345,7 +344,6 @@ const CalendarView = ({ user }) => {
 
           <div className="flex items-center gap-1">
             <motion.button
-              whileTap={{ scale: 0.92 }}
               onClick={() => goToMonth(addMonths(currentDate, -1))}
               className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
               aria-label="Previous month"
@@ -354,7 +352,6 @@ const CalendarView = ({ user }) => {
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.97 }}
               onClick={handleReset}
               className="relative px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[10.5rem] justify-center overflow-hidden"
               title="Back to this month"
@@ -381,7 +378,6 @@ const CalendarView = ({ user }) => {
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.92 }}
               onClick={() => goToMonth(addMonths(currentDate, 1))}
               className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
               aria-label="Next month"
@@ -471,7 +467,6 @@ const CalendarView = ({ user }) => {
                               </div>
                             </div>
                             <motion.button
-                              whileTap={{ scale: 0.9 }}
                               onClick={() => setShowFlyout(false)}
                               aria-label="Close"
                               className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"

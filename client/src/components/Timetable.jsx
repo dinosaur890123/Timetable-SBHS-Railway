@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig } from 'framer-motion';
 import { format } from 'date-fns';
@@ -15,7 +15,7 @@ const CycleCell = ({ classInfo, onSelect }) => {
             onClick={onSelect}
             title={name}
             {...(tinted ? subjectInk(colour) : {})}
-            className={`min-h-[3.25rem] px-3 py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+            className={`press press-soft min-h-[3.25rem] px-3 py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
                 isSelected
                     ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
                     : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800`
@@ -38,9 +38,12 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
+    // Which row was live at the last tick, and when that last changed (see startedBell below).
+    const bellWatch = useRef({ key: undefined, at: 0 });
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 15000);
+        // Every second, so a bell is noticed as it rings rather than up to 15 seconds later.
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -93,6 +96,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     let lastMin = 0;
     let routineData = [];
     let timelineProgressPos = 0;
+    let startedBell = null;
 
     if (viewMode === 'daily') {
         routineData = routine.map((bellId, index) => {
@@ -141,6 +145,16 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             rows.push({ ...row });
             return rows;
         }, []);
+
+        // A bell has just rung if the live row changed since the last tick on the same day.
+        // Opening the page or browsing to another day never counts as a bell.
+        const live = routineData.find(r => r.isCurrent);
+        const liveKey = `${viewedKey}:${live ? live.bellId : 'none'}`;
+        if (bellWatch.current.key !== liveKey) {
+            const sameDay = bellWatch.current.key?.startsWith(`${viewedKey}:`);
+            bellWatch.current = { key: liveKey, at: sameDay ? Date.now() : 0 };
+        }
+        startedBell = live && Date.now() - bellWatch.current.at < 2600 ? live.bellId : null;
 
         // Timeline Progress Line Position
         if (currentMinutes >= firstMin && currentMinutes <= lastMin) {
@@ -306,6 +320,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             label={data.label}
                             isBreak={data.isBreak}
                             isCurrent={data.isCurrent}
+                            justStarted={data.bellId === startedBell}
                             isNext={data.isNext}
                             routineIndex={data.index}
                             currentMinutes={currentMinutes}

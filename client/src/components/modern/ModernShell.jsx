@@ -181,7 +181,18 @@ export const ModernTopbar = ({
                     <BrandMark />
                 </button>
                 <h1 className="text-[15px] font-medium tracking-tight text-zinc-900 dark:text-white truncate">
-                    {VIEW_LABELS[currentView] || currentView}
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                            key={currentView}
+                            className="inline-block"
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.14 }}
+                        >
+                            {VIEW_LABELS[currentView] || currentView}
+                        </motion.span>
+                    </AnimatePresence>
                 </h1>
 
                 {currentView === 'home' && (

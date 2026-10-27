@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef, lazy, Suspense, useMemo } from 'react';
 import Home from './components/Home';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
+import AmbientLight from './components/modern/AmbientLight';
 
 const Timetable = lazy(() => import('./components/Timetable'));
 const CalendarView = lazy(() => import('./components/CalendarView'));
@@ -69,6 +70,8 @@ function App() {
     });
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
+    const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
+    const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
     useModernShellEffects(setPaletteOpen);
@@ -263,6 +266,7 @@ function App() {
                 theme,
                 colorTheme,
                 aiDisabled,
+                ambientLight,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -344,6 +348,11 @@ function App() {
         localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
         savePreferences();
     }, [aiDisabled]);
+
+    useEffect(() => {
+        localStorage.setItem('ambient_light', ambientLight ? 'on' : 'off');
+        savePreferences();
+    }, [ambientLight]);
 
     // Color Theme Config
     useEffect(() => {
@@ -484,6 +493,10 @@ function App() {
                             if (prefs.aiDisabled !== undefined) {
                                 setAiDisabled(prefs.aiDisabled);
                                 localStorage.setItem('ai_disabled', prefs.aiDisabled ? 'true' : 'false');
+                            }
+                            if (prefs.ambientLight !== undefined) {
+                                setAmbientLight(prefs.ambientLight);
+                                localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
                             }
                             
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
@@ -721,8 +734,10 @@ function App() {
     }
 
     return (
+        <MotionConfig reducedMotion="user">
         <CanvasLinksProvider>
-            <div className="flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
+            <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
+            {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} />
 
             <main className="relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
@@ -737,6 +752,7 @@ function App() {
                     timetableViewMode={timetableViewMode}
                     setTimetableViewMode={setTimetableViewMode}
                 />
+                {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
 
                 {broadcast && (
@@ -757,177 +773,189 @@ function App() {
                         </div>
                     }>
 
-                        {/* HOME VIEW: greeting, the day's timetable and a side rail */}
-                        {currentView === 'home' && (
-                            <Home
-                                user={user}
-                                timetableData={timetable}
-                                railTimetable={railTimetable}
-                                viewDate={viewDate}
-                                isCycle={timetableViewMode === 'cycle'}
-                                dayNav={timetableViewMode === 'daily' && (
-                                    <>
-                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                        <div className="flex items-center min-w-0 gap-1">
-                                            <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
-                                                <ChevronLeft size={17} />
-                                            </button>
-                                            <button
-                                                onClick={() => setShowDatePicker(!showDatePicker)}
-                                                aria-label="Choose date"
-                                                className="flex items-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
-                                            >
-                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
-                                                <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
-                                                <span className="text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
-                                            </button>
-                                            <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
-                                                <ChevronRight size={17} />
-                                            </button>
-                                        </div>
-                        
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
-                                                <button
-                                                    onClick={resetToday}
-                                                    className="h-8 px-2.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
-                                                >
-                                                    Today
-                                                </button>
-                                            )}
-                                            {!aiDisabled && (
-                                                <button
-                                                    onClick={() => setShowAiModal(true)}
-                                                    aria-label="Ask AI about your timetable"
-                                                    className="h-8 px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
-                                                >
-                                                    <Sparkles size={14} className="text-accent" />
-                                                    <span className="hidden min-[400px]:inline">Ask AI</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                        
-                                <AnimatePresence>
-                                    {showDatePicker && (
-                                        <div className="relative" ref={setCalendarPopupRef}>
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                                transition={{ duration: 0.15 }}
-                                                className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
-                                            >
-                                                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between gap-1">
-                                                    <button
-                                                        onClick={() => navigateMonth(-1)}
-                                                        className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
-                                                    >
-                                                        <ChevronLeft size={14} className="text-zinc-500 dark:text-zinc-400" />
-                                                    </button>
-                                                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white">
-                                                        {format(calendarMonth, 'MMMM yyyy')}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => navigateMonth(1)}
-                                                        className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
-                                                    >
-                                                        <ChevronRight size={14} className="text-zinc-500 dark:text-zinc-400" />
-                                                    </button>
-                                                </div>
-                                                
-                                                <div className="p-3">
-                                                    <div className="grid grid-cols-7 gap-1 mb-2">
-                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                                            <div key={day} className="text-[11px] font-extrabold uppercase text-zinc-400 dark:text-zinc-500 text-center">
-                                                                {day}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    
-                                                    <div className="grid grid-cols-7 gap-1">
-                                                        {calendarDays.map((date, idx) => {
-                                                            if (!date) {
-                                                                return <div key={idx} className="aspect-square" />;
-                                                            }
-                                                            
-                                                            const isSelected = isSameDay(date, viewDate);
-                                                            const isToday = isSameDay(date, new Date());
-                                                            
-                                                            return (
-                                                                <button
-                                                                    key={idx}
-                                                                    onClick={() => handleDateSelect(date)}
-                                                                    className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-                                                                        isSelected
-                                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                                                                            : isToday
-                                                                                ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                                                                                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                                                                    }`}
-                                                                >
-                                                                    {format(date, 'd')}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        </div>
-                                    )}
-                                </AnimatePresence>
-                                </>
-                                )}
+                        {/* Views cross-fade with a slight lift, so moving between pages feels continuous. */}
+                        <AnimatePresence mode="wait" initial={false}>
+                            <motion.div
+                                key={currentView}
+                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, filter: 'blur(6px)' }}
+                                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                exit={reduceMotion ? { opacity: 0, transition: { duration: 0.08 } } : { opacity: 0, y: -6, filter: 'blur(4px)', transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } }}
+                                transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
                             >
-                                <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
-                            </Home>
-                        )}
+                            {/* HOME VIEW: greeting, the day's timetable and a side rail */}
+                            {currentView === 'home' && (
+                                <Home
+                                    user={user}
+                                    timetableData={timetable}
+                                    railTimetable={railTimetable}
+                                    viewDate={viewDate}
+                                    isCycle={timetableViewMode === 'cycle'}
+                                    dayNav={timetableViewMode === 'daily' && (
+                                        <>
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                            <div className="flex items-center min-w-0 gap-1">
+                                                <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                    <ChevronLeft size={17} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowDatePicker(!showDatePicker)}
+                                                    aria-label="Choose date"
+                                                    className="flex items-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
+                                                >
+                                                    <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
+                                                    <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
+                                                    <span className="text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
+                                                </button>
+                                                <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                    <ChevronRight size={17} />
+                                                </button>
+                                            </div>
+                        
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
+                                                    <button
+                                                        onClick={resetToday}
+                                                        className="h-8 px-2.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                                                    >
+                                                        Today
+                                                    </button>
+                                                )}
+                                                {!aiDisabled && (
+                                                    <button
+                                                        onClick={() => setShowAiModal(true)}
+                                                        aria-label="Ask AI about your timetable"
+                                                        className="h-8 px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
+                                                    >
+                                                        <Sparkles size={14} className="text-accent" />
+                                                        <span className="hidden min-[400px]:inline">Ask AI</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                        
+                                    <AnimatePresence>
+                                        {showDatePicker && (
+                                            <div className="relative" ref={setCalendarPopupRef}>
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
+                                                >
+                                                    <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between gap-1">
+                                                        <button
+                                                            onClick={() => navigateMonth(-1)}
+                                                            className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                        >
+                                                            <ChevronLeft size={14} className="text-zinc-500 dark:text-zinc-400" />
+                                                        </button>
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-900 dark:text-white">
+                                                            {format(calendarMonth, 'MMMM yyyy')}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => navigateMonth(1)}
+                                                            className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                                        >
+                                                            <ChevronRight size={14} className="text-zinc-500 dark:text-zinc-400" />
+                                                        </button>
+                                                    </div>
+                                                
+                                                    <div className="p-3">
+                                                        <div className="grid grid-cols-7 gap-1 mb-2">
+                                                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                                                <div key={day} className="text-[11px] font-extrabold uppercase text-zinc-400 dark:text-zinc-500 text-center">
+                                                                    {day}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    
+                                                        <div className="grid grid-cols-7 gap-1">
+                                                            {calendarDays.map((date, idx) => {
+                                                                if (!date) {
+                                                                    return <div key={idx} className="aspect-square" />;
+                                                                }
+                                                            
+                                                                const isSelected = isSameDay(date, viewDate);
+                                                                const isToday = isSameDay(date, new Date());
+                                                            
+                                                                return (
+                                                                    <button
+                                                                        key={idx}
+                                                                        onClick={() => handleDateSelect(date)}
+                                                                        className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                                                                            isSelected
+                                                                                ? 'bg-black text-white dark:bg-white dark:text-black'
+                                                                                : isToday
+                                                                                    ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                                                                                    : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                                                        }`}
+                                                                    >
+                                                                        {format(date, 'd')}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            </div>
+                                        )}
+                                    </AnimatePresence>
+                                    </>
+                                    )}
+                                >
+                                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
+                                </Home>
+                            )}
 
-                        {/* CALENDAR VIEW */}
-                        {currentView === 'calendar' && <CalendarView user={user} />}
+                            {/* CALENDAR VIEW */}
+                            {currentView === 'calendar' && <CalendarView user={user} />}
 
-                        {/* NOTICES VIEW */}
-                        {currentView === 'notices' && (
-                            <DailyNotices notices={notices} aiBriefing={aiBriefing} user={user} />
-                        )}
+                            {/* NOTICES VIEW */}
+                            {currentView === 'notices' && (
+                                <DailyNotices notices={notices} aiBriefing={aiBriefing} user={user} />
+                            )}
 
-                        {/* AWARD SCHEME VIEW */}
-                        {currentView === 'awards' && <AwardSchemeView user={user} />}
+                            {/* AWARD SCHEME VIEW */}
+                            {currentView === 'awards' && <AwardSchemeView user={user} />}
 
-                        {/* CLIPBOARD VIEW */}
-                        {currentView === 'clipboard' && <ClipboardView user={user} />}
+                            {/* CLIPBOARD VIEW */}
+                            {currentView === 'clipboard' && <ClipboardView user={user} />}
 
-                        {/* NOTES VIEW */}
-                        {currentView === 'notes' && <StudyView />}
+                            {/* NOTES VIEW */}
+                            {currentView === 'notes' && <StudyView />}
 
-                        {/* FEEDBACK VIEW */}
-                        {currentView === 'feedback' && (
-                            <FeedbackView user={user} onBack={() => setCurrentView('profile')} />
-                        )}
+                            {/* FEEDBACK VIEW */}
+                            {currentView === 'feedback' && (
+                                <FeedbackView user={user} onBack={() => setCurrentView('profile')} />
+                            )}
 
-                        {/* CANVAS LINKS VIEW */}
-                        {currentView === 'canvas-links' && (
-                            <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
-                        )}
+                            {/* CANVAS LINKS VIEW */}
+                            {currentView === 'canvas-links' && (
+                                <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
+                            )}
 
-                        {/* ADMIN VIEW */}
-                        {currentView === 'admin' && <AdminPanel user={user} />}
+                            {/* ADMIN VIEW */}
+                            {currentView === 'admin' && <AdminPanel user={user} />}
 
-                        {/* PROFILE VIEW (Simple placeholder) */}
-                        {currentView === 'profile' && (
-                            <SettingsView
-                                user={user}
-                                theme={theme}
-                                setTheme={setTheme}
-                                colorTheme={colorTheme}
-                                setColorTheme={setColorTheme}
-                                aiDisabled={aiDisabled}
-                                setAiDisabled={setAiDisabled}
-                                onSignOut={logout}
-                                setView={setCurrentView}
-                            />
-                        )}
-
+                            {/* PROFILE VIEW (Simple placeholder) */}
+                            {currentView === 'profile' && (
+                                <SettingsView
+                                    user={user}
+                                    theme={theme}
+                                    setTheme={setTheme}
+                                    colorTheme={colorTheme}
+                                    setColorTheme={setColorTheme}
+                                    aiDisabled={aiDisabled}
+                                    setAiDisabled={setAiDisabled}
+                                    ambientLight={ambientLight}
+                                    setAmbientLight={setAmbientLight}
+                                    onSignOut={logout}
+                                    setView={setCurrentView}
+                                />
+                            )}
+                            </motion.div>
+                        </AnimatePresence>
                     </Suspense>
                 </div>
 
@@ -1044,6 +1072,7 @@ function App() {
             )}
         </div>
         </CanvasLinksProvider>
+        </MotionConfig>
     );
 }
 

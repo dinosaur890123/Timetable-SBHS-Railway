@@ -14,12 +14,13 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
     // Applied inside the motion element: framer-motion's inline opacity would override it there.
-    const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity' : '';
+    // A finished class fades back slowly, so the change of period reads as a handover.
+    const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
 
     if (isBreak) {
         return (
@@ -48,7 +49,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
-                <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full subject-fill" {...subjectInk(colour)} />
+                <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
                 <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />
             )}
@@ -72,7 +73,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
-                        <span className="shrink-0 font-medium text-accent">Now</span>
+                        <motion.span
+                            className="shrink-0 font-medium text-accent"
+                            initial={justStarted ? { opacity: 0, x: -6 } : false}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+                        >
+                            Now
+                        </motion.span>
                     ) : isNext ? (
                         <span className="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">Up next</span>
                     ) : null}
@@ -104,10 +112,12 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
 
     return (
         <motion.li
+            {...(colour ? subjectInk(colour) : {})}
             initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: enterDelay(routineIndex) }}
-            className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors ${isCurrent
+            // When its bell rings, the class lifts a touch and pulses in its subject colour once.
+            animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
+            className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent
                 ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045]'
                 : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'}`}
         >

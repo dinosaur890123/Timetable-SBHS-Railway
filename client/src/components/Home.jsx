@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
@@ -73,11 +74,55 @@ const RailLabel = ({ children, aside }) => (
     </div>
 );
 
-const RailCard = ({ children }) => (
-    <section className="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-4">
-        {children}
-    </section>
-);
+// The rail's card, washed with the live class's colour. `phase` names what it is showing
+// (before school, a break, a class); when that changes the card pulses once, a sheen sweeps
+// across and the new content rises in, so a bell is something you notice.
+const RailCard = ({ children, colour, phase }) => {
+    const previous = useRef(phase);
+    const [changedAt, setChangedAt] = useState(0);
+    // Reduced motion keeps the swap but drops the blur, which framer-motion would still play.
+    const still = useReducedMotion();
+
+    useEffect(() => {
+        if (previous.current === phase) return;
+        previous.current = phase;
+        setChangedAt(Date.now());
+    }, [phase]);
+
+    return (
+        <section
+            {...(colour ? subjectInk(colour) : {})}
+            className={`relative overflow-hidden rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
+        >
+            {changedAt > 0 && (
+                <>
+                    <span key={`pulse-${changedAt}`} aria-hidden className="absolute inset-0 rounded-2xl pointer-events-none period-start" />
+                    <motion.span
+                        key={`sheen-${changedAt}`}
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 w-2/3 pointer-events-none"
+                        style={{ background: 'linear-gradient(100deg, transparent, color-mix(in srgb, var(--subject-ink, hsl(var(--color-accent))) 26%, transparent), transparent)' }}
+                        initial={{ x: '-110%' }}
+                        animate={{ x: '170%' }}
+                        transition={{ duration: 1.25, ease: [0.2, 0.8, 0.2, 1] }}
+                    />
+                </>
+            )}
+            <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                    key={phase}
+                    className="relative"
+                    initial={still ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.97, filter: 'blur(8px)' }}
+                    animate={still ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                    exit={still ? { opacity: 0, transition: { duration: 0.1 } } : { opacity: 0, y: -10, filter: 'blur(6px)', transition: { duration: 0.18 } }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                >
+                    {children}
+                </motion.div>
+            </AnimatePresence>
+        </section>
+    );
+};
 
 // The subject's colour from the timetable, as a small dot beside its name.
 const SubjectDot = ({ colour }) => colour
@@ -134,16 +179,51 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     </div>
 );
 
+// Digits roll like an odometer: counting down, each new digit drops in from above while the
+// old one falls away. Keyed from the right so the seconds keep their place as the string shortens.
+const RollingText = ({ text }) => (
+    <span className="inline-flex">
+        {text.split('').map((ch, i, all) => {
+            const slot = all.length - i;
+            if (!/\d/.test(ch)) return <span key={slot}>{ch}</span>;
+            return (
+                <span key={slot} className="relative inline-block overflow-hidden">
+                    <span className="invisible">{ch}</span>
+                    <AnimatePresence initial={false}>
+                        <motion.span
+                            key={ch}
+                            className="absolute inset-0"
+                            initial={{ y: '-80%', opacity: 0 }}
+                            animate={{ y: '0%', opacity: 1 }}
+                            exit={{ y: '80%', opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 380, damping: 30, opacity: { duration: 0.2 } }}
+                        >
+                            {ch}
+                        </motion.span>
+                    </AnimatePresence>
+                </span>
+            );
+        })}
+    </span>
+);
+
 const Countdown = ({ mins, caption }) => (
     <div className="flex items-baseline gap-2">
-        <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">{formatCountdown(mins)}</span>
+        <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">
+            <span className="sr-only">{formatCountdown(mins)}</span>
+            <span aria-hidden><RollingText text={formatCountdown(mins)} /></span>
+        </span>
         <span className="text-[13px] text-zinc-500">{caption}</span>
     </div>
 );
 
-const Progress = ({ value }) => (
+const Progress = ({ value, colour }) => (
     <div className="mt-4 h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
-        <div className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+        <div
+            {...(colour ? subjectInk(colour) : {})}
+            className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${colour ? 'subject-fill' : 'bg-accent'}`}
+            style={{ ...(colour ? subjectInk(colour).style : {}), width: `${Math.min(100, Math.max(0, value))}%` }}
+        />
     </div>
 );
 
@@ -159,7 +239,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
 
     if (nowMin < dayStart) {
         return (
-            <RailCard>
+            <RailCard phase="before-school">
                 <RailLabel>Before school</RailLabel>
                 <Countdown mins={classes[0].startMin - nowMin} caption="until first class" />
                 <ThenLine slot={classes[0]} prefix="First" />
@@ -175,7 +255,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
         const end = current ? current.endMin : (next?.startMin ?? dayEnd);
         const start = current ? current.startMin : nowMin;
         return (
-            <RailCard>
+            <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
                 <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
                 <Countdown mins={end - nowMin} caption="left" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
@@ -185,12 +265,12 @@ const NowCard = ({ slots, nowMin, isLive }) => {
     }
 
     return (
-        <RailCard>
+        <RailCard phase={`class-${current.bellId}`} colour={current.period.colour}>
             <RailLabel aside={schoolLeft}>Now · P{current.bellId}</RailLabel>
             <ClassTitle period={current.period} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
             <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
-            <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} />
+            <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
         </RailCard>
     );

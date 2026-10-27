@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare } from 'lucide-react';
+import { useSky } from './modern/AmbientLight';
 
 const ACCENTS = [
     { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
@@ -88,11 +89,12 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled,
-    onSignOut, setView
+    ambientLight, setAmbientLight, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
+    const sky = useSky();
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -141,6 +143,9 @@ const SettingsView = ({
                             </button>
                         ))}
                     </div>
+                </Row>
+                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`}>
+                    <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />
                 </Row>
             </Section>
 

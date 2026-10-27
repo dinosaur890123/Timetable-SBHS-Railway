@@ -301,9 +301,22 @@ Skeletons use `bg-zinc-900/[0.05] dark:bg-white/[0.06]` with `animate-pulse-subt
 | Hover colour | Tailwind `transition-colors` (150ms) |
 | Tile lift / glow | `300ms cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | Page entrance | `animate-in fade-in slide-in-from-bottom-2` (tailwindcss-animate) |
+| Changing view | `App.jsx`: cross-fade with a 12px lift and 6px blur in (`0.32s`), out in `0.12s` |
+| Press | global in `modern.css`: everything pressable dips to `--press-scale` (`.96`, `.98` for wide targets) in 90ms, then springs back past rest (`520ms cubic-bezier(.34,1.56,.64,1)`). Uses the `scale` property so it composes with framer-motion. Opt out with `data-no-press`; make a non-button pressable with `.press` |
+| Countdown digits | roll like an odometer, each digit a spring (`stiffness 380, damping 30`) |
 
-Under `prefers-reduced-motion: reduce`, animations and transitions are cut to near zero globally. Don't bypass
-this with inline styles.
+**The bell.** When a period changes, it's an event worth seeing once: the new class row pulses in its subject colour
+(`.period-start`) and its colour stripe swells (`.period-stripe`), the finished one fades back over 700ms, and the Now
+card's sheen sweeps across as the new class rises in. Opening the app or browsing days never counts as a bell.
+
+**Ambient light** (`components/modern/AmbientLight.jsx`) is the one deliberate exception to "glows stay at 10%
+or less". Three drifting glows follow the time of day, from dawn pinks to midday sky to sunset violets and night
+blues, blending between keyframes. It's noticeable on purpose, at 62% opacity in light mode and 38% in dark, and
+students can turn it off in Settings. The live class's card is likewise washed in its subject colour
+(`.subject-wash`).
+
+Under `prefers-reduced-motion: reduce`, animations and transitions are cut to near zero globally, ambient drift and
+the bell pulse stop entirely, and blurs are dropped. Don't bypass this with inline styles.
 
 ---
 
