@@ -2,8 +2,35 @@ import React, { useState, useEffect } from 'react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig } from 'framer-motion';
 import { format } from 'date-fns';
-import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+
+// One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines.
+const CycleCell = ({ classInfo, onSelect }) => {
+    const { name, room, colour, isSelected } = classInfo;
+    const tinted = colour && !isSelected;
+    return (
+        <div
+            onClick={onSelect}
+            title={name}
+            {...(tinted ? subjectInk(colour) : {})}
+            className={`min-h-[3.25rem] px-3 py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+                isSelected
+                    ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
+                    : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800`
+            }`}
+        >
+            <span className={`text-xs font-bold leading-tight line-clamp-2 ${
+                isSelected ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-900 dark:text-white'
+            }`}>
+                {name}
+            </span>
+            {room && (
+                <span className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{room}</span>
+            )}
+        </div>
+    );
+};
 
 const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
     const { getLink } = useCanvasLinks();
@@ -41,6 +68,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
     const classVariations = timetableData.classVariations || {};
     const roomVariations = timetableData.roomVariations || {};
+    const daySubjects = timetable?.subjects;
+    const subjectIndex = indexSubjects(completeTimetable);
 
     const getMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
@@ -73,6 +102,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
+                const { name, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
+                periodInfo = { ...periodInfo, fullTitle: name, colour };
             }
 
             // Filter out roll call from timetable view
@@ -175,6 +206,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isSelected = selectedClass && periodInfo.title === selectedClass;
             
             return {
+                ...describeClass(periodInfo, null, subjectIndex),
                 title: periodInfo.title,
                 room: periodInfo.room,
                 teacher: periodInfo.fullTeacher || periodInfo.teacher,
@@ -223,12 +255,13 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                             if (!classInfo) {
                                                 return (
                                                     <td key={dayIndex} className="px-2 py-2">
-                                                        <div className="h-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg"></div>
+                                                        <div className="min-h-[3.25rem] h-full bg-zinc-50 dark:bg-zinc-900/50 rounded-lg"></div>
                                                     </td>
                                                 );
                                             }
                                             
                                             const canvasLink = getLink(classInfo.title);
+                                            const cell = <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />;
 
                                             return (
                                                 <td key={dayIndex} className="px-2 py-2">
@@ -238,57 +271,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             onClick={(e) => e.stopPropagation()}
-                                                            className="block h-12"
+                                                            className="block"
                                                         >
-                                                            <div
-                                                                onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
-                                                                className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
-                                                                    classInfo.isSelected
-                                                                        ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
-                                                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                                                                }`}
-                                                            >
-                                                                <span className={`text-xs font-bold truncate ${
-                                                                    classInfo.isSelected
-                                                                        ? 'text-violet-700 dark:text-violet-300'
-                                                                        : 'text-zinc-900 dark:text-white'
-                                                                }`}>
-                                                                    {classInfo.title}
-                                                                </span>
-                                                                <div className="flex items-center gap-1 mt-0.5">
-                                                                    {classInfo.room && (
-                                                                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                                                                            {classInfo.room}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                                            {cell}
                                                         </a>
-                                                    ) : (
-                                                        <div
-                                                            onClick={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)}
-                                                            className={`h-12 px-3 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
-                                                                classInfo.isSelected
-                                                                    ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
-                                                                    : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                                                            }`}
-                                                        >
-                                                            <span className={`text-xs font-bold truncate ${
-                                                                classInfo.isSelected
-                                                                    ? 'text-violet-700 dark:text-violet-300'
-                                                                    : 'text-zinc-900 dark:text-white'
-                                                            }`}>
-                                                                {classInfo.title}
-                                                            </span>
-                                                            <div className="flex items-center gap-1 mt-0.5">
-                                                                {classInfo.room && (
-                                                                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                                                                        {classInfo.room}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    ) : cell}
                                                 </td>
                                             );
                                         })}

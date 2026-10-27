@@ -91,6 +91,18 @@
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Subject colours, straight from the timetable API (props from subjectInk() in utils/timetable.js).
+   Very pale colours deepen on light surfaces and very dark ones lift on dark surfaces. */
+[data-tone] { --subject-ink: var(--subject); }
+html:not(.dark) [data-tone="pale"] { --subject-ink: color-mix(in oklab, var(--subject) 70%, black); }
+html.dark [data-tone="deep"] { --subject-ink: color-mix(in oklab, var(--subject) 50%, white); }
+.subject-fill { background-color: var(--subject-ink); }
+.subject-edge {
+  box-shadow: inset 3px 0 0 var(--subject-ink);
+  background-color: color-mix(in srgb, var(--subject) 10%, transparent);
+}
+html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb, var(--subject-ink) 12%, transparent); }
+
 /* Entrance animations are decorative: skip them for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .animate-in {

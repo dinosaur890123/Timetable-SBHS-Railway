@@ -66,3 +66,98 @@ export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, 
 
     return enriched;
 };
+
+// ---------------------------------------------------------------------------
+// Full class names and subject colours
+//
+// A period only carries a short class code ("Ma1"). The day timetable's
+// `subjects` map, keyed by year + short code, has the full name ("9 Maths 1")
+// and a colour ("cccccc"). The complete-cycle timetable has full names but no
+// colours, so colours are remembered from every day timetable fetched.
+
+const COLOUR_STORE = 'subject_colours';
+let colourCache = null;
+
+const subjectKey = (year, shortTitle) => `${year ?? ''}${shortTitle ?? ''}`;
+
+const normaliseColour = (value) => {
+    const hex = String(value ?? '').trim().replace(/^#/, '');
+    return /^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex) ? `#${hex}` : null;
+};
+
+const readColours = () => {
+    if (colourCache) return colourCache;
+    try {
+        colourCache = JSON.parse(localStorage.getItem(COLOUR_STORE)) || {};
+    } catch {
+        colourCache = {};
+    }
+    return colourCache;
+};
+
+// Call with each day timetable response so its subject colours outlive that day.
+export const rememberSubjectColours = (timetableData) => {
+    const subjects = timetableData?.timetable?.subjects;
+    if (!subjects) return;
+    const colours = { ...readColours() };
+    let changed = false;
+    Object.entries(subjects).forEach(([key, subject]) => {
+        const colour = normaliseColour(subject?.colour);
+        if (colour && colours[key] !== colour) {
+            colours[key] = colour;
+            changed = true;
+        }
+    });
+    if (!changed) return;
+    colourCache = colours;
+    try {
+        localStorage.setItem(COLOUR_STORE, JSON.stringify(colours));
+    } catch { /* storage unavailable: colours still apply this session */ }
+};
+
+// The complete timetable lists subjects by index; index them by year + short code instead.
+export const indexSubjects = (completeTimetable) => {
+    const subjects = (completeTimetable?.timetable || completeTimetable)?.subjects;
+    const index = {};
+    Object.values(subjects || {}).forEach(subject => {
+        if (subject?.shortTitle) index[subjectKey(subject.year, subject.shortTitle)] = subject;
+    });
+    return index;
+};
+
+// "9 Maths 1" -> "Maths 1": the year prefix only repeats the class's year.
+const withoutYear = (title, year) => {
+    const prefix = year != null ? `${year} ` : null;
+    return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
+};
+
+// Relative luminance (WCAG) of a #rgb or #rrggbb colour, 0 (black) to 1 (white).
+const luminance = (colour) => {
+    let hex = colour.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const [r, g, b] = [0, 2, 4].map(i => {
+        const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+// Props that paint a subject colour through index.css's .subject-fill / .subject-edge. The
+// school's colours aren't chosen for legibility: the tone lets very pale ones deepen on light
+// surfaces and very dark ones lift on dark surfaces.
+export const subjectInk = (colour) => {
+    const l = luminance(colour);
+    return { style: { '--subject': colour }, 'data-tone': l > 0.65 ? 'pale' : l < 0.06 ? 'deep' : 'mid' };
+};
+
+// Full name and colour for a period. `daySubjects` is the day timetable's subjects map and
+// `subjectIndex` comes from indexSubjects(); either may be missing. Falls back to the short code.
+export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
+    if (!periodInfo?.title) return { name: periodInfo?.title || '', colour: null };
+    const key = subjectKey(periodInfo.year, periodInfo.title);
+    const subject = daySubjects?.[key] || subjectIndex?.[key];
+    return {
+        name: subject?.title ? withoutYear(subject.title, subject.year ?? periodInfo.year) : periodInfo.title,
+        colour: normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
+    };
+};

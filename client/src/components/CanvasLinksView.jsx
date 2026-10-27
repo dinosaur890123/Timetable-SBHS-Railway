@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X } from 'lucide-react';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { describeClass, indexSubjects, subjectInk } from '../utils/timetable';
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const { canvasLinks, saveLinks, getLink } = useCanvasLinks();
@@ -11,7 +12,8 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const [toast, setToast] = useState('');
 
   const getClasses = useCallback(() => {
-    const classes = new Set();
+    // Short class code -> one of its periods, so each class can be named and coloured.
+    const classes = new Map();
     
     // Try to get classes from complete timetable first (has all days)
     if (completeTimetable) {
@@ -24,7 +26,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
           if (dayData?.periods) {
             Object.values(dayData.periods).forEach(period => {
               if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-                classes.add(period.title);
+                if (!classes.has(period.title)) classes.set(period.title, period);
               }
             });
           }
@@ -33,7 +35,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         // Structure with direct periods
         Object.values(timetableStructure.periods).forEach(period => {
           if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-            classes.add(period.title);
+            if (!classes.has(period.title)) classes.set(period.title, period);
           }
         });
       }
@@ -48,13 +50,16 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         const periods = innerTimetable.periods;
         Object.values(periods).forEach(period => {
           if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-            classes.add(period.title);
+            if (!classes.has(period.title)) classes.set(period.title, period);
           }
         });
       }
     }
     
-    return Array.from(classes).sort();
+    const daySubjects = timetableData?.timetable?.subjects;
+    const subjectIndex = indexSubjects(completeTimetable);
+    return Array.from(classes, ([title, period]) => ({ title, ...describeClass(period, daySubjects, subjectIndex) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [timetableData, completeTimetable]);
 
   const showToast = (msg) => {
@@ -132,14 +137,18 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
           </div>
         ) : (
           <div className="space-y-4">
-            {classes.map(className => {
+            {classes.map(({ title: className, name, colour }) => {
               const hasLink = Boolean(getLink(className));
               const isEditing = editingClass === className;
 
               return (
                 <div key={className} className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
                   <div className="flex items-center justify-between gap-4 mb-3">
-                    <label className="font-semibold text-zinc-900 dark:text-white">{className}</label>
+                    <label className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white">
+                      {colour && <span aria-hidden className="w-2.5 h-2.5 shrink-0 rounded-full subject-fill" {...subjectInk(colour)} />}
+                      {name}
+                      {name !== className && <span className="font-mono text-[11px] font-normal text-zinc-400">{className}</span>}
+                    </label>
                     {hasLink && !isEditing && (
                       <button
                         type="button"

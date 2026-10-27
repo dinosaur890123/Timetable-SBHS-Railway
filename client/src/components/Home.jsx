@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import { applyPeriodVariations, isBreakBell } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 
 const getMinutes = (timeStr) => {
@@ -48,9 +48,13 @@ const buildSlots = (timetableData) => {
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const isBreak = isBreakBell(bellId, period);
-        period = isBreak
-            ? { ...period, title: bell.bellDisplay }
-            : applyPeriodVariations(period, bellId, classVariations, roomVariations);
+        if (isBreak) {
+            period = { ...period, title: bell.bellDisplay };
+        } else {
+            period = applyPeriodVariations(period, bellId, classVariations, roomVariations);
+            const { name, colour } = describeClass(period, timetableData.timetable?.subjects);
+            period = { ...period, fullTitle: name, colour };
+        }
 
         if (bellId === 'RC' || period.title?.toLowerCase().includes('roll call')) return null;
 
@@ -75,14 +79,25 @@ const RailCard = ({ children }) => (
     </section>
 );
 
-const ClassTitle = ({ title, className }) => {
+// The subject's colour from the timetable, as a small dot beside its name.
+const SubjectDot = ({ colour }) => colour
+    ? <span aria-hidden className="inline-block w-2 h-2 shrink-0 rounded-full subject-fill" {...subjectInk(colour)} />
+    : null;
+
+// Canvas links are keyed by the short class code; the full name is what's shown.
+const ClassTitle = ({ period, className }) => {
     const { getLink } = useCanvasLinks();
-    const link = getLink(title);
-    if (!link) return <div className={className}>{title}</div>;
+    const link = getLink(period.title);
+    const name = period.fullTitle || period.title;
     return (
-        <a href={link} target="_blank" rel="noopener noreferrer" className={`${className} block hover:underline decoration-zinc-400/50 underline-offset-4`}>
-            {title}
-        </a>
+        <div className="flex items-center gap-2 min-w-0">
+            <SubjectDot colour={period.colour} />
+            {link ? (
+                <a href={link} target="_blank" rel="noopener noreferrer" className={`${className} block hover:underline decoration-zinc-400/50 underline-offset-4`}>
+                    {name}
+                </a>
+            ) : <div className={className}>{name}</div>}
+        </div>
     );
 };
 
@@ -102,7 +117,8 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     <div className="mt-4 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
-        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{slot.period.title}</span>
+        <SubjectDot colour={slot.period.colour} />
+        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{slot.period.fullTitle || slot.period.title}</span>
         <span className="ml-auto shrink-0 tabular-nums">{slot.bell.time}</span>
     </div>
 );
@@ -160,7 +176,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
     return (
         <RailCard>
             <RailLabel aside={schoolLeft}>Now · P{current.bellId}</RailLabel>
-            <ClassTitle title={current.period.title} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
+            <ClassTitle period={current.period} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
             <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} />

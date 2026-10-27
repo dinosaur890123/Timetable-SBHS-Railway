@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { rememberSubjectColours } from '../utils/timetable';
 
 // Environment variables
 const CLIENT_ID = import.meta.env.VITE_SBHS_CLIENT_ID?.trim();
@@ -170,7 +171,9 @@ async function fetchWithAuth(endpoint) {
 // 1. Timetable
 export const fetchDayTimetable = async (date) => {
     const dateStr = date ? `?date=${format(date, 'yyyy-MM-dd')}` : '';
-    return fetchWithAuth(`/timetable/daytimetable.json${dateStr}`);
+    const data = await fetchWithAuth(`/timetable/daytimetable.json${dateStr}`);
+    rememberSubjectColours(data);
+    return data;
 };
 
 export const fetchCompleteTimetable = async () => {

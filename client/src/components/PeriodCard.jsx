@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { subjectInk } from '../utils/timetable';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
@@ -14,7 +15,8 @@ const ChangeTag = ({ children, className = '' }) => (
 );
 
 const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
-    const { title, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
+    const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
+    const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
     // Applied inside the motion element: framer-motion's inline opacity would override it there.
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity' : '';
@@ -44,7 +46,12 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
-            {isCurrent && <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
+            {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
+            {colour ? (
+                <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full subject-fill" {...subjectInk(colour)} />
+            ) : isCurrent && (
+                <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />
+            )}
 
             <div className="w-11 shrink-0 text-right leading-tight">
                 <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{bell.time}</div>
@@ -53,7 +60,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
 
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{title || 'Free Period'}</h3>
+                    <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50" title={name || undefined}>{name || 'Free Period'}</h3>
                     {hasCanvasLink && (
                         <ArrowUpRight size={14} className="shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
@@ -107,7 +114,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, isNext, routineIndex, curr
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    aria-label={`${title}, open in Canvas`}
+                    aria-label={`${name}, open in Canvas`}
                 >
                     {content}
                 </a>
