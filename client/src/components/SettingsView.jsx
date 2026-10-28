@@ -171,7 +171,7 @@ const SettingsView = ({
             </Section>
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-                Synchron · build {__APP_BUILD__.sha}
+                Synchron ALPHA· build {__APP_BUILD__.sha}
             </p>
         </div>
     );
