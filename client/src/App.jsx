@@ -794,20 +794,20 @@ function App() {
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-1">
-                                                <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
-                                                    <ChevronLeft size={17} />
+                                                <button onClick={prevDay} aria-label="Previous day" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                    <ChevronLeft size={15} sm:size={17} />
                                                 </button>
                                                 <button
                                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                                     aria-label="Choose date"
-                                                    className="flex items-center justify-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[220px]"
+                                                    className="flex items-center justify-center gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
                                                 >
-                                                    <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
-                                                    <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
-                                                    <span className="text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
+                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
+                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
+                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
                                                 </button>
-                                                <button onClick={nextDay} aria-label="Next day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
-                                                    <ChevronRight size={17} />
+                                                <button onClick={nextDay} aria-label="Next day" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
+                                                    <ChevronRight size={15} sm:size={17} />
                                                 </button>
                                             </div>
                         
@@ -815,7 +815,7 @@ function App() {
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
                                                         onClick={resetToday}
-                                                        className="h-8 px-2.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
                                                     >
                                                         Today
                                                     </button>
@@ -824,10 +824,10 @@ function App() {
                                                     <button
                                                         onClick={() => setShowAiModal(true)}
                                                         aria-label="Ask AI about your timetable"
-                                                        className="h-8 px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
+                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
                                                     >
-                                                        <Sparkles size={14} className="text-accent" />
-                                                        <span className="hidden min-[400px]:inline">Ask AI</span>
+                                                        <Sparkles size={13} sm:size={14} className="text-accent" />
+                                                        <span className="hidden sm:inline">Ask AI</span>
                                                     </button>
                                                 )}
                                             </div>
