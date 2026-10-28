@@ -201,6 +201,27 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const bellB = bells.find(b => b.bell === b);
             if (!bellA || !bellB) return 0;
             return bellA.time.localeCompare(bellB.time);
+        }).filter(bellId => {
+            // Check if this period has at least one class across all days
+            const hasAnyClass = days.some((_, dayIndex) => {
+                const dayData = timetableStructure?.days?.[dayIndex + 1];
+                if (!dayData) return false;
+                
+                const periods = dayData.periods || {};
+                const periodInfo = periods[bellId];
+                
+                // No period info at all
+                if (!periodInfo) return false;
+                
+                // Filter out breaks, roll call, and free periods
+                if (isBreakBell(bellId, periodInfo)) return false;
+                if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return false;
+                if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return false;
+                
+                return true;
+            });
+            
+            return hasAnyClass;
         });
 
         // Get class info for a specific day and period

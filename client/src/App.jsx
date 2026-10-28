@@ -800,11 +800,11 @@ function App() {
                                                 <button
                                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                                     aria-label="Choose date"
-                                                    className="flex items-center justify-center gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
+                                                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
                                                 >
-                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
-                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
-                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
+                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline leading-none">{format(viewDate, 'EEEE')}</span>
+                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden leading-none">{format(viewDate, 'EEE')}</span>
+                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap leading-none">{format(viewDate, 'd MMMM')}</span>
                                                 </button>
                                                 <button onClick={nextDay} aria-label="Next day" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                     <ChevronRight size={15} sm:size={17} />
