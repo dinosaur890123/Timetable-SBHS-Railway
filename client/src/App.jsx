@@ -793,14 +793,14 @@ function App() {
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
-                                            <div className="flex items-center gap-1 shrink-0 w-[220px]">
+                                            <div className="flex items-center gap-1">
                                                 <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                     <ChevronLeft size={17} />
                                                 </button>
                                                 <button
                                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                                     aria-label="Choose date"
-                                                    className="flex items-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors min-w-0"
+                                                    className="flex items-center justify-center gap-2 px-2 h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[220px]"
                                                 >
                                                     <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
                                                     <span className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
