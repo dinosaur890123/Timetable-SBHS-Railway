@@ -793,7 +793,7 @@ function App() {
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
-                                            <div className="flex items-center gap-1 shrink-0">
+                                            <div className="flex items-center gap-1 shrink-0 w-[220px]">
                                                 <button onClick={prevDay} aria-label="Previous day" className="w-10 h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                     <ChevronLeft size={17} />
                                                 </button>
