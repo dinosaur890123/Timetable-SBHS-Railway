@@ -26,18 +26,7 @@ const QUICK_LINKS = [
     { id: 'link-canvas', label: 'Canvas', icon: BookOpen, href: 'https://canvas.sbhs.net.au' }
 ];
 
-const buildNavGroups = (isAdmin) => {
-    const getHiddenPages = () => {
-        try {
-            const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    };
-
-    const hiddenPages = getHiddenPages();
-
+const buildNavGroups = (isAdmin, hiddenPages = []) => {
     return [
         {
             label: 'Workspace',
@@ -76,8 +65,8 @@ export const BrandMark = ({ className = '' }) => (
     </div>
 );
 
-export const ModernSidebar = ({ currentView, setView, user }) => {
-    const groups = buildNavGroups(user?.role === 'Admin');
+export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) => {
+    const groups = buildNavGroups(user?.role === 'Admin', hiddenPages);
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
 
@@ -274,18 +263,7 @@ export const ModernTopbar = ({
 };
 
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
-export const ModernDock = ({ currentView, setView, onOpenPalette }) => {
-    const getHiddenPages = () => {
-        try {
-            const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    };
-
-    const hiddenPages = getHiddenPages();
-
+export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = [] }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
@@ -453,21 +431,10 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 };
 
 // Builds the palette's command list from app-level actions.
-export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut }) => {
-    const getHiddenPages = () => {
-        try {
-            const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    };
-
-    const hiddenPages = getHiddenPages();
-
+export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut, hiddenPages = [] }) => {
     // Navigation commands
     // Pages first, then external links, so each group heading appears once
-    const navCommands = buildNavGroups(user?.role === 'Admin')
+    const navCommands = buildNavGroups(user?.role === 'Admin', hiddenPages)
         .flatMap(g => g.items)
         .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({

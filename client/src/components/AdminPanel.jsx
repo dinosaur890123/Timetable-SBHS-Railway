@@ -3,7 +3,7 @@ import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, More
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 
-const AdminPanel = ({ user, setView }) => {
+const AdminPanel = ({ user, setView, setHiddenPages }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -396,6 +396,9 @@ const AdminPanel = ({ user, setView }) => {
 
         setHiddenPagesState(newHiddenPages);
         localStorage.setItem('hidden_pages', JSON.stringify(newHiddenPages));
+        if (setHiddenPages) {
+            setHiddenPages(newHiddenPages);
+        }
     };
 
     const handleExportCSV = () => {
