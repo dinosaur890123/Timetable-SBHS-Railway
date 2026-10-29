@@ -936,7 +936,7 @@ function App() {
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (

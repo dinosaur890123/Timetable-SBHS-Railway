@@ -26,33 +26,46 @@ const QUICK_LINKS = [
     { id: 'link-canvas', label: 'Canvas', icon: BookOpen, href: 'https://canvas.sbhs.net.au' }
 ];
 
-const buildNavGroups = (isAdmin) => [
-    {
-        label: 'Workspace',
-        items: [
-            { id: 'home', icon: Home },
-            { id: 'calendar', icon: CalendarDays },
-            { id: 'notices', icon: Newspaper }
-        ]
-    },
-    {
-        label: 'School',
-        items: [
-            { id: 'awards', icon: Award },
-            { id: 'clipboard', icon: Clipboard },
-            { id: 'notes', icon: GraduationCap },
-            ...QUICK_LINKS
-        ]
-    },
-    {
-        label: 'Account',
-        items: [
-            { id: 'profile', icon: Settings },
-            { id: 'feedback', icon: MessageSquare },
-            ...(isAdmin ? [{ id: 'admin', icon: ShieldCheck }] : [])
-        ]
-    }
-];
+const buildNavGroups = (isAdmin) => {
+    const getHiddenPages = () => {
+        try {
+            const stored = localStorage.getItem('hidden_pages');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    const hiddenPages = getHiddenPages();
+
+    return [
+        {
+            label: 'Workspace',
+            items: [
+                { id: 'home', icon: Home },
+                { id: 'calendar', icon: CalendarDays },
+                { id: 'notices', icon: Newspaper }
+            ].filter(item => !hiddenPages.includes(item.id))
+        },
+        {
+            label: 'School',
+            items: [
+                { id: 'awards', icon: Award },
+                { id: 'clipboard', icon: Clipboard },
+                { id: 'notes', icon: GraduationCap },
+                ...QUICK_LINKS
+            ].filter(item => !item.href || !hiddenPages.includes(item.id))
+        },
+        {
+            label: 'Account',
+            items: [
+                { id: 'profile', icon: Settings },
+                { id: 'feedback', icon: MessageSquare },
+                ...(isAdmin ? [{ id: 'admin', icon: ShieldCheck }] : [])
+            ].filter(item => !hiddenPages.includes(item.id))
+        }
+    ];
+};
 
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
@@ -262,12 +275,23 @@ export const ModernTopbar = ({
 
 // Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
 export const ModernDock = ({ currentView, setView, onOpenPalette }) => {
+    const getHiddenPages = () => {
+        try {
+            const stored = localStorage.getItem('hidden_pages');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    const hiddenPages = getHiddenPages();
+
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
         { id: 'notes', icon: GraduationCap, label: 'Noteflow' }
-    ];
+    ].filter(item => !hiddenPages.includes(item.id));
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
 
@@ -430,6 +454,17 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 
 // Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut }) => {
+    const getHiddenPages = () => {
+        try {
+            const stored = localStorage.getItem('hidden_pages');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    const hiddenPages = getHiddenPages();
+
     // Navigation commands
     // Pages first, then external links, so each group heading appears once
     const navCommands = buildNavGroups(user?.role === 'Admin')
@@ -442,14 +477,16 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
             icon: item.icon,
             run: item.href ? () => window.open(item.href, '_blank', 'noopener') : () => setView(item.id)
         }));
-    
-    navCommands.splice(navCommands.findIndex(c => c.group === 'Links'), 0, {
-        id: 'nav-canvas-links', 
-        group: 'Go to', 
-        label: 'Canvas Links', 
-        icon: BookOpen, 
-        run: () => setView('canvas-links') 
-    });
+
+    if (!hiddenPages.includes('canvas-links')) {
+        navCommands.splice(navCommands.findIndex(c => c.group === 'Links'), 0, {
+            id: 'nav-canvas-links',
+            group: 'Go to',
+            label: 'Canvas Links',
+            icon: BookOpen,
+            run: () => setView('canvas-links')
+        });
+    }
 
     // Action commands
     const actionCommands = [
