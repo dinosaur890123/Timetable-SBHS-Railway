@@ -183,8 +183,33 @@ function App() {
             return false;
         }
     });
+    const [hiddenPages, setHiddenPages] = useState(() => {
+        try {
+            const stored = localStorage.getItem('hidden_pages');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
+
+    // Listen for localStorage changes to hidden_pages
+    useEffect(() => {
+        const handleStorageChange = (e) => {
+            if (e.key === 'hidden_pages') {
+                try {
+                    const stored = e.newValue;
+                    setHiddenPages(stored ? JSON.parse(stored) : []);
+                } catch {
+                    setHiddenPages([]);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     // Timetable AI Modal States
     const [showAiModal, setShowAiModal] = useState(false);
@@ -741,7 +766,7 @@ function App() {
         <CanvasLinksProvider>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
-            <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} />
+            <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
             <main className="relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
                 <ModernTopbar
@@ -939,7 +964,7 @@ function App() {
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} setHiddenPages={setHiddenPages} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
@@ -1033,6 +1058,7 @@ function App() {
                 currentView={currentView}
                 setView={setCurrentView}
                 onOpenPalette={() => setPaletteOpen(true)}
+                hiddenPages={hiddenPages}
             />
             <CommandPalette
                 open={paletteOpen}
@@ -1043,7 +1069,8 @@ function App() {
                     theme,
                     toggleTheme,
                     onAskAi: aiDisabled ? null : () => { setCurrentView('home'); setShowAiModal(true); },
-                    onSignOut: logout
+                    onSignOut: logout,
+                    hiddenPages
                 })}
             />
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle } from 'lucide-react';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 
-const AdminPanel = ({ user }) => {
+const AdminPanel = ({ user, setView, setHiddenPages }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -323,6 +323,27 @@ const AdminPanel = ({ user }) => {
     const [updatingConfig, setUpdatingConfig] = useState(false);
     const [customModelName, setCustomModelName] = useState('');
 
+    // Hidden pages state (localStorage-based)
+    const [availablePages] = useState([
+        { id: 'home', label: 'My Synchron' },
+        { id: 'timetable', label: 'Timetable' },
+        { id: 'calendar', label: 'Calendar' },
+        { id: 'notices', label: 'Notices' },
+        { id: 'awards', label: 'Awards' },
+        { id: 'clipboard', label: 'Clipboard' },
+        { id: 'notes', label: 'Noteflow' },
+        { id: 'feedback', label: 'Feedback' },
+        { id: 'canvas-links', label: 'Canvas Links' }
+    ]);
+    const [hiddenPages, setHiddenPagesState] = useState(() => {
+        try {
+            const stored = localStorage.getItem('hidden_pages');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
+
     useEffect(() => {
         if (stats?.aiModel) {
             setCustomModelName(stats.aiModel);
@@ -365,6 +386,18 @@ const AdminPanel = ({ user }) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             handleModelSave();
+        }
+    };
+
+    const handleToggleHiddenPage = (pageId) => {
+        const newHiddenPages = hiddenPages.includes(pageId)
+            ? hiddenPages.filter(id => id !== pageId)
+            : [...hiddenPages, pageId];
+
+        setHiddenPagesState(newHiddenPages);
+        localStorage.setItem('hidden_pages', JSON.stringify(newHiddenPages));
+        if (setHiddenPages) {
+            setHiddenPages(newHiddenPages);
         }
     };
 
@@ -488,6 +521,7 @@ const AdminPanel = ({ user }) => {
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
+                    {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
                 </div>
             </header>
 
@@ -1403,12 +1437,75 @@ const AdminPanel = ({ user }) => {
                     </button>
                 </div>
 
+                {/* Hidden Pages Configuration */}
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div className="mb-4">
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <EyeOff size={16} />
+                            Hidden Pages
+                        </h4>
+                        <p className="text-xs text-zinc-500 mt-1">Select pages to hide from navigation for all users. Hidden pages remain accessible via buttons below.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {availablePages.map(page => (
+                            <label
+                                key={page.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                    hiddenPages.includes(page.id)
+                                        ? 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700'
+                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                }`}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={hiddenPages.includes(page.id)}
+                                    onChange={() => handleToggleHiddenPage(page.id)}
+                                    className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-black dark:text-white focus:ring-black dark:focus:ring-white"
+                                />
+                                <span className="text-sm font-medium text-zinc-900 dark:text-white">{page.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
 
             </div>
         </div>
     )
 }
 
+{
+    activeTab === 'hidden-pages' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
+            <h3 className="text-lg font-semibold dark:text-white mb-4">Access Hidden Pages</h3>
+            <p className="text-zinc-500 text-sm mb-6">
+                These pages are hidden from navigation but can still be accessed here.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availablePages.filter(page => hiddenPages.includes(page.id)).map(page => (
+                    <button
+                        key={page.id}
+                        onClick={() => setView(page.id)}
+                        className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors text-left"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+                            <Eye size={20} className="text-zinc-600 dark:text-zinc-400" />
+                        </div>
+                        <div>
+                            <div className="font-medium text-zinc-900 dark:text-white">{page.label}</div>
+                            <div className="text-xs text-zinc-500">Click to access</div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+            {hiddenPages.length === 0 && (
+                <div className="text-center py-8 text-zinc-500">
+                    No pages are currently hidden. Go to Settings to hide pages.
+                </div>
+            )}
+        </div>
+    )
+}
 
 {
     activeTab === 'feedback' && (
