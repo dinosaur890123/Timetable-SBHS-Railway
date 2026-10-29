@@ -10,7 +10,8 @@ const AUTH_ENDPOINT = 'https://auth.sbhs.net.au/authorize';
 const TOKEN_ENDPOINT = 'https://auth.sbhs.net.au/token';
 const API_BASE_URL = 'https://student.sbhs.net.au/api';
 
-const SCOPES = 'all-ro openid profile email';
+// ns.sbhs.au/r/student_app grants access to the Core API on api.sbhs.net.au (award scheme, clipboard).
+const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
 
 export const getOauthConfig = () => ({
   clientId: CLIENT_ID || '(Not configured)',

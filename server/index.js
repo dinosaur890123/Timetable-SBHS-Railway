@@ -2577,7 +2577,8 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
                 const data = await response.json();
                 return res.json(data);
             }
-            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}, falling back to mock`);
+            const detail = (await response.text().catch(() => '')).slice(0, 300);
+            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}, falling back to mock: ${detail}`);
         } catch (e) {
             console.error(`[proxy] SBHS API call failed for ${subpath}:`, e.message);
         }
@@ -2603,7 +2604,8 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
                 const data = await response.json();
                 return res.json(data);
             }
-            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}, falling back to mock`);
+            const detail = (await response.text().catch(() => '')).slice(0, 300);
+            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}, falling back to mock: ${detail}`);
         } catch (e) {
             console.error(`[proxy] SBHS API call failed for global ${subpath}:`, e.message);
         }
