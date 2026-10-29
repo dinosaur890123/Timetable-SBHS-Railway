@@ -182,7 +182,14 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         // Handle different possible data structures
         const bells = completeTimetable.bells || timetableData?.bells || [];
         const timetableStructure = completeTimetable.timetable || completeTimetable;
-        
+
+        // "Lunch 1" -> "Lunch" for break bells; null for anything else.
+        const breakLabel = (bellId) => {
+            const bell = bells.find(b => b.bell === bellId);
+            if (!bell || !isBreakBell(bellId, { title: bell.bellDisplay })) return null;
+            return bell.bellDisplay.replace(/\s*\d+$/, '');
+        };
+
         // Get all unique period slots across all days
         const allPeriodSlots = new Set();
         days.forEach((_, dayIndex) => {
@@ -197,11 +204,17 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         });
         
         const periodSlots = Array.from(allPeriodSlots).sort((a, b) => {
-            const bellA = bells.find(b => b.bell === a);
-            const bellB = bells.find(b => b.bell === b);
+            const bellA = bells.find(bell => bell.bell === a);
+            const bellB = bells.find(bell => bell.bell === b);
             if (!bellA || !bellB) return 0;
             return bellA.time.localeCompare(bellB.time);
         }).filter(bellId => {
+            // Breaks have no class but still mark the shape of the day; an empty Period 0 does not.
+            const bell = bells.find(b => b.bell === bellId);
+            if (isBreakBell(bellId, { title: bell?.bellDisplay })) {
+                return bellId !== 'RC' && String(bellId) !== '0';
+            }
+
             // Check if this period has at least one class across all days
             const hasAnyClass = days.some((_, dayIndex) => {
                 const dayData = timetableStructure?.days?.[dayIndex + 1];
@@ -222,6 +235,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             });
             
             return hasAnyClass;
+        }).filter((bellId, i, slots) => {
+            // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            const label = breakLabel(bellId);
+            return !label || label !== breakLabel(slots[i - 1]);
         });
 
         // Get class info for a specific day and period
@@ -280,7 +297,19 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             {periodSlots.map(bellId => {
                                 const bell = bells.find(b => b.bell === bellId);
                                 if (!bell) return null;
-                                
+
+                                const label = breakLabel(bellId);
+                                if (label) {
+                                    return (
+                                        <tr key={bellId} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                            <td className="px-4 py-1.5 text-xs text-zinc-400 dark:text-zinc-500">{label}</td>
+                                            <td colSpan={days.length} className="px-2 py-1.5">
+                                                <div className="h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
                                 return (
                                     <tr key={bellId} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0">
                                         <td className="px-4 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">

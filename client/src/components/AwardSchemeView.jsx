@@ -30,7 +30,10 @@ const AwardSchemeView = ({ user }) => {
 
     useEffect(() => {
         const loadData = async () => {
-            if (!user?.studentId) return;
+            if (!user?.studentId) {
+                setLoading(false);
+                return;
+            }
             setLoading(true);
             setError(null);
             try {
@@ -74,7 +77,7 @@ const AwardSchemeView = ({ user }) => {
         };
 
         loadData();
-    }, [user]);
+    }, [user?.studentId]);
 
     if (loading) {
         return (
