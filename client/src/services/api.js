@@ -65,6 +65,7 @@ export const exchangeToken = async (code) => {
 
     const data = await response.json();
     storeTokens(data);
+    localStorage.setItem('sbhs_token_scope', SCOPES);
     return data;
   } catch (error) {
     console.error("Auth Error:", error);
@@ -81,7 +82,15 @@ const storeTokens = (data) => {
 };
 
 const clearTokens = () => {
-    ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry'].forEach(key => localStorage.removeItem(key));
+    ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry', 'sbhs_token_scope'].forEach(key => localStorage.removeItem(key));
+};
+
+// Refreshed tokens keep the scopes of the original sign-in, so a session from before
+// SCOPES changed has to sign in again to reach the Core API.
+const hasCurrentScopes = () => {
+    if (!getAccessToken() || localStorage.getItem('sbhs_token_scope') === SCOPES) return true;
+    clearTokens();
+    return false;
 };
 
 // Treat a token as expired a minute early so it can't lapse mid-request.
@@ -143,7 +152,7 @@ export const logout = (redirectToLogin = false) => {
 };
 
 // Signed in if the access token is still good, or can be renewed with the refresh token.
-export const isAuthenticated = () => hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token'));
+export const isAuthenticated = () => hasCurrentScopes() && (hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token')));
 
 // --- API Client ---
 
