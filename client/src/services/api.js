@@ -391,8 +391,8 @@ export const fetchStudentPrizes = (studentId) =>
                 }
                 return {
                     id: item.id || Math.random(),
-                    title: item.award?.name || item.title || 'Unknown Prize',
-                    description: item.award?.description || item.description || '',
+                    title: item.prize?.name || item.award?.name || item.title || 'Unknown Prize',
+                    description: item.prize?.tier ? `Tier ${item.prize.tier} prize` : (item.description || ''),
                     year: item.year || (item.date ? new Date(item.date).getFullYear() : (item.year || ''))
                 };
             });
@@ -410,28 +410,29 @@ export const fetchStudentRollover = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/rollover`)
     .then(data => {
         if (!data) return null;
-        if (data.member && Array.isArray(data.member) && data.member.length > 0) {
-            return data.member[0];
-        }
-        return data;
+        const rollover = Array.isArray(data.member) ? data.member[0] : data;
+        if (!rollover) return null;
+        // Nominations carried over from last year, counting towards the next prize.
+        return {
+            nominationCount: rollover.nominationCount || 0,
+            prizeName: rollover.prize?.name || ''
+        };
     });
+
+const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
+const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
 
 export const fetchStudentClipboardAttendance = (studentId) => 
     fetchFromBackend(`/students/${studentId}/clipboard/attendance`)
     .then(data => {
         const parseAttendance = (items) => {
-            return items.map(item => {
-                if (item && item.activity && item.status !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    activity: item.activity || item.session?.activity || 'Activity',
-                    date: item.date || item.session?.date || '',
-                    recordedBy: item.recordedBy || '',
-                    status: item.status || 'Present'
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                activity: item.session?.activity?.name || item.session?.title || 'Activity',
+                date: formatDay(item.session?.startDateTime),
+                recordedBy: item.roll?.markedByUser || item.updatedByUser || '',
+                status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseAttendance(data.member);
@@ -446,18 +447,13 @@ export const fetchStudentPreExplainedAbsences = (studentId) =>
     fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`)
     .then(data => {
         const parsePreExplained = (items) => {
-            return items.map(item => {
-                if (item && item.reason && item.status !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    reason: item.reason || '',
-                    startDate: item.startDate || item.start || '',
-                    endDate: item.endDate || item.end || '',
-                    status: item.status || 'Pending'
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                reason: item.reason || 'Absence',
+                startDate: formatDay(item.startDateTime),
+                endDate: formatDay(item.endDateTime),
+                status: item.isExplained ? 'Approved' : 'Pending'
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parsePreExplained(data.member);
@@ -472,18 +468,13 @@ export const fetchStudentClipboardSessions = (studentId) =>
     fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
     .then(data => {
         const parseSessions = (items) => {
-            return items.map(item => {
-                if (item && item.activity && item.location !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    activity: item.activity || '',
-                    date: item.date || '',
-                    time: item.time || '',
-                    location: item.location || ''
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                activity: item.activity?.name || item.title || 'Session',
+                title: item.title && item.title !== item.activity?.name ? item.title : '',
+                date: formatDay(item.startDateTime),
+                time: formatTimeRange(item.startDateTime, item.endDateTime)
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseSessions(data.member);
@@ -498,18 +489,13 @@ export const fetchStudentClipboardTeams = (studentId) =>
     fetchFromBackend(`/students/${studentId}/clipboard/teams`)
     .then(data => {
         const parseTeams = (items) => {
-            return items.map(item => {
-                if (item && item.name && item.sportOrActivity !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    name: item.name || '',
-                    season: item.season || '',
-                    sportOrActivity: item.sportOrActivity || item.activity || '',
-                    coach: item.coach || ''
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                name: item.team?.name || 'Team',
+                season: item.startDateTime ? String(new Date(item.startDateTime).getFullYear()) : '',
+                sportOrActivity: item.team?.activity?.name || '',
+                category: item.team?.category || ''
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseTeams(data.member);
@@ -533,17 +519,12 @@ export const fetchGlobalAwards = () =>
     fetchFromBackend('/award-scheme/awards')
     .then(data => {
         const parseGlobalAwards = (items) => {
-            return items.map(item => {
-                if (item && item.name && item.pointsRequired !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    name: item.name || item.award?.name || '',
-                    pointsRequired: item.pointsRequired || item.points || 0,
-                    description: item.description || ''
-                };
-            });
+            return items.filter(item => item && !item.archived).map(item => ({
+                id: item.id || Math.random(),
+                name: item.name || '',
+                points: item.points || 0,
+                description: item.category?.name || ''
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseGlobalAwards(data.member);
@@ -560,16 +541,11 @@ export const fetchGlobalCategories = () =>
     fetchFromBackend('/award-scheme/categories')
     .then(data => {
         const parseCategories = (items) => {
-            return items.map(item => {
-                if (item && item.name && item.weight !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    name: item.name || '',
-                    weight: item.weight || 1
-                };
-            });
+            return items.filter(item => item && !item.archived).map(item => ({
+                id: item.id || Math.random(),
+                name: item.name || '',
+                type: item.type || ''
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseCategories(data.member);
@@ -586,15 +562,11 @@ export const fetchGlobalHousePoints = () =>
     fetchFromBackend('/award-scheme/house-points')
     .then(data => {
         const parseHousePoints = (items) => {
-            return items.map(item => {
-                if (item && item.house && item.points !== undefined) {
-                    return item;
-                }
-                return {
-                    house: item.house || '',
-                    points: item.points || 0
-                };
-            });
+            return items.map(item => ({
+                house: item.name || item.house || '',
+                colour: item.color || null,
+                points: item.points || 0
+            })).sort((a, b) => b.points - a.points);
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseHousePoints(data.member);
@@ -609,20 +581,12 @@ export const fetchGlobalNominations = () =>
     fetchFromBackend('/award-scheme/nominations')
     .then(data => {
         const parseNominations = (items) => {
-            return items.map(item => {
-                if (item && item.nomineeName && item.status !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    nomineeName: item.nomineeName || '',
-                    nomineeId: item.nomineeId || '',
-                    awardId: item.awardId || '',
-                    nominatedBy: item.nominatedBy || '',
-                    date: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
-                    status: item.status || 'Pending'
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                name: item.name || '',
+                pointsRequired: item.pointsRequired || 0,
+                tier: item.tier || null
+            })).sort((a, b) => a.pointsRequired - b.pointsRequired);
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseNominations(data.member);
@@ -641,17 +605,11 @@ export const fetchGlobalActivities = () =>
     fetchFromBackend('/clipboard/activities')
     .then(data => {
         const parseActivities = (items) => {
-            return items.map(item => {
-                if (item && item.name && item.type !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    name: item.name || '',
-                    type: item.type || '',
-                    term: item.term || 1
-                };
-            });
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                name: item.name || '',
+                department: item.department?.name || ''
+            }));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseActivities(data.member);

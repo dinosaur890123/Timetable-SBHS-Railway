@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Shield, Compass, Sparkles, TrendingUp, Trophy, ListCollapse, Star, User, History } from 'lucide-react';
+import { Award, Shield, Compass, Sparkles, TrendingUp, Trophy, ListCollapse, Star, User } from 'lucide-react';
 import { 
     fetchStudentAwards,
     fetchStudentBadges,
@@ -138,10 +138,13 @@ const AwardSchemeView = ({ user }) => {
                         <TrendingUp size={22} />
                     </div>
                     <div>
-                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Rollover Points</span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Rollover Nominations</span>
                         <h4 className="text-3xl font-extrabold text-zinc-900 dark:text-white leading-none mt-1">
-                            {rollover ? `${rollover.rolloverPoints} pts` : '0 pts'}
+                            {rollover ? rollover.nominationCount : 0}
                         </h4>
+                        {rollover?.prizeName && (
+                            <span className="text-[11px] font-semibold text-zinc-400 block mt-1">Towards {rollover.prizeName}</span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -304,7 +307,7 @@ const AwardSchemeView = ({ user }) => {
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="font-extrabold text-lg text-zinc-900 dark:text-white">{ga.name}</h4>
                                         <span className="text-[11px] font-black uppercase bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 px-2 py-0.5 text-zinc-550 shrink-0">
-                                            {ga.pointsRequired} Pts Required
+                                            {ga.points} Pts
                                         </span>
                                     </div>
                                     <p className="text-zinc-550 text-xs leading-relaxed">{ga.description}</p>
@@ -315,13 +318,13 @@ const AwardSchemeView = ({ user }) => {
 
                     <div className="space-y-4">
                         <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                            Categories and Weights
+                            Categories
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {categories.map(c => (
                                 <div key={c.id} className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm">
                                     <h4 className="font-bold text-sm text-zinc-900 dark:text-white">{c.name}</h4>
-                                    <span className="text-xs text-zinc-400 font-medium block mt-1">Multiplier: {c.weight}x</span>
+                                    {c.type && <span className="text-xs text-zinc-400 font-medium block mt-1">{c.type}</span>}
                                 </div>
                             ))}
                         </div>
@@ -367,38 +370,29 @@ const AwardSchemeView = ({ user }) => {
                 <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-300">
                     <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900 pb-4">
                         <div>
-                            <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white">Award Nominations</h3>
-                            <p className="text-zinc-550 text-xs mt-1">Pending and approved nominations from class teachers and activity coordinators.</p>
+                            <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white">Nomination Levels</h3>
+                            <p className="text-zinc-550 text-xs mt-1">The points needed to be nominated at each level of the Award Scheme.</p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         {nominations.length > 0 ? nominations.map(nom => (
-                            <div key={nom.id} className="bg-white dark:bg-zinc-950 p-5 border border-zinc-200 dark:border-zinc-850 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-extrabold text-zinc-950 dark:text-white text-base">{nom.nomineeName}</span>
-                                        <span className="text-xs text-zinc-400 font-medium">({nom.nomineeId})</span>
+                            <div key={nom.id} className="bg-white dark:bg-zinc-950 p-5 border border-zinc-200 dark:border-zinc-850 shadow-sm flex justify-between items-center gap-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-extrabold text-zinc-950 dark:text-white text-base">{nom.name}</span>
+                                    {nom.tier && (
                                         <span className="text-[11px] font-black uppercase text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 leading-none">
-                                            {nom.awardId.replace('-', ' ')}
+                                            Tier {nom.tier}
                                         </span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs font-semibold text-zinc-500">
-                                        <span className="flex items-center gap-1"><User size={14} /> By {nom.nominatedBy}</span>
-                                        <span className="flex items-center gap-1"><History size={14} /> {nom.date}</span>
-                                    </div>
+                                    )}
                                 </div>
-                                <div className={`px-3 py-1 border text-xs font-black uppercase tracking-wider self-start sm:self-auto ${
-                                    nom.status === 'Approved'
-                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                                        : 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
-                                }`}>
-                                    {nom.status}
-                                </div>
+                                <span className="text-xs font-black uppercase tracking-wider text-zinc-500 shrink-0">
+                                    {nom.pointsRequired} Pts Required
+                                </span>
                             </div>
                         )) : (
                             <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900/10 border border-dashed border-zinc-200 dark:border-zinc-850 text-zinc-500 text-sm">
-                                No nominations filed.
+                                No nomination levels found.
                             </div>
                         )}
                     </div>

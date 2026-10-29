@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clipboard, Calendar, Users, FileCheck, MapPin, Clock, ShieldAlert, BadgeInfo, CheckCircle } from 'lucide-react';
+import { Clipboard, Calendar, Users, FileCheck, Clock, ShieldAlert, BadgeInfo, CheckCircle } from 'lucide-react';
 import { 
     fetchStudentClipboardAttendance,
     fetchStudentPreExplainedAbsences,
@@ -168,11 +168,10 @@ const ClipboardView = ({ user }) => {
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="font-extrabold text-zinc-900 dark:text-white text-lg leading-tight">{sess.activity}</h4>
-                                        <span className="text-[11px] font-black uppercase text-zinc-400 mt-2 block tracking-wider">TRAINING SESSION</span>
+                                        <span className="text-[11px] font-black uppercase text-zinc-400 mt-2 block tracking-wider">{sess.title || 'TRAINING SESSION'}</span>
                                     </div>
                                     <div className="space-y-2 text-xs font-semibold text-zinc-650 dark:text-zinc-300">
                                         <div className="flex items-center gap-2"><Clock size={15} className="text-zinc-400" /> {sess.date} | {sess.time}</div>
-                                        <div className="flex items-center gap-2"><MapPin size={15} className="text-zinc-400" /> {sess.location}</div>
                                     </div>
                                 </div>
                             </div>
@@ -211,10 +210,12 @@ const ClipboardView = ({ user }) => {
                                                 <span className="text-[11px] text-zinc-400 block font-bold">SPORT/ACTIVITY</span>
                                                 <span className="text-zinc-800 dark:text-zinc-300">{team.sportOrActivity}</span>
                                             </div>
-                                            <div>
-                                                <span className="text-[11px] text-zinc-400 block font-bold">COACH</span>
-                                                <span className="text-zinc-800 dark:text-zinc-300">{team.coach}</span>
-                                            </div>
+                                            {team.category && (
+                                                <div>
+                                                    <span className="text-[11px] text-zinc-400 block font-bold">CATEGORY</span>
+                                                    <span className="text-zinc-800 dark:text-zinc-300">{team.category}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -230,11 +231,8 @@ const ClipboardView = ({ user }) => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {globalActivities.map(act => (
                                 <div key={act.id} className="bg-white dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-850 shadow-sm space-y-2">
-                                    <div className="flex justify-between items-start gap-2">
-                                        <h4 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">{act.name}</h4>
-                                        <span className="text-[10px] font-black uppercase text-zinc-400 shrink-0">{act.type}</span>
-                                    </div>
-                                    <p className="text-[12px] text-zinc-500 font-semibold">Active: Term {act.term}</p>
+                                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">{act.name}</h4>
+                                    {act.department && <p className="text-[12px] text-zinc-500 font-semibold">{act.department}</p>}
                                 </div>
                             ))}
                         </div>
@@ -256,13 +254,15 @@ const ClipboardView = ({ user }) => {
                                     <h4 className="font-extrabold text-zinc-900 dark:text-white text-base">{att.activity}</h4>
                                     <div className="flex items-center gap-4 text-xs font-semibold text-zinc-400">
                                         <span>Date: {att.date}</span>
-                                        <span>Recorded by: {att.recordedBy}</span>
+                                        {att.recordedBy && <span>Recorded by: {att.recordedBy}</span>}
                                     </div>
                                 </div>
                                 <div className={`flex items-center gap-1.5 px-3 py-1 text-xs font-black uppercase border leading-none tracking-wider ${
                                     att.status === 'Present'
                                         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                                        : 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
+                                        : att.status === 'Explained'
+                                            ? 'bg-zinc-100 border-zinc-200 text-zinc-600 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-400'
+                                            : 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
                                 }`}>
                                     {att.status === 'Present' ? <CheckCircle size={12} /> : <ShieldAlert size={12} />}
                                     {att.status}

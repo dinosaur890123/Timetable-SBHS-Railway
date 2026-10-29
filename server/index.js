@@ -2190,7 +2190,8 @@ Return ONLY the JSON. Do not include markdown code block wraps.`;
 
     } catch (err) {
         console.error('[ai] Hack Club AI failed, returning fallback:', err);
-        const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+        // `notices` is scoped to the try block, so read it from the request again here.
+        const sorted = [...(req.body?.notices || [])].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
         res.json({
             briefing: "Welcome to your notices for today! Check out co-curricular meetings and activities below.",
             sortedNotices: sorted
@@ -2551,6 +2552,10 @@ const checkStudentAccess = async (req, res) => {
     return false;
 };
 
+// SBHS Core API (award scheme, clipboard, attendance, enrolments). Spec: https://api.sbhs.net.au/api/core/#/
+// Asking for plain JSON returns collections as arrays rather than JSON-LD `member` wrappers.
+const SBHS_PORTAL_API = 'https://api.sbhs.net.au/api/core';
+
 // Main proxy/mock resolver for student endpoints
 const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const isAuthorized = await checkStudentAccess(req, res);
@@ -2559,13 +2564,14 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
-            const url = new URL(`https://student.sbhs.net.au/api/core/students/${studentId}/${subpath}`);
+            const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/${subpath}`);
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
             console.log(`[proxy] Proxying student API request to: ${url.toString()}`);
             const response = await fetch(url.toString(), {
-                headers: { 'Authorization': authHeader }
+                headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(8000)
             });
             if (response.ok) {
                 const data = await response.json();
@@ -2584,13 +2590,14 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
-            const url = new URL(`https://student.sbhs.net.au/api/core/${subpath}`);
+            const url = new URL(`${SBHS_PORTAL_API}/${subpath}`);
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
             console.log(`[proxy] Proxying global API request to: ${url.toString()}`);
             const response = await fetch(url.toString(), {
-                headers: { 'Authorization': authHeader }
+                headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(8000)
             });
             if (response.ok) {
                 const data = await response.json();
