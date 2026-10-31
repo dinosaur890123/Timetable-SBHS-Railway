@@ -103,6 +103,13 @@ html.dark [data-tone="deep"] { --subject-ink: color-mix(in oklab, var(--subject)
 }
 html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb, var(--subject-ink) 12%, transparent); }
 
+/* Scale to 80% on medium+ devices (simulating browser-setting zoom) */
+@media (min-width: 768px) {
+  html {
+    zoom: 0.8;
+  }
+}
+
 /* Entrance animations are decorative: skip them for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .animate-in {
