@@ -670,6 +670,19 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
+// Helper to ensure canvas URL is absolute
+const formatCanvasUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^(courses\/\d+|\d+$)/i.test(trimmed)) {
+        const id = trimmed.replace(/\D/g, '');
+        return `https://canvas.instructure.com/courses/${id}`;
+    }
+    return `https://${trimmed.replace(/^\/+/, '')}`;
+};
+
 // GET /api/canvas-links - Get canvas links for current user
 app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
     try {
@@ -720,7 +733,8 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
             canvasLinksMemory = canvasLinksMemory.filter(l => l.studentId !== studentId);
             const now = new Date().toISOString();
             for (const [className, rawLink] of Object.entries(links)) {
-                const canvasUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+                const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+                const canvasUrl = formatCanvasUrl(rawUrl);
                 if (!canvasUrl) continue;
                 canvasLinksMemory.push({
                     id: crypto.randomUUID(),
@@ -743,7 +757,8 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
         // Insert new links
         const entries = Object.entries(links);
         for (const [className, rawLink] of entries) {
-            const canvasUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+            const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+            const canvasUrl = formatCanvasUrl(rawUrl);
             if (!canvasUrl) continue;
 
             const id = crypto.randomUUID();

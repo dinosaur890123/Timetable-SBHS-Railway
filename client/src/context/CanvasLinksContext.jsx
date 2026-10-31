@@ -3,6 +3,20 @@ import { fetchCanvasLinks, saveCanvasLinks } from '../services/api';
 
 const CanvasLinksContext = createContext(null);
 
+const ensureAbsoluteUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed;
+    }
+    if (/^(courses\/\d+|\d+$)/i.test(trimmed)) {
+        const id = trimmed.replace(/\D/g, '');
+        return `https://canvas.instructure.com/courses/${id}`;
+    }
+    return `https://${trimmed.replace(/^\/+/, '')}`;
+};
+
 export const CanvasLinksProvider = ({ children }) => {
     const [canvasLinks, setCanvasLinks] = useState({});
     const [loading, setLoading] = useState(false);
@@ -76,7 +90,8 @@ export const CanvasLinksProvider = ({ children }) => {
     const getLink = useCallback((className) => {
         const val = canvasLinks[className];
         if (!val) return null;
-        return typeof val === 'string' ? val : (val.url || null);
+        const raw = typeof val === 'string' ? val : (val.url || null);
+        return ensureAbsoluteUrl(raw);
     }, [canvasLinks]);
 
     // Initialize: migrate localStorage to backend on first load
