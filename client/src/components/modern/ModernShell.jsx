@@ -43,7 +43,7 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
                 { id: 'clipboard', icon: Clipboard },
                 { id: 'notes', icon: GraduationCap },
                 ...QUICK_LINKS
-            ].filter(item => !item.href || !hiddenPages.includes(item.id))
+            ].filter(item => !hiddenPages.includes(item.id))
         },
         {
             label: 'Account',
