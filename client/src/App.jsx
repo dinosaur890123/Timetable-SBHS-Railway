@@ -15,7 +15,7 @@ const StudyView = lazy(() => import('./components/StudyView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
 const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
-const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
+
 import {
     fetchDayTimetable,
     fetchDailyNews,
@@ -111,8 +111,7 @@ function App() {
     const [aiLoading, setAiLoading] = useState(false);
 
 
-    // Welcome Modal State
-    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
 
     // Offline State
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -450,12 +449,6 @@ function App() {
                 window.history.replaceState({}, document.title, "/");
                 try {
                     await exchangeToken(code);
-                    // Check if this is first-time sign-in (no welcome_shown flag)
-                    const hasSeenWelcome = localStorage.getItem('welcome_shown');
-                    if (!hasSeenWelcome) {
-                        setShowWelcomeModal(true);
-                        localStorage.setItem('welcome_shown', 'true');
-                    }
                 } catch (err) {
                     console.error(err);
                     setAuthError(err.message || "Failed to authenticate.");
@@ -1076,13 +1069,7 @@ function App() {
                     </div>
                 )}
 
-                {/* Welcome Modal for First-Time Sign-In */}
-                <Suspense fallback={null}>
-                    <WelcomeModal
-                        isOpen={showWelcomeModal}
-                        onClose={() => setShowWelcomeModal(false)}
-                    />
-                </Suspense>
+
             </main>
 
             <ModernDock
