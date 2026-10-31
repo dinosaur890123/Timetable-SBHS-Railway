@@ -185,6 +185,11 @@ function App() {
     });
     const [hiddenPages, setHiddenPages] = useState(() => {
         try {
+            const cachedSystem = localStorage.getItem('cached_system');
+            if (cachedSystem) {
+                const parsed = JSON.parse(cachedSystem);
+                if (Array.isArray(parsed.hiddenPages)) return parsed.hiddenPages;
+            }
             const stored = localStorage.getItem('hidden_pages');
             return stored ? JSON.parse(stored) : [];
         } catch {
@@ -336,24 +341,48 @@ function App() {
         }
     };
 
-    // Poll System Status
+    // Poll System Status (low frequency to minimize performance cost)
     useEffect(() => {
+        let lastFetched = 0;
+
         const pollStatus = async () => {
+            // Avoid polling if tab is backgrounded
+            if (document.hidden && lastFetched !== 0) return;
+
             try {
                 const systemData = await fetchSystemStatus();
+                lastFetched = Date.now();
                 if (systemData) {
                     setBroadcast(systemData.broadcast);
-
                     setMaintenance(systemData.maintenance);
+                    if (Array.isArray(systemData.hiddenPages)) {
+                        setHiddenPages(systemData.hiddenPages);
+                        localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
+                    }
                 }
             } catch (e) {
                 console.error("Failed to poll system status", e);
             }
         };
 
-        // Poll every 30 seconds
-        const interval = setInterval(pollStatus, 30000);
-        return () => clearInterval(interval);
+        // Poll once on mount for all visitors
+        pollStatus();
+
+        // Poll infrequently (every 5 minutes) when tab is active
+        const interval = setInterval(pollStatus, 5 * 60 * 1000);
+
+        // When user returns to tab after a while, refresh if older than 2 minutes
+        const handleVisibilityChange = () => {
+            if (!document.hidden && Date.now() - lastFetched > 2 * 60 * 1000) {
+                pollStatus();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const isSignedIn = !!user;
@@ -464,6 +493,11 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
+
+                    if (Array.isArray(systemData.hiddenPages)) {
+                        setHiddenPages(systemData.hiddenPages);
+                        localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
+                    }
                 }
 
                 // Attempt to register/update user in Admin Panel in background
@@ -961,7 +995,7 @@ function App() {
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} setHiddenPages={setHiddenPages} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (

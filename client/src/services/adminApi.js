@@ -204,6 +204,21 @@ export const pruneOldLogs = async () => {
 };
 
 
+export const updateHiddenPages = async (hiddenPages) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/system/hidden-pages`, {
+            method: 'POST',
+            headers: await getHeaders(),
+            body: JSON.stringify({ hiddenPages })
+        });
+        if (!response.ok) throw new Error('Failed to update hidden pages');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const updateAiConfig = async (provider, model) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/system/ai-config`, {

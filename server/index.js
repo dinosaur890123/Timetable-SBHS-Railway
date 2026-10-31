@@ -47,7 +47,8 @@ let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
     aiProvider: 'hackclub',
-    aiModel: 'qwen/qwen3-32b'
+    aiModel: 'qwen/qwen3-32b',
+    hiddenPages: []
 };
 
 // Historical system metrics buffer (last 20 entries)
@@ -161,21 +162,47 @@ async function getSystemState() {
     if (!isDbEnabled) {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
+        if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', hidden_pages: [], updated_at: null };
+    let hiddenPages = [];
+    if (Array.isArray(row.hidden_pages)) {
+        hiddenPages = row.hidden_pages;
+    } else if (typeof row.hidden_pages === 'string') {
+        try {
+            hiddenPages = JSON.parse(row.hidden_pages);
+        } catch {
+            hiddenPages = [];
+        }
+    }
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
-        aiModel: row.ai_model || 'qwen/qwen3-32b'
+        aiModel: row.ai_model || 'qwen/qwen3-32b',
+        hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
+}
+
+async function setHiddenPages(hiddenPages) {
+    const cleanPages = Array.isArray(hiddenPages) ? hiddenPages : [];
+    if (!isDbEnabled) {
+        systemState.hiddenPages = cleanPages;
+        return systemState.hiddenPages;
+    }
+
+    await db.query(
+        'UPDATE system_state SET hidden_pages = $1::jsonb, updated_at = NOW() WHERE id = 1',
+        [JSON.stringify(cleanPages)]
+    );
+    return cleanPages;
 }
 
 async function setAiConfig(provider, model) {
@@ -1636,6 +1663,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             memoryUsage: process.memoryUsage().heapUsed,
             aiProvider: state.aiProvider || 'hackclub',
             aiModel: state.aiModel || 'qwen/qwen3-32b',
+            hiddenPages: state.hiddenPages || [],
             availableHackClubModels,
             availableGeminiModels: [
                 'gemini-1.5-flash',
@@ -1715,7 +1743,8 @@ app.get('/api/system/status', (req, res) => {
             const state = await getSystemState();
             res.json({
                 maintenance: state.maintenance,
-                broadcast: state.broadcast
+                broadcast: state.broadcast,
+                hiddenPages: state.hiddenPages || []
             });
         } catch (e) {
             console.error('System status error:', e);
@@ -1796,6 +1825,33 @@ app.post('/api/system/ai-config', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI config error:', e);
         res.status(500).json({ error: 'Failed to update AI configuration' });
+    }
+});
+
+// GET /api/system/hidden-pages (Public endpoint)
+app.get('/api/system/hidden-pages', async (req, res) => {
+    try {
+        const state = await getSystemState();
+        res.json({ hiddenPages: state.hiddenPages || [] });
+    } catch (e) {
+        console.error('Get hidden pages error:', e);
+        res.status(500).json({ error: 'Failed to fetch hidden pages' });
+    }
+});
+
+// POST /api/system/hidden-pages (Admin only)
+app.post('/api/system/hidden-pages', requireAuth, async (req, res) => {
+    try {
+        const { hiddenPages } = req.body || {};
+        if (!Array.isArray(hiddenPages)) {
+            return res.status(400).json({ error: 'hiddenPages must be an array' });
+        }
+        const updated = await setHiddenPages(hiddenPages);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Updated hidden pages: ${updated.join(', ') || 'none'}`);
+        res.json({ success: true, hiddenPages: updated });
+    } catch (e) {
+        console.error('Update hidden pages error:', e);
+        res.status(500).json({ error: 'Failed to update hidden pages' });
     }
 });
 

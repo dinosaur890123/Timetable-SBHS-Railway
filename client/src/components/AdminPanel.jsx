@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 
-const AdminPanel = ({ user, setView, setHiddenPages }) => {
+const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -82,7 +82,14 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         if (logsRes.status === 'fulfilled') setLogs(logsRes.value || []);
         if (aiLogsRes.status === 'fulfilled') setAiLogs(aiLogsRes.value || []);
         if (feedbackRes.status === 'fulfilled') setFeedback(feedbackRes.value || []);
-        if (systemRes.status === 'fulfilled') setCurrentBroadcast(systemRes.value?.broadcast || null);
+        if (systemRes.status === 'fulfilled') {
+            setCurrentBroadcast(systemRes.value?.broadcast || null);
+            if (Array.isArray(systemRes.value?.hiddenPages)) {
+                setHiddenPagesState(systemRes.value.hiddenPages);
+                if (setHiddenPages) setHiddenPages(systemRes.value.hiddenPages);
+                localStorage.setItem('hidden_pages', JSON.stringify(systemRes.value.hiddenPages));
+            }
+        }
 
         const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback'];
         const failed = results
@@ -336,6 +343,7 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
     const [hiddenPages, setHiddenPagesState] = useState(() => {
+        if (Array.isArray(propHiddenPages) && propHiddenPages.length > 0) return propHiddenPages;
         try {
             const stored = localStorage.getItem('hidden_pages');
             return stored ? JSON.parse(stored) : [];
@@ -343,6 +351,12 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
             return [];
         }
     });
+
+    useEffect(() => {
+        if (Array.isArray(propHiddenPages)) {
+            setHiddenPagesState(propHiddenPages);
+        }
+    }, [propHiddenPages]);
 
     useEffect(() => {
         if (stats?.aiModel) {
@@ -389,7 +403,7 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         }
     };
 
-    const handleToggleHiddenPage = (pageId) => {
+    const handleToggleHiddenPage = async (pageId) => {
         const newHiddenPages = hiddenPages.includes(pageId)
             ? hiddenPages.filter(id => id !== pageId)
             : [...hiddenPages, pageId];
@@ -398,6 +412,12 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         localStorage.setItem('hidden_pages', JSON.stringify(newHiddenPages));
         if (setHiddenPages) {
             setHiddenPages(newHiddenPages);
+        }
+        try {
+            await updateHiddenPages(newHiddenPages);
+        } catch (err) {
+            console.error("Failed to update hidden pages on server:", err);
+            alert("Failed to save hidden pages to server");
         }
     };
 
