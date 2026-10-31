@@ -348,3 +348,51 @@ export const toggleUserBlacklist = async (userId, blacklisted) => {
     }
 };
 
+// --- Build Notes Admin APIs ---
+
+export const fetchAdminBuildNotes = async () => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/build-notes`, {
+            headers: await getHeaders()
+        });
+        if (!response.ok) throw new Error(`Failed to fetch build notes (HTTP ${response.status})`);
+        const data = await response.json();
+        return data?.notes || [];
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const saveAdminBuildNote = async (note) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/build-notes`, {
+            method: 'POST',
+            headers: await getHeaders(),
+            body: JSON.stringify(note)
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Failed to save build note (HTTP ${response.status})`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+export const deleteAdminBuildNote = async (id) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/build-notes/${id}`, {
+            method: 'DELETE',
+            headers: await getHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to delete build note');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+

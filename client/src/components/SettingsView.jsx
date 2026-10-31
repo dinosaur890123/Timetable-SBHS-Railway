@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 
 const ACCENTS = [
@@ -158,6 +158,12 @@ const SettingsView = ({
                     title="Canvas links"
                     description="Open a class's Canvas page straight from your timetable."
                     onClick={() => setView('canvas-links')}
+                />
+                <LinkRow
+                    icon={FileCode}
+                    title="Build notes"
+                    description="See the latest updates, bug fixes, and changelog."
+                    onClick={() => setView('build-notes')}
                 />
             </Section>
 

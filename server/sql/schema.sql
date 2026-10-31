@@ -201,3 +201,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications (user_id);
 CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read);
 CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
+
+-- Build Notes migration
+CREATE TABLE IF NOT EXISTS app_build_notes (
+  id TEXT PRIMARY KEY,
+  version TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  author TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);

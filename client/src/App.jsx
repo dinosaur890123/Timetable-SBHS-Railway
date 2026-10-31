@@ -14,6 +14,7 @@ const ClipboardView = lazy(() => import('./components/ClipboardView'));
 const StudyView = lazy(() => import('./components/StudyView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
 const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
+const BuildNotesView = lazy(() => import('./components/BuildNotesView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 
 import {
@@ -28,7 +29,8 @@ import {
     fetchAiBriefing,
     fetchTimetableQa,
     fetchUserPreferences,
-    saveUserPreferences
+    saveUserPreferences,
+    fetchBuildNotes
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -456,6 +458,13 @@ function App() {
                     return;
                 }
             }
+
+            // Sync build notes on reload of the page (single fetch on load, no constant polling)
+            fetchBuildNotes().then(notes => {
+                if (Array.isArray(notes)) {
+                    localStorage.setItem('cached_build_notes', JSON.stringify(notes));
+                }
+            }).catch(() => {});
 
             if (!isAuthenticated()) {
                 setLoading(false);
@@ -985,6 +994,11 @@ function App() {
                             {/* CANVAS LINKS VIEW */}
                             {currentView === 'canvas-links' && (
                                 <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
+                            )}
+
+                            {/* BUILD NOTES VIEW */}
+                            {currentView === 'build-notes' && (
+                                <BuildNotesView onBack={() => setCurrentView('profile')} />
                             )}
 
                             {/* ADMIN VIEW */}

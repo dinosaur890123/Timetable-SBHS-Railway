@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
-    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight
+    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 
 export const VIEW_LABELS = {
@@ -17,6 +17,7 @@ export const VIEW_LABELS = {
     profile: 'Settings',
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
+    'build-notes': 'Build Notes',
     admin: 'Admin'
 };
 
@@ -452,6 +453,16 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
             label: 'Canvas Links',
             icon: BookOpen,
             run: () => setView('canvas-links')
+        });
+    }
+
+    if (!hiddenPages.includes('build-notes')) {
+        navCommands.splice(navCommands.findIndex(c => c.group === 'Links'), 0, {
+            id: 'nav-build-notes',
+            group: 'Go to',
+            label: 'Build Notes',
+            icon: FileCode,
+            run: () => setView('build-notes')
         });
     }
 

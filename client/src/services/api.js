@@ -847,5 +847,20 @@ export const reportCanvasCourse = async (className, suggestedCourseId, justifica
     return { ok: false, error: data.message || data.error || 'Failed to submit report' };
 };
 
+// Build Notes API
+export const fetchBuildNotes = async () => {
+    try {
+        const response = await fetch(`${SYSTEM_API_URL}/build-notes`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch build notes: ${response.status}`);
+        }
+        const data = await response.json();
+        return data?.notes || [];
+    } catch (e) {
+        console.error('fetchBuildNotes error:', e);
+        return [];
+    }
+};
+
 
 
