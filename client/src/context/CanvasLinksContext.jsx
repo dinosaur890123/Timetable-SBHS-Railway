@@ -13,7 +13,14 @@ export const CanvasLinksProvider = ({ children }) => {
         try {
             const stored = localStorage.getItem('canvas_links');
             if (stored) {
-                return JSON.parse(stored);
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object') {
+                    const normalized = {};
+                    Object.entries(parsed).forEach(([k, v]) => {
+                        normalized[k] = typeof v === 'string' ? { url: v } : (v?.url ? { url: v.url } : v);
+                    });
+                    return normalized;
+                }
             }
         } catch (e) {
             console.warn('Failed to load canvas links from localStorage:', e);
@@ -67,7 +74,9 @@ export const CanvasLinksProvider = ({ children }) => {
 
     // Get canvas link for a specific class
     const getLink = useCallback((className) => {
-        return canvasLinks[className]?.url || null;
+        const val = canvasLinks[className];
+        if (!val) return null;
+        return typeof val === 'string' ? val : (val.url || null);
     }, [canvasLinks]);
 
     // Initialize: migrate localStorage to backend on first load

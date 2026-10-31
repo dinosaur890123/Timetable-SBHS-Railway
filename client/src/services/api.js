@@ -737,10 +737,18 @@ export const saveCanvasLinks = async (links) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
+    // Normalize links map to { className: urlString }
+    const normalizedLinks = {};
+    if (links && typeof links === 'object') {
+        Object.entries(links).forEach(([key, val]) => {
+            const url = typeof val === 'string' ? val : (val && typeof val === 'object' && val.url ? String(val.url) : null);
+            if (url) normalizedLinks[key] = url;
+        });
+    }
     const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ links })
+        body: JSON.stringify({ links: normalizedLinks })
     });
     if (!response.ok) {
         throw new Error(`Failed to save canvas links: ${response.status}`);

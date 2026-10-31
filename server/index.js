@@ -42,6 +42,7 @@ let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
 let sharedResources = []; // Shared resources memory fallback
 let notifications = []; // Notifications memory fallback
+let canvasLinksMemory = []; // Canvas links memory fallback
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
@@ -676,7 +677,10 @@ app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
         let links = [];
 
         if (!isDbEnabled) {
-            return res.json({ success: true, links: [] });
+            const userLinks = canvasLinksMemory
+                .filter(l => l.studentId === studentId)
+                .map(l => ({ className: l.className, canvasUrl: l.canvasUrl, createdAt: l.createdAt, updatedAt: l.updatedAt }));
+            return res.json({ success: true, links: userLinks });
         }
 
         const result = await db.query(
@@ -713,7 +717,20 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
         }
 
         if (!isDbEnabled) {
-            // Memory fallback - not implemented for canvas links
+            canvasLinksMemory = canvasLinksMemory.filter(l => l.studentId !== studentId);
+            const now = new Date().toISOString();
+            for (const [className, rawLink] of Object.entries(links)) {
+                const canvasUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+                if (!canvasUrl) continue;
+                canvasLinksMemory.push({
+                    id: crypto.randomUUID(),
+                    className: String(className),
+                    canvasUrl: String(canvasUrl),
+                    studentId,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            }
             return res.json({ success: true, message: 'Canvas links saved (memory fallback)' });
         }
 
@@ -725,8 +742,9 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
 
         // Insert new links
         const entries = Object.entries(links);
-        for (const [className, canvasUrl] of entries) {
-            if (!canvasUrl || typeof canvasUrl !== 'string') continue;
+        for (const [className, rawLink] of entries) {
+            const canvasUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+            if (!canvasUrl) continue;
 
             const id = crypto.randomUUID();
             await db.query(
@@ -756,7 +774,8 @@ app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, r
         }
 
         if (!isDbEnabled) {
-            return res.json({ success: true, link: null });
+            const match = canvasLinksMemory.find(l => l.className === String(className));
+            return res.json({ success: true, link: match ? { canvasUrl: match.canvasUrl, studentId: match.studentId, updatedAt: match.updatedAt } : null });
         }
 
         const result = await db.query(
