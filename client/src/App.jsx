@@ -78,6 +78,7 @@ function App() {
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
+    const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') === 'true');
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -301,6 +302,7 @@ function App() {
                 colorTheme,
                 aiDisabled,
                 ambientLight,
+                showClipboardEvents,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -411,6 +413,11 @@ function App() {
         localStorage.setItem('ambient_light', ambientLight ? 'on' : 'off');
         savePreferences();
     }, [ambientLight]);
+
+    useEffect(() => {
+        localStorage.setItem('show_clipboard_events', showClipboardEvents ? 'true' : 'false');
+        savePreferences();
+    }, [showClipboardEvents]);
 
     // Color Theme Config
     useEffect(() => {
@@ -581,7 +588,11 @@ function App() {
                                 setAmbientLight(prefs.ambientLight);
                                 localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
                             }
-                            
+                            if (prefs.showClipboardEvents !== undefined) {
+                                setShowClipboardEvents(prefs.showClipboardEvents);
+                                localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                            }
+
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
@@ -948,6 +959,7 @@ function App() {
                                     railTimetable={railTimetable}
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
+                                    showClipboardEvents={showClipboardEvents}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
@@ -1113,6 +1125,8 @@ function App() {
                                     setAiDisabled={setAiDisabled}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
+                                    showClipboardEvents={showClipboardEvents}
+                                    setShowClipboardEvents={setShowClipboardEvents}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />

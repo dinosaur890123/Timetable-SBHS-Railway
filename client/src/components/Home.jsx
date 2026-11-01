@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ArrowRight, MapPin, UserRound } from 'lucide-react';
+import { ArrowRight, MapPin, UserRound, Calendar, Users, Clock, X } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { fetchStudentClipboardSessions } from '../services/api';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -217,6 +218,152 @@ const Countdown = ({ mins, caption }) => (
     </div>
 );
 
+// Clipboard Event Inline Component
+const ClipboardEventInline = ({ session, onClick, timeContext }) => {
+    const isDuringSchool = timeContext === 'during-school';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClick}
+            className={`relative group cursor-pointer rounded-xl border p-3.5 transition-all hover:shadow-md ${
+                isDuringSchool
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30 hover:border-amber-300/60 dark:hover:border-amber-700/40'
+                    : 'bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/50 dark:border-zinc-800/30 hover:border-zinc-300/60 dark:hover:border-zinc-700/40'
+            }`}
+        >
+            <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center ${
+                    isDuringSchool
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                }`}>
+                    <Calendar size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                            isDuringSchool
+                                ? 'bg-amber-200/60 dark:bg-amber-800/40 text-amber-800 dark:text-amber-300'
+                                : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
+                        }`}>
+                            {isDuringSchool ? 'During School' : timeContext === 'before-school' ? 'Before School' : 'After School'}
+                        </span>
+                    </div>
+                    <h4 className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{session.activity}</h4>
+                    {session.title && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{session.title}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {session.time}
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <Calendar size={12} />
+                            {session.date}
+                        </span>
+                    </div>
+                </div>
+                <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight size={16} className="text-zinc-400" />
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+// Event Detail Popout Modal
+const EventDetailPopout = ({ session, onClose }) => {
+    if (!session) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl max-w-md w-full relative overflow-hidden rounded-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
+                                <Calendar size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{session.activity}</h3>
+                                {session.title && (
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{session.title}</p>
+                                )}
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 text-sm">
+                            <Clock size={16} className="text-zinc-400 shrink-0" />
+                            <div>
+                                <p className="text-zinc-500 dark:text-zinc-400 text-xs">Time</p>
+                                <p className="text-zinc-900 dark:text-white font-medium">{session.time}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-sm">
+                            <Calendar size={16} className="text-zinc-400 shrink-0" />
+                            <div>
+                                <p className="text-zinc-500 dark:text-zinc-400 text-xs">Date</p>
+                                <p className="text-zinc-900 dark:text-white font-medium">{session.date}</p>
+                            </div>
+                        </div>
+
+                        {session.location && (
+                            <div className="flex items-center gap-3 text-sm">
+                                <MapPin size={16} className="text-zinc-400 shrink-0" />
+                                <div>
+                                    <p className="text-zinc-500 dark:text-zinc-400 text-xs">Location</p>
+                                    <p className="text-zinc-900 dark:text-white font-medium">{session.location}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {session.team && (
+                            <div className="flex items-center gap-3 text-sm">
+                                <Users size={16} className="text-zinc-400 shrink-0" />
+                                <div>
+                                    <p className="text-zinc-500 dark:text-zinc-400 text-xs">Team</p>
+                                    <p className="text-zinc-900 dark:text-white font-medium">{session.team}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {session.staff && (
+                            <div className="flex items-center gap-3 text-sm">
+                                <UserRound size={16} className="text-zinc-400 shrink-0" />
+                                <div>
+                                    <p className="text-zinc-500 dark:text-zinc-400 text-xs">Staff</p>
+                                    <p className="text-zinc-900 dark:text-white font-medium">{session.staff}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 const Progress = ({ value, colour }) => (
     <div className="mt-4 h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
         <div
@@ -278,13 +425,35 @@ const NowCard = ({ slots, nowMin, isLive }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, showClipboardEvents, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
+    const [clipboardSessions, setClipboardSessions] = useState([]);
+    const [selectedEvent, setSelectedEvent] = useState(null);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Fetch clipboard sessions when feature is enabled
+    useEffect(() => {
+        if (!showClipboardEvents || !user?.studentId) {
+            setClipboardSessions([]);
+            return;
+        }
+
+        const loadClipboardSessions = async () => {
+            try {
+                const sessions = await fetchStudentClipboardSessions(user.studentId);
+                setClipboardSessions(sessions || []);
+            } catch (err) {
+                console.error("Failed to load clipboard sessions:", err);
+                setClipboardSessions([]);
+            }
+        };
+
+        loadClipboardSessions();
+    }, [showClipboardEvents, user?.studentId]);
 
     // The greeting and rail describe the real school day (today, or the next one after
     // school), not whichever day is being browsed below. Falls back to the viewed day
@@ -318,14 +487,92 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, c
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />;
 
+    // Categorize clipboard events by time relative to school hours
+    const categorizeClipboardEvents = () => {
+        if (!clipboardSessions.length || !dayStart || !dayEnd) return { beforeSchool: [], duringSchool: [], afterSchool: [] };
+
+        return clipboardSessions.reduce((acc, session) => {
+            // Parse time from session.startDateTime (ISO format)
+            if (!session.startDateTime) return acc;
+
+            const eventDate = new Date(session.startDateTime);
+            const eventMin = eventDate.getHours() * 60 + eventDate.getMinutes();
+
+            if (eventMin < dayStart) {
+                acc.beforeSchool.push(session);
+            } else if (eventMin >= dayStart && eventMin < dayEnd) {
+                acc.duringSchool.push(session);
+            } else {
+                acc.afterSchool.push(session);
+            }
+
+            return acc;
+        }, { beforeSchool: [], duringSchool: [], afterSchool: [] });
+    };
+
+    const categorizedEvents = categorizeClipboardEvents();
+
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
             <header className="mb-8 md:mb-10">
                 <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                     {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                 </h1>
-                {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
+                {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>
             </header>
+
+            {/* Clipboard Events Section */}
+            {showClipboardEvents && (categorizedEvents.beforeSchool.length > 0 || categorizedEvents.duringSchool.length > 0 || categorizedEvents.afterSchool.length > 0) && (
+                <div className="mb-8 space-y-4">
+                    {categorizedEvents.beforeSchool.length > 0 && (
+                        <div>
+                            <h3 className="text-xs font-mono uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500 mb-3">Before School</h3>
+                            <div className="space-y-2">
+                                {categorizedEvents.beforeSchool.map(session => (
+                                    <ClipboardEventInline
+                                        key={session.id}
+                                        session={session}
+                                        onClick={() => setSelectedEvent(session)}
+                                        timeContext="before-school"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {categorizedEvents.duringSchool.length > 0 && (
+                        <div>
+                            <h3 className="text-xs font-mono uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500 mb-3">During School</h3>
+                            <div className="space-y-2">
+                                {categorizedEvents.duringSchool.map(session => (
+                                    <ClipboardEventInline
+                                        key={session.id}
+                                        session={session}
+                                        onClick={() => setSelectedEvent(session)}
+                                        timeContext="during-school"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {categorizedEvents.afterSchool.length > 0 && (
+                        <div>
+                            <h3 className="text-xs font-mono uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500 mb-3">After School</h3>
+                            <div className="space-y-2">
+                                {categorizedEvents.afterSchool.map(session => (
+                                    <ClipboardEventInline
+                                        key={session.id}
+                                        session={session}
+                                        onClick={() => setSelectedEvent(session)}
+                                        timeContext="after-school"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
                 {/* On phones the countdown sits above the list so it's seen first */}
@@ -340,6 +587,13 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, c
                     </div>
                 )}
             </div>
+
+            {/* Event Detail Popout */}
+            <AnimatePresence>
+                {selectedEvent && (
+                    <EventDetailPopout session={selectedEvent} onClose={() => setSelectedEvent(null)} />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

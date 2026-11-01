@@ -481,7 +481,7 @@ export const fetchStudentPreExplainedAbsences = (studentId) =>
         return [];
     });
 
-export const fetchStudentClipboardSessions = (studentId) => 
+export const fetchStudentClipboardSessions = (studentId) =>
     fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
     .then(data => {
         const parseSessions = (items) => {
@@ -490,7 +490,12 @@ export const fetchStudentClipboardSessions = (studentId) =>
                 activity: item.activity?.name || item.title || 'Session',
                 title: item.title && item.title !== item.activity?.name ? item.title : '',
                 date: formatDay(item.startDateTime),
-                time: formatTimeRange(item.startDateTime, item.endDateTime)
+                time: formatTimeRange(item.startDateTime, item.endDateTime),
+                startDateTime: item.startDateTime,
+                endDateTime: item.endDateTime,
+                location: item.location || item.venue || '',
+                team: item.team?.name || '',
+                staff: item.staff || item.teacher || item.staffMember || ''
             }));
         };
         if (data && data.member && Array.isArray(data.member)) {
