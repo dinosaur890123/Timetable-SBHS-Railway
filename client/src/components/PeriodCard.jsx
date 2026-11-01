@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, Calendar } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { subjectInk } from '../utils/timetable';
 
@@ -14,7 +14,7 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, clipboardSession, onClipboardSessionClick }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
@@ -105,22 +105,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                         <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
                     {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
-                </div>
-            )}
-
-            {clipboardSession && (
-                <div className="shrink-0 ml-2">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClipboardSessionClick();
-                        }}
-                        className="flex items-center gap-1.5 px-2 py-1 bg-accent/10 border border-accent/20 rounded-lg hover:bg-accent/20 transition-colors cursor-pointer"
-                        title={`View details for ${clipboardSession.activity}`}
-                    >
-                        <Calendar size={12} className="text-accent" />
-                        <span className="text-[11px] font-medium text-accent truncate max-w-[120px]">{clipboardSession.activity}</span>
-                    </button>
                 </div>
             )}
         </div>
