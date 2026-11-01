@@ -811,7 +811,7 @@ function App() {
     return (
         <MotionConfig reducedMotion="user">
         <CanvasLinksProvider>
-            <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
+            <div className="zoomed-height relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 

@@ -235,6 +235,13 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
   html[data-ui="modern"] body {
     zoom: 0.85;
   }
+  /* Fix sidebar and main container height to account for zoom scaling */
+  html[data-ui="modern"] aside {
+    height: 117.65dvh !important; /* 100dvh / 0.85 to compensate for zoom */
+  }
+  html[data-ui="modern"] .zoomed-height {
+    height: 117.65dvh !important;
+  }
   /* Fallback for browsers that don't support zoom */
   @supports not (zoom: 1) {
     html[data-ui="modern"] body {
