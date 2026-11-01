@@ -64,6 +64,9 @@ function App() {
         }
     });
     const [railTimetable, setRailTimetable] = useState(null);
+    
+    // In-memory cache for recently viewed timetable days (max 10 days)
+    const timetableCache = useRef(new Map());
     const [completeTimetable, setCompleteTimetable] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_complete_timetable');
@@ -698,13 +701,28 @@ function App() {
         initializeDefaultDate();
     }, [user]);
 
-    // Fetch Timetable when date changes
+    // Fetch Timetable when date changes (with in-memory caching)
     useEffect(() => {
         if (!isAuthenticated()) return;
+
+        const dateKey = format(viewDate, 'yyyy-MM-dd');
+        
+        // Optimistic UI: show cached data immediately if available
+        if (timetableCache.current.has(dateKey)) {
+            setTimetable(timetableCache.current.get(dateKey));
+        }
 
         const loadTimetable = async () => {
             try {
                 const data = await fetchDayTimetable(viewDate);
+                
+                // Update cache (limit to 10 entries, remove oldest if needed)
+                if (timetableCache.current.size >= 10) {
+                    const firstKey = timetableCache.current.keys().next().value;
+                    timetableCache.current.delete(firstKey);
+                }
+                timetableCache.current.set(dateKey, data);
+                
                 setTimetable(data);
 
                 if (isSameDay(viewDate, new Date())) {
@@ -717,6 +735,35 @@ function App() {
         loadTimetable();
     }, [viewDate, user]);
 
+    // Pre-fetch adjacent days in background for smoother navigation
+    useEffect(() => {
+        if (!isAuthenticated()) return;
+
+        const prefetchDay = async (date) => {
+            const dateKey = format(date, 'yyyy-MM-dd');
+            if (timetableCache.current.has(dateKey)) return; // Already cached
+
+            try {
+                const data = await fetchDayTimetable(date);
+                if (timetableCache.current.size >= 10) {
+                    const firstKey = timetableCache.current.keys().next().value;
+                    timetableCache.current.delete(firstKey);
+                }
+                timetableCache.current.set(dateKey, data);
+            } catch (err) {
+                // Silent fail - prefetch is nice-to-have
+            }
+        };
+
+        // Prefetch previous and next day with a small delay
+        const timer = setTimeout(() => {
+            prefetchDay(addDays(viewDate, -1));
+            prefetchDay(addDays(viewDate, 1));
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [viewDate, user]);
+
     // Fetch rail timetable for RHS - always shows current school day (if before end) or next school day
     useEffect(() => {
         if (!isAuthenticated()) return;
@@ -725,7 +772,23 @@ function App() {
             try {
                 // Today until its last bell, then the next school day (skipping weekends)
                 const railDate = await findNextSchoolDay();
+                const dateKey = format(railDate, 'yyyy-MM-dd');
+                
+                // Check cache first
+                if (timetableCache.current.has(dateKey)) {
+                    setRailTimetable(timetableCache.current.get(dateKey));
+                    return;
+                }
+                
                 const data = await fetchDayTimetable(railDate);
+                
+                // Add to cache
+                if (timetableCache.current.size >= 10) {
+                    const firstKey = timetableCache.current.keys().next().value;
+                    timetableCache.current.delete(firstKey);
+                }
+                timetableCache.current.set(dateKey, data);
+                
                 setRailTimetable(data);
             } catch (err) {
                 console.error("Failed to fetch rail timetable", err);
