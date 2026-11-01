@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Calendar } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 
 const ACCENTS = [
@@ -89,7 +89,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled,
-    ambientLight, setAmbientLight, onSignOut, setView
+    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -152,6 +152,9 @@ const SettingsView = ({
             <Section label="Features">
                 <Row title="AI assistant" description="Daily notice briefings and answers to questions about your timetable.">
                     <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI assistant" />
+                </Row>
+                <Row title="Clipboard events" description="Show co-curricular training sessions inline in your timetable.">
+                    <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard events" />
                 </Row>
                 <LinkRow
                     icon={BookOpen}

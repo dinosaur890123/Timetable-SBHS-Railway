@@ -32,7 +32,8 @@ import {
     fetchUserPreferences,
     saveUserPreferences,
     fetchBuildNotes,
-    isScopeOutdated
+    isScopeOutdated,
+    fetchStudentClipboardSessions
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -64,6 +65,7 @@ function App() {
         }
     });
     const [railTimetable, setRailTimetable] = useState(null);
+    const [clipboardSessions, setClipboardSessions] = useState([]);
     const [completeTimetable, setCompleteTimetable] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_complete_timetable');
@@ -75,6 +77,7 @@ function App() {
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
+    const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -298,6 +301,7 @@ function App() {
                 colorTheme,
                 aiDisabled,
                 ambientLight,
+                showClipboardEvents,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -408,6 +412,11 @@ function App() {
         localStorage.setItem('ambient_light', ambientLight ? 'on' : 'off');
         savePreferences();
     }, [ambientLight]);
+
+    useEffect(() => {
+        localStorage.setItem('show_clipboard_events', showClipboardEvents ? 'true' : 'false');
+        savePreferences();
+    }, [showClipboardEvents]);
 
     // Color Theme Config
     useEffect(() => {
@@ -578,6 +587,10 @@ function App() {
                                 setAmbientLight(prefs.ambientLight);
                                 localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
                             }
+                            if (prefs.showClipboardEvents !== undefined) {
+                                setShowClipboardEvents(prefs.showClipboardEvents);
+                                localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                            }
                             
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
                             if (prefs.dashboardLayoutMobile) {
@@ -684,6 +697,21 @@ function App() {
         };
         loadCompleteTimetable();
     }, [user]);
+
+    // Fetch clipboard sessions in the background once authenticated
+    useEffect(() => {
+        if (!user || !showClipboardEvents) return;
+
+        const loadClipboardSessions = async () => {
+            try {
+                const sessions = await fetchStudentClipboardSessions(user.studentId);
+                setClipboardSessions(sessions || []);
+            } catch (err) {
+                console.warn("Failed to fetch clipboard sessions in background", err);
+            }
+        };
+        loadClipboardSessions();
+    }, [user, showClipboardEvents]);
 
     // Initialize defaultDate to the next/current school day after authentication
     useEffect(() => {
@@ -999,7 +1027,13 @@ function App() {
                                     </>
                                     )}
                                 >
-                                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
+                                    <Timetable 
+                                        timetableData={timetable} 
+                                        completeTimetable={completeTimetable} 
+                                        viewMode={timetableViewMode} 
+                                        clipboardSessions={clipboardSessions}
+                                        showClipboardEvents={showClipboardEvents}
+                                    />
                                 </Home>
                             )}
 
@@ -1050,6 +1084,8 @@ function App() {
                                     setAiDisabled={setAiDisabled}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
+                                    showClipboardEvents={showClipboardEvents}
+                                    setShowClipboardEvents={setShowClipboardEvents}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />

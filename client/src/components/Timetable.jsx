@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PeriodCard from './PeriodCard';
-import { MotionConfig } from 'framer-motion';
+import { MotionConfig, AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { X, MapPin, Clock, Users, Calendar } from 'lucide-react';
 
 // One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
 // on desktop, abbreviated on mobile.
@@ -34,10 +35,99 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
+// Modal component to display clipboard event details
+const ClipboardEventModal = ({ session, onClose }) => {
+    if (!session) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-md w-full border border-zinc-200 dark:border-zinc-800"
+            >
+                <div className="flex items-center justify-between p-5 border-b border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Event Details</h3>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                        <X size={18} className="text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Calendar size={16} className="text-accent" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Event</span>
+                        </div>
+                        <p className="text-base font-semibold text-zinc-900 dark:text-white">{session.activity}</p>
+                        {session.title && (
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{session.title}</p>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar size={16} className="text-accent" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Date</span>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{session.date}</p>
+                        </div>
+
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Clock size={16} className="text-accent" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Time</span>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{session.time}</p>
+                        </div>
+                    </div>
+
+                    {session.location && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <MapPin size={16} className="text-accent" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Location</span>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{session.location}</p>
+                        </div>
+                    )}
+
+                    {session.staff && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Users size={16} className="text-accent" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Staff</span>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{session.staff}</p>
+                        </div>
+                    )}
+
+                    {session.team && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Users size={16} className="text-accent" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Team</span>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{session.team}</p>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], showClipboardEvents = false }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedClipboardSession, setSelectedClipboardSession] = useState(null);
+    const [showClipboardModal, setShowClipboardModal] = useState(false);
     // Which row was live at the last tick, and when that last changed (see startedBell below).
     const bellWatch = useRef({ key: undefined, at: 0 });
 
@@ -79,6 +169,37 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const getMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
         return h * 60 + m;
+    };
+
+    // Match clipboard sessions to periods based on time
+    const getClipboardSessionForPeriod = (bell, viewedDate) => {
+        if (!showClipboardEvents || !clipboardSessions || clipboardSessions.length === 0) return null;
+
+        const periodStartMin = getMinutes(bell.time);
+        const periodEndMin = bell.endTime ? getMinutes(bell.endTime) : periodStartMin + 60;
+
+        // Find clipboard sessions that overlap with this period's time
+        return clipboardSessions.find(session => {
+            // Parse session date and time
+            const sessionDate = session.date; // Format from API: "EEE d MMM yyyy" (e.g., "Mon 2 Jan 2026")
+            const sessionTime = session.time; // Format from API: "h:mm a – h:mm a" (e.g., "3:30 PM – 5:00 PM")
+
+            // Check if session date matches viewed date
+            if (!sessionDate || sessionDate !== format(viewedDate, 'EEE d MMM yyyy')) return null;
+
+            // Parse session time range (handle 12-hour format with AM/PM)
+            const timeMatch = sessionTime.match(/(\d{1,2}):(\d{2})\s*([AP]M)\s*–\s*(\d{1,2}):(\d{2})\s*([AP]M)/i);
+            if (!timeMatch) return null;
+
+            const [, startH, startM, startAmpm, endH, endM, endAmpm] = timeMatch;
+            
+            // Convert 12-hour to 24-hour format
+            const sessionStartMin = (parseInt(startH) % 12 + (startAmpm.toUpperCase() === 'PM' ? 12 : 0)) * 60 + parseInt(startM);
+            const sessionEndMin = (parseInt(endH) % 12 + (endAmpm.toUpperCase() === 'PM' ? 12 : 0)) * 60 + parseInt(endM);
+
+            // Check if session overlaps with period
+            return (sessionStartMin < periodEndMin && sessionEndMin > periodStartMin);
+        });
     };
 
     // Only the live day gets a "now" marker. Earlier days render fully past,
@@ -362,23 +483,31 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             {viewMode === 'daily' ? (
                 <>
                 <ol className="-mx-3 space-y-0.5">
-                    {routineData.map((data) => (
-                        <PeriodCard
-                            key={`${data.bellId}-${data.index}`}
-                            period={data.periodInfo}
-                            bell={data.bell}
-                            label={data.label}
-                            isBreak={data.isBreak}
-                            isCurrent={data.isCurrent}
-                            justStarted={data.bellId === startedBell}
-                            isNext={data.isNext}
-                            routineIndex={data.index}
-                            currentMinutes={currentMinutes}
-                            startMinutes={data.startMin}
-                            endMinutes={data.endMin}
-                            canvasLink={getLink(data.periodInfo.title)}
-                        />
-                    ))}
+                    {routineData.map((data) => {
+                        const clipboardSession = getClipboardSessionForPeriod(data.bell, viewedKey);
+                        return (
+                            <PeriodCard
+                                key={`${data.bellId}-${data.index}`}
+                                period={data.periodInfo}
+                                bell={data.bell}
+                                label={data.label}
+                                isBreak={data.isBreak}
+                                isCurrent={data.isCurrent}
+                                justStarted={data.bellId === startedBell}
+                                isNext={data.isNext}
+                                routineIndex={data.index}
+                                currentMinutes={currentMinutes}
+                                startMinutes={data.startMin}
+                                endMinutes={data.endMin}
+                                canvasLink={getLink(data.periodInfo.title)}
+                                clipboardSession={clipboardSession}
+                                onClipboardSessionClick={() => {
+                                    setSelectedClipboardSession(clipboardSession);
+                                    setShowClipboardModal(true);
+                                }}
+                            />
+                        );
+                    })}
                     {routineData.length > 0 && (
                         <li className="flex items-center gap-4 px-3 pt-3">
                             <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
@@ -393,6 +522,18 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 renderCycleView()
             )}
         </div>
+
+        <AnimatePresence>
+            {showClipboardModal && selectedClipboardSession && (
+                <ClipboardEventModal
+                    session={selectedClipboardSession}
+                    onClose={() => {
+                        setShowClipboardModal(false);
+                        setSelectedClipboardSession(null);
+                    }}
+                />
+            )}
+        </AnimatePresence>
         </MotionConfig>
     );
 };
