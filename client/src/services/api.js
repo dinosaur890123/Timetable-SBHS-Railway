@@ -747,10 +747,29 @@ export const saveCanvasLinks = async (links) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
+    // Normalize links map to { className: urlString } with absolute URLs
+    const normalizedLinks = {};
+    if (links && typeof links === 'object') {
+        Object.entries(links).forEach(([key, val]) => {
+            let url = typeof val === 'string' ? val : (val && typeof val === 'object' && val.url ? String(val.url) : null);
+            if (url) {
+                url = url.trim();
+                if (!/^https?:\/\//i.test(url)) {
+                    if (/^(courses\/\d+|\d+$)/i.test(url)) {
+                        const id = url.replace(/\D/g, '');
+                        url = `https://canvas.instructure.com/courses/${id}`;
+                    } else {
+                        url = `https://${url.replace(/^\/+/, '')}`;
+                    }
+                }
+                normalizedLinks[key] = url;
+            }
+        });
+    }
     const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ links })
+        body: JSON.stringify({ links: normalizedLinks })
     });
     if (!response.ok) {
         throw new Error(`Failed to save canvas links: ${response.status}`);
@@ -836,6 +855,21 @@ export const reportCanvasCourse = async (className, suggestedCourseId, justifica
     }
     
     return { ok: false, error: data.message || data.error || 'Failed to submit report' };
+};
+
+// Build Notes API
+export const fetchBuildNotes = async () => {
+    try {
+        const response = await fetch(`${SYSTEM_API_URL}/build-notes`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch build notes: ${response.status}`);
+        }
+        const data = await response.json();
+        return data?.notes || [];
+    } catch (e) {
+        console.error('fetchBuildNotes error:', e);
+        return [];
+    }
 };
 
 

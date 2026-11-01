@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   ai_provider TEXT NOT NULL DEFAULT 'hackclub',
   ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
   version TEXT NOT NULL DEFAULT '1.0.0',
+  hidden_pages JSONB NOT NULL DEFAULT '[]',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS ai_cache (
 -- Migrations
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_provider TEXT NOT NULL DEFAULT 'hackclub';
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id TEXT PRIMARY KEY,
@@ -199,3 +201,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications (user_id);
 CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read);
 CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
+
+-- Build Notes migration
+CREATE TABLE IF NOT EXISTS app_build_notes (
+  id TEXT PRIMARY KEY,
+  version TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  author TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);

@@ -14,8 +14,9 @@ const ClipboardView = lazy(() => import('./components/ClipboardView'));
 const StudyView = lazy(() => import('./components/StudyView'));
 const FeedbackView = lazy(() => import('./components/FeedbackView'));
 const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
+const BuildNotesView = lazy(() => import('./components/BuildNotesView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
-const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
+
 import {
     fetchDayTimetable,
     fetchDailyNews,
@@ -28,7 +29,8 @@ import {
     fetchAiBriefing,
     fetchTimetableQa,
     fetchUserPreferences,
-    saveUserPreferences
+    saveUserPreferences,
+    fetchBuildNotes
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -111,8 +113,7 @@ function App() {
     const [aiLoading, setAiLoading] = useState(false);
 
 
-    // Welcome Modal State
-    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
 
     // Offline State
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -185,6 +186,11 @@ function App() {
     });
     const [hiddenPages, setHiddenPages] = useState(() => {
         try {
+            const cachedSystem = localStorage.getItem('cached_system');
+            if (cachedSystem) {
+                const parsed = JSON.parse(cachedSystem);
+                if (Array.isArray(parsed.hiddenPages)) return parsed.hiddenPages;
+            }
             const stored = localStorage.getItem('hidden_pages');
             return stored ? JSON.parse(stored) : [];
         } catch {
@@ -336,24 +342,48 @@ function App() {
         }
     };
 
-    // Poll System Status
+    // Poll System Status (low frequency to minimize performance cost)
     useEffect(() => {
+        let lastFetched = 0;
+
         const pollStatus = async () => {
+            // Avoid polling if tab is backgrounded
+            if (document.hidden && lastFetched !== 0) return;
+
             try {
                 const systemData = await fetchSystemStatus();
+                lastFetched = Date.now();
                 if (systemData) {
                     setBroadcast(systemData.broadcast);
-
                     setMaintenance(systemData.maintenance);
+                    if (Array.isArray(systemData.hiddenPages)) {
+                        setHiddenPages(systemData.hiddenPages);
+                        localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
+                    }
                 }
             } catch (e) {
                 console.error("Failed to poll system status", e);
             }
         };
 
-        // Poll every 30 seconds
-        const interval = setInterval(pollStatus, 30000);
-        return () => clearInterval(interval);
+        // Poll once on mount for all visitors
+        pollStatus();
+
+        // Poll infrequently (every 5 minutes) when tab is active
+        const interval = setInterval(pollStatus, 5 * 60 * 1000);
+
+        // When user returns to tab after a while, refresh if older than 2 minutes
+        const handleVisibilityChange = () => {
+            if (!document.hidden && Date.now() - lastFetched > 2 * 60 * 1000) {
+                pollStatus();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     const isSignedIn = !!user;
@@ -421,12 +451,6 @@ function App() {
                 window.history.replaceState({}, document.title, "/");
                 try {
                     await exchangeToken(code);
-                    // Check if this is first-time sign-in (no welcome_shown flag)
-                    const hasSeenWelcome = localStorage.getItem('welcome_shown');
-                    if (!hasSeenWelcome) {
-                        setShowWelcomeModal(true);
-                        localStorage.setItem('welcome_shown', 'true');
-                    }
                 } catch (err) {
                     console.error(err);
                     setAuthError(err.message || "Failed to authenticate.");
@@ -434,6 +458,13 @@ function App() {
                     return;
                 }
             }
+
+            // Sync build notes on reload of the page (single fetch on load, no constant polling)
+            fetchBuildNotes().then(notes => {
+                if (Array.isArray(notes)) {
+                    localStorage.setItem('cached_build_notes', JSON.stringify(notes));
+                }
+            }).catch(() => {});
 
             if (!isAuthenticated()) {
                 // Drop the cached user so the sign-in screen shows instead of a session with no tokens.
@@ -467,6 +498,11 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
+
+                    if (Array.isArray(systemData.hiddenPages)) {
+                        setHiddenPages(systemData.hiddenPages);
+                        localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
+                    }
                 }
 
                 // Attempt to register/update user in Admin Panel in background
@@ -963,8 +999,13 @@ function App() {
                                 <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
                             )}
 
+                            {/* BUILD NOTES VIEW */}
+                            {currentView === 'build-notes' && (
+                                <BuildNotesView onBack={() => setCurrentView('profile')} />
+                            )}
+
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} setHiddenPages={setHiddenPages} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
@@ -1045,13 +1086,7 @@ function App() {
                     </div>
                 )}
 
-                {/* Welcome Modal for First-Time Sign-In */}
-                <Suspense fallback={null}>
-                    <WelcomeModal
-                        isOpen={showWelcomeModal}
-                        onClose={() => setShowWelcomeModal(false)}
-                    />
-                </Suspense>
+
             </main>
 
             <ModernDock

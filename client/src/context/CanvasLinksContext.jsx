@@ -3,6 +3,20 @@ import { fetchCanvasLinks, saveCanvasLinks } from '../services/api';
 
 const CanvasLinksContext = createContext(null);
 
+const ensureAbsoluteUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed;
+    }
+    if (/^(courses\/\d+|\d+$)/i.test(trimmed)) {
+        const id = trimmed.replace(/\D/g, '');
+        return `https://canvas.instructure.com/courses/${id}`;
+    }
+    return `https://${trimmed.replace(/^\/+/, '')}`;
+};
+
 export const CanvasLinksProvider = ({ children }) => {
     const [canvasLinks, setCanvasLinks] = useState({});
     const [loading, setLoading] = useState(false);
@@ -13,7 +27,14 @@ export const CanvasLinksProvider = ({ children }) => {
         try {
             const stored = localStorage.getItem('canvas_links');
             if (stored) {
-                return JSON.parse(stored);
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object') {
+                    const normalized = {};
+                    Object.entries(parsed).forEach(([k, v]) => {
+                        normalized[k] = typeof v === 'string' ? { url: v } : (v?.url ? { url: v.url } : v);
+                    });
+                    return normalized;
+                }
             }
         } catch (e) {
             console.warn('Failed to load canvas links from localStorage:', e);
@@ -67,7 +88,10 @@ export const CanvasLinksProvider = ({ children }) => {
 
     // Get canvas link for a specific class
     const getLink = useCallback((className) => {
-        return canvasLinks[className]?.url || null;
+        const val = canvasLinks[className];
+        if (!val) return null;
+        const raw = typeof val === 'string' ? val : (val.url || null);
+        return ensureAbsoluteUrl(raw);
     }, [canvasLinks]);
 
     // Initialize: migrate localStorage to backend on first load

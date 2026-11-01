@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
-    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight
+    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 
 export const VIEW_LABELS = {
@@ -13,10 +13,11 @@ export const VIEW_LABELS = {
     notices: 'Notices',
     awards: 'Awards',
     clipboard: 'Clipboard',
-    notes: 'Noteflow',
+    notes: 'NoteFlow',
     profile: 'Settings',
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
+    'build-notes': 'Build Notes',
     admin: 'Admin'
 };
 
@@ -43,7 +44,7 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
                 { id: 'clipboard', icon: Clipboard },
                 { id: 'notes', icon: GraduationCap },
                 ...QUICK_LINKS
-            ].filter(item => !item.href || !hiddenPages.includes(item.id))
+            ].filter(item => !hiddenPages.includes(item.id))
         },
         {
             label: 'Account',
@@ -268,7 +269,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
-        { id: 'notes', icon: GraduationCap, label: 'Noteflow' }
+        { id: 'notes', icon: GraduationCap, label: 'NoteFlow' }
     ].filter(item => !hiddenPages.includes(item.id));
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
@@ -452,6 +453,16 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
             label: 'Canvas Links',
             icon: BookOpen,
             run: () => setView('canvas-links')
+        });
+    }
+
+    if (!hiddenPages.includes('build-notes')) {
+        navCommands.splice(navCommands.findIndex(c => c.group === 'Links'), 0, {
+            id: 'nav-build-notes',
+            group: 'Go to',
+            label: 'Build Notes',
+            icon: FileCode,
+            run: () => setView('build-notes')
         });
     }
 

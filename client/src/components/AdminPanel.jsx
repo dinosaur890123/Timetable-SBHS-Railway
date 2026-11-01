@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist } from '../services/adminApi';
+import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 
-const AdminPanel = ({ user, setView, setHiddenPages }) => {
+const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -53,6 +53,19 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
     const [clearingAiCache, setClearingAiCache] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(null);
 
+    // Build Notes State
+    const [buildNotes, setBuildNotes] = useState([]);
+    const [loadingBuildNotes, setLoadingBuildNotes] = useState(false);
+    const [noteForm, setNoteForm] = useState({
+        id: null,
+        version: '',
+        title: '',
+        content: '',
+        author: ''
+    });
+    const [savingNote, setSavingNote] = useState(false);
+    const [noteSuccessMsg, setNoteSuccessMsg] = useState('');
+
     useEffect(() => {
         if (user && user.role === 'Admin') {
             setIsAuthenticated(true);
@@ -82,7 +95,14 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         if (logsRes.status === 'fulfilled') setLogs(logsRes.value || []);
         if (aiLogsRes.status === 'fulfilled') setAiLogs(aiLogsRes.value || []);
         if (feedbackRes.status === 'fulfilled') setFeedback(feedbackRes.value || []);
-        if (systemRes.status === 'fulfilled') setCurrentBroadcast(systemRes.value?.broadcast || null);
+        if (systemRes.status === 'fulfilled') {
+            setCurrentBroadcast(systemRes.value?.broadcast || null);
+            if (Array.isArray(systemRes.value?.hiddenPages)) {
+                setHiddenPagesState(systemRes.value.hiddenPages);
+                if (setHiddenPages) setHiddenPages(systemRes.value.hiddenPages);
+                localStorage.setItem('hidden_pages', JSON.stringify(systemRes.value.hiddenPages));
+            }
+        }
 
         const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback'];
         const failed = results
@@ -108,6 +128,68 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
             loadData();
         }
     }, [isAuthenticated]);
+
+    const loadBuildNotes = async () => {
+        setLoadingBuildNotes(true);
+        try {
+            const notes = await fetchAdminBuildNotes();
+            setBuildNotes(notes || []);
+        } catch (err) {
+            console.error("Failed to load build notes:", err);
+        } finally {
+            setLoadingBuildNotes(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab === 'build-notes') {
+            loadBuildNotes();
+        }
+    }, [isAuthenticated, activeTab]);
+
+    const handleSaveNote = async (e) => {
+        e.preventDefault();
+        if (!noteForm.version.trim() || !noteForm.title.trim() || !noteForm.content.trim()) {
+            alert("Please provide version, title, and content.");
+            return;
+        }
+        setSavingNote(true);
+        try {
+            await saveAdminBuildNote({
+                ...noteForm,
+                author: noteForm.author.trim() || user?.name || user?.studentId || 'Dev Team'
+            });
+            setNoteSuccessMsg(noteForm.id ? 'Build note updated successfully!' : 'Build note published successfully!');
+            setNoteForm({ id: null, version: '', title: '', content: '', author: '' });
+            await loadBuildNotes();
+            setTimeout(() => setNoteSuccessMsg(''), 4000);
+        } catch (err) {
+            alert(`Failed to save build note: ${err.message}`);
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
+    const handleEditNote = (note) => {
+        setNoteForm({
+            id: note.id,
+            version: note.version,
+            title: note.title,
+            content: note.content,
+            author: note.author || ''
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleDeleteNote = async (noteId) => {
+        if (!window.confirm("Are you sure you want to delete this build note?")) return;
+        try {
+            await deleteAdminBuildNote(noteId);
+            await loadBuildNotes();
+        } catch (err) {
+            alert(`Failed to delete build note: ${err.message}`);
+        }
+    };
 
     const handleDeleteUser = async (userId) => {
         if (!window.confirm("Are you sure you want to delete this user?")) return;
@@ -336,6 +418,7 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
     const [hiddenPages, setHiddenPagesState] = useState(() => {
+        if (Array.isArray(propHiddenPages) && propHiddenPages.length > 0) return propHiddenPages;
         try {
             const stored = localStorage.getItem('hidden_pages');
             return stored ? JSON.parse(stored) : [];
@@ -343,6 +426,12 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
             return [];
         }
     });
+
+    useEffect(() => {
+        if (Array.isArray(propHiddenPages)) {
+            setHiddenPagesState(propHiddenPages);
+        }
+    }, [propHiddenPages]);
 
     useEffect(() => {
         if (stats?.aiModel) {
@@ -389,7 +478,7 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         }
     };
 
-    const handleToggleHiddenPage = (pageId) => {
+    const handleToggleHiddenPage = async (pageId) => {
         const newHiddenPages = hiddenPages.includes(pageId)
             ? hiddenPages.filter(id => id !== pageId)
             : [...hiddenPages, pageId];
@@ -398,6 +487,12 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
         localStorage.setItem('hidden_pages', JSON.stringify(newHiddenPages));
         if (setHiddenPages) {
             setHiddenPages(newHiddenPages);
+        }
+        try {
+            await updateHiddenPages(newHiddenPages);
+        } catch (err) {
+            console.error("Failed to update hidden pages on server:", err);
+            alert("Failed to save hidden pages to server");
         }
     };
 
@@ -520,6 +615,7 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
+                    <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                     {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
                 </div>
@@ -1681,6 +1777,204 @@ const AdminPanel = ({ user, setView, setHiddenPages }) => {
                         })()}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    )
+}
+
+{
+    activeTab === 'build-notes' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header info card */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                        <FileCode className="text-violet-600 dark:text-violet-400" size={22} />
+                        Build Notes & Changelog Publisher
+                    </h3>
+                    <p className="text-zinc-500 text-sm mt-1">
+                        Write release notes, bug fixes, and feature announcements. These sync directly to the user-facing Build Notes page in Settings.
+                    </p>
+                </div>
+                <button
+                    onClick={loadBuildNotes}
+                    disabled={loadingBuildNotes}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-sm font-medium transition-colors text-zinc-700 dark:text-zinc-300 shrink-0"
+                >
+                    <RefreshCw size={14} className={loadingBuildNotes ? 'animate-spin' : ''} />
+                    Refresh
+                </button>
+            </div>
+
+            {noteSuccessMsg && (
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 text-sm font-semibold flex items-center gap-2">
+                    <Check size={16} />
+                    {noteSuccessMsg}
+                </div>
+            )}
+
+            {/* Note Editor Form */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                        {noteForm.id ? <Edit2 size={16} /> : <Plus size={16} />}
+                        {noteForm.id ? 'Edit Build Note' : 'Draft New Build Note'}
+                    </h4>
+                    {noteForm.id && (
+                        <button
+                            type="button"
+                            onClick={() => setNoteForm({ id: null, version: '', title: '', content: '', author: '' })}
+                            className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                        >
+                            Cancel Edit
+                        </button>
+                    )}
+                </div>
+
+                <form onSubmit={handleSaveNote} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                                Version / Tag *
+                            </label>
+                            <input
+                                type="text"
+                                value={noteForm.version}
+                                onChange={(e) => setNoteForm(prev => ({ ...prev, version: e.target.value }))}
+                                placeholder="e.g. v1.2.0 or Alpha 0.9.4"
+                                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                                required
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                                Title / Headline *
+                            </label>
+                            <input
+                                type="text"
+                                value={noteForm.title}
+                                onChange={(e) => setNoteForm(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="e.g. Canvas Links Sync & Dock Navigation Updates"
+                                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                            Author (Optional)
+                        </label>
+                        <input
+                            type="text"
+                            value={noteForm.author}
+                            onChange={(e) => setNoteForm(prev => ({ ...prev, author: e.target.value }))}
+                            placeholder="e.g. Dev Team or Your Name"
+                            className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                            Notes / Details (Markdown supported) *
+                        </label>
+                        <textarea
+                            value={noteForm.content}
+                            onChange={(e) => setNoteForm(prev => ({ ...prev, content: e.target.value }))}
+                            placeholder={"### What's New\n- Added automatic sync for Canvas class links\n- Fixed URL redirection\n- Performance improvements across timetable view"}
+                            rows={6}
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white font-mono"
+                            required
+                        />
+                        <p className="text-[11px] text-zinc-400 mt-1">
+                            Tip: You can use bullet points (- item), bolding (**text**), and headers (### Heading).
+                        </p>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        {noteForm.id && (
+                            <button
+                                type="button"
+                                onClick={() => setNoteForm({ id: null, version: '', title: '', content: '', author: '' })}
+                                className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={savingNote}
+                            className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {savingNote ? 'Publishing...' : noteForm.id ? 'Save Changes' : 'Publish Build Note'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Published Notes List */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                    <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                        Published Build Notes ({buildNotes.length})
+                    </h4>
+                </div>
+
+                {loadingBuildNotes ? (
+                    <div className="py-8 text-center text-sm text-zinc-500">Loading build notes...</div>
+                ) : buildNotes.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-zinc-500">
+                        No build notes published yet. Draft one above!
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {buildNotes.map((note) => (
+                            <div
+                                key={note.id}
+                                className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 dark:bg-zinc-950/40 space-y-3"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300 border border-violet-200 dark:border-violet-900/40">
+                                            {note.version}
+                                        </span>
+                                        <span className="font-bold text-zinc-900 dark:text-white text-base">
+                                            {note.title}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEditNote(note)}
+                                            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                                            title="Edit note"
+                                        >
+                                            <Edit2 size={15} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteNote(note.id)}
+                                            className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                            title="Delete note"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="text-xs text-zinc-400 flex items-center gap-3">
+                                    <span>{note.author ? `By ${note.author}` : 'Dev Team'}</span>
+                                    <span>•</span>
+                                    <span>{note.createdAt ? new Date(note.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : ''}</span>
+                                </div>
+
+                                <div className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed border-t border-zinc-200/60 dark:border-zinc-800/60 pt-3">
+                                    {note.content}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     )

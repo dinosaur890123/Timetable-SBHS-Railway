@@ -42,11 +42,24 @@ let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
 let sharedResources = []; // Shared resources memory fallback
 let notifications = []; // Notifications memory fallback
+let canvasLinksMemory = []; // Canvas links memory fallback
+let buildNotesMemory = [
+    {
+        id: 'initial-build-note',
+        version: 'Alpha 0.9.4',
+        title: 'Canvas Links Sync & Performance Updates',
+        content: `### What's New\n- **Canvas Links Sync**: Your Canvas class links now reliably sync across devices to the backend database.\n- **Direct Protocol Linking**: Fixed issue where custom URLs appended to the site domain.\n- **Optimized Shell & Dock**: Faster page navigation and smoother animations.\n- **Build Notes**: Introducing in-app build notes for tracking releases.`,
+        author: 'Synchron Devs',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    }
+];
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
     aiProvider: 'hackclub',
-    aiModel: 'qwen/qwen3-32b'
+    aiModel: 'qwen/qwen3-32b',
+    hiddenPages: []
 };
 
 // Historical system metrics buffer (last 20 entries)
@@ -83,6 +96,35 @@ setInterval(() => {
 const isDbEnabled = db.hasDb();
 if (!isDbEnabled) {
     console.warn('[admin-db] POSTGRES_URL/DATABASE_URL not set; using in-memory admin storage');
+} else {
+    // Ensure app_build_notes table exists
+    (async () => {
+        try {
+            await db.query(`
+                CREATE TABLE IF NOT EXISTS app_build_notes (
+                    id TEXT PRIMARY KEY,
+                    version TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    author TEXT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);
+            `);
+            const countRes = await db.query('SELECT COUNT(*) FROM app_build_notes');
+            if (parseInt(countRes.rows[0]?.count || '0', 10) === 0 && buildNotesMemory.length > 0) {
+                const initNote = buildNotesMemory[0];
+                await db.query(`
+                    INSERT INTO app_build_notes (id, version, title, content, author, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                    ON CONFLICT (id) DO NOTHING
+                `, [initNote.id, initNote.version, initNote.title, initNote.content, initNote.author]);
+            }
+        } catch (e) {
+            console.warn('[build-notes] Table init failed:', e?.message || e);
+        }
+    })();
 }
 
 const toIso = (v) => (v instanceof Date ? v.toISOString() : v);
@@ -160,21 +202,47 @@ async function getSystemState() {
     if (!isDbEnabled) {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
+        if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
     }
 
     const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, updated_at FROM system_state WHERE id = 1',
+        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at FROM system_state WHERE id = 1',
         []
     );
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', hidden_pages: [], updated_at: null };
+    let hiddenPages = [];
+    if (Array.isArray(row.hidden_pages)) {
+        hiddenPages = row.hidden_pages;
+    } else if (typeof row.hidden_pages === 'string') {
+        try {
+            hiddenPages = JSON.parse(row.hidden_pages);
+        } catch {
+            hiddenPages = [];
+        }
+    }
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
-        aiModel: row.ai_model || 'qwen/qwen3-32b'
+        aiModel: row.ai_model || 'qwen/qwen3-32b',
+        hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
+}
+
+async function setHiddenPages(hiddenPages) {
+    const cleanPages = Array.isArray(hiddenPages) ? hiddenPages : [];
+    if (!isDbEnabled) {
+        systemState.hiddenPages = cleanPages;
+        return systemState.hiddenPages;
+    }
+
+    await db.query(
+        'UPDATE system_state SET hidden_pages = $1::jsonb, updated_at = NOW() WHERE id = 1',
+        [JSON.stringify(cleanPages)]
+    );
+    return cleanPages;
 }
 
 async function setAiConfig(provider, model) {
@@ -669,6 +737,19 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
+// Helper to ensure canvas URL is absolute
+const formatCanvasUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^(courses\/\d+|\d+$)/i.test(trimmed)) {
+        const id = trimmed.replace(/\D/g, '');
+        return `https://canvas.instructure.com/courses/${id}`;
+    }
+    return `https://${trimmed.replace(/^\/+/, '')}`;
+};
+
 // GET /api/canvas-links - Get canvas links for current user
 app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
     try {
@@ -676,7 +757,10 @@ app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
         let links = [];
 
         if (!isDbEnabled) {
-            return res.json({ success: true, links: [] });
+            const userLinks = canvasLinksMemory
+                .filter(l => l.studentId === studentId)
+                .map(l => ({ className: l.className, canvasUrl: l.canvasUrl, createdAt: l.createdAt, updatedAt: l.updatedAt }));
+            return res.json({ success: true, links: userLinks });
         }
 
         const result = await db.query(
@@ -713,7 +797,21 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
         }
 
         if (!isDbEnabled) {
-            // Memory fallback - not implemented for canvas links
+            canvasLinksMemory = canvasLinksMemory.filter(l => l.studentId !== studentId);
+            const now = new Date().toISOString();
+            for (const [className, rawLink] of Object.entries(links)) {
+                const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+                const canvasUrl = formatCanvasUrl(rawUrl);
+                if (!canvasUrl) continue;
+                canvasLinksMemory.push({
+                    id: crypto.randomUUID(),
+                    className: String(className),
+                    canvasUrl: String(canvasUrl),
+                    studentId,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            }
             return res.json({ success: true, message: 'Canvas links saved (memory fallback)' });
         }
 
@@ -725,8 +823,10 @@ app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
 
         // Insert new links
         const entries = Object.entries(links);
-        for (const [className, canvasUrl] of entries) {
-            if (!canvasUrl || typeof canvasUrl !== 'string') continue;
+        for (const [className, rawLink] of entries) {
+            const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
+            const canvasUrl = formatCanvasUrl(rawUrl);
+            if (!canvasUrl) continue;
 
             const id = crypto.randomUUID();
             await db.query(
@@ -756,7 +856,8 @@ app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, r
         }
 
         if (!isDbEnabled) {
-            return res.json({ success: true, link: null });
+            const match = canvasLinksMemory.find(l => l.className === String(className));
+            return res.json({ success: true, link: match ? { canvasUrl: match.canvasUrl, studentId: match.studentId, updatedAt: match.updatedAt } : null });
         }
 
         const result = await db.query(
@@ -1602,6 +1703,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             memoryUsage: process.memoryUsage().heapUsed,
             aiProvider: state.aiProvider || 'hackclub',
             aiModel: state.aiModel || 'qwen/qwen3-32b',
+            hiddenPages: state.hiddenPages || [],
             availableHackClubModels,
             availableGeminiModels: [
                 'gemini-1.5-flash',
@@ -1681,7 +1783,8 @@ app.get('/api/system/status', (req, res) => {
             const state = await getSystemState();
             res.json({
                 maintenance: state.maintenance,
-                broadcast: state.broadcast
+                broadcast: state.broadcast,
+                hiddenPages: state.hiddenPages || []
             });
         } catch (e) {
             console.error('System status error:', e);
@@ -1762,6 +1865,169 @@ app.post('/api/system/ai-config', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI config error:', e);
         res.status(500).json({ error: 'Failed to update AI configuration' });
+    }
+});
+
+// GET /api/system/hidden-pages (Public endpoint)
+app.get('/api/system/hidden-pages', async (req, res) => {
+    try {
+        const state = await getSystemState();
+        res.json({ hiddenPages: state.hiddenPages || [] });
+    } catch (e) {
+        console.error('Get hidden pages error:', e);
+        res.status(500).json({ error: 'Failed to fetch hidden pages' });
+    }
+});
+
+// POST /api/system/hidden-pages (Admin only)
+app.post('/api/system/hidden-pages', requireAuth, async (req, res) => {
+    try {
+        const { hiddenPages } = req.body || {};
+        if (!Array.isArray(hiddenPages)) {
+            return res.status(400).json({ error: 'hiddenPages must be an array' });
+        }
+        const updated = await setHiddenPages(hiddenPages);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Updated hidden pages: ${updated.join(', ') || 'none'}`);
+        res.json({ success: true, hiddenPages: updated });
+    } catch (e) {
+        console.error('Update hidden pages error:', e);
+        res.status(500).json({ error: 'Failed to update hidden pages' });
+    }
+});
+
+// --- Build Notes Endpoints ---
+
+// GET /api/build-notes - Fetch build notes for user view
+app.get('/api/build-notes', async (req, res) => {
+    try {
+        if (!isDbEnabled) {
+            return res.json({ success: true, notes: buildNotesMemory });
+        }
+        const result = await db.query(
+            'SELECT id, version, title, content, author, created_at, updated_at FROM app_build_notes ORDER BY created_at DESC'
+        );
+        const notes = result.rows.map(row => ({
+            id: row.id,
+            version: row.version,
+            title: row.title,
+            content: row.content,
+            author: row.author,
+            createdAt: toIso(row.created_at),
+            updatedAt: toIso(row.updated_at)
+        }));
+        res.json({ success: true, notes });
+    } catch (e) {
+        console.error('Failed to fetch build notes:', e);
+        res.json({ success: true, notes: buildNotesMemory });
+    }
+});
+
+// GET /api/admin/build-notes - Fetch build notes for admin panel
+app.get('/api/admin/build-notes', requireAuth, async (req, res) => {
+    try {
+        if (!isDbEnabled) {
+            return res.json({ success: true, notes: buildNotesMemory });
+        }
+        const result = await db.query(
+            'SELECT id, version, title, content, author, created_at, updated_at FROM app_build_notes ORDER BY created_at DESC'
+        );
+        const notes = result.rows.map(row => ({
+            id: row.id,
+            version: row.version,
+            title: row.title,
+            content: row.content,
+            author: row.author,
+            createdAt: toIso(row.created_at),
+            updatedAt: toIso(row.updated_at)
+        }));
+        res.json({ success: true, notes });
+    } catch (e) {
+        console.error('Admin fetch build notes error:', e);
+        res.status(500).json({ error: 'Failed to fetch build notes' });
+    }
+});
+
+// POST /api/admin/build-notes - Save (create/update) a build note
+app.post('/api/admin/build-notes', requireAuth, async (req, res) => {
+    try {
+        const { id, version, title, content, author } = req.body || {};
+        if (!version || !title || !content) {
+            return res.status(400).json({ error: 'Version, title, and content are required' });
+        }
+
+        const noteId = id || crypto.randomUUID();
+        const noteAuthor = (author && String(author).trim()) || req.user?.givenName || 'Dev Team';
+        const now = new Date();
+
+        if (!isDbEnabled) {
+            const existingIdx = buildNotesMemory.findIndex(n => n.id === noteId);
+            const noteObj = {
+                id: noteId,
+                version: String(version).trim(),
+                title: String(title).trim(),
+                content: String(content).trim(),
+                author: noteAuthor,
+                createdAt: existingIdx >= 0 ? buildNotesMemory[existingIdx].createdAt : now.toISOString(),
+                updatedAt: now.toISOString()
+            };
+            if (existingIdx >= 0) {
+                buildNotesMemory[existingIdx] = noteObj;
+            } else {
+                buildNotesMemory.unshift(noteObj);
+            }
+            await addLog('BUILD_NOTES_SAVE', req.user?.studentId || 'ADMIN', `Saved build note ${version} (${title})`);
+            return res.json({ success: true, note: noteObj });
+        }
+
+        const result = await db.query(`
+            INSERT INTO app_build_notes (id, version, title, content, author, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                version = EXCLUDED.version,
+                title = EXCLUDED.title,
+                content = EXCLUDED.content,
+                author = EXCLUDED.author,
+                updated_at = NOW()
+            RETURNING id, version, title, content, author, created_at, updated_at
+        `, [noteId, String(version).trim(), String(title).trim(), String(content).trim(), noteAuthor]);
+
+        const savedRow = result.rows[0];
+        const savedNote = {
+            id: savedRow.id,
+            version: savedRow.version,
+            title: savedRow.title,
+            content: savedRow.content,
+            author: savedRow.author,
+            createdAt: toIso(savedRow.created_at),
+            updatedAt: toIso(savedRow.updated_at)
+        };
+
+        await addLog('BUILD_NOTES_SAVE', req.user?.studentId || 'ADMIN', `Saved build note ${version} (${title})`);
+        res.json({ success: true, note: savedNote });
+    } catch (e) {
+        console.error('Save build note error:', e);
+        res.status(500).json({ error: 'Failed to save build note' });
+    }
+});
+
+// DELETE /api/admin/build-notes/:id - Delete a build note
+app.delete('/api/admin/build-notes/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) return res.status(400).json({ error: 'Missing note ID' });
+
+        if (!isDbEnabled) {
+            buildNotesMemory = buildNotesMemory.filter(n => n.id !== id);
+            await addLog('BUILD_NOTES_DELETE', req.user?.studentId || 'ADMIN', `Deleted build note ${id}`);
+            return res.json({ success: true, message: 'Build note deleted' });
+        }
+
+        await db.query('DELETE FROM app_build_notes WHERE id = $1', [id]);
+        await addLog('BUILD_NOTES_DELETE', req.user?.studentId || 'ADMIN', `Deleted build note ${id}`);
+        res.json({ success: true, message: 'Build note deleted' });
+    } catch (e) {
+        console.error('Delete build note error:', e);
+        res.status(500).json({ error: 'Failed to delete build note' });
     }
 });
 

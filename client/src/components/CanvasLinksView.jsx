@@ -68,11 +68,22 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   };
 
   const handleSet = async (className) => {
-    const value = (drafts[className] || '').trim();
+    let value = (drafts[className] || '').trim();
     if (!value) {
       setErrors(prev => ({ ...prev, [className]: 'Enter the Canvas URL' }));
       return;
     }
+
+    // Ensure the link is an absolute URL with protocol so it doesn't navigate relative to synchron.work
+    if (!/^https?:\/\//i.test(value)) {
+      if (/^(courses\/\d+|\d+$)/i.test(value)) {
+        const id = value.replace(/\D/g, '');
+        value = `https://canvas.instructure.com/courses/${id}`;
+      } else {
+        value = `https://${value.replace(/^\/+/, '')}`;
+      }
+    }
+
     setSavingClass(className);
     setErrors(prev => ({ ...prev, [className]: '' }));
 
