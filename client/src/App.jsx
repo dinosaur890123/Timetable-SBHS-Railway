@@ -749,7 +749,7 @@ function App() {
         lastViewRef.current = currentView;
     }, [currentView, defaultDate]);
 
-    if ((maintenance || user?.blacklisted) && currentView !== 'admin') {
+    if ((maintenance || user?.blacklisted) && currentView !== 'admin' && user?.role !== 'Admin') {
         return (
             <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-8 text-center">
                 <div className="bg-red-900/20 p-6 rounded-full border border-red-500/20 mb-6 animate-pulse">
@@ -757,11 +757,6 @@ function App() {
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-2">System Maintenance</h1>
                 <p className="text-zinc-400 max-w-md">Synchron is currently undergoing scheduled maintenance. Please check back later.</p>
-                {user?.role === 'Admin' && (
-                    <button onClick={() => setCurrentView('admin')} className="mt-8 text-xs text-zinc-600 hover:text-white underline">
-                        Admin Bypass
-                    </button>
-                )}
             </div>
         );
     }
@@ -815,6 +810,13 @@ function App() {
                 />
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
+
+                {maintenance && user?.role === 'Admin' && (
+                    <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400 border">
+                        <AlertTriangle size={18} className="shrink-0" />
+                        <span className="flex-1">Maintenance Mode Active - Admin Access Only</span>
+                    </div>
+                )}
 
                 {broadcast && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium border
