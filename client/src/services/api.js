@@ -11,7 +11,7 @@ const TOKEN_ENDPOINT = 'https://auth.sbhs.net.au/token';
 const API_BASE_URL = 'https://student.sbhs.net.au/api';
 
 // ns.sbhs.au/r/student_app grants access to the Core API on api.sbhs.net.au (award scheme, clipboard).
-const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
+export const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
 
 export const getOauthConfig = () => ({
   clientId: CLIENT_ID || '(Not configured)',
@@ -91,6 +91,13 @@ const hasCurrentScopes = () => {
     if (!getAccessToken() || localStorage.getItem('sbhs_token_scope') === SCOPES) return true;
     clearTokens();
     return false;
+};
+
+// Check if scopes are outdated without clearing tokens (for UI banner)
+export const isScopeOutdated = () => {
+    const currentScope = localStorage.getItem('sbhs_token_scope');
+    const accessToken = localStorage.getItem('sbhs_access_token');
+    return !!accessToken && currentScope !== SCOPES;
 };
 
 // Treat a token as expired a minute early so it can't lapse mid-request.

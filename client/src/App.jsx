@@ -24,17 +24,19 @@ import {
     isAuthenticated,
     exchangeToken,
     logout,
+    performLogin,
     fetchSystemStatus,
     fetchCompleteTimetable,
     fetchAiBriefing,
     fetchTimetableQa,
     fetchUserPreferences,
     saveUserPreferences,
-    fetchBuildNotes
+    fetchBuildNotes,
+    isScopeOutdated
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 
 function App() {
@@ -111,9 +113,7 @@ function App() {
     const [authError, setAuthError] = useState(null);
     const [aiBriefing, setAiBriefing] = useState(null);
     const [aiLoading, setAiLoading] = useState(false);
-
-
-
+    const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
 
     // Offline State
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -441,6 +441,21 @@ function App() {
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
+    // Check if token scope is outdated (needs relogin to get new scopes)
+    useEffect(() => {
+        setTokenScopeOutdated(isScopeOutdated());
+
+        // Listen for storage changes (e.g., when another tab updates the token)
+        const handleStorageChange = (e) => {
+            if (e.key === 'sbhs_token_scope' || e.key === 'sbhs_access_token') {
+                setTokenScopeOutdated(isScopeOutdated());
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
     // Auth & Initial Data
     useEffect(() => {
         const init = async () => {
@@ -451,6 +466,7 @@ function App() {
                 window.history.replaceState({}, document.title, "/");
                 try {
                     await exchangeToken(code);
+                    setTokenScopeOutdated(false);
                 } catch (err) {
                     console.error(err);
                     setAuthError(err.message || "Failed to authenticate.");
@@ -828,6 +844,19 @@ function App() {
                                 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400'}`}>
                         <Info size={18} className="shrink-0" />
                         <span className="flex-1">{broadcast.message}</span>
+                    </div>
+                )}
+
+                {tokenScopeOutdated && (
+                    <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+                        <AlertCircle size={18} className="shrink-0" />
+                        <span className="flex-1">Your SBHS sign-in needs to be updated to access new features. Sign in again to continue.</span>
+                        <button
+                            onClick={() => performLogin()}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                            Sign in again
+                        </button>
                     </div>
                 )}
 
