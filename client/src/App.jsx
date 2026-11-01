@@ -1129,7 +1129,7 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
-                commands={buildCommands({
+                {...buildCommands({
                     user,
                     setView: setCurrentView,
                     theme,

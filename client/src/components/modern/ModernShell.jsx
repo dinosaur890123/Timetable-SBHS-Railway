@@ -308,7 +308,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
     );
 };
 
-export const CommandPalette = ({ open, onClose, commands }) => {
+export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const inputRef = useRef(null);
@@ -393,6 +393,25 @@ export const CommandPalette = ({ open, onClose, commands }) => {
                             />
                             <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
                         </div>
+                        {quickActions.length > 0 && !query && (
+                            <div className="flex gap-2 px-4 py-3 border-b border-m-line">
+                                {quickActions.map(action => (
+                                    <button
+                                        key={action.id}
+                                        onClick={() => {
+                                            onClose();
+                                            action.run();
+                                        }}
+                                        className="flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                                    >
+                                        <action.icon size={20} className="text-zinc-600 dark:text-zinc-300" />
+                                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 text-center leading-tight">
+                                            {action.label}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         <div ref={listRef} className="max-h-[50vh] overflow-y-auto p-1.5">
                             {filtered.length === 0 && (
                                 <div className="py-10 text-center text-sm text-zinc-400">No results for “{query}”</div>
@@ -433,10 +452,25 @@ export const CommandPalette = ({ open, onClose, commands }) => {
 
 // Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut, hiddenPages = [] }) => {
+    // Quick actions for mobile (awards, clipboard, portal, canvas)
+    const quickActions = [
+        { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
+        { id: 'quick-clipboard', label: 'Clipboard', icon: Clipboard, run: () => setView('clipboard') },
+        { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
+        { id: 'quick-canvas', label: 'Canvas', icon: BookOpen, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
+    ].filter(action => {
+        // Filter out if the corresponding page is hidden
+        if (action.id === 'quick-awards') return !hiddenPages.includes('awards');
+        if (action.id === 'quick-clipboard') return !hiddenPages.includes('clipboard');
+        return true; // portal and canvas are external links, not pages
+    });
+
     // Navigation commands
     // Pages first, then external links, so each group heading appears once
+    // Filter out portal and canvas from the regular list since they're in quick actions
     const navCommands = buildNavGroups(user?.role === 'Admin', hiddenPages)
         .flatMap(g => g.items)
+        .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas')
         .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({
             id: `nav-${item.id}`,
@@ -493,7 +527,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
         }
     ];
 
-    return [...navCommands, ...actionCommands];
+    return { commands: [...navCommands, ...actionCommands], quickActions };
 };
 
 // Shell-level behaviour: Ctrl/Cmd+K shortcut and pointer-tracked spotlight on dashboard tiles.
