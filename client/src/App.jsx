@@ -467,6 +467,9 @@ function App() {
             }).catch(() => {});
 
             if (!isAuthenticated()) {
+                // Drop the cached user so the sign-in screen shows instead of a session with no tokens.
+                localStorage.removeItem('cached_user');
+                setUser(null);
                 setLoading(false);
                 return;
             }
