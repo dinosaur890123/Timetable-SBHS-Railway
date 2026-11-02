@@ -176,3 +176,81 @@ export const sessionsOn = (sessions, date) => sessions.filter((s) => {
     const start = startOf(s);
     return start && isSameDay(start, date);
 }).sort((a, b) => startOf(a) - startOf(b));
+
+// A right slide popout showing all events for a selected day
+export const DayAgendaSheet = ({ date, sessions, onClose, onOpenSession }) => {
+    const still = useReducedMotion();
+    useNoteFlowFonts(!!date);
+
+    useEffect(() => {
+        if (!date) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [date, onClose]);
+
+    return createPortal(
+        <AnimatePresence>
+            {date && (
+                <>
+                    <motion.div
+                        key="scrim"
+                        className="nf-pop-scrim"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        onClick={onClose}
+                    />
+                    <motion.div
+                        key="sheet"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={`${format(date, 'EEEE d MMMM')} events`}
+                        className="nf nf-sheet nf-agenda-sheet"
+                        initial={still ? false : { x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ duration: 0.32, ease: EASE_OUT }}
+                    >
+                        <div className="nf-agenda-sheet__header">
+                            <h2 className="nf-agenda-sheet__title">
+                                {isToday(date) ? 'Today' : format(date, 'EEEE d MMMM')}
+                            </h2>
+                            <button type="button" className="nf-cb-btn nf-cb-btn--bare" onClick={onClose} aria-label="Close">
+                                <X size={20} strokeWidth={1.75} />
+                            </button>
+                        </div>
+
+                        <div className="nf-agenda-sheet__body">
+                            {sessions.length > 0 ? (
+                                <div className="nf-agenda-sheet__list">
+                                    {sessions.map((s) => (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            data-no-press
+                                            className={`nf-cb-session rounded-none ${s.cancelled ? 'is-cancelled' : ''}`}
+                                            onClick={() => onOpenSession(s)}
+                                        >
+                                            <span className="nf-cb-session__time tnum">{clockTime(startOf(s))}</span>
+                                            <span className="nf-cb-dot" aria-hidden="true" />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="nf-cb-session__name">{sessionName(s)}</span>
+                                                {s.title && <span className="nf-meta"> {s.activity}</span>}
+                                            </span>
+                                            <span className="nf-cb-session__where">{s.cancelled ? 'Cancelled' : s.location?.name || ''}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="nf-cb-empty">Nothing on Clipboard this day.</p>
+                            )}
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>,
+        document.body
+    );
+};

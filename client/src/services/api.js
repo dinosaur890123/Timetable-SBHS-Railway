@@ -1,6 +1,5 @@
 import { format } from 'date-fns';
 import { rememberSubjectColours } from '../utils/timetable';
-import { clipboardCache } from '../utils/cache';
 
 // Environment variables
 const CLIENT_ID = import.meta.env.VITE_SBHS_CLIENT_ID?.trim();
@@ -151,18 +150,12 @@ export const getValidAccessToken = async () => (hasFreshToken() ? getAccessToken
 export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
     localStorage.clear();
-    clipboardCache.clear(); // Clear clipboard cache on logout
     if (theme) localStorage.setItem('theme', theme);
     if (redirectToLogin === true) {
         performLogin();
     } else {
         window.location.href = '/';
     }
-};
-
-// Manual cache invalidation for clipboard data
-export const invalidateClipboardCache = () => {
-    clipboardCache.clear();
 };
 
 // Signed in if the access token is still good, or can be renewed with the refresh token.
@@ -446,147 +439,107 @@ export const fetchStudentRollover = (studentId) =>
 const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
 const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
 
-export const fetchStudentClipboardAttendance = (studentId) => {
-    const cached = clipboardCache.get('attendance', studentId);
-    if (cached) return Promise.resolve(cached);
-    
-    return fetchFromBackend(`/students/${studentId}/clipboard/attendance`)
+export const fetchStudentClipboardAttendance = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/attendance`)
     .then(data => {
-        const result = parseAttendance(data);
-        clipboardCache.set('attendance', result, 5 * 60 * 1000, studentId);
-        return result;
+        const parseAttendance = (items) => {
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                activity: item.session?.activity?.name || item.session?.title || 'Activity',
+                date: formatDay(item.session?.startDateTime),
+                recordedBy: item.roll?.markedByUser || item.updatedByUser || '',
+                status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
+            }));
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseAttendance(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseAttendance(data);
+        }
+        return [];
     });
-};
 
-const parseAttendance = (data) => {
-    const parseItems = (items) => {
-        return items.map(item => ({
-            id: item.id || Math.random(),
-            activity: item.session?.activity?.name || item.session?.title || 'Activity',
-            date: formatDay(item.session?.startDateTime),
-            recordedBy: item.roll?.markedByUser || item.updatedByUser || '',
-            status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
-        }));
-    };
-    if (data && data.member && Array.isArray(data.member)) {
-        return parseItems(data.member);
-    }
-    if (Array.isArray(data)) {
-        return parseItems(data);
-    }
-    return [];
-};
-
-export const fetchStudentPreExplainedAbsences = (studentId) => {
-    const cached = clipboardCache.get('preExplained', studentId);
-    if (cached) return Promise.resolve(cached);
-    
-    return fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`)
+export const fetchStudentPreExplainedAbsences = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`)
     .then(data => {
-        const result = parsePreExplained(data);
-        clipboardCache.set('preExplained', result, 5 * 60 * 1000, studentId);
-        return result;
+        const parsePreExplained = (items) => {
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                reason: item.reason || 'Absence',
+                startDate: formatDay(item.startDateTime),
+                endDate: formatDay(item.endDateTime),
+                status: item.isExplained ? 'Approved' : 'Pending'
+            }));
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parsePreExplained(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parsePreExplained(data);
+        }
+        return [];
     });
-};
 
-const parsePreExplained = (data) => {
-    const parseItems = (items) => {
-        return items.map(item => ({
-            id: item.id || Math.random(),
-            reason: item.reason || 'Absence',
-            startDate: formatDay(item.startDateTime),
-            endDate: formatDay(item.endDateTime),
-            status: item.isExplained ? 'Approved' : 'Pending'
-        }));
-    };
-    if (data && data.member && Array.isArray(data.member)) {
-        return parseItems(data.member);
-    }
-    if (Array.isArray(data)) {
-        return parseItems(data);
-    }
-    return [];
-};
-
-export const fetchStudentClipboardSessions = (studentId) => {
-    const cached = clipboardCache.get('sessions', studentId);
-    if (cached) return Promise.resolve(cached);
-    
-    return fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
+export const fetchStudentClipboardSessions = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
     .then(data => {
-        const result = parseSessions(data);
-        clipboardCache.set('sessions', result, 5 * 60 * 1000, studentId);
-        return result;
+        const parseSessions = (items) => {
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                activity: item.activity?.name || item.title || 'Session',
+                title: item.title && item.title !== item.activity?.name ? item.title : '',
+                date: formatDay(item.startDateTime),
+                time: formatTimeRange(item.startDateTime, item.endDateTime),
+                start: item.startDateTime || null,
+                end: item.endDateTime || null,
+                // A LocationLink: name, address and coordinates.
+                location: item.location ? {
+                    name: item.location.name || '',
+                    address: item.location.address || '',
+                    latitude: item.location.latitude ?? null,
+                    longitude: item.location.longitude ?? null
+                } : null,
+                opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+                round: item.roundName || '',
+                notes: item.studentParentNotes || item.notes || '',
+                cancelled: !!item.cancelled,
+                result: item.scored ? {
+                    outcome: item.result || '',
+                    us: item.organisationScore ?? null,
+                    them: item.opponentScore ?? null
+                } : null
+            })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseSessions(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseSessions(data);
+        }
+        return [];
     });
-};
 
-const parseSessions = (data) => {
-    const parseItems = (items) => {
-        return items.map(item => ({
-            id: item.id || Math.random(),
-            activity: item.activity?.name || item.title || 'Session',
-            title: item.title && item.title !== item.activity?.name ? item.title : '',
-            date: formatDay(item.startDateTime),
-            time: formatTimeRange(item.startDateTime, item.endDateTime),
-            start: item.startDateTime || null,
-            end: item.endDateTime || null,
-            // A LocationLink: name, address and coordinates.
-            location: item.location ? {
-                name: item.location.name || '',
-                address: item.location.address || '',
-                latitude: item.location.latitude ?? null,
-                longitude: item.location.longitude ?? null
-            } : null,
-            opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
-            round: item.roundName || '',
-            notes: item.studentParentNotes || item.notes || '',
-            cancelled: !!item.cancelled,
-            result: item.scored ? {
-                outcome: item.result || '',
-                us: item.organisationScore ?? null,
-                them: item.opponentScore ?? null
-            } : null
-        })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-    };
-    if (data && data.member && Array.isArray(data.member)) {
-        return parseItems(data.member);
-    }
-    if (Array.isArray(data)) {
-        return parseItems(data);
-    }
-    return [];
-};
-
-export const fetchStudentClipboardTeams = (studentId) => {
-    const cached = clipboardCache.get('teams', studentId);
-    if (cached) return Promise.resolve(cached);
-    
-    return fetchFromBackend(`/students/${studentId}/clipboard/teams`)
+export const fetchStudentClipboardTeams = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/teams`)
     .then(data => {
-        const result = parseTeams(data);
-        clipboardCache.set('teams', result, 5 * 60 * 1000, studentId);
-        return result;
+        const parseTeams = (items) => {
+            return items.map(item => ({
+                id: item.id || Math.random(),
+                name: item.team?.name || 'Team',
+                season: item.startDateTime ? String(new Date(item.startDateTime).getFullYear()) : '',
+                sportOrActivity: item.team?.activity?.name || '',
+                category: item.team?.category || ''
+            }));
+        };
+        if (data && data.member && Array.isArray(data.member)) {
+            return parseTeams(data.member);
+        }
+        if (Array.isArray(data)) {
+            return parseTeams(data);
+        }
+        return [];
     });
-};
-
-const parseTeams = (data) => {
-    const parseItems = (items) => {
-        return items.map(item => ({
-            id: item.id || Math.random(),
-            name: item.team?.name || 'Team',
-            season: item.startDateTime ? String(new Date(item.startDateTime).getFullYear()) : '',
-            sportOrActivity: item.team?.activity?.name || '',
-            category: item.team?.category || ''
-        }));
-    };
-    if (data && data.member && Array.isArray(data.member)) {
-        return parseItems(data.member);
-    }
-    if (Array.isArray(data)) {
-        return parseItems(data);
-    }
-    return [];
-};
 
 export const fetchStudentClipboardTeamDetail = (studentId, teamId) => fetchFromBackend(`/students/${studentId}/clipboard/teams/${teamId}`);
 export const fetchStudentEnrolments = (studentId) => fetchFromBackend(`/students/${studentId}/enrolments`);

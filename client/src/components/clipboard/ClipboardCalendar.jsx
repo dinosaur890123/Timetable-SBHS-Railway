@@ -6,18 +6,18 @@ import {
     startOfMonth, startOfWeek
 } from 'date-fns';
 import { Hl } from '../study/noteflow';
-import { clockTime, dayKeyOf, sessionName, sessionsOn, startOf } from './sessions';
+import { clockTime, dayKeyOf, sessionName, sessionsOn, startOf, DayAgendaSheet } from './sessions';
 
 const WEEK = { weekStartsOn: 1 };
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const CHIPS = 2;
 
 // A month of Clipboard sessions on one sheet. Today carries the one highlighter swipe;
-// the chosen day is listed underneath, and any session pops out with its location.
+// clicking a day opens a right slide popout with that day's sessions.
 const ClipboardCalendar = ({ sessions, onOpen }) => {
     const still = useReducedMotion();
     const [month, setMonth] = useState(() => startOfMonth(new Date()));
-    const [selected, setSelected] = useState(() => new Date());
+    const [selected, setSelected] = useState(null);
 
     const byDay = useMemo(() => {
         const map = {};
@@ -45,7 +45,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
     };
     const goToday = () => choose(new Date());
 
-    const agenda = sessionsOn(sessions, selected);
+    const selectedSessions = selected ? sessionsOn(sessions, selected) : [];
 
     return (
         <section className="nf-cal">
@@ -78,7 +78,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                     !isSameMonth(day, month) && 'is-out',
                                     isWeekend(day) && 'is-weekend',
                                     isToday(day) && 'is-today',
-                                    isSameDay(day, selected) && 'is-on'
+                                    selected && isSameDay(day, selected) && 'is-on'
                                 ].filter(Boolean).join(' ');
                                 return (
                                     <button
@@ -87,7 +87,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                         role="gridcell"
                                         data-no-press
                                         className={`${classes} rounded-none`}
-                                        aria-selected={isSameDay(day, selected)}
+                                        aria-selected={selected ? isSameDay(day, selected) : false}
                                         aria-label={`${format(day, 'EEEE d MMMM')}${daySessions.length ? `, ${daySessions.length} on Clipboard` : ''}`}
                                         onClick={() => choose(day)}
                                     >
@@ -122,32 +122,12 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                 </div>
             </div>
 
-            <div className="nf-cal__agenda">
-                <h3 className="nf-head">{isToday(selected) ? 'Today' : format(selected, 'EEEE d MMMM')}</h3>
-                {agenda.length > 0 ? (
-                    <div>
-                        {agenda.map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                data-no-press
-                                className={`nf-cb-session rounded-none ${s.cancelled ? 'is-cancelled' : ''}`}
-                                onClick={() => onOpen(s)}
-                            >
-                                <span className="nf-cb-session__time tnum">{clockTime(startOf(s))}</span>
-                                <span className="nf-cb-dot" aria-hidden="true" />
-                                <span className="min-w-0 flex-1">
-                                    <span className="nf-cb-session__name">{sessionName(s)}</span>
-                                    {s.title && <span className="nf-meta"> {s.activity}</span>}
-                                </span>
-                                <span className="nf-cb-session__where">{s.cancelled ? 'Cancelled' : s.location?.name || ''}</span>
-                            </button>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="nf-cb-empty">Nothing on Clipboard this day.</p>
-                )}
-            </div>
+            <DayAgendaSheet
+                date={selected}
+                sessions={selectedSessions}
+                onClose={() => setSelected(null)}
+                onOpenSession={onOpen}
+            />
         </section>
     );
 };

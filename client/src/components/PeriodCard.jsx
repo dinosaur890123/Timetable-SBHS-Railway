@@ -95,7 +95,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <div className="shrink-0 text-right leading-tight">
                     <div className="flex items-center gap-1.5 justify-end">
                         {fullTeacher && (
-                            <span className={`truncate text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden max-w-[60px] ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}
