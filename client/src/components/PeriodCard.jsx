@@ -101,7 +101,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                         )}
                         <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
-                    {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
                 </div>
             )}
         </div>
