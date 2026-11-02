@@ -4,7 +4,6 @@ import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import ClipboardEvents from './ClipboardEvents';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -317,19 +316,7 @@ const Home = ({ user, timetableData, railTimetable, clipboardSessions, showClipb
         changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : null
     ].filter(Boolean).join(' · ');
 
-    const rail = showRail && (
-        <div className="space-y-4">
-            <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />
-            {showClipboardEvents && dayStart && dayEnd && (
-                <ClipboardEvents
-                    sessions={clipboardSessions}
-                    dayStart={dayStart}
-                    dayEnd={dayEnd}
-                    nowMin={nowMin}
-                />
-            )}
-        </div>
-    );
+    const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />;
 
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>

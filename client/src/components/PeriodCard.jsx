@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { subjectInk } from '../utils/timetable';
+import ClipboardEventsInline from './ClipboardEventCard';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
@@ -14,7 +15,7 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, clipboardSessions = [], showClipboardEvents = false }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
@@ -108,6 +109,15 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 </div>
             )}
         </div>
+
+        {showClipboardEvents && !isBreak && (
+            <ClipboardEventsInline
+                sessions={clipboardSessions}
+                dayStart={startMinutes}
+                dayEnd={endMinutes}
+                periodInfo={period}
+            />
+        )}
     );
 
     return (

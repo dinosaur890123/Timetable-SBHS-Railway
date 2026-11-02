@@ -1090,10 +1090,15 @@ function App() {
                                             </div>
                                         )}
                                     </AnimatePresence>
-                                    </>
                                     )}
                                 >
-                                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
+                                    <Timetable 
+                                        timetableData={timetable} 
+                                        completeTimetable={completeTimetable} 
+                                        viewMode={timetableViewMode} 
+                                        clipboardSessions={clipboardSessions}
+                                        showClipboardEvents={showClipboardEvents}
+                                    />
                                 </Home>
                             )}
 
@@ -1153,7 +1158,6 @@ function App() {
                             </motion.div>
                         </AnimatePresence>
                     </Suspense>
-                </div>
 
                 {/* AI Assistant Popout Modal */}
                 {showAiModal && (
@@ -1181,9 +1185,9 @@ function App() {
 
                             {/* Body / Form */}
                             <div className="p-5 space-y-4">
-                                        <div className="text-xs text-zinc-500 font-semibold mb-1">
-                                            Ask questions about classes, rooms, teachers, or times
-                                        </div>
+                                <div className="text-xs text-zinc-500 font-semibold mb-1">
+                                    Ask questions about classes, rooms, teachers, or times
+                                </div>
                                         <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                             <input
                                                 type="text"
@@ -1212,7 +1216,6 @@ function App() {
                         </div>
                     </div>
                 )}
-
 
             </main>
 
@@ -1262,7 +1265,8 @@ function App() {
                     })}
                 </div>
             )}
-        </div>
+            </div>
+            </main>
         </CanvasLinksProvider>
         </MotionConfig>
     );

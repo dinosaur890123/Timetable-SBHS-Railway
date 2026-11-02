@@ -34,7 +34,7 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], showClipboardEvents = false }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
@@ -377,6 +377,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             startMinutes={data.startMin}
                             endMinutes={data.endMin}
                             canvasLink={getLink(data.periodInfo.title)}
+                            clipboardSessions={clipboardSessions}
+                            showClipboardEvents={showClipboardEvents}
                         />
                     ))}
                     {routineData.length > 0 && (
