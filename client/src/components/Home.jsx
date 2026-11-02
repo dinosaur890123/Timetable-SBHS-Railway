@@ -4,6 +4,7 @@ import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import ClipboardEvents from './ClipboardEvents';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -278,7 +279,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, clipboardSessions, showClipboardEvents, viewDate, isCycle, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -316,7 +317,19 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, c
         changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : null
     ].filter(Boolean).join(' · ');
 
-    const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />;
+    const rail = showRail && (
+        <div className="space-y-4">
+            <NowCard slots={slots} nowMin={nowMin} isLive={isLive} />
+            {showClipboardEvents && dayStart && dayEnd && (
+                <ClipboardEvents
+                    sessions={clipboardSessions}
+                    dayStart={dayStart}
+                    dayEnd={dayEnd}
+                    nowMin={nowMin}
+                />
+            )}
+        </div>
+    );
 
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
