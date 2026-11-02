@@ -49,7 +49,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
-                <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
+                <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
                 <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />
             )}
