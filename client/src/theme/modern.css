@@ -23,6 +23,9 @@ html[data-ui="modern"] {
 
   font-size: 16px;
   color-scheme: light;
+
+  /* Everything is drawn a little larger than its CSS sizes, for a softer, roomier feel. See "Scale" below. */
+  --ui-scale: 1;
 }
 
 html[data-ui="modern"].dark {
@@ -228,4 +231,22 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
   /* Infinite loops at 0.001ms would strobe: hold the light still instead. */
   html[data-ui="modern"] .ambient__blob { animation: none !important; }
   html[data-ui="modern"] :is(.period-start, .period-stripe) { animation: none !important; }
+}
+
+/* ---------- Scale ----------
+   One factor grows type, spacing and radii together, stepping up with the window so small laptops and phones
+   keep their room and big monitors don't look tiny. Each step needs the height as well as the width, so a wide
+   but short window stays compact. Full-height frames divide by it so they still exactly fill the window. */
+@media (min-width: 1280px) and (min-height: 760px) { html[data-ui="modern"] { --ui-scale: 1.04; } }
+@media (min-width: 1440px) and (min-height: 820px) { html[data-ui="modern"] { --ui-scale: 1.08; } }
+@media (min-width: 1680px) and (min-height: 940px) { html[data-ui="modern"] { --ui-scale: 1.14; } }
+@media (min-width: 1920px) and (min-height: 1040px) { html[data-ui="modern"] { --ui-scale: 1.2; } }
+@media (min-width: 2400px) and (min-height: 1300px) { html[data-ui="modern"] { --ui-scale: 1.32; } }
+html[data-ui="modern"] body { zoom: var(--ui-scale); }
+html[data-ui="modern"] .h-\[100dvh\] { height: calc(100dvh / var(--ui-scale)); }
+html[data-ui="modern"] .min-h-\[100dvh\] { min-height: calc(100dvh / var(--ui-scale)); }
+html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale)); }
+@media (min-width: 768px) {
+  html[data-ui="modern"] .md\:h-\[calc\(100dvh-9rem\)\] { height: calc(100dvh / var(--ui-scale) - 9rem); }
+  html[data-ui="modern"] .md\:min-h-\[calc\(100dvh-1rem\)\] { min-height: calc(100dvh / var(--ui-scale) - 1rem); }
 }

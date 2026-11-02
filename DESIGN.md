@@ -164,6 +164,13 @@ Body has `letter-spacing: -0.005em`, `ss01` + `cv11` features, and antialiasing.
 | `text-xl`–`text-2xl` | Section headings (tracking −0.02em) |
 | `text-3xl`+ | Page hero / dashboard numerals (tracking −0.03em) |
 
+**Overall scale.** On bigger screens the whole interface is drawn larger than these CSS sizes, so it stays soft and
+roomy instead of tiny: `--ui-scale` in `modern.css` zooms the body, stepping with the window (both width and height
+must clear each step). Phones, tablets and small laptops stay at 1; 1280×760 gets 1.04, 1440×820 1.08, 1680×940
+1.14, 1920×1040 1.2 and 2400×1300 1.32. Full-height frames
+(`h-[100dvh]`, `min-h-[100dvh]` and the `calc(100dvh…)` panels) are divided by the same factor so they still fill the
+window exactly. If you add another viewport-height frame, give it the same compensation there.
+
 **Weights.** 400 body, 500 (`font-medium`) for UI labels, 600 (`font-semibold`) for headings. `font-black` is
 capped at 650 and `font-extrabold` at 600. Don't reach for heavier.
 
