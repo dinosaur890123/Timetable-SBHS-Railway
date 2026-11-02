@@ -278,7 +278,7 @@ const NowCard = ({ slots, nowMin, isLive }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, clipboardSessions, showClipboardEvents, viewDate, isCycle, dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
