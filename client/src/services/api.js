@@ -490,7 +490,12 @@ export const fetchStudentClipboardSessions = (studentId) =>
                 activity: item.activity?.name || item.title || 'Session',
                 title: item.title && item.title !== item.activity?.name ? item.title : '',
                 date: formatDay(item.startDateTime),
-                time: formatTimeRange(item.startDateTime, item.endDateTime)
+                time: formatTimeRange(item.startDateTime, item.endDateTime),
+                startDateTime: item.startDateTime,
+                endDateTime: item.endDateTime,
+                location: item.location || '',
+                team: item.team?.name || '',
+                staff: item.staff || ''
             }));
         };
         if (data && data.member && Array.isArray(data.member)) {

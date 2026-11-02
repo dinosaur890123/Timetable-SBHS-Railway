@@ -78,7 +78,16 @@ function App() {
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
+    const [showClipboardEvents, setShowClipboardEvents] = useState(() => {
+        const stored = localStorage.getItem('show_clipboard_events');
+        return stored === 'true';
+    });
     const reduceMotion = useReducedMotion();
+
+    // Persist showClipboardEvents to localStorage
+    useEffect(() => {
+        localStorage.setItem('show_clipboard_events', showClipboardEvents ? 'true' : 'false');
+    }, [showClipboardEvents]);
 
     const [paletteOpen, setPaletteOpen] = useState(false);
     useModernShellEffects(setPaletteOpen);
@@ -214,6 +223,9 @@ function App() {
                     setHiddenPages([]);
                 }
             }
+            if (e.key === 'show_clipboard_events') {
+                setShowClipboardEvents(e.newValue === 'true');
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
@@ -301,6 +313,7 @@ function App() {
                 colorTheme,
                 aiDisabled,
                 ambientLight,
+                showClipboardEvents,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -581,7 +594,11 @@ function App() {
                                 setAmbientLight(prefs.ambientLight);
                                 localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
                             }
-                            
+                            if (prefs.showClipboardEvents !== undefined) {
+                                setShowClipboardEvents(prefs.showClipboardEvents);
+                                localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                            }
+
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
@@ -1062,7 +1079,7 @@ function App() {
                                     </>
                                     )}
                                 >
-                                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} />
+                                    <Timetable timetableData={timetable} completeTimetable={completeTimetable} viewMode={timetableViewMode} showClipboardEvents={showClipboardEvents} user={user} />
                                 </Home>
                             )}
 
@@ -1113,6 +1130,8 @@ function App() {
                                     setAiDisabled={setAiDisabled}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
+                                    showClipboardEvents={showClipboardEvents}
+                                    setShowClipboardEvents={setShowClipboardEvents}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />

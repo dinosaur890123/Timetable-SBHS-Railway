@@ -89,7 +89,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled,
-    ambientLight, setAmbientLight, onSignOut, setView
+    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -153,6 +153,9 @@ const SettingsView = ({
                 <Row title="AI assistant" description="Daily notice briefings and answers to questions about your timetable.">
                     <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI assistant" />
                 </Row>
+                <Row title="Clipboard events" description="Show co-curricular sessions directly on your timetable.">
+                    <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard events" />
+                </Row>
                 <LinkRow
                     icon={BookOpen}
                     title="Canvas links"
@@ -177,7 +180,7 @@ const SettingsView = ({
             </Section>
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-                Synchron ALPHA· build {__APP_BUILD__.sha}
+                Synchron BETA· build {__APP_BUILD__.sha}
             </p>
         </div>
     );
