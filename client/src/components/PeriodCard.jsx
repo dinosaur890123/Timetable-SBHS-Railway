@@ -68,8 +68,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     {hasCanvasLink && (
                         <ArrowUpRight size={14} className="shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
-                    {isSubstituted && <ChangeTag className="hidden sm:inline">Cover</ChangeTag>}
-                    {movedFrom && <ChangeTag className="hidden sm:inline">Room change</ChangeTag>}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
