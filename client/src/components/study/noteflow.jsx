@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import './noteflow.css';
 
@@ -6,6 +6,19 @@ import './noteflow.css';
 // animates once and is shown at rest when `still` (reduced motion) is set.
 
 export const NOTEFLOW_URL = 'https://noteflow.study';
+
+// NoteFlow's own faces, loaded only once something drawn in NoteFlow is on screen.
+const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap';
+
+export const useNoteFlowFonts = (enabled = true) => {
+    useEffect(() => {
+        if (!enabled || document.querySelector(`link[href="${FONTS_HREF}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = FONTS_HREF;
+        document.head.appendChild(link);
+    }, [enabled]);
+};
 
 export const EASE = [0.2, 0.7, 0.2, 1];
 export const EASE_OUT = [0.16, 1, 0.3, 1];

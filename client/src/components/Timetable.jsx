@@ -1,9 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PeriodCard from './PeriodCard';
-import { MotionConfig } from 'framer-motion';
+import { MotionConfig, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { useNoteFlowFonts } from './study/noteflow';
+import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
+
+// A Clipboard session in the day: one line at its start time, dimmed once it's over like a break.
+const SessionRow = ({ session, isPast, index, onOpen }) => (
+    <motion.li
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: Math.min(index, 8) * 0.03 }}
+        className="px-3 py-1.5"
+    >
+        <div className={`flex items-center gap-4 transition-opacity duration-700 ${isPast ? 'opacity-50 hover:opacity-100' : ''}`}>
+            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                {format(startOf(session), 'HH:mm')}
+            </span>
+            <SessionLine session={session} onOpen={onOpen} />
+        </div>
+    </motion.li>
+);
 
 // One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
 // on desktop, abbreviated on mobile.
@@ -34,10 +53,12 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [] }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
+    const [openSession, setOpenSession] = useState(null);
+    useNoteFlowFonts(clipboardSessions.length > 0);
     // Which row was live at the last tick, and when that last changed (see startedBell below).
     const bellWatch = useRef({ key: undefined, at: 0 });
 
@@ -355,6 +376,22 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         );
     };
 
+    // Clipboard sessions on the viewed day slot in by start time: during school after the period they
+    // start in, after school below "End of day".
+    const minutesOf = (date) => date.getHours() * 60 + date.getMinutes();
+    const daySessions = viewMode === 'daily'
+        ? clipboardSessions.filter(s => dayKeyOf(s) === viewedKey).map(s => {
+            const at = minutesOf(startOf(s));
+            const until = endOf(s) ? minutesOf(endOf(s)) : at + 60;
+            return { session: s, at, isPast: currentMinutes !== -1 && currentMinutes >= until };
+        })
+        : [];
+    const dayRows = [
+        ...routineData.map(row => ({ kind: 'period', at: row.startMin, row })),
+        ...daySessions.filter(s => s.at < lastMin).map(s => ({ kind: 'session', ...s }))
+    ].sort((a, b) => a.at - b.at || (a.kind === b.kind ? 0 : a.kind === 'period' ? -1 : 1));
+    const afterSchool = daySessions.filter(s => s.at >= lastMin);
+
     // Variations for the day are summarised in the home page's header card.
     return (
         <MotionConfig reducedMotion="user">
@@ -362,7 +399,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             {viewMode === 'daily' ? (
                 <>
                 <ol className="-mx-3 space-y-0.5">
-                    {routineData.map((data) => (
+                    {dayRows.map(({ kind, row: data, session, isPast }, i) => kind === 'session' ? (
+                        <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={i} onOpen={setOpenSession} />
+                    ) : (
                         <PeriodCard
                             key={`${data.bellId}-${data.index}`}
                             period={data.periodInfo}
@@ -387,7 +426,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             <span className="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
                         </li>
                     )}
+                    {routineData.length > 0 && afterSchool.map(({ session, isPast }, i) => (
+                        <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={dayRows.length + i} onOpen={setOpenSession} />
+                    ))}
                 </ol>
+                <SessionSheet session={openSession} onClose={() => setOpenSession(null)} />
                 </>
             ) : (
                 renderCycleView()

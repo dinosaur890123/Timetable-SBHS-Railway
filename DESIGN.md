@@ -241,13 +241,18 @@ Defined in `client/src/components/modern/ModernShell.jsx`.
 - **Brand mark**: a 28px rounded square in zinc-900 (dark: white) with an "S", plus an accent dot at the corner
   ringed in `m-page`.
 
-### The one exception: Study
+### The exceptions: Study and Clipboard
 
 The Study page promotes NoteFlow, a separate app, so its content is drawn in **NoteFlow's** design language (ink on
 warm paper, Instrument Sans and Serif, one violet highlighter swipe, a red pen for results) inside the Modern shell.
 Its tokens are scoped to `.nf` in `client/src/components/study/noteflow.css`, and Synchron's accent never reaches it.
-Keep NoteFlow's rules there (no uppercase eyebrows, one swipe at a time, motion that plays once) and don't reuse
-`.nf` anywhere else.
+Keep NoteFlow's rules there (no uppercase eyebrows, one swipe at a time, motion that plays once).
+
+**Clipboard** is drawn in the same language (`client/src/components/clipboard/`, styles in `clipboard.css`). Its
+main tab is a month calendar on one sheet: today carries the swipe, the chosen day is listed underneath as ruled
+rows, and any session pops out with its time, location (with a map), opponent and notes. The red pen only rings a
+match result. On the home timetable a session is **one line**, laid out like a break row (time, violet dot, name,
+hairline, place), never a card, and students can turn it off in Settings. Don't use `.nf` outside Study and Clipboard.
 
 ---
 

@@ -490,8 +490,26 @@ export const fetchStudentClipboardSessions = (studentId) =>
                 activity: item.activity?.name || item.title || 'Session',
                 title: item.title && item.title !== item.activity?.name ? item.title : '',
                 date: formatDay(item.startDateTime),
-                time: formatTimeRange(item.startDateTime, item.endDateTime)
-            }));
+                time: formatTimeRange(item.startDateTime, item.endDateTime),
+                start: item.startDateTime || null,
+                end: item.endDateTime || null,
+                // A LocationLink: name, address and coordinates.
+                location: item.location ? {
+                    name: item.location.name || '',
+                    address: item.location.address || '',
+                    latitude: item.location.latitude ?? null,
+                    longitude: item.location.longitude ?? null
+                } : null,
+                opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+                round: item.roundName || '',
+                notes: item.studentParentNotes || item.notes || '',
+                cancelled: !!item.cancelled,
+                result: item.scored ? {
+                    outcome: item.result || '',
+                    us: item.organisationScore ?? null,
+                    them: item.opponentScore ?? null
+                } : null
+            })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
         };
         if (data && data.member && Array.isArray(data.member)) {
             return parseSessions(data.member);

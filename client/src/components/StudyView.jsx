@@ -1,20 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
-import { NOTEFLOW_URL, Hl, Lockup, Rise, Ring, Tick, Words } from './study/noteflow';
-
-// NoteFlow's own faces, loaded only when someone opens Study.
-const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap';
-
-const useNoteFlowFonts = () => {
-    useEffect(() => {
-        if (document.querySelector(`link[href="${FONTS_HREF}"]`)) return;
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = FONTS_HREF;
-        document.head.appendChild(link);
-    }, []);
-};
+import { NOTEFLOW_URL, Hl, Lockup, Rise, Ring, Tick, Words, useNoteFlowFonts } from './study/noteflow';
 
 const ExternalLink = ({ href = NOTEFLOW_URL, className, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
