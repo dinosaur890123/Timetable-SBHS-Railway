@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpRight, X } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
 import { EASE_OUT, Ring, useNoteFlowFonts } from '../study/noteflow';
 import '../study/noteflow.css';
 import './clipboard.css';
