@@ -4,11 +4,13 @@ import {
     fetchStudentPreExplainedAbsences,
     fetchStudentClipboardSessions,
     fetchStudentClipboardTeams,
-    fetchGlobalActivities
+    fetchGlobalActivities,
+    invalidateClipboardCache
 } from '../services/api';
 import { Tick, useNoteFlowFonts } from './study/noteflow';
 import { SessionSheet } from './clipboard/sessions';
 import ClipboardCalendar from './clipboard/ClipboardCalendar';
+import { RefreshCw } from 'lucide-react';
 
 const TABS = [
     { id: 'calendar', label: 'Calendar' },
@@ -27,6 +29,7 @@ const ClipboardView = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [openSession, setOpenSession] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const [attendance, setAttendance] = useState([]);
     const [preExplained, setPreExplained] = useState([]);
@@ -61,11 +64,46 @@ const ClipboardView = ({ user }) => {
                 setError("Clipboard couldn't be reached. Check your connection and try again.");
             } finally {
                 setLoading(false);
+                setRefreshing(false);
             }
         };
 
         loadData();
     }, [user?.studentId]);
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        invalidateClipboardCache();
+        // Trigger reload by changing a dummy state or calling loadData directly
+        const loadData = async () => {
+            if (!user?.studentId) {
+                setRefreshing(false);
+                return;
+            }
+            setError(null);
+            try {
+                const [attData, preExpData, sessData, teamsData, actData] = await Promise.all([
+                    fetchStudentClipboardAttendance(user.studentId).catch(() => []),
+                    fetchStudentPreExplainedAbsences(user.studentId).catch(() => []),
+                    fetchStudentClipboardSessions(user.studentId).catch(() => []),
+                    fetchStudentClipboardTeams(user.studentId).catch(() => []),
+                    fetchGlobalActivities().catch(() => [])
+                ]);
+
+                setAttendance(attData);
+                setPreExplained(preExpData);
+                setSessions(sessData);
+                setTeams(teamsData);
+                setGlobalActivities(actData);
+            } catch (err) {
+                console.error("Failed to load Clipboard details", err);
+                setError("Clipboard couldn't be reached. Check your connection and try again.");
+            } finally {
+                setRefreshing(false);
+            }
+        };
+        loadData();
+    };
 
     if (loading) {
         return <div className="nf nf-cb nf-cb-state"><p className="nf-meta">Loading Clipboard…</p></div>;
@@ -98,9 +136,21 @@ const ClipboardView = ({ user }) => {
                         </button>
                     ))}
                 </div>
-                <span className="nf-meta nf-cb-tally">
-                    {plural(teams.length, 'team')} Â· {plural(sessions.length, 'session')}
-                </span>
+                <div className="nf-cb-bar__right">
+                    <button
+                        type="button"
+                        className="nf-cb-btn nf-cb-btn--bare"
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        aria-label="Refresh"
+                        title="Refresh data"
+                    >
+                        <RefreshCw size={16} strokeWidth={1.75} className={refreshing ? 'animate-spin' : ''} />
+                    </button>
+                    <span className="nf-meta nf-cb-tally">
+                        {plural(teams.length, 'team')} · {plural(sessions.length, 'session')}
+                    </span>
+                </div>
             </div>
 
             <div className="nf-cb-body">
