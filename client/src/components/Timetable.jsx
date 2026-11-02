@@ -154,10 +154,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             // An empty Period 0 is just a gap before school starts.
             if (isBreak && String(bellId) === '0') return null;
 
-            // Find clipboard events that overlap with this period
-            const periodClipboardEvents = dayClipboardSessions.filter(session => {
+            // Find clipboard events that overlap with this period (only in daily view)
+            const periodClipboardEvents = viewMode === 'daily' ? dayClipboardSessions.filter(session => {
                 return session.startMin < endMin && session.endMin > startMin;
-            });
+            }) : [];
 
             return {
                 bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
@@ -208,8 +208,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         const startMin = startDate ? startDate.getHours() * 60 + startDate.getMinutes() : 0;
         const endMin = endDate ? endDate.getHours() * 60 + endDate.getMinutes() : startMin + 60;
 
-        // Determine if this session falls during school hours
-        const isDuringSchool = startMin >= firstMin && endMin <= lastMin;
+        // Determine if this session falls during school hours (only in daily view)
+        const isDuringSchool = viewMode === 'daily' && startMin >= firstMin && endMin <= lastMin;
 
         return {
             ...session,
@@ -503,7 +503,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     )}
 
                     {/* After-school clipboard events */}
-                    {showClipboardEvents && dayClipboardSessions.filter(s => !s.isDuringSchool).length > 0 && (
+                    {showClipboardEvents && viewMode === 'daily' && dayClipboardSessions.filter(s => !s.isDuringSchool).length > 0 && (
                         <>
                             <li className="flex items-center gap-4 px-3 pt-4 pb-2">
                                 <span className="w-11 shrink-0"></span>
@@ -523,7 +523,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
         {/* Clipboard Event Detail Modal */}
         <AnimatePresence>
-            {selectedClipboardEvent && (
+            {selectedClipboardEvent && showClipboardEvents && (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
