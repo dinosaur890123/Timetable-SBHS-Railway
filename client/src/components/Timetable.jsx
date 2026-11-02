@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PeriodCard from './PeriodCard';
-import { MotionConfig, motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
+import { MotionConfig } from 'framer-motion';
+import { format } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import { fetchStudentClipboardSessions } from '../services/api';
-import { Calendar, MapPin, Users, X } from 'lucide-react';
 
 // One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
 // on desktop, abbreviated on mobile.
@@ -36,12 +34,10 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, showClipboardEvents = false, user = null }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
-    const [clipboardSessions, setClipboardSessions] = useState([]);
-    const [selectedClipboardEvent, setSelectedClipboardEvent] = useState(null);
     // Which row was live at the last tick, and when that last changed (see startedBell below).
     const bellWatch = useRef({ key: undefined, at: 0 });
 
@@ -50,26 +46,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
-
-    // Fetch clipboard sessions when toggle is enabled
-    useEffect(() => {
-        if (!showClipboardEvents || !user?.studentId) {
-            setClipboardSessions([]);
-            return;
-        }
-
-        const loadClipboardSessions = async () => {
-            try {
-                const sessions = await fetchStudentClipboardSessions(user.studentId);
-                setClipboardSessions(sessions);
-            } catch (err) {
-                console.error("Failed to fetch clipboard sessions:", err);
-                setClipboardSessions([]);
-            }
-        };
-
-        loadClipboardSessions();
-    }, [showClipboardEvents, user?.studentId]);
 
     if (!timetableData || !timetableData.bells) {
         return (
@@ -154,15 +130,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             // An empty Period 0 is just a gap before school starts.
             if (isBreak && String(bellId) === '0') return null;
 
-            // Find clipboard events that overlap with this period (only in daily view)
-            const periodClipboardEvents = viewMode === 'daily' ? dayClipboardSessions.filter(session => {
-                return session.startMin < endMin && session.endMin > startMin;
-            }) : [];
-
             return {
                 bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
-                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null,
-                clipboardEvents: periodClipboardEvents
+                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
@@ -195,87 +165,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             timelineProgressPos = 0;
         }
     }
-
-    // Filter and process clipboard sessions for the current day
-    const dayClipboardSessions = clipboardSessions.filter(session => {
-        if (!session.startDateTime) return false;
-        const sessionDate = format(parseISO(session.startDateTime), 'yyyy-MM-dd');
-        return sessionDate === viewedKey;
-    }).map(session => {
-        // Parse start and end times to minutes
-        const startDate = session.startDateTime ? parseISO(session.startDateTime) : null;
-        const endDate = session.endDateTime ? parseISO(session.endDateTime) : null;
-        const startMin = startDate ? startDate.getHours() * 60 + startDate.getMinutes() : 0;
-        const endMin = endDate ? endDate.getHours() * 60 + endDate.getMinutes() : startMin + 60;
-
-        // Determine if this session falls during school hours (only in daily view)
-        const isDuringSchool = viewMode === 'daily' && startMin >= firstMin && endMin <= lastMin;
-
-        return {
-            ...session,
-            startMin,
-            endMin,
-            isDuringSchool
-        };
-    }).sort((a, b) => a.startMin - b.startMin);
-
-    // Clipboard Event Card Component (for after-school events)
-    const ClipboardEventCard = ({ session, index }) => {
-        const isPast = currentMinutes !== -1 && currentMinutes >= session.endMin;
-        const isCurrent = currentMinutes >= session.startMin && currentMinutes < session.endMin;
-        const dim = isPast ? 'opacity-50 hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
-
-        const startTime = session.startDateTime ? format(parseISO(session.startDateTime), 'h:mm a') : '';
-        const endTime = session.endDateTime ? format(parseISO(session.endDateTime), 'h:mm a') : '';
-
-        return (
-            <motion.li
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: Math.min(index, 8) * 0.03 }}
-                className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${isCurrent
-                    ? 'bg-accent/10 dark:bg-accent/20 border-accent/30'
-                    : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'} ${dim}`}
-                onClick={() => setSelectedClipboardEvent(session)}
-            >
-                <div className="relative flex items-center gap-4 px-3 py-3">
-                    {/* Left accent bar */}
-                    <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full ${isCurrent ? 'bg-accent' : 'bg-zinc-400 dark:bg-zinc-600'}`} />
-
-                    <div className="w-11 shrink-0 text-right leading-tight">
-                        <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-500 dark:text-zinc-400'}`}>{startTime}</div>
-                        <div className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">{endTime}</div>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50" title={session.activity}>
-                                {session.activity}
-                            </h3>
-                            {session.title && (
-                                <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                                    {session.title}
-                                </span>
-                            )}
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            {isCurrent ? (
-                                <span className="shrink-0 font-medium text-accent">Now</span>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                        <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                                After school
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </motion.li>
-        );
-    };
 
     const renderCycleView = () => {
         if (!completeTimetable) {
@@ -488,11 +377,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             startMinutes={data.startMin}
                             endMinutes={data.endMin}
                             canvasLink={getLink(data.periodInfo.title)}
-                            clipboardEvents={data.clipboardEvents || []}
-                            onClipboardEventClick={setSelectedClipboardEvent}
                         />
                     ))}
-
                     {routineData.length > 0 && (
                         <li className="flex items-center gap-4 px-3 pt-3">
                             <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
@@ -501,128 +387,12 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             <span className="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
                         </li>
                     )}
-
-                    {/* After-school clipboard events */}
-                    {showClipboardEvents && viewMode === 'daily' && dayClipboardSessions.filter(s => !s.isDuringSchool).length > 0 && (
-                        <>
-                            <li className="flex items-center gap-4 px-3 pt-4 pb-2">
-                                <span className="w-11 shrink-0"></span>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">After school</span>
-                            </li>
-                            {dayClipboardSessions.filter(s => !s.isDuringSchool).map((session, idx) => (
-                                <ClipboardEventCard key={session.id} session={session} index={idx} />
-                            ))}
-                        </>
-                    )}
                 </ol>
                 </>
             ) : (
                 renderCycleView()
             )}
         </div>
-
-        {/* Clipboard Event Detail Modal */}
-        <AnimatePresence>
-            {selectedClipboardEvent && showClipboardEvents && (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/50 dark:bg-zinc-950/70 backdrop-blur-sm"
-                onClick={() => setSelectedClipboardEvent(null)}
-            >
-                <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl max-w-md w-full overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="p-6 space-y-4">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{selectedClipboardEvent.activity}</h3>
-                                {selectedClipboardEvent.title && (
-                                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{selectedClipboardEvent.title}</p>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => setSelectedClipboardEvent(null)}
-                                className="shrink-0 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                            >
-                                <X size={20} className="text-zinc-500 dark:text-zinc-400" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 pt-2">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                    <Calendar size={16} className="text-zinc-500 dark:text-zinc-400" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Date & Time</p>
-                                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                        {selectedClipboardEvent.date} · {selectedClipboardEvent.time}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {selectedClipboardEvent.location && (
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                        <MapPin size={16} className="text-zinc-500 dark:text-zinc-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Location</p>
-                                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                            {selectedClipboardEvent.location}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedClipboardEvent.team && (
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                        <Users size={16} className="text-zinc-500 dark:text-zinc-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Team</p>
-                                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                            {selectedClipboardEvent.team}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedClipboardEvent.staff && (
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                        <Users size={16} className="text-zinc-500 dark:text-zinc-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Staff</p>
-                                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                            {selectedClipboardEvent.staff}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-200 dark:border-zinc-800">
-                        <button
-                            onClick={() => setSelectedClipboardEvent(null)}
-                            className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-medium text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </motion.div>
-            </motion.div>
-            )}
-        </AnimatePresence>
         </MotionConfig>
     );
 };

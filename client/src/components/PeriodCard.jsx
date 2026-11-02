@@ -3,16 +3,6 @@ import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { subjectInk } from '../utils/timetable';
 
-const ClipboardEventTag = ({ event, onClick }) => (
-    <span
-        onClick={onClick}
-        className="text-[13px] font-medium text-accent truncate max-w-[120px] cursor-pointer hover:underline"
-        title={event.activity}
-    >
-        {event.activity}
-    </span>
-);
-
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
 
@@ -24,16 +14,13 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, clipboardEvents = [], onClipboardEventClick }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
     // Applied inside the motion element: framer-motion's inline opacity would override it there.
     // A finished class fades back slowly, so the change of period reads as a handover.
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
-
-    // Check if this is an SP (Sport) period
-    const isSportPeriod = title && title.toUpperCase().startsWith('SP');
 
     if (isBreak) {
         return (
@@ -107,33 +94,17 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 </div>
             </div>
 
-            {(room || (isSportPeriod && clipboardEvents.length > 0)) && (
+            {room && (
                 <div className="shrink-0 text-right leading-tight">
-                    {isSportPeriod && clipboardEvents.length > 0 ? (
-                        // Show clipboard events for SP periods
-                        <div className="flex flex-col items-end gap-1">
-                            {clipboardEvents.map((event, idx) => (
-                                <ClipboardEventTag
-                                    key={event.id || idx}
-                                    event={event}
-                                    onClick={() => onClipboardEventClick && onClipboardEventClick(event)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        // Show room for regular periods
-                        <>
-                            <div className="flex items-center gap-1.5 justify-end">
-                                {fullTeacher && (
-                                    <span className={`truncate text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden max-w-[60px] ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
-                                        {fullTeacher === 'No teacher' ? 'No teacher' : fullTeacher}
-                                    </span>
-                                )}
-                                <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
-                            </div>
-                            {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
-                        </>
-                    )}
+                    <div className="flex items-center gap-1.5 justify-end">
+                        {fullTeacher && (
+                            <span className={`truncate text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden max-w-[60px] ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                                {fullTeacher === 'No teacher' ? 'No teacher' : fullTeacher}
+                            </span>
+                        )}
+                        <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                    </div>
+                    {movedFrom && <div className="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 line-through">{movedFrom}</div>}
                 </div>
             )}
         </div>
