@@ -95,29 +95,39 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-// The year at a glance: points, nominations, and prize.
-const SummaryCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount, nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
+// Points card: total points, awards count, and house points
+const PointsCard = ({ summary }) => {
+    const { totalPoints, housePoints, awardCount } = summary;
     return (
-        <Card className="lg:col-span-2">
-            <div className="flex flex-wrap gap-6">
-                <Stat
-                    label="Points"
-                    value={totalPoints.toLocaleString('en-AU')}
-                    sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
-                />
-                <Stat
-                    label="Nominations"
-                    value={nominationsAllTime}
-                    sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
-                />
-                <Stat
-                    label="Prize"
-                    value={latestPrize ? latestPrize.name : 'None yet'}
-                    valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
-                    sub={prizeProgress(nextPrize, nominationsAllTime)}
-                />
-            </div>
+        <Card>
+            <Stat
+                label="Points"
+                value={totalPoints.toLocaleString('en-AU')}
+                sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
+            />
+        </Card>
+    );
+};
+
+// Nominations card: total nominations and prize progress
+const NominationsCard = ({ summary }) => {
+    const { nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
+    return (
+        <Card>
+            <Stat
+                label="Nominations"
+                value={nominationsAllTime}
+                sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
+            />
+            {latestPrize && (
+                <div className="mt-3 pt-3 border-t border-m-line">
+                    <Eyebrow>Current prize</Eyebrow>
+                    <div className="mt-1.5 text-[13.5px] font-medium text-zinc-900 dark:text-white">{latestPrize.name}</div>
+                    {prizeProgress(nextPrize, nominationsAllTime) && (
+                        <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{prizeProgress(nextPrize, nominationsAllTime)}</p>
+                    )}
+                </div>
+            )}
         </Card>
     );
 };
@@ -430,8 +440,9 @@ const AwardSchemeView = ({ user }) => {
             <div className="space-y-4" aria-busy="true" aria-label="Loading awards">
                 <div className="h-8 w-56 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
                 <div className="grid gap-4 lg:grid-cols-3">
-                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle lg:col-span-2" />
-                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
                 </div>
             </div>
         );
@@ -466,7 +477,8 @@ const AwardSchemeView = ({ user }) => {
 
             {view === 'overview' ? (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    <SummaryCard summary={summary} />
+                    <PointsCard summary={summary} />
+                    <NominationsCard summary={summary} />
                     <HouseCard houses={summary.houseStandings} />
                     <AreasCard summary={summary} />
                     <PrizesCard summary={summary} />
