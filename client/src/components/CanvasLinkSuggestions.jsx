@@ -1,103 +1,56 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import CanvasLinkSuggestionToast from './CanvasLinkSuggestionToast';
 
-const CanvasLinkSuggestions = () => {
-    const { suggestions, fetchSuggestions, verifySuggestion, rejectSuggestion, dismissSuggestion, mergeVerifiedLinks } = useCanvasLinks();
-    const [userClasses, setUserClasses] = useState([]);
-    const [currentSuggestion, setCurrentSuggestion] = useState(null);
-    const [hasFetched, setHasFetched] = useState(false);
+// Waits a moment after the app loads, and between questions, so the prompt
+// doesn't pop up mid-glance.
+const SHOW_DELAY_MS = 2500;
+// At most this many questions per visit.
+const MAX_PER_SESSION = 3;
 
-    // Extract user's classes from localStorage cached timetable
+const CanvasLinkSuggestions = ({ disabled = false }) => {
+    const { prompts, vote, snooze } = useCanvasLinks();
+    const [ready, setReady] = useState(false);
+    const [asked, setAsked] = useState(0);
+    const current = prompts[0];
+
     useEffect(() => {
-        try {
-            const cachedTimetable = localStorage.getItem('cached_timetable');
-            const cachedCompleteTimetable = localStorage.getItem('cached_complete_timetable');
+        if (!current || ready) return undefined;
+        const timer = setTimeout(() => setReady(true), SHOW_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [current, ready]);
 
-            const classes = new Set();
-
-            if (cachedCompleteTimetable) {
-                const completeTimetable = JSON.parse(cachedCompleteTimetable);
-                if (completeTimetable?.timetable?.days) {
-                    Object.values(completeTimetable.timetable.days).forEach(dayData => {
-                        if (dayData?.periods) {
-                            Object.values(dayData.periods).forEach(period => {
-                                if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-                                    classes.add(period.title);
-                                }
-                            });
-                        }
-                    });
-                }
-            }
-
-            if (cachedTimetable) {
-                const timetable = JSON.parse(cachedTimetable);
-                if (timetable?.timetable?.timetable?.periods) {
-                    Object.values(timetable.timetable.timetable.periods).forEach(period => {
-                        if (period.title && period.title !== 'Free Period' && !period.title.toLowerCase().includes('roll call')) {
-                            classes.add(period.title);
-                        }
-                    });
-                }
-            }
-
-            setUserClasses(Array.from(classes));
-        } catch (e) {
-            console.warn('Failed to extract classes from cache:', e);
-        }
-    }, []);
-
-    // Fetch suggestions when we have user classes
-    useEffect(() => {
-        if (userClasses.length > 0 && !hasFetched) {
-            fetchSuggestions(userClasses);
-            setHasFetched(true);
-        }
-    }, [userClasses, hasFetched, fetchSuggestions]);
-
-    // Show first suggestion
-    useEffect(() => {
-        if (suggestions.length > 0 && !currentSuggestion) {
-            setCurrentSuggestion(suggestions[0]);
-        }
-    }, [suggestions, currentSuggestion]);
-
-    // Handle verification
-    const handleVerify = async (suggestionId) => {
-        const result = await verifySuggestion(suggestionId);
-        if (result.success) {
-            setCurrentSuggestion(null);
-
-            // If auto-adopted, merge verified links
-            if (result.autoAdopted) {
-                await mergeVerifiedLinks(userClasses);
-            }
-        }
+    const done = () => {
+        setReady(false);
+        setAsked(n => n + 1);
     };
 
-    // Handle rejection
-    const handleReject = async (suggestionId) => {
-        await rejectSuggestion(suggestionId);
-        setCurrentSuggestion(null);
+    const handleVote = async (value) => {
+        const result = await vote(current.id, value);
+        if (result.ok) done();
+        return result;
     };
 
-    // Handle dismissal
-    const handleDismiss = (suggestionId) => {
-        dismissSuggestion(suggestionId);
-        setCurrentSuggestion(null);
+    const handleDismiss = () => {
+        snooze(current.id);
+        done();
     };
 
-    if (!currentSuggestion) return null;
+    const show = !disabled && ready && current && asked < MAX_PER_SESSION;
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] pointer-events-none">
-            <CanvasLinkSuggestionToast
-                suggestion={currentSuggestion}
-                onConfirm={handleVerify}
-                onReject={handleReject}
-                onDismiss={handleDismiss}
-            />
+        <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-[9999] pointer-events-none">
+            <AnimatePresence>
+                {show && (
+                    <CanvasLinkSuggestionToast
+                        key={current.id}
+                        suggestion={current}
+                        onVote={handleVote}
+                        onDismiss={handleDismiss}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

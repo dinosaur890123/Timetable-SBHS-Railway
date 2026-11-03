@@ -133,7 +133,7 @@ const SubjectDot = ({ colour }) => colour
 // abbreviated on mobile.
 const ClassTitle = ({ period, className }) => {
     const { getLink } = useCanvasLinks();
-    const link = getLink(period.title);
+    const link = getLink(period.title, period.year);
     const name = period.fullTitle || period.title;
     const shortName = period.title;
     return (

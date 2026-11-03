@@ -404,7 +404,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             currentMinutes={currentMinutes}
                             startMinutes={data.startMin}
                             endMinutes={data.endMin}
-                            canvasLink={getLink(data.periodInfo.title)}
+                            canvasLink={getLink(data.periodInfo.title, data.periodInfo.year)}
                         />
                     ))}
                     {routineData.length > 0 && (
