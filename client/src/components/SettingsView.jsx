@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Download, Monitor, Smartphone, Share2 } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const ACCENTS = [
     { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
@@ -95,6 +96,7 @@ const SettingsView = ({
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
+    const { isInstallable, isInstalled, platform, install, showIOSInstructions } = usePWAInstall();
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -116,6 +118,40 @@ const SettingsView = ({
                     <span className="hidden sm:inline">Sign out</span>
                 </button>
             </div>
+
+            {/* PWA Install Section - Only show if not installed */}
+            {!isInstalled && (isInstallable || showIOSInstructions) && (
+                <Section label="Install App">
+                    {showIOSInstructions ? (
+                        <div className="px-4 py-3.5 sm:px-5">
+                            <div className="flex items-start gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                    <Smartphone size={20} className="text-blue-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-1">Install on iPhone/iPad</div>
+                                    <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mb-2">
+                                        Tap the <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><Share2 size={14} /> Share</span> button, then choose "Add to Home Screen".
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <Row 
+                            title="Install app" 
+                            description={`Add Synchron to your ${platform === 'android' ? 'device' : 'computer'} for quick access.`}
+                        >
+                            <button
+                                onClick={install}
+                                className="flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+                            >
+                                <Download size={14} />
+                                <span>Install</span>
+                            </button>
+                        </Row>
+                    )}
+                </Section>
+            )}
 
             <Section label="Appearance">
                 <Row title="Mode">
