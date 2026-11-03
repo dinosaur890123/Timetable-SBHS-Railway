@@ -231,7 +231,10 @@ export const DayAgendaSheet = ({ date, sessions, onClose, onOpenSession }) => {
                                             type="button"
                                             data-no-press
                                             className={`nf-cb-session rounded-none ${s.cancelled ? 'is-cancelled' : ''}`}
-                                            onClick={() => onOpenSession(s)}
+                                            onClick={() => {
+                                                onOpenSession(s);
+                                                onClose();
+                                            }}
                                         >
                                             <span className="nf-cb-session__time tnum">{clockTime(startOf(s))}</span>
                                             <span className="nf-cb-dot" aria-hidden="true" />
