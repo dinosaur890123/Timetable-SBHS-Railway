@@ -91,58 +91,56 @@ const Segmented = ({ value, onChange }) => (
 
 // --- My progress -----------------------------------------------------------
 
-const PointsCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount, nextNomination, byCategory, nominationLadder } = summary;
-    const allEarned = nominationLadder.length > 0 && nominationLadder.every(n => n.state !== 'progress');
-    const topCategories = byCategory.slice(0, 5);
-    const maxCategory = topCategories[0]?.points || 0;
+const Stat = ({ label, value, sub, className = '', valueClass = 'text-2xl sm:text-3xl tracking-[-0.03em]' }) => (
+    <div className={`min-w-0 ${className}`}>
+        <Eyebrow>{label}</Eyebrow>
+        <div className={`mt-1.5 font-semibold tabular-nums text-zinc-900 dark:text-white truncate ${valueClass}`}>{value}</div>
+        {sub && <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{sub}</p>}
+    </div>
+);
 
+const prizeProgress = (prize, nominations) => {
+    if (!prize) return null;
+    if (prize.state === 'reached') return `${prize.name}: nominations reached`;
+    return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
+};
+
+// The year at a glance: points, nominations, prize, and the nomination closest to done.
+const SummaryCard = ({ summary }) => {
+    const { totalPoints, housePoints, awardCount, nominationsThisYear, latestPrize, nextPrize, nextNomination, rollover } = summary;
     return (
-        <Card className="lg:col-span-2">
-            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-                <div>
-                    <Eyebrow>Points this year</Eyebrow>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-5xl font-semibold tracking-[-0.03em] tabular-nums text-zinc-900 dark:text-white">{totalPoints}</span>
-                        <span className="text-sm text-zinc-500 dark:text-zinc-400">{totalPoints === 1 ? 'point' : 'points'}</span>
-                    </div>
-                    <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
-                        {awardCount === 0 ? 'No awards yet this year' : <>From {plural(awardCount, 'award')}</>}
-                        {housePoints > 0 && <> · {plural(housePoints, 'house point')} for your house</>}
-                    </p>
-                </div>
-
-                {nextNomination ? (
-                    <div className="w-full sm:w-72">
-                        <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                            <span className="text-zinc-500 dark:text-zinc-400">Next: <span className="font-medium text-zinc-900 dark:text-white">{nextNomination.name}</span></span>
-                            <span className="font-mono text-[12px] tabular-nums text-zinc-500">{nextNomination.points}/{nextNomination.pointsRequired}</span>
-                        </div>
-                        <div className="mt-2"><Bar value={nextNomination.points} max={nextNomination.pointsRequired} tone="accent" /></div>
-                        <p className="mt-1.5 text-[12px] text-zinc-400 dark:text-zinc-500">
-                            {plural(nextNomination.remaining, 'more point')} to be nominated
-                        </p>
-                    </div>
-                ) : allEarned ? (
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400 sm:max-w-[15rem]">You’ve reached every nomination this year.</p>
-                ) : null}
+        <Card className="lg:col-span-2 flex flex-col">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+                <Stat
+                    label="Points"
+                    value={totalPoints.toLocaleString('en-AU')}
+                    sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
+                />
+                <Stat
+                    label="Nominations"
+                    value={nominationsThisYear}
+                    sub={rollover?.nominationCount > 0 ? `this year, +${rollover.nominationCount} carried over` : 'this year'}
+                />
+                <Stat
+                    className="col-span-2 sm:col-span-1"
+                    label="Prize"
+                    value={latestPrize ? latestPrize.name : 'None yet'}
+                    valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
+                    sub={prizeProgress(nextPrize, nominationsThisYear)}
+                />
             </div>
 
-            {topCategories.length > 0 && (
-                <div className="mt-6 pt-5 border-t border-m-line">
-                    <Eyebrow className="mb-3">Where your points came from</Eyebrow>
-                    <ul className="space-y-2.5">
-                        {topCategories.map(c => (
-                            <li key={c.name} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[10rem_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-1">
-                                <span className="text-[13px] text-zinc-700 dark:text-zinc-300 truncate">{c.name}</span>
-                                <span className="text-[13px] font-mono tabular-nums text-zinc-500 text-right sm:order-last">{c.points}</span>
-                                <div className="col-span-2 sm:col-span-1"><Bar value={c.points} max={maxCategory} /></div>
-                            </li>
-                        ))}
-                    </ul>
-                    {byCategory.length > topCategories.length && (
-                        <p className="mt-3 text-[12px] text-zinc-400">and {plural(byCategory.length - topCategories.length, 'other category', 'other categories')}</p>
-                    )}
+            {nextNomination && (
+                <div className="mt-5 lg:mt-auto pt-4 border-t border-m-line">
+                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                        <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
+                            Closest nomination: <span className="font-medium text-zinc-900 dark:text-white">{nextNomination.name}</span>
+                        </span>
+                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-500">
+                            {nextNomination.points}/{nextNomination.pointsRequired} · {nextNomination.remaining} to go
+                        </span>
+                    </div>
+                    <div className="mt-2"><Bar value={nextNomination.points} max={nextNomination.pointsRequired} tone="accent" /></div>
                 </div>
             )}
         </Card>
@@ -157,16 +155,16 @@ const HouseCard = ({ houses }) => {
             {houses.length === 0 ? (
                 <Empty>No house points yet.</Empty>
             ) : (
-                <ol className="space-y-3">
+                <ol className="space-y-2.5">
                     {houses.map((house, index) => (
-                        <li key={house.id || house.name}>
-                            <div className="flex items-center gap-3">
-                                <span className="w-4 font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
+                        <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
+                            <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
+                            <span className="flex items-center gap-2 min-w-0">
                                 <span aria-hidden className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" style={house.colour ? { backgroundColor: house.colour } : undefined} />
-                                <span className="flex-1 min-w-0 truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
-                                <span className="font-mono text-[12px] tabular-nums text-zinc-500">{house.points.toLocaleString('en-AU')}</span>
-                            </div>
-                            <div className="mt-1.5 pl-7"><Bar value={house.points} max={leader} colour={house.colour} /></div>
+                                <span className="truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
+                            </span>
+                            <Bar value={house.points} max={leader} colour={house.colour} />
+                            <span className="font-mono text-[12px] tabular-nums text-zinc-500 text-right">{house.points.toLocaleString('en-AU')}</span>
                         </li>
                     ))}
                 </ol>
@@ -175,74 +173,100 @@ const HouseCard = ({ houses }) => {
     );
 };
 
-const StatusMark = ({ done }) => (
-    <span className={`grid place-items-center w-5 h-5 rounded-full shrink-0 ${done ? 'bg-accent text-accent-contrast' : 'border border-m-line'}`}>
-        {done && <Check size={12} strokeWidth={2.4} />}
+const StatusMark = ({ state }) => (
+    <span className={`grid place-items-center w-4 h-4 rounded-full shrink-0 ${state === 'won'
+        ? 'bg-accent text-accent-contrast'
+        : state === 'reached' ? 'border-[1.5px] border-accent' : 'border border-zinc-900/15 dark:border-white/15'}`}>
+        {state === 'won' && <Check size={10} strokeWidth={2.6} />}
     </span>
 );
 
-const LadderCard = ({ summary }) => {
-    const { nominationLadder, prizeRows, nominationsThisYear, rollover } = summary;
-    if (nominationLadder.length === 0 && prizeRows.length === 0) return null;
+// The levels of one area as a strip of segments: filled once earned.
+const LevelStrip = ({ area }) => (
+    <div className="flex gap-[3px] mt-1.5" aria-hidden>
+        {Array.from({ length: area.levels }, (_, i) => (
+            <span
+                key={i}
+                className={`h-1 flex-1 max-w-4 rounded-full ${i < area.earned
+                    ? 'bg-zinc-900/70 dark:bg-white/70'
+                    : i < area.earned + area.reached ? 'bg-accent' : 'bg-zinc-900/[0.08] dark:bg-white/[0.09]'}`}
+            />
+        ))}
+    </div>
+);
+
+// One row per area: points, levels earned, and how far to the next level.
+const AreasCard = ({ summary }) => {
+    const { areas, areasNotStarted, nominationsThisYear } = summary;
+    if (areas.length === 0 && areasNotStarted.length === 0) return null;
 
     return (
-        <Card className="lg:col-span-3">
-            <div className="mb-4">
-                <h2 className="text-[15px] font-medium text-zinc-900 dark:text-white">Nominations and prizes</h2>
-                <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                    Enough points in an area earns a nomination. Nominations add up to prizes.
+        <Card className="lg:col-span-2">
+            <CardTitle aside={`${plural(nominationsThisYear, 'nomination')} earned`}>Nominations by area</CardTitle>
+            {areas.length > 0 ? (
+                <ul className="divide-y divide-m-line -my-1">
+                    {areas.map(area => (
+                        <li key={area.id} className="py-3 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_4.5rem] items-center gap-x-5 gap-y-2">
+                            <div className="min-w-0">
+                                <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{area.name}</div>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 min-w-0"><LevelStrip area={area} /></div>
+                                    <span className="mt-1.5 text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">{area.earned}/{area.levels}</span>
+                                </div>
+                            </div>
+                            <div className="col-span-2 sm:col-span-1 order-last sm:order-none min-w-0">
+                                {area.next ? (
+                                    <>
+                                        <div className="flex items-baseline justify-between gap-3 text-[12px]">
+                                            <span className="text-zinc-500 dark:text-zinc-400 truncate">Next: {area.next.name}</span>
+                                            <span className="shrink-0 font-mono tabular-nums text-zinc-500">{area.next.points}/{area.next.pointsRequired}</span>
+                                        </div>
+                                        <div className="mt-1.5"><Bar value={area.next.points} max={area.next.pointsRequired} /></div>
+                                    </>
+                                ) : (
+                                    <span className="text-[12px] text-zinc-500 dark:text-zinc-400">Every level reached</span>
+                                )}
+                            </div>
+                            <span className="text-right font-mono text-[13px] tabular-nums text-zinc-700 dark:text-zinc-300">{area.points.toLocaleString('en-AU')}<span className="text-zinc-400"> pts</span></span>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <Empty>Points you earn will count towards nominations here.</Empty>
+            )}
+            {areasNotStarted.length > 0 && (
+                <p className="mt-3 pt-3 border-t border-m-line text-[12px] text-zinc-400 dark:text-zinc-500">
+                    Not started: {areasNotStarted.join(' · ')}
                 </p>
-            </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                {nominationLadder.length > 0 && (
-                    <div>
-                        <Eyebrow className="mb-2">Nominations</Eyebrow>
-                        <ul className="divide-y divide-m-line">
-                            {nominationLadder.map(n => (
-                                <li key={n.id} className="py-2.5 flex items-center gap-3">
-                                    <StatusMark done={n.state === 'earned'} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{n.name}</div>
-                                        {n.state === 'progress' && (
-                                            <div className="mt-1.5 max-w-[12rem]"><Bar value={n.points} max={n.pointsRequired} /></div>
-                                        )}
-                                    </div>
-                                    <span className="text-[12px] text-zinc-500 dark:text-zinc-400 tabular-nums text-right shrink-0">
-                                        {n.state === 'earned' && (n.earnedDate ? `Earned ${formatDate(n.earnedDate)}` : 'Earned')}
-                                        {n.state === 'reached' && 'Points reached'}
-                                        {n.state === 'progress' && <span className="font-mono">{n.points}/{n.pointsRequired} pts</span>}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+            )}
+        </Card>
+    );
+};
 
-                {prizeRows.length > 0 && (
-                    <div>
-                        <Eyebrow className="mb-2">Prizes</Eyebrow>
-                        <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-1">
-                            {plural(nominationsThisYear, 'nomination')} this year
-                            {rollover?.nominationCount > 0 && (
-                                <>, plus {rollover.nominationCount} carried over{rollover.prize ? <> towards <span className="text-zinc-900 dark:text-white">{rollover.prize.name}</span></> : ''}</>
-                            )}.
-                        </p>
-                        <ul className="divide-y divide-m-line">
-                            {prizeRows.map(p => (
-                                <li key={p.id} className="py-2.5 flex items-center gap-3">
-                                    <StatusMark done={Boolean(p.won)} />
-                                    <span className="flex-1 min-w-0 truncate text-[13.5px] text-zinc-900 dark:text-white">{p.name}</span>
-                                    <span className="text-[12px] text-zinc-500 dark:text-zinc-400 shrink-0">
-                                        {p.won
-                                            ? (p.won.date ? `Won ${formatDate(p.won.date, true)}` : 'Won')
-                                            : p.nominationsRequired > 0 ? `Needs ${plural(p.nominationsRequired, 'nomination')}` : ''}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-            </div>
+const PrizesCard = ({ summary }) => {
+    const { prizeRows, nominationsThisYear, rollover } = summary;
+    if (prizeRows.length === 0) return null;
+    return (
+        <Card>
+            <CardTitle>Prizes</CardTitle>
+            <ul className="space-y-0.5">
+                {prizeRows.map(p => (
+                    <li key={p.id} className="py-1.5 flex items-center gap-3">
+                        <StatusMark state={p.state} />
+                        <span className={`flex-1 min-w-0 truncate text-[13.5px] ${p.state === 'progress' ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>{p.name}</span>
+                        <span className="shrink-0 text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                            {p.state === 'won' && (p.won.date ? formatDate(p.won.date, true) : 'Won')}
+                            {p.state === 'reached' && <span className="text-zinc-700 dark:text-zinc-300">Reached</span>}
+                            {p.state === 'progress' && p.nominationsRequired > 0 && <span className="font-mono">{Math.min(nominationsThisYear, p.nominationsRequired)}/{p.nominationsRequired}</span>}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            {rollover?.nominationCount > 0 && (
+                <p className="mt-3 pt-3 border-t border-m-line text-[12px] text-zinc-500 dark:text-zinc-400">
+                    {plural(rollover.nominationCount, 'nomination')} carried over{rollover.prize ? ` towards ${rollover.prize.name}` : ''}.
+                </p>
+            )}
         </Card>
     );
 };
@@ -290,11 +314,11 @@ const RecordCard = ({ summary }) => {
                         {visible.map(entry => {
                             const Icon = KIND_ICONS[entry.kind] || Award;
                             return (
-                                <li key={entry.id} className="py-2.5 flex items-center gap-3">
+                                <li key={entry.id} className="py-2 flex items-center gap-3">
                                     <span className="w-14 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400">{formatDate(entry.date)}</span>
                                     <Icon size={15} strokeWidth={1.8} className="shrink-0 text-zinc-400" aria-hidden />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{entry.title}</div>
+                                    <div className="flex-1 min-w-0 sm:flex sm:items-baseline sm:gap-2">
+                                        <div className="text-[13.5px] text-zinc-900 dark:text-white truncate sm:shrink-0 sm:max-w-[60%]">{entry.title}</div>
                                         {entry.detail && <div className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{entry.detail}</div>}
                                     </div>
                                     {entry.points > 0 ? (
@@ -477,9 +501,10 @@ const AwardSchemeView = ({ user }) => {
 
             {view === 'overview' ? (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    <PointsCard summary={summary} />
+                    <SummaryCard summary={summary} />
                     <HouseCard houses={summary.houseStandings} />
-                    <LadderCard summary={summary} />
+                    <AreasCard summary={summary} />
+                    <PrizesCard summary={summary} />
                     <RecordCard summary={summary} />
                 </div>
             ) : (
