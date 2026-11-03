@@ -15,6 +15,17 @@ const versionFile = () => ({
   }
 })
 
+// A response the service worker serves from its cache (because the network failed) gets this header,
+// so the app can show that it's looking at saved data. Serialised into the generated service worker.
+const offlineMarker = {
+  cachedResponseWillBeUsed: async ({ cachedResponse }) => {
+    if (!cachedResponse) return cachedResponse;
+    const headers = new Headers(cachedResponse.headers);
+    headers.set('X-Synchron-Cached', '1');
+    return new Response(await cachedResponse.blob(), { status: cachedResponse.status, statusText: cachedResponse.statusText, headers });
+  }
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   define: {
@@ -27,29 +38,20 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Registered from src/utils/autoUpdate.js so reloads are coordinated with the version check
       injectRegister: false,
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'SBHS Timetable',
-        short_name: 'Timetable',
-        description: 'Sydney Boys High School Timetable App',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'https://cdn.iconscout.com/icon/free/png-256/free-react-1-282599.png',
-            sizes: '256x256',
-            type: 'image/png'
-          },
-          {
-            src: 'https://cdn.iconscout.com/icon/free/png-256/free-react-1-282599.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
+      // public/manifest.json is the app's manifest (linked from index.html), so don't generate a second one
+      manifest: false,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Precache the app itself and the icons the browser actually asks for. The many other icon
+        // sizes (and the dev/staging sets) are fetched only if something requests them.
+        globPatterns: [
+          '**/*.{js,css,html,woff,woff2}',
+          'favicon*.{ico,png}',
+          'android-icon-*.png',
+          'maskable-icon-*.png',
+          'apple-touch-icon.png',
+          'manifest.json'
+        ],
+        globIgnores: ['**/dev-*', '**/staging-*'],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -68,32 +70,46 @@ export default defineConfig({
               precacheFallback: { fallbackURL: 'index.html' }
             }
           },
+          // SBHS data (timetable, notices, calendar, profile): always fresh when online, the last
+          // copy when offline. Cleared on sign-out (see logout in services/api.js).
           {
-            urlPattern: /^https:\/\/student\.sbhs\.net\.au\/api\/.*/i,
+            urlPattern: ({ url, request }) => url.origin === 'https://student.sbhs.net.au' && url.pathname.startsWith('/api/') && request.method === 'GET',
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'sbhs-api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 5 * 60 // 5 minutes
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              cacheName: 'sbhs-data',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 200, maxAgeSeconds: 14 * 24 * 60 * 60, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [200] },
+              plugins: [offlineMarker]
             }
           },
+          // This app's own read-only data for the student (awards, Clipboard, Canvas links,
+          // preferences, system status). Admin data is never cached.
           {
-            urlPattern: /^https:\/\/auth\.sbhs\.net\.au\/.*/i,
+            urlPattern: ({ url, request, sameOrigin }) => sameOrigin && request.method === 'GET'
+              && /^\/api\/(students\/|award-scheme\/|clipboard\/|canvas-links|system\/status|build-notes|users\/[^/]+\/preferences)/.test(url.pathname),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'sbhs-auth-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 // 1 hour
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              cacheName: 'app-data',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 100, maxAgeSeconds: 14 * 24 * 60 * 60, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [200] },
+              plugins: [offlineMarker]
+            }
+          },
+          // Fonts: the stylesheet refreshes in the background, the font files never change.
+          {
+            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'font-styles' }
+          },
+          {
+            urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'font-files',
+              expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] }
             }
           },
           {

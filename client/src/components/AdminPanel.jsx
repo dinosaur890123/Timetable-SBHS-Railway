@@ -601,7 +601,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div>
+                <div className="shrink-0">
                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <ShieldCheck className="w-8 h-8 text-green-500" />
                         Admin Dashboard
@@ -610,7 +610,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="admin-tabs-container flex flex-wrap sm:flex-nowrap gap-2">
+                <div className="admin-tabs-container flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
                     <TabButton id="overview" label="Overview" icon={Activity} />
                     <TabButton id="users" label="Users" icon={Users} />
                     <TabButton id="analytics" label="Analytics" icon={BarChart3} />
