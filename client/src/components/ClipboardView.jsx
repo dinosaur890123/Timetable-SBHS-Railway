@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { useCachedLoad } from '../utils/pageCache';
-import {
-    fetchStudentClipboardAttendance,
-    fetchStudentPreExplainedAbsences,
-    fetchStudentClipboardSessions,
-    fetchStudentClipboardTeams,
-    fetchGlobalActivities
-} from '../services/api';
+import { clipboardPage } from '../services/pageData';
 import { Tick, useNoteFlowFonts } from './study/noteflow';
 import { SessionSheet } from './clipboard/sessions';
 import ClipboardCalendar from './clipboard/ClipboardCalendar';
@@ -27,17 +21,9 @@ const ClipboardView = ({ user }) => {
     const [activeTab, setActiveTab] = useState('calendar');
     const [openSession, setOpenSession] = useState(null);
 
-    // Kept for the session: coming back shows the last copy at once while it refreshes.
-    const { data, loading, error } = useCachedLoad(user?.studentId ? `clipboard:${user.studentId}` : null, async () => {
-        const [attendance, preExplained, sessions, teams, globalActivities] = await Promise.all([
-            fetchStudentClipboardAttendance(user.studentId).catch(() => []),
-            fetchStudentPreExplainedAbsences(user.studentId).catch(() => []),
-            fetchStudentClipboardSessions(user.studentId).catch(() => []),
-            fetchStudentClipboardTeams(user.studentId).catch(() => []),
-            fetchGlobalActivities().catch(() => [])
-        ]);
-        return { attendance, preExplained, sessions, teams, globalActivities };
-    });
+    // Shows the last copy at once (from this session or saved on the device) while it refreshes.
+    const page = user?.studentId ? clipboardPage(user.studentId) : null;
+    const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
     const { attendance = [], preExplained = [], sessions = [], teams = [], globalActivities = [] } = data || {};
 
     if (loading) {

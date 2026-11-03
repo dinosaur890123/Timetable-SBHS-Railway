@@ -58,8 +58,10 @@ import {
     isScopeOutdated,
     fetchStudentClipboardSessions,
     fetchNextSchoolDay,
+    peekNextSchoolDay,
     onCachedDataChange
 } from './services/api';
+import { prefetchPages } from './services/pageData';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
@@ -69,8 +71,11 @@ function App() {
     // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
-    const [viewDate, setViewDate] = useState(new Date());
-    const [defaultDate, setDefaultDate] = useState(null);
+    // Open on the school day worked out from the timetable saved on this device (today until its
+    // last bell, then the next school day), so the right day shows before the network answers.
+    const [startDay] = useState(() => peekNextSchoolDay());
+    const [viewDate, setViewDate] = useState(() => startDay || new Date());
+    const [defaultDate, setDefaultDate] = useState(startDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
     const lastViewRef = useRef('home');
 
@@ -89,7 +94,7 @@ function App() {
             return null;
         }
     });
-    const [railTimetable, setRailTimetable] = useState(null);
+    const [railTimetable, setRailTimetable] = useState(() => (startDay ? peekDayTimetable(startDay) : null));
     // Which day `timetable` holds (the cached copy at start-up is today's), and the day on screen,
     // so a reply for a day already left behind is dropped instead of shown.
     const [timetableKey, setTimetableKey] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -764,6 +769,19 @@ function App() {
             setViewDate(defaultDate || new Date());
         }
     };
+
+    // Once the timetable is on screen and the browser is idle, load the other pages' data in the
+    // background (one page at a time), so switching to them is instant. Once per app start.
+    const prefetchStarted = useRef(false);
+    useEffect(() => {
+        if (!user?.studentId || !dayTimetable || prefetchStarted.current) return;
+        prefetchStarted.current = true;
+        const start = () => prefetchPages({ studentId: user.studentId, hiddenPages });
+        setTimeout(() => {
+            if ('requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 5000 });
+            else start();
+        }, 1500);
+    }, [user?.studentId, !!dayTimetable]);
 
     // Reset date when leaving the home timetable
     useEffect(() => {

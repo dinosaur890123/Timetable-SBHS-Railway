@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
-import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
+import { calendarPage } from '../services/pageData';
+import { useCachedLoad } from '../utils/pageCache';
 import { motion, AnimatePresence, LayoutGroup, MotionConfig } from 'framer-motion';
 
 // Motion follows DESIGN.md: springs for things that move, short fades for things that swap.
@@ -9,7 +10,6 @@ const SPRING = { type: 'spring', stiffness: 500, damping: 40 };
 const PANEL_SPRING = { type: 'spring', stiffness: 380, damping: 38 };
 const EASE = [0.2, 0.8, 0.2, 1];
 
-const monthKeyOf = (date) => format(date, 'yyyy-MM');
 
 // Months slide in from the side you navigated towards.
 const slide = {
@@ -27,73 +27,6 @@ const useMediaQuery = (query) => {
     return () => mql.removeEventListener('change', onChange);
   }, [query]);
   return matches;
-};
-
-// Months loaded this session. Kept outside the component so leaving the Calendar and coming back
-// shows them at once (refreshed underneath) instead of starting empty.
-const monthCache = new Map();
-
-// Fetches a month's events and the student's assignments, merged into day groups.
-const loadMonth = async (monthDate) => {
-  const start = startOfMonth(monthDate);
-  const end = endOfMonth(monthDate);
-
-  const [eventsData, daysData, assignmentsData] = await Promise.all([
-    fetchCalendarEvents(start, end),
-    fetchDateInfo(monthDate).catch(() => null),
-    fetchAssignments().catch(() => ({ success: true, assignments: [] }))
-  ]);
-
-  const mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
-  const userAssignments = assignmentsData?.assignments || [];
-
-  if (userAssignments.length > 0) {
-    userAssignments.forEach(assignment => {
-      const dueDate = new Date(assignment.dueDate);
-      if (dueDate >= start && dueDate <= end) {
-        const assignmentDateStr = format(dueDate, 'yyyy-MM-dd');
-
-        let dayGroup = mergedEvents.find(group => group.info?.date === assignmentDateStr);
-        if (!dayGroup) {
-          let term = 1;
-          let week = 1;
-          let weekType = 'A';
-
-          const siblingGroup = mergedEvents.find(g => g.info?.term);
-          if (siblingGroup) {
-            term = siblingGroup.info.term;
-            week = siblingGroup.info.week;
-            weekType = siblingGroup.info.weekType;
-          } else if (daysData) {
-            for (const val of Object.values(daysData)) {
-              if (val && typeof val === 'object' && val.term && val.week) {
-                term = val.term;
-                week = val.week;
-                break;
-              }
-            }
-          }
-
-          dayGroup = { info: { date: assignmentDateStr, term, week, weekType }, items: [] };
-          mergedEvents.push(dayGroup);
-        }
-
-        dayGroup.items.push({
-          title: assignment.title,
-          type: 'assignment',
-          subject: assignment.subject,
-          time: assignment.dueDate ? format(new Date(assignment.dueDate), 'HH:mm') : '',
-          status: assignment.status,
-          priority: assignment.priority,
-          notes: assignment.notes
-        });
-      }
-    });
-
-    mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
-  }
-
-  return mergedEvents;
 };
 
 const getEventTypeColor = (type) => {
@@ -273,33 +206,17 @@ const DayEvents = ({ date, group }) => {
 const CalendarView = ({ user }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [direction, setDirection] = useState(0);
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showFlyout, setShowFlyout] = useState(false);
   const [dayDirection, setDayDirection] = useState(1);
   const isWide = useMediaQuery('(min-width: 1024px)');
 
-  // Months already fetched, so going back is instant; each is still refreshed in the background.
-  const monthKey = monthKeyOf(currentDate);
-
-  useEffect(() => {
-    let cancelled = false;
-    const cached = monthCache.get(monthKey);
-    setEvents(cached || []);
-    setLoading(!cached);
-
-    loadMonth(currentDate)
-      .then(merged => {
-        monthCache.set(monthKey, merged);
-        if (!cancelled) setEvents(merged);
-      })
-      .catch(err => console.error(err))
-      .finally(() => { if (!cancelled) setLoading(false); });
-
-    return () => { cancelled = true; };
-    // currentDate only matters through its month, so monthKey stands in for it.
-  }, [monthKey, user]);
+  // Months already loaded (this session, saved on the device, or fetched in the background at
+  // start-up) show at once and refresh underneath.
+  const monthKey = format(currentDate, 'yyyy-MM');
+  const page = user?.studentId ? calendarPage(user.studentId, currentDate) : null;
+  const { data: monthEvents, loading } = useCachedLoad(page?.key ?? null, page?.load);
+  const events = monthEvents || [];
 
   const goToMonth = (target) => {
     const dir = Math.sign(startOfMonth(target) - startOfMonth(currentDate));
