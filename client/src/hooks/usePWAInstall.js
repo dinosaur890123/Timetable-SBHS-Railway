@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 
 export const usePWAInstall = () => {
     const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [isInstallable, setIsInstallable] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [platform, setPlatform] = useState('unknown');
     const [dismissed, setDismissed] = useState(false);
-    const [checkedInstallability, setCheckedInstallability] = useState(false);
 
     useEffect(() => {
         // Check if user has dismissed the install prompt
@@ -51,14 +49,12 @@ export const usePWAInstall = () => {
         const handleBeforeInstallPrompt = (e) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            setIsInstallable(true);
             console.log('PWA install prompt available');
         };
 
         // Listen for appinstalled event
         const handleAppInstalled = () => {
             setIsInstalled(true);
-            setIsInstallable(false);
             setDeferredPrompt(null);
             console.log('PWA installed successfully');
         };
@@ -66,50 +62,11 @@ export const usePWAInstall = () => {
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', handleAppInstalled);
 
-        // For Chrome/Edge on desktop (Windows/Mac): check if PWA criteria are met
-        // even if beforeinstallprompt hasn't fired yet
-        if ((platform === 'windows' || platform === 'mac' || platform === 'android') && !isInstalled && !dismissed) {
-            // Check if we meet PWA criteria
-            const checkPWAEligibility = async () => {
-                // HTTPS is required (except localhost)
-                const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-                
-                // Service worker is required
-                const hasServiceWorker = 'serviceWorker' in navigator;
-                
-                // Manifest is required
-                const hasManifest = !!document.querySelector('link[rel="manifest"]');
-                
-                if (isHTTPS && hasServiceWorker && hasManifest) {
-                    // Wait a bit for service worker to register
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    try {
-                        const registration = await navigator.serviceWorker.getRegistration();
-                        if (registration) {
-                            // Service worker is active, app is likely installable
-                            // Show install button - if beforeinstallprompt fires, it will work
-                            // If not, we'll show instructions
-                            setIsInstallable(true);
-                        }
-                    } catch (e) {
-                        console.log('Service worker check failed:', e);
-                    }
-                }
-                
-                setCheckedInstallability(true);
-            };
-            
-            checkPWAEligibility();
-        } else {
-            setCheckedInstallability(true);
-        }
-
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
             window.removeEventListener('appinstalled', handleAppInstalled);
         };
-    }, [platform, isInstalled, dismissed]);
+    }, []);
 
     const install = async () => {
         // If we have a deferred prompt from beforeinstallprompt, use it
@@ -119,7 +76,6 @@ export const usePWAInstall = () => {
                 const { outcome } = await deferredPrompt.userChoice;
                 
                 if (outcome === 'accepted') {
-                    setIsInstallable(false);
                     setDeferredPrompt(null);
                 }
                 
@@ -130,15 +86,15 @@ export const usePWAInstall = () => {
             }
         }
 
-        // Fallback for Windows/Mac Chrome/Edge when we don't have a deferred prompt yet
-        // The browser might show the install icon in the address bar
+        // No deferred prompt available - browser may not be ready yet
+        // Show helpful message
         if (platform === 'windows' || platform === 'mac') {
             const browserName = navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome';
-            alert(`To install Synchron:\n\n1. Look for the install icon (⊕ or ⬇) in ${browserName}'s address bar\n2. Click it and select "Install"\n\nOr try visiting the site a few times - the install prompt may appear automatically.`);
+            alert(`Install Synchron:\n\nLook for the install icon (⊕ or ⬇) in ${browserName}'s address bar, then click "Install".\n\nYou may need to visit the site a few times for the install option to appear.`);
         } else if (platform === 'android') {
-            alert('To install: Look for the "Add to Home Screen" option in your browser menu (⋮).');
+            alert('Install Synchron:\n\nLook for "Add to Home Screen" in your browser menu (⋮).');
         } else {
-            alert('To install: Look for the install icon in your browser\'s address bar.');
+            alert('Install Synchron:\n\nLook for the install icon in your browser\'s address bar.');
         }
         return false;
     };
@@ -155,27 +111,16 @@ export const usePWAInstall = () => {
     // iOS doesn't support beforeinstallprompt, so always show instructions if not installed
     const showIOSInstructions = platform === 'ios' && !isInstalled && !dismissed;
 
-    // For desktop browsers (Windows/Mac), show instructions only if:
-    // - Not installed
-    // - We've checked installability
-    // - No deferred prompt available
-    // - Not dismissed
-    const showDesktopInstructions = (platform === 'windows' || platform === 'mac') && !isInstalled && checkedInstallability && !deferredPrompt && !dismissed;
-
-    // Show install button if:
-    // - Installable (service worker active, HTTPS, etc.)
-    // - Not dismissed
-    // - For Android or Windows/Mac with Chrome/Edge
-    const showInstallButton = isInstallable && !dismissed && (platform === 'android' || platform === 'windows' || platform === 'mac');
+    // For Android, Windows, Mac: always show install button if not installed and not dismissed
+    // (regardless of whether beforeinstallprompt has fired)
+    const showInstallButton = !isInstalled && !dismissed && (platform === 'android' || platform === 'windows' || platform === 'mac');
 
     return {
-        isInstallable,
         isInstalled,
         platform,
         install,
         dismiss,
         showIOSInstructions,
-        showDesktopInstructions,
         showInstallButton,
         deferredPrompt
     };
