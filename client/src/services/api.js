@@ -510,8 +510,15 @@ export const fetchStudentClipboardTeams = (studentId) =>
 // Global APIs
 export const fetchGlobalAwards = () =>
     fetchFromBackend('/award-scheme/awards').then(data => normaliseList(data, normaliseAward));
-export const fetchGlobalHousePoints = () =>
-    fetchFromBackend('/award-scheme/house-points').then(data => normaliseList(data, normaliseHouse));
+// This year's standings (the API's `context` is the year). Without it, SBHS returns every
+// context at once, so that's only the fallback.
+export const fetchGlobalHousePoints = async () => {
+    const thisYear = await fetchFromBackend(`/award-scheme/house-points?context=${new Date().getFullYear()}`)
+        .then(data => normaliseList(data, normaliseHouse))
+        .catch(() => []);
+    if (thisYear.length > 0) return thisYear;
+    return fetchFromBackend('/award-scheme/house-points').then(data => normaliseList(data, normaliseHouse));
+};
 export const fetchGlobalNominations = () =>
     fetchFromBackend('/award-scheme/nominations').then(data => normaliseList(data, normaliseNomination));
 export const fetchGlobalPrizes = () =>
