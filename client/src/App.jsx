@@ -3,6 +3,7 @@ import Home from './components/Home';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
+import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
 
 const Timetable = lazy(() => import('./components/Timetable'));
 const CalendarView = lazy(() => import('./components/CalendarView'));
@@ -1257,6 +1258,9 @@ function App() {
                     })}
                 </div>
             )}
+
+            {/* Canvas Link Suggestions Toast */}
+            <CanvasLinkSuggestions />
         </div>
         </CanvasLinksProvider>
         </MotionConfig>

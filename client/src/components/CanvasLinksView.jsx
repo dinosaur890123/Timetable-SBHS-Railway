@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X, Users } from 'lucide-react';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { describeClass, indexSubjects, subjectInk } from '../utils/timetable';
+import { submitCanvasLinkSuggestion } from '../services/api';
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const { canvasLinks, saveLinks, getLink } = useCanvasLinks();
@@ -10,6 +11,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const [savingClass, setSavingClass] = useState(null);
   const [errors, setErrors] = useState({}); // className -> error string
   const [toast, setToast] = useState('');
+  const [suggestingClass, setSuggestingClass] = useState(null);
 
   const getClasses = useCallback(() => {
     // Short class code -> one of its periods, so each class can be named and coloured.
@@ -94,6 +96,16 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
       setEditingClass(null);
       setSavingClass(null);
       showToast(`Saved Canvas link for ${className}`);
+
+      // Also submit as a suggestion for crowdsourcing
+      const classObj = classes.find(c => c.title === className);
+      const classNameFull = classObj?.name || className;
+      try {
+        await submitCanvasLinkSuggestion(className, classNameFull, value);
+      } catch (e) {
+        // Silently fail - suggestion is optional
+        console.warn('Failed to submit canvas link suggestion:', e);
+      }
     } catch (error) {
       setSavingClass(null);
       console.error('Error setting canvas course:', error);

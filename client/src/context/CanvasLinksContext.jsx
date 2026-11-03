@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchCanvasLinks, saveCanvasLinks } from '../services/api';
+import { fetchCanvasLinks, saveCanvasLinks, fetchCanvasLinkSuggestions, verifyCanvasLinkSuggestion, rejectCanvasLinkSuggestion, fetchVerifiedCanvasLinks } from '../services/api';
 
 const CanvasLinksContext = createContext(null);
 
@@ -21,6 +21,8 @@ export const CanvasLinksProvider = ({ children }) => {
     const [canvasLinks, setCanvasLinks] = useState({});
     const [loading, setLoading] = useState(false);
     const [initialized, setInitialized] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
+    const [dismissedSuggestions, setDismissedSuggestions] = useState(new Set());
 
     // Load canvas links from localStorage as fallback
     const loadFromLocalStorage = useCallback(() => {
@@ -94,6 +96,86 @@ export const CanvasLinksProvider = ({ children }) => {
         return ensureAbsoluteUrl(raw);
     }, [canvasLinks]);
 
+    // Fetch crowdsourced link suggestions for user's classes
+    const fetchSuggestions = useCallback(async (userClasses) => {
+        if (!userClasses || userClasses.length === 0) return;
+
+        try {
+            const data = await fetchCanvasLinkSuggestions(userClasses);
+            if (data?.success && data?.suggestions) {
+                // Filter out dismissed suggestions
+                const activeSuggestions = data.suggestions.filter(s => !dismissedSuggestions.has(s.id));
+                setSuggestions(activeSuggestions);
+            }
+        } catch (error) {
+            console.warn('Failed to fetch canvas link suggestions:', error);
+        }
+    }, [dismissedSuggestions]);
+
+    // Verify a suggestion
+    const verifySuggestion = useCallback(async (suggestionId) => {
+        try {
+            const data = await verifyCanvasLinkSuggestion(suggestionId);
+            if (data?.success) {
+                // Remove from suggestions
+                setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+
+                // If auto-adopted, refresh links
+                if (data.autoAdopted) {
+                    await fetchLinks();
+                }
+
+                return { success: true, autoAdopted: data.autoAdopted };
+            }
+        } catch (error) {
+            console.error('Failed to verify suggestion:', error);
+            return { success: false, error: error.message };
+        }
+    }, [fetchLinks]);
+
+    // Reject a suggestion
+    const rejectSuggestion = useCallback(async (suggestionId) => {
+        try {
+            const data = await rejectCanvasLinkSuggestion(suggestionId);
+            if (data?.success) {
+                // Remove from suggestions
+                setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+                return { success: true };
+            }
+        } catch (error) {
+            console.error('Failed to reject suggestion:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // Dismiss a suggestion (temporarily hide)
+    const dismissSuggestion = useCallback((suggestionId) => {
+        setDismissedSuggestions(prev => new Set([...prev, suggestionId]));
+        setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+    }, []);
+
+    // Merge verified links into user's canvas links
+    const mergeVerifiedLinks = useCallback(async (classNames) => {
+        try {
+            const data = await fetchVerifiedCanvasLinks(classNames);
+            if (data?.success && data?.links) {
+                const newLinks = { ...canvasLinks };
+                Object.entries(data.links).forEach(([className, url]) => {
+                    // Only add if user doesn't already have a link for this class
+                    if (!newLinks[className]) {
+                        newLinks[className] = { url, verified: true };
+                    }
+                });
+
+                if (Object.keys(newLinks).length > Object.keys(canvasLinks).length) {
+                    await saveLinks(newLinks);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to merge verified links:', error);
+        }
+    }, [canvasLinks, saveLinks]);
+
     // Initialize: migrate localStorage to backend on first load
     useEffect(() => {
         const initializeLinks = async () => {
@@ -124,7 +206,13 @@ export const CanvasLinksProvider = ({ children }) => {
         initialized,
         fetchLinks,
         saveLinks,
-        getLink
+        getLink,
+        suggestions,
+        fetchSuggestions,
+        verifySuggestion,
+        rejectSuggestion,
+        dismissSuggestion,
+        mergeVerifiedLinks
     };
 
     return (

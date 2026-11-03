@@ -1000,6 +1000,313 @@ app.post('/api/canvas-courses/report', requireStudentAuth, async (req, res) => {
     }
 });
 
+// In-memory storage for canvas link suggestions (fallback when DB disabled)
+let canvasLinkSuggestionsMemory = [];
+
+// POST /api/canvas-link-suggestions - Submit a crowdsourced canvas link suggestion
+app.post('/api/canvas-link-suggestions', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { className, classNameFull, canvasUrl } = req.body || {};
+
+        if (!className || !canvasUrl) {
+            return res.status(400).json({ error: 'Class name and canvas URL are required' });
+        }
+
+        // Validate canvas URL format
+        const formattedUrl = formatCanvasUrl(canvasUrl);
+        if (!formattedUrl) {
+            return res.status(400).json({ error: 'Invalid canvas URL format' });
+        }
+
+        if (!isDbEnabled) {
+            // Check if user already submitted for this class
+            const existing = canvasLinkSuggestionsMemory.find(
+                s => s.className === String(className) && s.submittedBy === studentId
+            );
+            if (existing) {
+                return res.status(409).json({ error: 'already_submitted', message: 'You have already submitted a link for this class' });
+            }
+
+            const suggestion = {
+                id: crypto.randomUUID(),
+                className: String(className),
+                classNameFull: String(classNameFull || className),
+                canvasUrl: formattedUrl,
+                submittedBy: studentId,
+                verifiedBy: [],
+                verifiedCount: 0,
+                reports: 0,
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            canvasLinkSuggestionsMemory.push(suggestion);
+
+            await addLog('CANVAS_LINK_SUGGESTION', studentId, `Suggested canvas link for class ${className}`);
+            return res.json({ success: true, suggestion });
+        }
+
+        // Check rate limit: max 5 submissions per day per user
+        const today = new Date().toISOString().split('T')[0];
+        const recentSubmissions = await db.query(
+            `SELECT COUNT(*) as count FROM canvas_link_suggestions
+             WHERE submitted_by = $1 AND DATE(created_at) = $2`,
+            [studentId, today]
+        );
+
+        if (parseInt(recentSubmissions.rows[0].count) >= 5) {
+            return res.status(429).json({ error: 'rate_limited', message: 'Maximum 5 submissions per day' });
+        }
+
+        // Check if user already submitted for this class
+        const existing = await db.query(
+            `SELECT id FROM canvas_link_suggestions
+             WHERE class_name = $1 AND submitted_by = $2`,
+            [String(className), studentId]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'already_submitted', message: 'You have already submitted a link for this class' });
+        }
+
+        const id = crypto.randomUUID();
+        await db.query(
+            `INSERT INTO canvas_link_suggestions (id, class_name, class_name_full, canvas_url, submitted_by, verified_by, verified_count, reports, status, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, '{}', 0, 0, 'pending', NOW(), NOW())`,
+            [id, String(className), String(classNameFull || className), formattedUrl, studentId]
+        );
+
+        await addLog('CANVAS_LINK_SUGGESTION', studentId, `Suggested canvas link for class ${className}`);
+
+        res.json({ success: true, suggestionId: id });
+    } catch (e) {
+        console.error('Submit canvas link suggestion error:', e);
+        res.status(500).json({ error: 'Failed to submit suggestion' });
+    }
+});
+
+// GET /api/canvas-link-suggestions - Get pending suggestions for user's classes
+app.get('/api/canvas-link-suggestions', requireStudentAuth, async (req, res) => {
+    try {
+        const { userClasses } = req.query; // Comma-separated list of class names
+
+        if (!userClasses) {
+            return res.json({ success: true, suggestions: [] });
+        }
+
+        const classNames = userClasses.split(',').map(c => c.trim()).filter(Boolean);
+
+        if (!isDbEnabled) {
+            const suggestions = canvasLinkSuggestionsMemory
+                .filter(s =>
+                    classNames.includes(s.className) ||
+                    classNames.includes(s.classNameFull) ||
+                    classNames.some(c => s.className.includes(c) || c.includes(s.className))
+                )
+                .filter(s => s.status === 'pending' && s.submittedBy !== String(req.user.studentId))
+                .map(s => ({
+                    id: s.id,
+                    className: s.className,
+                    classNameFull: s.classNameFull,
+                    canvasUrl: s.canvasUrl,
+                    verifiedCount: s.verifiedCount,
+                    createdAt: s.createdAt
+                }));
+            return res.json({ success: true, suggestions });
+        }
+
+        const result = await db.query(
+            `SELECT id, class_name, class_name_full, canvas_url, verified_count, created_at
+             FROM canvas_link_suggestions
+             WHERE status = 'pending'
+             AND submitted_by != $1
+             AND (class_name = ANY($2) OR class_name_full = ANY($2))
+             ORDER BY verified_count DESC, created_at DESC`,
+            [String(req.user.studentId), classNames]
+        );
+
+        const suggestions = result.rows.map(row => ({
+            id: row.id,
+            className: row.class_name,
+            classNameFull: row.class_name_full,
+            canvasUrl: row.canvas_url,
+            verifiedCount: row.verified_count,
+            createdAt: toIso(row.created_at)
+        }));
+
+        res.json({ success: true, suggestions });
+    } catch (e) {
+        console.error('Get canvas link suggestions error:', e);
+        res.json({ success: true, suggestions: [] });
+    }
+});
+
+// POST /api/canvas-link-suggestions/:id/verify - Verify a suggestion
+app.post('/api/canvas-link-suggestions/:id/verify', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { id } = req.params;
+
+        if (!isDbEnabled) {
+            const suggestion = canvasLinkSuggestionsMemory.find(s => s.id === id);
+            if (!suggestion) {
+                return res.status(404).json({ error: 'Suggestion not found' });
+            }
+
+            if (suggestion.verifiedBy.includes(studentId)) {
+                return res.status(409).json({ error: 'already_verified', message: 'You have already verified this link' });
+            }
+
+            suggestion.verifiedBy.push(studentId);
+            suggestion.verifiedCount = suggestion.verifiedBy.length;
+
+            // Auto-verify if 3+ users confirm
+            if (suggestion.verifiedCount >= 3) {
+                suggestion.status = 'verified';
+            }
+
+            suggestion.updatedAt = new Date().toISOString();
+
+            await addLog('CANVAS_LINK_VERIFICATION', studentId, `Verified canvas link for class ${suggestion.className}`);
+
+            return res.json({
+                success: true,
+                verified: suggestion.verifiedCount,
+                autoAdopted: suggestion.status === 'verified'
+            });
+        }
+
+        // Check if already verified
+        const existing = await db.query(
+            `SELECT verified_by, verified_count FROM canvas_link_suggestions WHERE id = $1`,
+            [id]
+        );
+
+        if (existing.rows.length === 0) {
+            return res.status(404).json({ error: 'Suggestion not found' });
+        }
+
+        const verifiedBy = existing.rows[0].verified_by || [];
+        if (verifiedBy.includes(studentId)) {
+            return res.status(409).json({ error: 'already_verified', message: 'You have already verified this link' });
+        }
+
+        verifiedBy.push(studentId);
+        const newCount = verifiedBy.length;
+
+        // Auto-verify if 3+ users confirm
+        const status = newCount >= 3 ? 'verified' : 'pending';
+
+        await db.query(
+            `UPDATE canvas_link_suggestions
+             SET verified_by = $1, verified_count = $2, status = $3, updated_at = NOW()
+             WHERE id = $4`,
+            [verifiedBy, newCount, status, id]
+        );
+
+        await addLog('CANVAS_LINK_VERIFICATION', studentId, `Verified canvas link suggestion ${id}`);
+
+        res.json({
+            success: true,
+            verified: newCount,
+            autoAdopted: status === 'verified'
+        });
+    } catch (e) {
+        console.error('Verify canvas link suggestion error:', e);
+        res.status(500).json({ error: 'Failed to verify suggestion' });
+    }
+});
+
+// POST /api/canvas-link-suggestions/:id/reject - Reject a suggestion
+app.post('/api/canvas-link-suggestions/:id/reject', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const { id } = req.params;
+
+        if (!isDbEnabled) {
+            const suggestion = canvasLinkSuggestionsMemory.find(s => s.id === id);
+            if (!suggestion) {
+                return res.status(404).json({ error: 'Suggestion not found' });
+            }
+
+            suggestion.reports += 1;
+            suggestion.updatedAt = new Date().toISOString();
+
+            // Auto-reject if 3+ reports
+            if (suggestion.reports >= 3) {
+                suggestion.status = 'rejected';
+            }
+
+            await addLog('CANVAS_LINK_REJECTION', studentId, `Rejected canvas link for class ${suggestion.className}`);
+
+            return res.json({ success: true, reports: suggestion.reports });
+        }
+
+        const result = await db.query(
+            `UPDATE canvas_link_suggestions
+             SET reports = reports + 1, status = CASE WHEN reports + 1 >= 3 THEN 'rejected' ELSE status END, updated_at = NOW()
+             WHERE id = $1
+             RETURNING reports, status`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Suggestion not found' });
+        }
+
+        await addLog('CANVAS_LINK_REJECTION', studentId, `Rejected canvas link suggestion ${id}`);
+
+        res.json({
+            success: true,
+            reports: result.rows[0].reports,
+            rejected: result.rows[0].status === 'rejected'
+        });
+    } catch (e) {
+        console.error('Reject canvas link suggestion error:', e);
+        res.status(500).json({ error: 'Failed to reject suggestion' });
+    }
+});
+
+// GET /api/canvas-link-suggestions/verified - Get verified canvas links for classes
+app.get('/api/canvas-link-suggestions/verified', requireStudentAuth, async (req, res) => {
+    try {
+        const { classNames } = req.query; // Comma-separated list of class names
+
+        if (!classNames) {
+            return res.json({ success: true, links: {} });
+        }
+
+        const classList = classNames.split(',').map(c => c.trim()).filter(Boolean);
+
+        if (!isDbEnabled) {
+            const links = {};
+            canvasLinkSuggestionsMemory
+                .filter(s => s.status === 'verified' && classList.includes(s.className))
+                .forEach(s => {
+                    links[s.className] = s.canvasUrl;
+                });
+            return res.json({ success: true, links });
+        }
+
+        const result = await db.query(
+            `SELECT class_name, canvas_url FROM canvas_link_suggestions
+             WHERE status = 'verified' AND class_name = ANY($1)`,
+            [classList]
+        );
+
+        const links = {};
+        result.rows.forEach(row => {
+            links[row.class_name] = row.canvas_url;
+        });
+
+        res.json({ success: true, links });
+    } catch (e) {
+        console.error('Get verified canvas links error:', e);
+        res.json({ success: true, links: {} });
+    }
+});
+
 // GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
 app.get('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     try {

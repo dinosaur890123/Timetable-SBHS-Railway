@@ -168,6 +168,26 @@ CREATE TABLE IF NOT EXISTS canvas_course_reports (
 CREATE INDEX IF NOT EXISTS canvas_course_reports_class_name_idx ON canvas_course_reports (class_name);
 CREATE INDEX IF NOT EXISTS canvas_course_reports_status_idx ON canvas_course_reports (status);
 
+-- Crowdsourced Canvas Link Suggestions migration
+CREATE TABLE IF NOT EXISTS canvas_link_suggestions (
+  id TEXT PRIMARY KEY,
+  class_name TEXT NOT NULL,
+  class_name_full TEXT NOT NULL, -- Full name variant for matching
+  canvas_url TEXT NOT NULL,
+  submitted_by TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  verified_by TEXT[] DEFAULT '{}', -- Array of user IDs who verified this link
+  verified_count INTEGER NOT NULL DEFAULT 0,
+  reports INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'verified', 'rejected'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS canvas_link_suggestions_class_name_idx ON canvas_link_suggestions (class_name);
+CREATE INDEX IF NOT EXISTS canvas_link_suggestions_class_name_full_idx ON canvas_link_suggestions (class_name_full);
+CREATE INDEX IF NOT EXISTS canvas_link_suggestions_status_idx ON canvas_link_suggestions (status);
+CREATE INDEX IF NOT EXISTS canvas_link_suggestions_submitted_by_idx ON canvas_link_suggestions (submitted_by);
+
 -- Shared Resources migration
 CREATE TABLE IF NOT EXISTS shared_resources (
   id TEXT PRIMARY KEY,

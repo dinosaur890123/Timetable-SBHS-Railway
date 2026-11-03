@@ -815,6 +815,85 @@ export const fetchSharedCanvasLink = async (className) => {
     return response.json();
 };
 
+// Crowdsourced Canvas Link Suggestions API
+export const submitCanvasLinkSuggestion = async (className, classNameFull, canvasUrl) => {
+    const token = await getValidAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ className, classNameFull, canvasUrl })
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to submit suggestion: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const fetchCanvasLinkSuggestions = async (userClasses) => {
+    const token = await getValidAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions?userClasses=${encodeURIComponent(userClasses.join(','))}`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch suggestions: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const verifyCanvasLinkSuggestion = async (suggestionId) => {
+    const token = await getValidAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/${suggestionId}/verify`, {
+        method: 'POST',
+        headers
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to verify suggestion: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const rejectCanvasLinkSuggestion = async (suggestionId) => {
+    const token = await getValidAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/${suggestionId}/reject`, {
+        method: 'POST',
+        headers
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to reject suggestion: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const fetchVerifiedCanvasLinks = async (classNames) => {
+    const token = await getValidAccessToken();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/verified?classNames=${encodeURIComponent(classNames.join(','))}`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch verified links: ${response.status}`);
+    }
+    return response.json();
+};
+
 // Shared Canvas Courses API (one canonical course ID per class, school-wide)
 export const fetchCanvasCourses = async () => {
     const token = await getValidAccessToken();
