@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { rememberSubjectColours } from '../utils/timetable';
+import { clearPageCache } from '../utils/pageCache';
 import { normaliseList, normaliseIssuedAward, normaliseIssuedPrize, normaliseRollover, normaliseAward, normaliseHouse, normaliseNomination, normalisePrize } from '../utils/awardScheme';
 
 // Environment variables
@@ -33,6 +34,8 @@ export const onCachedDataChange = (listener) => {
 const PRIVATE_CACHES = ['sbhs-data', 'app-data'];
 const clearOfflineData = async () => {
     dayCache.clear();
+    clearPageCache();
+    try { localStorage.removeItem(SAVED_DAYS_KEY); } catch { /* storage unavailable */ }
     try {
         if (!('caches' in window)) return;
         await Promise.all(PRIVATE_CACHES.map(name => caches.delete(name)));
@@ -278,7 +281,67 @@ const rememberDay = (key, data) => {
     dayCache.delete(key);
     dayCache.set(key, { data, at: Date.now() });
     if (dayCache.size > DAY_CACHE_LIMIT) dayCache.delete(dayCache.keys().next().value);
+    saveDaysSoon();
     return data;
+};
+
+// Days near today are also saved on the device, so reopening the app shows the timetable at once
+// (the saved copy is refreshed in the background, as any day older than five minutes is).
+const SAVED_DAYS_KEY = 'day_cache:v1';
+const savedDayWindow = () => [dayKey(new Date(Date.now() - 7 * 864e5)), dayKey(new Date(Date.now() + 28 * 864e5))];
+let saveDaysTimer = null;
+const saveDaysSoon = () => {
+    clearTimeout(saveDaysTimer);
+    // Days arrive in bursts (the week is fetched at once), so they're written together.
+    saveDaysTimer = setTimeout(() => {
+        const [from, to] = savedDayWindow();
+        const saved = {};
+        [...dayCache.keys()].filter(k => k >= from && k <= to).sort().forEach(k => { saved[k] = dayCache.get(k); });
+        try {
+            localStorage.setItem(SAVED_DAYS_KEY, JSON.stringify(saved));
+        } catch {
+            // Storage full or blocked: the days are still kept for this session
+        }
+    }, 1000);
+};
+const loadSavedDays = () => {
+    try {
+        const saved = JSON.parse(localStorage.getItem(SAVED_DAYS_KEY) || '{}');
+        const [from, to] = savedDayWindow();
+        Object.entries(saved).forEach(([k, entry]) => {
+            if (k >= from && k <= to && entry?.data && !dayCache.has(k)) dayCache.set(k, { data: entry.data, at: Number(entry.at) || 0 });
+        });
+    } catch {
+        // Nothing saved, or storage unavailable
+    }
+};
+loadSavedDays();
+
+const minutesOf = (time) => {
+    const [h, m] = String(time || '').split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+};
+
+// The day to open on, worked out from saved days without waiting for the network: today until its
+// last bell, then the next saved school day. Null when nothing suitable is saved.
+// fetchNextSchoolDay gives the authoritative answer once it arrives.
+export const peekNextSchoolDay = () => {
+    const now = new Date();
+    const today = dayKey(now);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    for (const key of [...dayCache.keys()].filter(k => k >= today).sort()) {
+        const data = dayCache.get(key)?.data;
+        // SBHS answers a day without school with the next school day; that one is saved under its own date.
+        if (!data || (data.date && data.date !== key)) continue;
+        const inner = data.timetable?.timetable || data.timetable;
+        if (!inner?.periods || Object.keys(inner.periods).length === 0 || !Array.isArray(data.bells) || data.bells.length === 0) continue;
+        if (key === today) {
+            const lastBell = Math.max(...data.bells.map(b => minutesOf(b.endTime) ?? minutesOf(b.time) ?? -1));
+            if (nowMinutes >= lastBell) continue;
+        }
+        return new Date(`${key}T00:00`);
+    }
+    return null;
 };
 
 // The school day the app should open on: today until its last bell, then the next school day.
