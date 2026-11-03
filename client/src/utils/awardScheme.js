@@ -119,9 +119,15 @@ export const normaliseHouse = (raw) => {
         id: String(h.houseId ?? h.id ?? h.name ?? h.house ?? ''),
         name: h.name || h.house || 'House',
         colour: normaliseColour(h.color ?? h.colour),
-        points: toNumber(h.points)
+        points: toNumber(h.points),
+        // Standings come for several contexts (years); only the latest is shown.
+        context: h.context ?? null
     };
 };
+
+// An area's name, from its first nomination level ("Academic 1" -> "Academic"). The first
+// level's spelling is used because later ones vary ("Sport 1" ... "Sports 6").
+const areaName = (levels) => levels[0]?.name.replace(/[\s\-–:#]*\d+\s*$/, '').trim() || 'Other';
 
 export const normaliseList = (data, normalise) => unwrap(data).map(normalise).filter(Boolean);
 
@@ -165,7 +171,9 @@ export const summariseAwards = ({
     const categoryPoints = new Map();
     issued.forEach(item => {
         const { points, category } = item.award;
-        if (!points) return;
+        // A nomination is itself issued as an award with points; those don't count
+        // towards the area's next nomination.
+        if (!points || item.nomination) return;
         const group = category?.group;
         if (group != null) groupPoints.set(group, (groupPoints.get(group) || 0) + points);
         const name = category?.name || 'Other';
@@ -202,6 +210,33 @@ export const summariseAwards = ({
         .filter(n => n.state === 'progress' && n.pointsRequired > 0)
         .sort((a, b) => (b.points / b.pointsRequired) - (a.points / a.pointsRequired) || a.remaining - b.remaining)[0] || null;
 
+    // Each area (a group of categories) has a ladder of nomination levels. One row per
+    // area: its points, how many levels are earned, and the next level.
+    const areaGroups = new Map();
+    nominationLadder.forEach(n => {
+        const key = n.fromGroup ?? 'all';
+        if (!areaGroups.has(key)) areaGroups.set(key, []);
+        areaGroups.get(key).push(n);
+    });
+    const allAreas = [...areaGroups.values()].map(levels => {
+        levels.sort((a, b) => a.pointsRequired - b.pointsRequired);
+        const earned = levels.filter(n => n.state === 'earned');
+        const next = levels.find(n => n.state === 'progress') || null;
+        return {
+            id: String(levels[0].fromGroup ?? 'all'),
+            name: areaName(levels),
+            points: levels[0].points,
+            levels: levels.length,
+            earned: earned.length,
+            reached: levels.filter(n => n.state === 'reached').length,
+            next,
+            complete: !next
+        };
+    });
+    const started = (a) => a.points > 0 || a.earned > 0;
+    const areas = allAreas.filter(started).sort((a, b) => b.points - a.points || b.earned - a.earned);
+    const areasNotStarted = allAreas.filter(a => !started(a)).map(a => a.name);
+
     const nominationsThisYear = issued.filter(item => item.kind === 'nomination').length;
 
     const wonPrizes = new Map(prizes.map(p => [p.prize.id, p]));
@@ -212,6 +247,11 @@ export const summariseAwards = ({
     prizes.forEach(p => {
         if (!prizeRows.some(row => row.id === p.prize.id)) prizeRows.push({ ...p.prize, won: p });
     });
+    prizeRows.forEach(p => {
+        p.state = p.won ? 'won' : p.nominationsRequired > 0 && nominationsThisYear >= p.nominationsRequired ? 'reached' : 'progress';
+    });
+    const latestPrize = [...prizeRows].reverse().find(p => p.state === 'won') || null;
+    const nextPrize = prizeRows.find(p => p.state !== 'won') || null;
 
     // Everything the student has received, newest first.
     const timeline = [
@@ -220,7 +260,10 @@ export const summariseAwards = ({
             kind: item.kind,
             date: item.date,
             title: item.nomination?.name && item.kind === 'nomination' ? item.nomination.name : item.award.name,
-            detail: item.award.category?.name || '',
+            // A nomination's own category is just its tier ("TIER 4 NOMINATION").
+            detail: item.kind === 'nomination'
+                ? `Nomination${item.nomination.tier != null ? ` · level ${item.nomination.tier}` : ''}`
+                : item.award.category?.name || '',
             points: item.award.points
         })),
         ...prizes.map(p => ({ id: `p:${p.id}`, kind: 'prize', date: p.date, title: p.prize.name, detail: p.prize.tier != null ? `Tier ${p.prize.tier}` : '', points: 0 }))
@@ -243,7 +286,19 @@ export const summariseAwards = ({
         .map(([name, items]) => ({ name, items: items.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name)) }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    const houseStandings = [...houses].sort((a, b) => b.points - a.points);
+    // One set of standings, one row per house: this year's if the contexts are years,
+    // otherwise the latest.
+    const contexts = [...new Set(houses.map(h => h.context).filter(c => c != null))];
+    const thisYear = contexts.find(c => String(c) === String(new Date().getFullYear()));
+    const latest = thisYear ?? (contexts.length ? contexts.reduce((a, b) => (Number(b) > Number(a) ? b : a)) : null);
+    const byHouse = new Map();
+    houses
+        .filter(h => latest == null || h.context === latest)
+        .forEach(h => {
+            const key = h.name.toLowerCase();
+            if (!byHouse.has(key) || byHouse.get(key).points < h.points) byHouse.set(key, h);
+        });
+    const houseStandings = [...byHouse.values()].sort((a, b) => b.points - a.points);
 
     return {
         totalPoints,
@@ -253,7 +308,11 @@ export const summariseAwards = ({
         nominationLadder,
         nextNomination,
         nominationsThisYear,
+        areas,
+        areasNotStarted,
         prizeRows,
+        latestPrize,
+        nextPrize,
         rollover,
         timeline,
         kindCounts,
