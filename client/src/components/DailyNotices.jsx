@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
-import { Megaphone, Users, ChevronDown, ChevronUp, Search, X, SearchX } from 'lucide-react';
+import { Megaphone, Users, ChevronDown, ChevronUp, Search, X, SearchX, FileText, ExternalLink } from 'lucide-react';
 import { motion, MotionConfig } from 'framer-motion';
 
 const FILTER_OPTIONS = [
@@ -146,16 +146,29 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
             </div>
           </div>
 
-          <select
-            value={filterView}
-            onChange={(e) => setFilterView(e.target.value)}
-            aria-label="Filter notices by year"
-            className="shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {FILTER_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://sbhs.co/hnpdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 text-xs font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700/50 transition-colors border border-zinc-200 dark:border-zinc-700"
+              title="View latest High Notes PDF"
+            >
+              <FileText size={14} />
+              <span className="hidden sm:inline">High Notes</span>
+              <ExternalLink size={12} className="opacity-60" />
+            </a>
+            <select
+              value={filterView}
+              onChange={(e) => setFilterView(e.target.value)}
+              aria-label="Filter notices by year"
+              className="shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {FILTER_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <label className="relative block">
