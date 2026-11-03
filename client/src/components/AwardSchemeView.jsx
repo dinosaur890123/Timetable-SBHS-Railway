@@ -26,11 +26,11 @@ const Eyebrow = ({ children, className = '' }) => (
 );
 
 const Card = ({ children, className = '' }) => (
-    <section className={`min-w-0 rounded-2xl border border-m-line bg-m-card p-5 ${className}`}>{children}</section>
+    <section className={`min-w-0 rounded-2xl border border-m-line bg-m-card p-4 ${className}`}>{children}</section>
 );
 
 const CardTitle = ({ children, aside }) => (
-    <div className="flex items-baseline justify-between gap-3 mb-3">
+    <div className="flex items-baseline justify-between gap-3 mb-2">
         <h2 className="text-[15px] font-medium text-zinc-900 dark:text-white">{children}</h2>
         {aside && <span className="text-[12px] text-zinc-400 dark:text-zinc-500 tabular-nums">{aside}</span>}
     </div>
@@ -84,7 +84,7 @@ const Segmented = ({ value, onChange }) => (
 const Stat = ({ label, value, sub, className = '', valueClass = 'text-2xl sm:text-3xl tracking-[-0.03em]' }) => (
     <div className={`min-w-0 ${className}`}>
         <Eyebrow>{label}</Eyebrow>
-        <div className={`mt-1.5 font-semibold tabular-nums text-zinc-900 dark:text-white truncate ${valueClass}`}>{value}</div>
+        <div className={`mt-1 font-semibold tabular-nums text-zinc-900 dark:text-white truncate ${valueClass}`}>{value}</div>
         {sub && <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{sub}</p>}
     </div>
 );
@@ -95,39 +95,29 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-// Points card: total points, awards count, and house points
-const PointsCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount } = summary;
+// The year at a glance: points, nominations, and prize.
+const SummaryCard = ({ summary }) => {
+    const { totalPoints, housePoints, awardCount, nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
         <Card>
-            <Stat
-                label="Points"
-                value={totalPoints.toLocaleString('en-AU')}
-                sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
-            />
-        </Card>
-    );
-};
-
-// Nominations card: total nominations and prize progress
-const NominationsCard = ({ summary }) => {
-    const { nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
-    return (
-        <Card>
-            <Stat
-                label="Nominations"
-                value={nominationsAllTime}
-                sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
-            />
-            {latestPrize && (
-                <div className="mt-3 pt-3 border-t border-m-line">
-                    <Eyebrow>Current prize</Eyebrow>
-                    <div className="mt-1.5 text-[13.5px] font-medium text-zinc-900 dark:text-white">{latestPrize.name}</div>
-                    {prizeProgress(nextPrize, nominationsAllTime) && (
-                        <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{prizeProgress(nextPrize, nominationsAllTime)}</p>
-                    )}
-                </div>
-            )}
+            <div className="flex flex-wrap gap-5">
+                <Stat
+                    label="Points"
+                    value={totalPoints.toLocaleString('en-AU')}
+                    sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
+                />
+                <Stat
+                    label="Nominations"
+                    value={nominationsAllTime}
+                    sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
+                />
+                <Stat
+                    label="Prize"
+                    value={latestPrize ? latestPrize.name : 'None yet'}
+                    valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
+                    sub={prizeProgress(nextPrize, nominationsAllTime)}
+                />
+            </div>
         </Card>
     );
 };
@@ -140,7 +130,7 @@ const HouseCard = ({ houses }) => {
             {houses.length === 0 ? (
                 <Empty>No house points yet.</Empty>
             ) : (
-                <ol className="space-y-2.5">
+                <ol className="space-y-2">
                     {houses.map((house, index) => (
                         <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
                             <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
@@ -186,12 +176,12 @@ const AreasCard = ({ summary }) => {
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
 
     return (
-        <Card className="lg:col-span-2">
+        <Card>
             <CardTitle>Nominations by area</CardTitle>
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => (
-                        <li key={area.id} className="py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
+                        <li key={area.id} className="py-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
                             <div className="min-w-0">
                                 <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{area.name}</div>
                                 <div className="flex items-center gap-2">
@@ -206,7 +196,7 @@ const AreasCard = ({ summary }) => {
                 <Empty>Points you earn will count towards nominations here.</Empty>
             )}
             {areasNotStarted.length > 0 && (
-                <p className="mt-3 pt-3 border-t border-m-line text-[12px] text-zinc-400 dark:text-zinc-500">
+                <p className="mt-2 pt-2 border-t border-m-line text-[12px] text-zinc-400 dark:text-zinc-500">
                     Not started: {areasNotStarted.join(' · ')}
                 </p>
             )}
@@ -276,11 +266,11 @@ const RecordCard = ({ summary }) => {
     }));
 
     return (
-        <Card className="lg:col-span-3">
+        <Card>
             <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>Your record</CardTitle>
 
             {yearFilters.length > 1 && (
-                <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
                     {yearFilters.map(f => (
                         <button
                             key={f.id}
@@ -305,7 +295,7 @@ const RecordCard = ({ summary }) => {
                         {visible.map(entry => {
                             const Icon = KIND_ICONS[entry.kind] || Award;
                             return (
-                                <li key={entry.id} className="py-2 flex items-center gap-3">
+                                <li key={entry.id} className="py-1.5 flex items-center gap-3">
                                     <span className="w-14 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400">{formatDate(entry.date)}</span>
                                     <Icon size={15} strokeWidth={1.8} className="shrink-0 text-zinc-400" aria-hidden />
                                     <div className="flex-1 min-w-0 sm:flex sm:items-baseline sm:gap-2">
@@ -361,7 +351,7 @@ const EarnView = ({ summary }) => {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <Card>
                 <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-3">
                     Every award in the scheme and the points it’s worth. Points in an area count towards its nominations.
@@ -393,7 +383,7 @@ const EarnView = ({ summary }) => {
             {groups.length === 0 ? (
                 <Card><Empty>No awards match “{query.trim()}”.</Empty></Card>
             ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {groups.map(g => (
                         <Card key={g.name}>
                             <CardTitle aside={plural(g.items.length, 'award')}>{g.name}</CardTitle>
@@ -437,12 +427,11 @@ const AwardSchemeView = ({ user }) => {
 
     if (loading) {
         return (
-            <div className="space-y-4" aria-busy="true" aria-label="Loading awards">
+            <div className="space-y-3" aria-busy="true" aria-label="Loading awards">
                 <div className="h-8 w-56 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
-                <div className="grid gap-4 lg:grid-cols-3">
-                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
-                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
-                    <div className="h-32 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
                 </div>
             </div>
         );
@@ -459,7 +448,7 @@ const AwardSchemeView = ({ user }) => {
     }
 
     return (
-        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <Eyebrow>Award scheme · {new Date().getFullYear()}</Eyebrow>
@@ -476,9 +465,8 @@ const AwardSchemeView = ({ user }) => {
             )}
 
             {view === 'overview' ? (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    <PointsCard summary={summary} />
-                    <NominationsCard summary={summary} />
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <SummaryCard summary={summary} />
                     <HouseCard houses={summary.houseStandings} />
                     <AreasCard summary={summary} />
                     <PrizesCard summary={summary} />
