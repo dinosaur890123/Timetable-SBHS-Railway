@@ -3,17 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, Search, Trophy, Award, Medal, Sparkles, Shield, ChevronDown } from 'lucide-react';
 import { useCachedLoad } from '../utils/pageCache';
 import { summariseAwards, RECORD_KINDS } from '../utils/awardScheme';
-import {
-    fetchStudentAwards,
-    fetchStudentBadges,
-    fetchStudentDecorations,
-    fetchStudentPrizes,
-    fetchStudentRollover,
-    fetchGlobalAwards,
-    fetchGlobalHousePoints,
-    fetchGlobalNominations,
-    fetchGlobalPrizes
-} from '../services/api';
+import { awardsPage } from '../services/pageData';
 
 const VIEWS = [
     { id: 'overview', label: 'My progress' },
@@ -431,32 +421,12 @@ const EarnView = ({ summary }) => {
 
 // --- Page ----------------------------------------------------------------------
 
-const settle = (promise, fallback) => promise.then(value => ({ ok: true, value }), () => ({ ok: false, value: fallback }));
-
 const AwardSchemeView = ({ user }) => {
     const [view, setView] = useState('overview');
 
-    // Kept for the session: coming back shows the last copy at once while it refreshes.
-    const { data, loading, error } = useCachedLoad(user?.studentId ? `awards:${user.studentId}` : null, async () => {
-        const id = user.studentId;
-        const results = await Promise.all([
-            settle(fetchStudentAwards(id), []),
-            settle(fetchStudentBadges(id), []),
-            settle(fetchStudentDecorations(id), []),
-            settle(fetchStudentPrizes(id), []),
-            settle(fetchStudentRollover(id), null),
-            settle(fetchGlobalAwards(), []),
-            settle(fetchGlobalNominations(), []),
-            settle(fetchGlobalPrizes(), []),
-            settle(fetchGlobalHousePoints(), [])
-        ]);
-        const [awards, badges, decorations, prizes, rollover, catalog, nominations, prizeLadder, houses] = results.map(r => r.value);
-        if (!results[0].ok && !results[5].ok) throw new Error('Award scheme unavailable');
-        return {
-            awards, badges, decorations, prizes, rollover, catalog, nominations, prizeLadder, houses,
-            incomplete: results.some(r => !r.ok)
-        };
-    });
+    // Shows the last copy at once (from this session or saved on the device) while it refreshes.
+    const page = user?.studentId ? awardsPage(user.studentId) : null;
+    const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
 
     const summary = useMemo(() => (data ? summariseAwards(data) : null), [data]);
 
