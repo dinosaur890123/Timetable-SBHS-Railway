@@ -213,7 +213,10 @@ export const ModernTopbar = ({
                                         className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
                                     />
                                 )}
-                                <span className="relative">{mode}</span>
+                                <span className="relative">
+                                    <span className="md:hidden">{mode === 'daily' ? 'D' : 'C'}</span>
+                                    <span className="hidden md:inline">{mode}</span>
+                                </span>
                             </button>
                         ))}
                     </div>
