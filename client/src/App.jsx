@@ -964,6 +964,7 @@ function App() {
                                     railTimetable={railTimetable}
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
+                                    clipboardSessions={showClipboardEvents ? clipboardSessions : []}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
