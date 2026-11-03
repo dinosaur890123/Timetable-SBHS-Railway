@@ -45,6 +45,7 @@ import {
     fetchUserInfo,
     isAuthenticated,
     exchangeToken,
+    checkAuthState,
     logout,
     performLogin,
     fetchSystemStatus,
@@ -499,6 +500,11 @@ function App() {
 
             if (code) {
                 window.history.replaceState({}, document.title, "/");
+                if (!checkAuthState(params.get('state'))) {
+                    setAuthError('That sign-in link didn’t come from this app. Please sign in again.');
+                    setLoading(false);
+                    return;
+                }
                 try {
                     await exchangeToken(code);
                     setTokenScopeOutdated(false);

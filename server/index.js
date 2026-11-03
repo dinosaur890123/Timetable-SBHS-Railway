@@ -3,36 +3,38 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 
+const compression = require('compression');
+
 const db = require('./db');
 const { registerCanvasLinkRoutes } = require('./canvasLinks');
+const { guardBypassAuth, securityHeaders, corsOptionsDelegate, makeLimiter, rateLimit, createTokenVerifier } = require('./security');
 
 dotenv.config();
+guardBypassAuth();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+// Railway (and Vercel) sit behind one proxy: trust it for the client's IP and https.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 // Middleware
-const allowedOrigins = ['https://www.synchron.work', 'http://localhost:5173', 'http://localhost:3000'];
+// Origins allowed to call the API from a browser, besides the app's own origin.
+// Add more with ALLOWED_ORIGINS (comma-separated).
+const allowedOrigins = [
+    'https://www.synchron.work',
+    'https://synchron.work',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    ...String(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
+];
 
-app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            // For debugging, you might want to log the blocked origin
-            console.log('Blocked Origin:', origin);
-            // Optionally allow it anyway for now to fix the blockage
-            // return callback(null, true);
-        }
-        return callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token']
-}));
-
-app.use(express.json());
+app.use(securityHeaders);
+app.use(compression());
+app.use(cors(corsOptionsDelegate(allowedOrigins)));
+app.use(express.json({ limit: '1mb' }));
 
 // In-memory fallback storage (used only when POSTGRES_URL/DATABASE_URL is not set)
 let users = [];
@@ -41,8 +43,6 @@ let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
-let sharedResources = []; // Shared resources memory fallback
-let notifications = []; // Notifications memory fallback
 let buildNotesMemory = [
     {
         id: 'initial-build-note',
@@ -62,36 +62,21 @@ let systemState = {
     hiddenPages: []
 };
 
-// Historical system metrics buffer (last 20 entries)
+// System metrics for the admin dashboard, sampled every 10 seconds (last 20 samples).
+// "sessions" is the number of students who made an authenticated request in the
+// last 5 minutes.
 const statsHistory = [];
 const MAX_HISTORY = 20;
 
-// Initialize history with initial baseline values so it is populated at boot
-const startMemory = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
-for (let i = 19; i >= 0; i--) {
-    const time = new Date(Date.now() - i * 10000);
-    statsHistory.push({
-        time: time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
-        memory: Math.round(startMemory + (Math.random() * 6 - 3)),
-        sessions: Math.floor(Math.random() * 3) + 1
-    });
-}
-
-// Update history every 10 seconds
-setInterval(() => {
-    const currentMemory = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
-    const sessions = Math.floor(Math.random() * 4) + 1; // Active simulation
-    
+const sampleStats = () => {
     statsHistory.push({
         time: new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
-        memory: currentMemory,
-        sessions: sessions
+        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        sessions: tokenVerifier.activeCount()
     });
-    
-    if (statsHistory.length > MAX_HISTORY) {
-        statsHistory.shift();
-    }
-}, 10000);
+    if (statsHistory.length > MAX_HISTORY) statsHistory.shift();
+};
+setInterval(sampleStats, 10000).unref();
 
 const isDbEnabled = db.hasDb();
 if (!isDbEnabled) {
@@ -198,7 +183,22 @@ const formatFeedbackRow = (row) => ({
     updatedAt: toIso(row.updated_at)
 });
 
+// System state is read on every page load (/api/system/status) and by every AI
+// call, so it's cached briefly. Writes below clear the cache, so admin changes
+// show immediately on this server.
+const SYSTEM_STATE_TTL_MS = 10 * 1000;
+let systemStateCache = null; // { at, value }
+
 async function getSystemState() {
+    if (isDbEnabled && systemStateCache && Date.now() - systemStateCache.at < SYSTEM_STATE_TTL_MS) {
+        return systemStateCache.value;
+    }
+    const value = await readSystemState();
+    if (isDbEnabled) systemStateCache = { at: Date.now(), value };
+    return value;
+}
+
+async function readSystemState() {
     if (!isDbEnabled) {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
@@ -238,6 +238,7 @@ async function setHiddenPages(hiddenPages) {
         return systemState.hiddenPages;
     }
 
+    systemStateCache = null;
     await db.query(
         'UPDATE system_state SET hidden_pages = $1::jsonb, updated_at = NOW() WHERE id = 1',
         [JSON.stringify(cleanPages)]
@@ -256,6 +257,7 @@ async function setAiConfig(provider, model) {
         return { aiProvider: cleanProvider, aiModel: cleanModel };
     }
 
+    systemStateCache = null;
     await db.query(
         'UPDATE system_state SET ai_provider = $1, ai_model = $2, updated_at = NOW() WHERE id = 1',
         [cleanProvider, cleanModel]
@@ -276,6 +278,7 @@ async function setBroadcast(message, type) {
         return systemState.broadcast;
     }
 
+    systemStateCache = null;
     const res = await db.query(
         'UPDATE system_state SET broadcast_message = $1, broadcast_type = $2, updated_at = NOW() WHERE id = 1 RETURNING updated_at',
         [message || null, message ? (type || 'info') : null]
@@ -291,6 +294,7 @@ async function setMaintenance(maintenance) {
         return systemState.maintenance;
     }
 
+    systemStateCache = null;
     const result = await db.query(
         'UPDATE system_state SET maintenance = $1, updated_at = NOW() WHERE id = 1 RETURNING maintenance',
         [Boolean(maintenance)]
@@ -539,7 +543,7 @@ setInterval(() => {
     purgeArchivedFeedback().catch((err) => {
         console.error('[purge-feedback] Interval purge failed:', err);
     });
-}, 12 * 60 * 60 * 1000);
+}, 12 * 60 * 60 * 1000).unref();
 
 // Initial log (best-effort)
 addLog('STARTUP', 'SYSTEM', 'Server service started').catch((e) => {
@@ -554,25 +558,31 @@ const getAdminIds = () => {
     return ["449130511", "449596935"];
 };
 
-// Verify SBHS Access Token via SBHS API
+// Verify SBHS Access Token via SBHS API. Results are cached briefly per token
+// (see security.js), so SBHS is asked once per few minutes, not once per request.
+const tokenVerifier = createTokenVerifier({
+    fetchUserInfo: async (token) => {
+        try {
+            // Without a timeout an unresponsive SBHS API keeps the request open
+            // indefinitely, and every page load hangs behind it.
+            const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: AbortSignal.timeout(8000)
+            });
+            if (!response.ok) return null;
+            const user = await response.json();
+            return user || null;
+        } catch (e) {
+            console.error('[auth] SBHS Token validation failed:', e?.message || e);
+            return null;
+        }
+    }
+});
+
 const verifySbhsToken = async (req) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-
-    const token = authHeader.split(' ')[1];
-    try {
-        // Without a timeout an unresponsive SBHS API keeps the request open
-        // indefinitely, and every admin page load hangs behind it.
-        const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            signal: AbortSignal.timeout(8000)
-        });
-        if (!response.ok) return null;
-        return await response.json();
-    } catch (e) {
-        console.error('[auth] SBHS Token validation failed:', e?.message || e);
-        return null;
-    }
+    return tokenVerifier.verify(authHeader.slice('Bearer '.length).trim());
 };
 
 // Require valid student authentication (Any logged-in student)
@@ -1323,7 +1333,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
         let availableHackClubModels = ['qwen/qwen3-32b'];
         try {
-            const modelsRes = await fetch('https://ai.hackclub.com/proxy/v1/models');
+            const modelsRes = await fetch('https://ai.hackclub.com/proxy/v1/models', { signal: AbortSignal.timeout(5000) });
             if (modelsRes.ok) {
                 const modelsData = await modelsRes.json();
                 if (modelsData && Array.isArray(modelsData.data)) {
@@ -1459,7 +1469,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
                 'gemini-2.0-flash',
                 'gemini-2.5-flash'
             ],
-            activeSessions: statsHistory[statsHistory.length - 1]?.sessions || 1,
+            activeSessions: tokenVerifier.activeCount(),
             history: statsHistory,
             
             // Year group analytics
@@ -1999,72 +2009,87 @@ app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
 
 let aiMemoryCache = {};
 
-// POST /api/ai/briefing
-app.post('/api/ai/briefing', requireStudentAuth, async (req, res) => {
+// AI calls cost money and can hang: cap how often each student can make them,
+// how big their input can be, and how long the provider gets to answer.
+const AI_TIMEOUT_MS = 30 * 1000;
+const aiLimit = rateLimit(
+    [makeLimiter(20, 60 * 60 * 1000), makeLimiter(60, 24 * 60 * 60 * 1000)],
+    (req) => String(req.user?.studentId),
+    'You’ve used the AI features a lot recently. Try again later.'
+);
+const briefingLimit = rateLimit(
+    [makeLimiter(30, 60 * 60 * 1000)],
+    (req) => String(req.user?.studentId),
+    'Too many requests. Try again later.'
+);
+const clip = (value, max) => String(value ?? '').slice(0, max);
+
+const meetingsFirst = (notices) => [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+
+// Today's notices, straight from SBHS with the student's own token. The briefing
+// is shared by every student, so it must never be built from notices a client
+// sent in.
+const fetchTodaysNotices = async (authHeader) => {
+    const response = await fetch('https://student.sbhs.net.au/api/dailynews/list.json', {
+        headers: { Authorization: authHeader },
+        signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error(`SBHS notices request failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data?.notices) ? data.notices : [];
+};
+
+const readBriefingCache = async (dateKey) => {
+    if (aiMemoryCache[dateKey]) return aiMemoryCache[dateKey];
+    if (!isDbEnabled) return null;
     try {
-        const studentId = String(req.user.studentId);
-        const dbUser = await getUserById(studentId);
-        if (!dbUser) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+        const cacheResult = await db.query(
+            'SELECT briefing, prioritized_notices FROM ai_cache WHERE date_key = $1',
+            [dateKey]
+        );
+        if (cacheResult.rows.length === 0) return null;
+        const cached = { briefing: cacheResult.rows[0].briefing, sortedNotices: cacheResult.rows[0].prioritized_notices };
+        aiMemoryCache[dateKey] = cached;
+        return cached;
+    } catch (err) {
+        console.error('[ai-cache] Failed to query cache database:', err);
+        return null;
+    }
+};
 
-        const notices = req.body.notices || [];
-        const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+const writeBriefingCache = async (dateKey, result) => {
+    aiMemoryCache[dateKey] = result;
+    if (!isDbEnabled) return;
+    try {
+        await db.query(
+            'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
+            [dateKey, result.briefing, JSON.stringify(result.sortedNotices)]
+        );
+    } catch (err) {
+        console.error('[ai-cache] Failed to write cache to DB:', err);
+    }
+};
 
-        // 1. Check in-memory / DB cache
-        if (isDbEnabled) {
-            try {
-                const cacheResult = await db.query(
-                    'SELECT briefing, prioritized_notices FROM ai_cache WHERE date_key = $1',
-                    [dateKey]
-                );
-                if (cacheResult.rows.length > 0) {
-                    console.log(`[ai-cache] DB cache hit for ${dateKey}`);
-                    return res.json({
-                        briefing: cacheResult.rows[0].briefing,
-                        sortedNotices: cacheResult.rows[0].prioritized_notices
-                    });
-                }
-            } catch (err) {
-                console.error('[ai-cache] Failed to query cache database, falling back to memory:', err);
-            }
-        }
+const parseAiJson = (aiText) => {
+    let jsonText = String(aiText || '').trim();
+    if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
+    else if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
+    if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
+    return JSON.parse(jsonText.trim());
+};
 
-        if (aiMemoryCache[dateKey]) {
-            console.log(`[ai-cache] In-memory cache hit for ${dateKey}`);
-            return res.json(aiMemoryCache[dateKey]);
-        }
+const generateBriefing = async (notices) => {
+    if (notices.length === 0) return { briefing: 'No notices for today.', sortedNotices: [] };
 
-        // 2. Handle empty notices quickly
-        if (notices.length === 0) {
-            const defaultResult = {
-                briefing: "No notices for today.",
-                sortedNotices: []
-            };
-            if (isDbEnabled) {
-                await db.query(
-                    'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
-                    [dateKey, defaultResult.briefing, JSON.stringify(defaultResult.sortedNotices)]
-                ).catch(() => {});
-            }
-            aiMemoryCache[dateKey] = defaultResult;
-            return res.json(defaultResult);
-        }
+    const promptNotices = notices.map((n, i) => ({
+        index: i,
+        title: n.title || '',
+        content: (n.content || '').replace(/<[^>]*>/g, ''), // strip HTML to save context window tokens
+        isMeeting: n.isMeeting || 0,
+        displayYears: n.displayYears || 'All Students'
+    }));
 
-        // 3. Check configuration and request AI
-        const systemStateObj = await getSystemState();
-        const activeProvider = systemStateObj.aiProvider || 'hackclub';
-        const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
-
-        const promptNotices = notices.map((n, i) => ({
-            index: i,
-            title: n.title || '',
-            content: (n.content || '').replace(/<[^>]*>/g, ''), // strip HTML to save context window tokens
-            isMeeting: n.isMeeting || 0,
-            displayYears: n.displayYears || 'All Students'
-        }));
-
-        const systemPrompt = `You are a school assistant. Summarize the daily school notices and prioritize them.
+    const systemPrompt = `You are a school assistant. Summarize the daily school notices and prioritize them.
 Return a JSON object in this exact format:
 {
   "briefing": "A friendly, engaging morning summary of the key notices (2-3 sentences max). Ensure you highlight important school-wide dates, sporting updates, or co-curricular requirements.",
@@ -2078,143 +2103,56 @@ Return a JSON object in this exact format:
 }
 Return ONLY the JSON. Do not include markdown code block wraps.`;
 
-        let aiText = '';
+    const { aiText } = await runAiPrompt(systemPrompt, `Here are today's notices:\n${JSON.stringify(promptNotices)}`, await getSystemState(), 'application/json');
+    const parsed = parseAiJson(aiText);
+    const priorities = Array.isArray(parsed.prioritizedNotices) ? parsed.prioritizedNotices : [];
 
-        if (activeProvider === 'gemini') {
-            const apiKey = process.env.GEMINI_API_KEY;
-            if (!apiKey) {
-                console.warn('[ai] GEMINI_API_KEY is not set. Using fallback sorting.');
-                const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-                return res.json({
-                    briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
-                    sortedNotices: sorted
-                });
-            }
+    const sortedNotices = notices.map((n, i) => {
+        const prio = priorities.find(p => p.index === i);
+        return { ...n, priority: prio ? prio.priority : 1, priorityReason: prio ? prio.reason : '' };
+    }).sort((a, b) => b.priority - a.priority);
 
-            console.log(`[ai] Querying Google Gemini API (${activeModel}) for ${dateKey}...`);
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `${systemPrompt}\n\nHere are today's notices:\n${JSON.stringify(promptNotices)}`
-                        }]
-                    }],
-                    generationConfig: {
-                        responseMimeType: 'application/json',
-                        temperature: 0.3
-                    }
-                })
-            });
+    return { briefing: parsed.briefing || 'Here is your notices summary for today.', sortedNotices };
+};
 
-            if (!response.ok) {
-                throw new Error(`Gemini API responded with status ${response.status}`);
-            }
+// One briefing is generated per day; students who ask while it's being made wait
+// for the same result instead of starting their own AI call.
+const briefingInFlight = new Map(); // dateKey -> Promise
 
-            const aiData = await response.json();
-            aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-        } else {
-            const apiKey = process.env.HACKCLUB_AI_API_KEY;
-            if (!apiKey) {
-                console.warn('[ai] HACKCLUB_AI_API_KEY is not set. Using fallback sorting.');
-                const sorted = [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-                return res.json({
-                    briefing: "Welcome to your notices for today! Read below for co-curricular and meeting updates.",
-                    sortedNotices: sorted
-                });
-            }
+// POST /api/ai/briefing
+app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res) => {
+    const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+    const clientNotices = Array.isArray(req.body?.notices) ? req.body.notices.slice(0, 200) : [];
+    const fallback = (notices) => res.json({
+        briefing: 'Welcome to your notices for today! Check out co-curricular meetings and activities below.',
+        sortedNotices: meetingsFirst(notices)
+    });
 
-            console.log(`[ai] Querying Hack Club AI (${activeModel}) for ${dateKey}...`);
-            const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: activeModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: `Here are today's notices:\n${JSON.stringify(promptNotices)}` }
-                    ],
-                    temperature: 0.3
-                })
-            });
+    try {
+        const cached = await readBriefingCache(dateKey);
+        if (cached) return res.json(cached);
 
-            if (!response.ok) {
-                throw new Error(`Hack Club AI responded with status ${response.status}`);
-            }
-
-            const aiData = await response.json();
-            aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
+        if (!briefingInFlight.has(dateKey)) {
+            const job = (async () => {
+                const notices = await fetchTodaysNotices(req.headers.authorization);
+                const result = await generateBriefing(notices);
+                await writeBriefingCache(dateKey, result);
+                console.log(`[ai] Briefing cached for ${dateKey}`);
+                return result;
+            })().finally(() => briefingInFlight.delete(dateKey));
+            briefingInFlight.set(dateKey, job);
         }
-
-        // Clean up markdown block wraps if present
-        let jsonText = aiText;
-        if (jsonText.startsWith('```json')) {
-            jsonText = jsonText.substring(7);
-        } else if (jsonText.startsWith('```')) {
-            jsonText = jsonText.substring(3);
-        }
-        if (jsonText.endsWith('```')) {
-            jsonText = jsonText.substring(0, jsonText.length - 3);
-        }
-        jsonText = jsonText.trim();
-
-        const parsed = JSON.parse(jsonText);
-        const briefing = parsed.briefing || "Here is your notices summary for today.";
-        const priorities = parsed.prioritizedNotices || [];
-
-        // Map priorities to original notices list
-        const noticesWithPriority = notices.map((n, i) => {
-            const prio = priorities.find(p => p.index === i);
-            return {
-                ...n,
-                priority: prio ? prio.priority : 1,
-                priorityReason: prio ? prio.reason : ''
-            };
-        });
-
-        // Sort by priority descending (highest first)
-        noticesWithPriority.sort((a, b) => b.priority - a.priority);
-
-        const result = {
-            briefing,
-            sortedNotices: noticesWithPriority
-        };
-
-        // Write cache
-        if (isDbEnabled) {
-            try {
-                await db.query(
-                    'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
-                    [dateKey, result.briefing, JSON.stringify(result.sortedNotices)]
-                );
-            } catch (err) {
-                console.error('[ai-cache] Failed to write cache to DB:', err);
-            }
-        }
-        aiMemoryCache[dateKey] = result;
-
-        console.log(`[ai] Cache updated successfully for ${dateKey}`);
-        res.json(result);
-
+        res.json(await briefingInFlight.get(dateKey));
     } catch (err) {
-        console.error('[ai] Hack Club AI failed, returning fallback:', err);
-        // `notices` is scoped to the try block, so read it from the request again here.
-        const sorted = [...(req.body?.notices || [])].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-        res.json({
-            briefing: "Welcome to your notices for today! Check out co-curricular meetings and activities below.",
-            sortedNotices: sorted
-        });
+        // Nothing is cached, so the next request tries again. The client's own
+        // notices are only echoed back to that client, sorted.
+        console.error('[ai] Briefing failed, returning fallback:', err?.message || err);
+        fallback(clientNotices);
     }
 });
 
 // POST /api/ai/timetable-qa
-app.post('/api/ai/timetable-qa', requireStudentAuth, async (req, res) => {
+app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
@@ -2222,7 +2160,8 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const { question, timetable, currentMinutes, completeTimetable } = req.body || {};
+        const { timetable, currentMinutes, completeTimetable } = req.body || {};
+        const question = clip(req.body?.question, 500).trim();
         if (!question) {
             return res.status(400).json({ error: 'Missing question' });
         }
@@ -2263,6 +2202,7 @@ Answer the student's question:`;
                 console.log(`[ai] Querying Google Gemini API (${activeModel}) for Timetable Q&A...`);
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
                     method: 'POST',
+                    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{
@@ -2292,6 +2232,7 @@ Answer the student's question:`;
                 console.log(`[ai] Querying Hack Club AI (${activeModel}) for Timetable Q&A...`);
                 const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
                     method: 'POST',
+                    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
@@ -2356,6 +2297,7 @@ async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMim
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
             method: 'POST',
+            signal: AbortSignal.timeout(AI_TIMEOUT_MS),
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -2376,6 +2318,7 @@ async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMim
 
         const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
             method: 'POST',
+            signal: AbortSignal.timeout(AI_TIMEOUT_MS),
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
@@ -2402,7 +2345,7 @@ async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMim
 }
 
 // POST /api/ai/notes-summarise
-app.post('/api/ai/notes-summarise', requireStudentAuth, async (req, res) => {
+app.post('/api/ai/notes-summarise', requireStudentAuth, aiLimit, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
@@ -2410,8 +2353,9 @@ app.post('/api/ai/notes-summarise', requireStudentAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const { content, title } = req.body || {};
-        if (!content) {
+        const content = clip(req.body?.content, 20000);
+        const title = clip(req.body?.title, 200);
+        if (!content.trim()) {
             return res.status(400).json({ error: 'Missing note content' });
         }
 
@@ -2431,7 +2375,7 @@ app.post('/api/ai/notes-summarise', requireStudentAuth, async (req, res) => {
 });
 
 // POST /api/ai/quiz-generate
-app.post('/api/ai/quiz-generate', requireStudentAuth, async (req, res) => {
+app.post('/api/ai/quiz-generate', requireStudentAuth, aiLimit, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
@@ -2439,8 +2383,10 @@ app.post('/api/ai/quiz-generate', requireStudentAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const { source, noteContent, topic, count } = req.body || {};
-        const qCount = parseInt(count) || 5;
+        const source = req.body?.source === 'note' ? 'note' : 'topic';
+        const noteContent = clip(req.body?.noteContent, 20000);
+        const topic = clip(req.body?.topic, 200);
+        const qCount = Math.min(Math.max(parseInt(req.body?.count, 10) || 5, 1), 15);
 
         if (source === 'note' && !noteContent) {
             return res.status(400).json({ error: 'Missing note content for generating quiz' });
@@ -2582,7 +2528,6 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
-            console.log(`[proxy] Proxying student API request to: ${url.toString()}`);
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(8000)
@@ -2609,7 +2554,6 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
             Object.entries(req.query).forEach(([key, val]) => {
                 url.searchParams.append(key, val);
             });
-            console.log(`[proxy] Proxying global API request to: ${url.toString()}`);
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(8000)
@@ -2953,346 +2897,141 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
     }
 });
 
-// Resource Sharing Endpoints
+// --- Sign-in ---
+// The SBHS client secret stays on the server. The browser sends its sign-in code
+// or refresh token here; the server adds the client ID and secret and forwards
+// the request to SBHS. SBHS_CLIENT_* fall back to the VITE_SBHS_CLIENT_* names
+// the client build already uses, so existing deployments need no new settings.
+const SBHS_TOKEN_ENDPOINT = 'https://auth.sbhs.net.au/token';
+const envFirst = (...names) => names.map(n => String(process.env[n] || '').trim()).find(Boolean) || '';
+const tokenLimit = rateLimit(
+    [makeLimiter(30, 60 * 1000)],
+    (req) => req.ip,
+    'Too many sign-in attempts. Wait a minute and try again.'
+);
 
-// Search for users by student ID or name
-app.get('/api/users/search', requireStudentAuth, async (req, res) => {
+app.post('/api/auth/token', tokenLimit, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const clientId = envFirst('SBHS_CLIENT_ID', 'VITE_SBHS_CLIENT_ID');
+    if (!clientId) {
+        return res.status(500).json({ error: 'server_misconfigured', error_description: 'SBHS_CLIENT_ID is not set on the server.' });
+    }
+
+    const { grant_type: grantType, code, refresh_token: refreshToken, redirect_uri: redirectUri } = req.body || {};
+    const form = new URLSearchParams({ client_id: clientId });
+    if (grantType === 'authorization_code' && typeof code === 'string' && code && code.length <= 4096) {
+        form.set('grant_type', 'authorization_code');
+        form.set('code', code);
+        form.set('redirect_uri', envFirst('SBHS_REDIRECT_URI', 'VITE_SBHS_REDIRECT_URI') || String(redirectUri || ''));
+    } else if (grantType === 'refresh_token' && typeof refreshToken === 'string' && refreshToken && refreshToken.length <= 4096) {
+        form.set('grant_type', 'refresh_token');
+        form.set('refresh_token', refreshToken);
+    } else {
+        return res.status(400).json({ error: 'invalid_request' });
+    }
+    const secret = envFirst('SBHS_CLIENT_SECRET', 'VITE_SBHS_CLIENT_SECRET');
+    if (secret) form.set('client_secret', secret);
+
     try {
-        const { query } = req.query;
-        if (!query || query.length < 2) {
-            return res.json([]);
-        }
-
-        const user = req.user;
-        const searchPattern = `%${query.toLowerCase()}%`;
-
-        let result;
-        if (db.hasDb()) {
-            result = await db.query(
-                `SELECT id, name, email, year, role 
-                 FROM app_users 
-                 WHERE (id ILIKE $1 OR name ILIKE $1 OR email ILIKE $1)
-                 AND id != $2
-                 AND blacklisted = false
-                 LIMIT 20`,
-                [searchPattern, user.studentId]
-            );
-            res.json(result.rows);
-        } else {
-            // In-memory fallback
-            const filteredUsers = users.filter(u => 
-                (u.id && u.id.toLowerCase().includes(query.toLowerCase())) ||
-                (u.name && u.name.toLowerCase().includes(query.toLowerCase())) ||
-                (u.email && u.email.toLowerCase().includes(query.toLowerCase()))
-            ).map(u => ({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                year: u.year,
-                role: u.role
-            }));
-            res.json(filteredUsers.slice(0, 20));
-        }
-    } catch (error) {
-        console.error('User search error:', error);
-        res.status(500).json({ error: 'Failed to search users' });
+        const response = await fetch(SBHS_TOKEN_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+            body: form,
+            signal: AbortSignal.timeout(10000)
+        });
+        const body = await response.text();
+        res.status(response.status).type(response.headers.get('content-type') || 'application/json').send(body);
+    } catch (e) {
+        console.error('[auth] SBHS token request failed:', e?.message || e);
+        res.status(502).json({ error: 'sbhs_unreachable', error_description: 'Couldn’t reach SBHS. Try again.' });
     }
 });
 
-// Share a resource with another student
-app.post('/api/resources/share', requireStudentAuth, async (req, res) => {
-    try {
-        const { recipientId, resourceType, resourceId, title, description } = req.body;
-        const senderId = req.user.studentId;
-
-        if (!recipientId || !resourceType || !resourceId || !title) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-
-        if (recipientId === senderId) {
-            return res.status(400).json({ error: 'Cannot share with yourself' });
-        }
-
-        const shareId = crypto.randomUUID();
-        const now = new Date().toISOString();
-
-        if (db.hasDb()) {
-            await db.query(
-                `INSERT INTO shared_resources (id, sender_id, recipient_id, resource_type, resource_id, title, description, status, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $8)`,
-                [shareId, senderId, recipientId, resourceType, resourceId, title, description, now]
-            );
-
-            // Create notification for recipient
-            const notificationId = crypto.randomUUID();
-            await db.query(
-                `INSERT INTO notifications (id, user_id, type, title, message, action_url, read, created_at)
-                 VALUES ($1, $2, 'resource_share', $3, $4, $5, false, $6)`,
-                [notificationId, recipientId, 'New Resource Shared', `${req.user.name || 'A student'} shared "${title}" with you`, `/study?tab=shared`, now]
-            );
-        } else {
-            // In-memory fallback
-            sharedResources.push({
-                id: shareId,
-                sender_id: senderId,
-                recipient_id: recipientId,
-                resource_type: resourceType,
-                resource_id: resourceId,
-                title,
-                description,
-                status: 'pending',
-                created_at: now,
-                updated_at: now
-            });
-
-            notifications.push({
-                id: crypto.randomUUID(),
-                user_id: recipientId,
-                type: 'resource_share',
-                title: 'New Resource Shared',
-                message: `${req.user.name || 'A student'} shared "${title}" with you`,
-                action_url: '/study?tab=shared',
-                read: false,
-                created_at: now
-            });
-        }
-
-        await addLog('RESOURCE_SHARE', senderId, `Shared ${resourceType} "${title}" with ${recipientId}`);
-        res.json({ success: true, shareId });
-    } catch (error) {
-        console.error('Resource share error:', error);
-        res.status(500).json({ error: 'Failed to share resource' });
-    }
-});
-
-// Get resources shared by current user
-app.get('/api/resources/sent', requireStudentAuth, async (req, res) => {
-    try {
-        const senderId = req.user.studentId;
-
-        if (db.hasDb()) {
-            const result = await db.query(
-                `SELECT sr.*, u.name as recipient_name, u.email as recipient_email
-                 FROM shared_resources sr
-                 JOIN app_users u ON sr.recipient_id = u.id
-                 WHERE sr.sender_id = $1
-                 ORDER BY sr.created_at DESC`,
-                [senderId]
-            );
-            res.json(result.rows);
-        } else {
-            const sent = sharedResources.filter(sr => sr.sender_id === senderId);
-            res.json(sent);
-        }
-    } catch (error) {
-        console.error('Get sent resources error:', error);
-        res.status(500).json({ error: 'Failed to fetch sent resources' });
-    }
-});
-
-// Get resources received by current user
-app.get('/api/resources/received', requireStudentAuth, async (req, res) => {
-    try {
-        const recipientId = req.user.studentId;
-
-        if (db.hasDb()) {
-            const result = await db.query(
-                `SELECT sr.*, u.name as sender_name, u.email as sender_email
-                 FROM shared_resources sr
-                 JOIN app_users u ON sr.sender_id = u.id
-                 WHERE sr.recipient_id = $1
-                 ORDER BY sr.created_at DESC`,
-                [recipientId]
-            );
-            res.json(result.rows);
-        } else {
-            const received = sharedResources.filter(sr => sr.recipient_id === recipientId);
-            res.json(received);
-        }
-    } catch (error) {
-        console.error('Get received resources error:', error);
-        res.status(500).json({ error: 'Failed to fetch received resources' });
-    }
-});
-
-// Update resource share status (accept/decline)
-app.put('/api/resources/:id/status', requireStudentAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body; // 'accepted' or 'declined'
-        const userId = req.user.studentId;
-
-        if (!['accepted', 'declined'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status' });
-        }
-
-        const now = new Date().toISOString();
-
-        if (db.hasDb()) {
-            const result = await db.query(
-                `UPDATE shared_resources 
-                 SET status = $1, updated_at = $2
-                 WHERE id = $3 AND recipient_id = $4
-                 RETURNING *`,
-                [status, now, id, userId]
-            );
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Resource share not found' });
-            }
-        } else {
-            const shareIndex = sharedResources.findIndex(sr => sr.id === id && sr.recipient_id === userId);
-            if (shareIndex === -1) {
-                return res.status(404).json({ error: 'Resource share not found' });
-            }
-            sharedResources[shareIndex].status = status;
-            sharedResources[shareIndex].updated_at = now;
-        }
-
-        await addLog('RESOURCE_STATUS', userId, `Updated resource share ${id} to ${status}`);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Update resource status error:', error);
-        res.status(500).json({ error: 'Failed to update resource status' });
-    }
-});
-
-// Notification Endpoints
-
-// Get user notifications
-app.get('/api/notifications', requireStudentAuth, async (req, res) => {
-    try {
-        const userId = req.user.studentId;
-        const { unreadOnly } = req.query;
-
-        if (db.hasDb()) {
-            let query = `SELECT * FROM notifications WHERE user_id = $1`;
-            const params = [userId];
-
-            if (unreadOnly === 'true') {
-                query += ' AND read = false';
-            }
-
-            query += ' ORDER BY created_at DESC LIMIT 50';
-
-            const result = await db.query(query, params);
-            res.json(result.rows);
-        } else {
-            let userNotifications = notifications.filter(n => n.user_id === userId);
-            if (unreadOnly === 'true') {
-                userNotifications = userNotifications.filter(n => !n.read);
-            }
-            userNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            res.json(userNotifications.slice(0, 50));
-        }
-    } catch (error) {
-        console.error('Get notifications error:', error);
-        res.status(500).json({ error: 'Failed to fetch notifications' });
-    }
-});
-
-// Mark notification as read
-app.put('/api/notifications/:id/read', requireStudentAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.studentId;
-
-        if (db.hasDb()) {
-            const result = await db.query(
-                `UPDATE notifications 
-                 SET read = true 
-                 WHERE id = $1 AND user_id = $2
-                 RETURNING *`,
-                [id, userId]
-            );
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Notification not found' });
-            }
-        } else {
-            const notifIndex = notifications.findIndex(n => n.id === id && n.user_id === userId);
-            if (notifIndex === -1) {
-                return res.status(404).json({ error: 'Notification not found' });
-            }
-            notifications[notifIndex].read = true;
-        }
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Mark notification read error:', error);
-        res.status(500).json({ error: 'Failed to mark notification as read' });
-    }
-});
-
-// Mark all notifications as read
-app.put('/api/notifications/read-all', requireStudentAuth, async (req, res) => {
-    try {
-        const userId = req.user.studentId;
-
-        if (db.hasDb()) {
-            await db.query(
-                `UPDATE notifications 
-                 SET read = true 
-                 WHERE user_id = $1`,
-                [userId]
-            );
-        } else {
-            notifications.forEach(n => {
-                if (n.user_id === userId) {
-                    n.read = true;
-                }
-            });
-        }
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Mark all notifications read error:', error);
-        res.status(500).json({ error: 'Failed to mark all notifications as read' });
-    }
-});
-
-// Get unread notification count
-app.get('/api/notifications/unread-count', requireStudentAuth, async (req, res) => {
-    try {
-        const userId = req.user.studentId;
-
-        let count = 0;
-        if (db.hasDb()) {
-            const result = await db.query(
-                `SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read = false`,
-                [userId]
-            );
-            count = parseInt(result.rows[0].count);
-        } else {
-            count = notifications.filter(n => n.user_id === userId && !n.read).length;
-        }
-
-        res.json({ count });
-    } catch (error) {
-        console.error('Get unread count error:', error);
-        res.status(500).json({ error: 'Failed to get unread count' });
-    }
-});
-
-// Health check endpoint (public)
+// Health check endpoint (public). Liveness only: it doesn't touch the database,
+// so a database blip doesn't get the server restarted.
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Serve static assets from Vite build in client/dist
+// Readiness: 200 when the database (if configured) answers, 503 otherwise.
+app.get('/health/ready', async (req, res) => {
+    if (!isDbEnabled) return res.json({ status: 'ok', database: 'not configured' });
+    try {
+        await db.query('SELECT 1');
+        res.json({ status: 'ok', database: 'ok' });
+    } catch (e) {
+        res.status(503).json({ status: 'unavailable', database: 'unreachable' });
+    }
+});
+
+// Unknown API routes get a JSON 404, not the app's HTML page.
+app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: 'Not found' });
+});
+
+// Serve static assets from Vite build in client/dist.
+// Files under /assets have content hashes in their names, so browsers can keep
+// them for a year. Everything else (index.html, the service worker,
+// version.json) is revalidated on every load so new deploys show up at once.
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../client/dist')));
+const clientDist = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDist, {
+    setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (/\.(png|ico|svg|webp|jpg|woff2?)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
+}));
 
 // Fallback all unmatched routes to index.html (for client-side routing)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(clientDist, 'index.html'));
+});
+
+// Last-resort error handler: log it, and never send a stack trace to the browser.
+app.use((err, req, res, next) => {
+    if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Request too large' });
+    if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });
+    console.error('[server] Unhandled route error:', err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Something went wrong' });
+});
+
+// A stray rejected promise shouldn't take the whole server down.
+process.on('unhandledRejection', (reason) => {
+    console.error('[server] Unhandled promise rejection:', reason);
 });
 
 if (require.main === module) {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
         console.log(`Admin Password configured: ${!!ADMIN_PASSWORD}`);
     });
+    // Railway can keep connections open between requests; keep ours open a bit
+    // longer than its proxy so it never reuses a socket we just closed.
+    server.keepAliveTimeout = 65 * 1000;
+    server.headersTimeout = 66 * 1000;
+
+    // On redeploy Railway sends SIGTERM: finish in-flight requests, then close
+    // the database pool, instead of dropping requests mid-way.
+    let shuttingDown = false;
+    const shutdown = (signal) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        console.log(`[server] ${signal} received, shutting down`);
+        const force = setTimeout(() => process.exit(0), 10 * 1000);
+        force.unref();
+        server.close(() => {
+            db.close().catch(() => {}).finally(() => process.exit(0));
+        });
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 // Export the app for Vercel
