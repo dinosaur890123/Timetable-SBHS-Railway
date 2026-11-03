@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check } from 'lucide-react';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
+import AdminCanvasLinks from './AdminCanvasLinks';
 
 const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -616,6 +617,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                     <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
                     <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
+                    <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
                     <TabButton id="settings" label="Settings" icon={Settings} />
                     {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
                 </div>
@@ -1569,6 +1571,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         </div>
     )
 }
+
+{activeTab === 'canvas-links' && <AdminCanvasLinks />}
 
 {
     activeTab === 'hidden-pages' && (

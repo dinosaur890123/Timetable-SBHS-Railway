@@ -127,66 +127,58 @@ ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
 -- Blacklist migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blacklisted BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Canvas Links migration
+-- Canvas Links migration: each student's own links, one per class per school year.
 CREATE TABLE IF NOT EXISTS canvas_links (
   id TEXT PRIMARY KEY,
   class_name TEXT NOT NULL,
   canvas_url TEXT NOT NULL,
   student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  school_year INTEGER NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(class_name, student_id)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Links saved before school years were tracked belong to the year they were made in.
+ALTER TABLE canvas_links ADD COLUMN IF NOT EXISTS school_year INTEGER;
+UPDATE canvas_links SET school_year = EXTRACT(YEAR FROM (created_at AT TIME ZONE 'Australia/Sydney'))::int WHERE school_year IS NULL;
+ALTER TABLE canvas_links ALTER COLUMN school_year SET NOT NULL;
+ALTER TABLE canvas_links DROP CONSTRAINT IF EXISTS canvas_links_class_name_student_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS canvas_links_student_year_class_key ON canvas_links (student_id, school_year, class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
 
--- Shared Canvas Courses migration (one canonical course ID per class, school-wide)
-CREATE TABLE IF NOT EXISTS canvas_courses (
+-- Shared Canvas links: one row per Canvas course suggested for a class in a school year.
+-- class_key is the timetable's year + short title, e.g. "9Ma1".
+CREATE TABLE IF NOT EXISTS canvas_class_links (
   id TEXT PRIMARY KEY,
-  class_name TEXT NOT NULL UNIQUE,
+  class_key TEXT NOT NULL,
+  school_year INTEGER NOT NULL,
+  class_name TEXT NOT NULL,
   course_id TEXT NOT NULL,
-  set_by TEXT NOT NULL,
+  submitted_by TEXT NOT NULL,
+  locked_status TEXT NULL CHECK (locked_status IN ('verified', 'rejected')), -- set by an admin; overrides votes
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (school_year, class_key, course_id)
 );
 
-CREATE INDEX IF NOT EXISTS canvas_courses_class_name_idx ON canvas_courses (class_name);
+CREATE INDEX IF NOT EXISTS canvas_class_links_submitted_by_idx ON canvas_class_links (submitted_by, created_at);
 
--- Canvas Course Reports migration (for reporting incorrect shared links)
-CREATE TABLE IF NOT EXISTS canvas_course_reports (
-  id TEXT PRIMARY KEY,
-  class_name TEXT NOT NULL,
-  suggested_course_id TEXT NOT NULL,
-  justification TEXT NOT NULL,
-  reported_by TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'resolved', 'rejected'
+-- One vote per student per shared link: 1 backs it, -1 reports it as wrong.
+CREATE TABLE IF NOT EXISTS canvas_class_link_votes (
+  link_id TEXT NOT NULL REFERENCES canvas_class_links(id) ON DELETE CASCADE,
+  student_id TEXT NOT NULL,
+  vote SMALLINT NOT NULL CHECK (vote IN (1, -1)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (link_id, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS canvas_course_reports_class_name_idx ON canvas_course_reports (class_name);
-CREATE INDEX IF NOT EXISTS canvas_course_reports_status_idx ON canvas_course_reports (status);
+CREATE INDEX IF NOT EXISTS canvas_class_link_votes_student_idx ON canvas_class_link_votes (student_id);
 
--- Crowdsourced Canvas Link Suggestions migration
-CREATE TABLE IF NOT EXISTS canvas_link_suggestions (
-  id TEXT PRIMARY KEY,
-  class_name TEXT NOT NULL,
-  class_name_full TEXT NOT NULL, -- Full name variant for matching
-  canvas_url TEXT NOT NULL,
-  submitted_by TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
-  verified_by TEXT[] DEFAULT '{}', -- Array of user IDs who verified this link
-  verified_count INTEGER NOT NULL DEFAULT 0,
-  reports INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'verified', 'rejected'
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS canvas_link_suggestions_class_name_idx ON canvas_link_suggestions (class_name);
-CREATE INDEX IF NOT EXISTS canvas_link_suggestions_class_name_full_idx ON canvas_link_suggestions (class_name_full);
-CREATE INDEX IF NOT EXISTS canvas_link_suggestions_status_idx ON canvas_link_suggestions (status);
-CREATE INDEX IF NOT EXISTS canvas_link_suggestions_submitted_by_idx ON canvas_link_suggestions (submitted_by);
+-- canvas_courses, canvas_course_reports and canvas_link_suggestions were used by
+-- earlier versions of Canvas links and are no longer read. They are left in place
+-- so no data is dropped automatically; they can be dropped by hand.
 
 -- Shared Resources migration
 CREATE TABLE IF NOT EXISTS shared_resources (
