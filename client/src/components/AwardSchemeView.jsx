@@ -105,11 +105,11 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-// The year at a glance: points, nominations, prize, and the nomination closest to done.
+// The year at a glance: points, nominations, and prize.
 const SummaryCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount, nominationsThisYear, latestPrize, nextPrize, nextNomination, rollover } = summary;
+    const { totalPoints, housePoints, awardCount, nominationsThisYear, latestPrize, nextPrize, rollover } = summary;
     return (
-        <Card className="lg:col-span-2 flex flex-col">
+        <Card className="lg:col-span-2">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
                 <Stat
                     label="Points"
@@ -129,20 +129,6 @@ const SummaryCard = ({ summary }) => {
                     sub={prizeProgress(nextPrize, nominationsThisYear)}
                 />
             </div>
-
-            {nextNomination && (
-                <div className="mt-5 lg:mt-auto pt-4 border-t border-m-line">
-                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                        <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
-                            Closest nomination: <span className="font-medium text-zinc-900 dark:text-white">{nextNomination.name}</span>
-                        </span>
-                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-500">
-                            {nextNomination.points}/{nextNomination.pointsRequired} · {nextNomination.remaining} to go
-                        </span>
-                    </div>
-                    <div className="mt-2"><Bar value={nextNomination.points} max={nextNomination.pointsRequired} tone="accent" /></div>
-                </div>
-            )}
         </Card>
     );
 };
@@ -182,50 +168,41 @@ const StatusMark = ({ state }) => (
 );
 
 // The levels of one area as a strip of segments: filled once earned.
-const LevelStrip = ({ area }) => (
-    <div className="flex gap-[3px] mt-1.5" aria-hidden>
-        {Array.from({ length: area.levels }, (_, i) => (
-            <span
-                key={i}
-                className={`h-1 flex-1 max-w-4 rounded-full ${i < area.earned
-                    ? 'bg-zinc-900/70 dark:bg-white/70'
-                    : i < area.earned + area.reached ? 'bg-accent' : 'bg-zinc-900/[0.08] dark:bg-white/[0.09]'}`}
-            />
-        ))}
-    </div>
-);
+const LevelStrip = ({ area }) => {
+    const nextNomination = Math.min(area.earned + 1, 30);
+    const isComplete = area.earned >= 30;
+    return (
+        <div className="flex gap-[3px] mt-1.5" aria-hidden>
+            {Array.from({ length: 30 }, (_, i) => (
+                <span
+                    key={i}
+                    className={`h-1 flex-1 max-w-4 rounded-full ${i < area.earned
+                        ? isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-zinc-900/70 dark:bg-white/70'
+                        : 'bg-zinc-900/[0.08] dark:bg-white/[0.09]'}`}
+                />
+            ))}
+        </div>
+    );
+};
 
 // One row per area: points, levels earned, and how far to the next level.
 const AreasCard = ({ summary }) => {
-    const { areas, areasNotStarted, nominationsThisYear } = summary;
+    const { areas, areasNotStarted } = summary;
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
 
     return (
         <Card className="lg:col-span-2">
-            <CardTitle aside={`${plural(nominationsThisYear, 'nomination')} earned`}>Nominations by area</CardTitle>
+            <CardTitle>Nominations by area</CardTitle>
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => (
-                        <li key={area.id} className="py-3 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_4.5rem] items-center gap-x-5 gap-y-2">
+                        <li key={area.id} className="py-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
                             <div className="min-w-0">
                                 <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{area.name}</div>
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1 min-w-0"><LevelStrip area={area} /></div>
-                                    <span className="mt-1.5 text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">{area.earned}/{area.levels}</span>
+                                    <span className="mt-1.5 text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">{Math.min(area.earned, 30)}/30</span>
                                 </div>
-                            </div>
-                            <div className="col-span-2 sm:col-span-1 order-last sm:order-none min-w-0">
-                                {area.next ? (
-                                    <>
-                                        <div className="flex items-baseline justify-between gap-3 text-[12px]">
-                                            <span className="text-zinc-500 dark:text-zinc-400 truncate">Next: {area.next.name}</span>
-                                            <span className="shrink-0 font-mono tabular-nums text-zinc-500">{area.next.points}/{area.next.pointsRequired}</span>
-                                        </div>
-                                        <div className="mt-1.5"><Bar value={area.next.points} max={area.next.pointsRequired} /></div>
-                                    </>
-                                ) : (
-                                    <span className="text-[12px] text-zinc-500 dark:text-zinc-400">Every level reached</span>
-                                )}
                             </div>
                             <span className="text-right font-mono text-[13px] tabular-nums text-zinc-700 dark:text-zinc-300">{area.points.toLocaleString('en-AU')}<span className="text-zinc-400"> pts</span></span>
                         </li>
@@ -275,28 +252,48 @@ const KIND_ICONS = { award: Award, nomination: Sparkles, badge: Shield, decorati
 const KIND_LABELS = { nomination: 'Nomination', badge: 'Badge', decoration: 'Presentation night', prize: 'Prize' };
 
 const RecordCard = ({ summary }) => {
-    const { timeline, kindCounts } = summary;
-    const [kind, setKind] = useState('all');
+    const { timeline } = summary;
+    const [selectedYear, setSelectedYear] = useState(null);
     const [expanded, setExpanded] = useState(false);
-    const filters = [{ id: 'all', label: 'All', count: timeline.length }, ...RECORD_KINDS
-        .filter(k => kindCounts[k.id])
-        .map(k => ({ ...k, count: kindCounts[k.id] }))];
-    const shown = kind === 'all' ? timeline : timeline.filter(entry => entry.kind === kind);
+
+    // Group timeline by year
+    const yearGroups = useMemo(() => {
+        const groups = new Map();
+        timeline.forEach(entry => {
+            if (!entry.date) return;
+            const year = new Date(entry.date).getFullYear();
+            if (!groups.has(year)) groups.set(year, []);
+            groups.get(year).push(entry);
+        });
+        return Array.from(groups.entries())
+            .map(([year, entries]) => ({ year, entries }))
+            .sort((a, b) => b.year - a.year);
+    }, [timeline]);
+
+    // Default to the most recent year
+    const activeYear = selectedYear ?? (yearGroups[0]?.year ?? null);
+    const shown = activeYear ? yearGroups.find(g => g.year === activeYear)?.entries ?? [] : [];
     const visible = expanded ? shown : shown.slice(0, RECORD_PREVIEW);
+
+    const yearFilters = yearGroups.map(g => ({
+        id: String(g.year),
+        label: String(g.year),
+        count: g.entries.length
+    }));
 
     return (
         <Card className="lg:col-span-3">
             <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>Your record</CardTitle>
 
-            {filters.length > 2 && (
+            {yearFilters.length > 1 && (
                 <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                    {filters.map(f => (
+                    {yearFilters.map(f => (
                         <button
                             key={f.id}
                             type="button"
-                            aria-pressed={kind === f.id}
-                            onClick={() => { setKind(f.id); setExpanded(false); }}
-                            className={`h-7 px-2.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-colors ${kind === f.id
+                            aria-pressed={activeYear === Number(f.id)}
+                            onClick={() => { setSelectedYear(Number(f.id)); setExpanded(false); }}
+                            className={`h-7 px-2.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-colors ${activeYear === Number(f.id)
                                 ? 'bg-zinc-900/[0.06] text-zinc-900 dark:bg-white/[0.08] dark:text-white'
                                 : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:hover:text-white dark:hover:bg-white/[0.04]'}`}
                         >
