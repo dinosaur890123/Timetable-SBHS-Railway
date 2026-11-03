@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { subjectInk } from '../utils/timetable';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
@@ -21,6 +21,8 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     // Applied inside the motion element: framer-motion's inline opacity would override it there.
     // A finished class fades back slowly, so the change of period reads as a handover.
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
+    const [showTooltip, setShowTooltip] = React.useState(false);
+    const tooltipTimeoutRef = React.useRef(null);
 
     if (isBreak) {
         return (
@@ -44,6 +46,27 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const hasCanvasLink = canvasLink && title && title !== 'Free Period';
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
+    const shouldShowCanvasTooltip = !hasCanvasLink && title && title !== 'Free Period' && !title.toLowerCase().includes('sport') && !title.startsWith('SP');
+
+    React.useEffect(() => {
+        return () => {
+            if (tooltipTimeoutRef.current) {
+                clearTimeout(tooltipTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleClick = () => {
+        if (shouldShowCanvasTooltip) {
+            setShowTooltip(true);
+            if (tooltipTimeoutRef.current) {
+                clearTimeout(tooltipTimeoutRef.current);
+            }
+            tooltipTimeoutRef.current = setTimeout(() => {
+                setShowTooltip(false);
+            }, 2500);
+        }
+    };
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
@@ -127,7 +150,27 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 >
                     {content}
                 </a>
-            ) : content}
+            ) : (
+                <button
+                    onClick={handleClick}
+                    className="w-full text-left bg-transparent border-0 p-0 cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    disabled={!shouldShowCanvasTooltip}
+                >
+                    {content}
+                </button>
+            )}
+            <AnimatePresence>
+                {showTooltip && shouldShowCanvasTooltip && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 4 }}
+                        className="absolute left-1/2 -translate-x-1/2 -top-10 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-medium rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
+                    >
+                        Set up Canvas links in settings
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.li>
     );
 };
