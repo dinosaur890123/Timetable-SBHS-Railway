@@ -13,6 +13,34 @@ const API_BASE_URL = 'https://student.sbhs.net.au/api';
 const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
 
+// Whether the data on screen came from the offline copy. The service worker answers from its cache
+// when the network fails and marks those responses (see offlineMarker in vite.config.js); the next
+// real response clears it. Subscribers hear only actual changes.
+let servingCachedData = false;
+const cachedDataListeners = new Set();
+const setServingCachedData = (value) => {
+    if (servingCachedData === value) return;
+    servingCachedData = value;
+    cachedDataListeners.forEach(listener => listener(value));
+};
+export const onCachedDataChange = (listener) => {
+    cachedDataListeners.add(listener);
+    listener(servingCachedData);
+    return () => cachedDataListeners.delete(listener);
+};
+
+// Service worker caches holding the student's own data, emptied whenever the account changes.
+const PRIVATE_CACHES = ['sbhs-data', 'app-data'];
+const clearOfflineData = async () => {
+    dayCache.clear();
+    try {
+        if (!('caches' in window)) return;
+        await Promise.all(PRIVATE_CACHES.map(name => caches.delete(name)));
+    } catch {
+        // Caches unavailable (private mode): nothing was stored
+    }
+};
+
 // fetch with a time limit, so a server that stops answering shows an error
 // instead of a spinner that never ends. AI requests get longer.
 const timedFetch = async (url, options = {}, timeoutMs) => {
@@ -20,7 +48,10 @@ const timedFetch = async (url, options = {}, timeoutMs) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), limit);
     try {
-        return await fetch(url, { ...options, signal: controller.signal });
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (response.headers.get('X-Synchron-Cached')) setServingCachedData(true);
+        else if (response.ok) setServingCachedData(false);
+        return response;
     } catch (error) {
         if (error?.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(limit / 1000)}s`);
         throw error;
@@ -91,6 +122,8 @@ export const exchangeToken = async (code) => {
     }
 
     const data = await response.json();
+    // A new sign-in may be a different student on this device: drop the last one's offline copy.
+    await clearOfflineData();
     storeTokens(data);
     localStorage.setItem('sbhs_token_scope', SCOPES);
     return data;
@@ -166,17 +199,26 @@ export const refreshAccessToken = () => {
 };
 
 // The current access token, refreshed first if it has expired. Null when signed out.
-export const getValidAccessToken = async () => (hasFreshToken() ? getAccessToken() : refreshAccessToken());
+export const getValidAccessToken = async () => {
+    if (hasFreshToken()) return getAccessToken();
+    const fresh = await refreshAccessToken();
+    // Offline the token can't be renewed, but the expired one still opens the offline copy.
+    if (!fresh && !navigator.onLine) return getAccessToken();
+    return fresh;
+};
 
 export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
     localStorage.clear();
     if (theme) localStorage.setItem('theme', theme);
-    if (redirectToLogin === true) {
-        performLogin();
-    } else {
-        window.location.href = '/';
-    }
+    // The offline copy belongs to this student, so it goes too (before leaving the page).
+    clearOfflineData().finally(() => {
+        if (redirectToLogin === true) {
+            performLogin();
+        } else {
+            window.location.href = '/';
+        }
+    });
 };
 
 // Signed in if the access token is still good, or can be renewed with the refresh token.
@@ -225,16 +267,36 @@ export const fetchDayTimetable = (date, { fresh = false } = {}) => {
     if (dayInFlight.has(key)) return dayInFlight.get(key);
 
     const request = fetchWithAuth(`/timetable/daytimetable.json?date=${key}`)
-        .then(data => {
-            rememberSubjectColours(data);
-            dayCache.delete(key);
-            dayCache.set(key, { data, at: Date.now() });
-            if (dayCache.size > DAY_CACHE_LIMIT) dayCache.delete(dayCache.keys().next().value);
-            return data;
-        })
+        .then(data => rememberDay(key, data))
         .finally(() => dayInFlight.delete(key));
     dayInFlight.set(key, request);
     return request;
+};
+
+const rememberDay = (key, data) => {
+    rememberSubjectColours(data);
+    dayCache.delete(key);
+    dayCache.set(key, { data, at: Date.now() });
+    if (dayCache.size > DAY_CACHE_LIMIT) dayCache.delete(dayCache.keys().next().value);
+    return data;
+};
+
+// The school day the app should open on: today until its last bell, then the next school day.
+// SBHS works this out itself when no date is given, so it's one request however long the holidays
+// are. Resolves with { date, data }; `data` is null when the answer is an offline copy from an
+// earlier day, so the caller fetches today instead. Callers at start-up share one request.
+let nextSchoolDayRequest = null;
+export const fetchNextSchoolDay = () => {
+    if (nextSchoolDayRequest) return nextSchoolDayRequest;
+    nextSchoolDayRequest = fetchWithAuth('/timetable/daytimetable.json')
+        .then(data => {
+            const today = dayKey(new Date());
+            const served = /^\d{4}-\d{2}-\d{2}$/.test(data?.date || '') ? data.date : today;
+            if (served < today) return { date: new Date(), data: null };
+            return { date: new Date(`${served}T00:00`), data: rememberDay(served, data) };
+        })
+        .finally(() => { setTimeout(() => { nextSchoolDayRequest = null; }, 30 * 1000); });
+    return nextSchoolDayRequest;
 };
 
 export const fetchCompleteTimetable = async () => {
@@ -310,40 +372,6 @@ export const fetchTimetableQa = async (question, timetable, currentMinutes, comp
     return response.json();
 };
 
-export const fetchAiNotesSummarise = async (content, title) => {
-    const token = await getValidAccessToken();
-    const response = await timedFetch(`${SYSTEM_API_URL}/ai/notes-summarise`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ content, title })
-    });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Failed to generate AI note summary: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const fetchAiQuizGenerate = async (payload) => {
-    const token = await getValidAccessToken();
-    const response = await timedFetch(`${SYSTEM_API_URL}/ai/quiz-generate`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Failed to generate AI quiz: ${response.status}`);
-    }
-    return response.json();
-};
-
 async function fetchFromBackend(endpoint) {
     const token = await getValidAccessToken();
     const headers = {};
@@ -360,10 +388,6 @@ async function fetchFromBackend(endpoint) {
 // --- New Award Scheme & Clipboard APIs ---
 
 // Student-specific APIs
-export const fetchStudentAbsences = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/absences`);
-export const fetchStudentAbsenceDetail = (studentId, id) => fetchFromBackend(`/students/${studentId}/attendance/absences/${id}`);
-export const fetchStudentScanIns = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins`);
-export const fetchStudentScanInDetail = (studentId, dateId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${dateId}`);
 // Award scheme. The normalisers in utils/awardScheme.js keep the fields the Awards
 // page needs (dates, categories and groups, nominations, prizes).
 export const fetchStudentAwards = (studentId) =>
@@ -483,14 +507,6 @@ export const fetchStudentClipboardTeams = (studentId) =>
         return [];
     });
 
-export const fetchStudentClipboardTeamDetail = (studentId, teamId) => fetchFromBackend(`/students/${studentId}/clipboard/teams/${teamId}`);
-export const fetchStudentEnrolments = (studentId) => fetchFromBackend(`/students/${studentId}/enrolments`);
-export const fetchStudentEnrolmentDetail = (studentId, schoolYear) => fetchFromBackend(`/students/${studentId}/enrolments/${schoolYear}`);
-export const fetchStudentTimetable = (studentId) => fetchFromBackend(`/students/${studentId}/timetable`);
-export const fetchStudentTimetableClasses = (studentId) => fetchFromBackend(`/students/${studentId}/timetable/classes`);
-export const fetchStudentTimetableDates = (studentId) => fetchFromBackend(`/students/${studentId}/timetable/dates`);
-export const fetchStudentTimetableDateDetail = (studentId, date) => fetchFromBackend(`/students/${studentId}/timetable/dates/${date}`);
-
 // Global APIs
 export const fetchGlobalAwards = () =>
     fetchFromBackend('/award-scheme/awards').then(data => normaliseList(data, normaliseAward));
@@ -500,11 +516,6 @@ export const fetchGlobalNominations = () =>
     fetchFromBackend('/award-scheme/nominations').then(data => normaliseList(data, normaliseNomination));
 export const fetchGlobalPrizes = () =>
     fetchFromBackend('/award-scheme/prizes').then(data => normaliseList(data, normalisePrize));
-export const fetchGlobalAwardDetail = (id) => fetchFromBackend(`/award-scheme/awards/${id}`);
-export const fetchGlobalCategoryDetail = (id) => fetchFromBackend(`/award-scheme/categories/${id}`);
-export const fetchGlobalNominationDetail = (id) => fetchFromBackend(`/award-scheme/nominations/${id}`);
-export const fetchGlobalPrizeDetail = (id) => fetchFromBackend(`/award-scheme/prizes/${id}`);
-
 export const fetchGlobalActivities = () => 
     fetchFromBackend('/clipboard/activities')
     .then(data => {
@@ -524,71 +535,7 @@ export const fetchGlobalActivities = () =>
         return [];
     });
 
-export const fetchGlobalActivityDetail = (id) => fetchFromBackend(`/clipboard/activities/${id}`);
-
-export const fetchGlobalDepartments = () => 
-    fetchFromBackend('/clipboard/departments')
-    .then(data => {
-        const parseDepartments = (items) => {
-            return items.map(item => {
-                if (item && item.name !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    name: item.name || ''
-                };
-            });
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseDepartments(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseDepartments(data);
-        }
-        return [];
-    });
-
-export const fetchGlobalDepartmentDetail = (id) => fetchFromBackend(`/clipboard/departments/${id}`);
-export const fetchGlobalTeamDetail = (id) => fetchFromBackend(`/clipboard/teams/${id}`);
-
-export const fetchTransitDepartures = (stopName) => 
-    fetchFromBackend(`/transit/departures?stopName=${encodeURIComponent(stopName || 'Moore Park Light Rail')}`);
-
 export const fetchAssignments = () => fetchFromBackend('/assignments');
-
-export const saveAssignment = async (assignment) => {
-    const token = await getValidAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await timedFetch(`${SYSTEM_API_URL}/assignments`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(assignment)
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to save assignment: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const deleteAssignment = async (id) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await timedFetch(`${SYSTEM_API_URL}/assignments/${id}`, {
-        method: 'DELETE',
-        headers
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to delete assignment: ${response.status}`);
-    }
-    return response.json();
-};
 
 // User Preferences API
 export const fetchUserPreferences = async (studentId) => {

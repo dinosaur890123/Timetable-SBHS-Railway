@@ -14,7 +14,6 @@ guardBypassAuth();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 // Railway (and Vercel) sit behind one proxy: trust it for the client's IP and https.
 app.set('trust proxy', 1);
@@ -3010,7 +3009,6 @@ process.on('unhandledRejection', (reason) => {
 if (require.main === module) {
     const server = app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
-        console.log(`Admin Password configured: ${!!ADMIN_PASSWORD}`);
     });
     // Railway can keep connections open between requests; keep ours open a bit
     // longer than its proxy so it never reuses a socket we just closed.
