@@ -396,3 +396,33 @@ export const deleteAdminBuildNote = async (id) => {
     }
 };
 
+
+// Shared Canvas links (moderation)
+export const fetchAdminCanvasLinks = async () => {
+    const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community`, {
+        headers: await getHeaders()
+    });
+    if (!response.ok) throw new Error(`Failed to fetch shared Canvas links (HTTP ${response.status})`);
+    return response.json();
+};
+
+// lockedStatus: 'verified' pins the link for its class, 'rejected' hides it,
+// null hands it back to students' votes.
+export const setAdminCanvasLinkStatus = async (id, lockedStatus) => {
+    const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: await getHeaders(),
+        body: JSON.stringify({ lockedStatus })
+    });
+    if (!response.ok) throw new Error(`Failed to update link (HTTP ${response.status})`);
+    return response.json();
+};
+
+export const deleteAdminCanvasLink = async (id) => {
+    const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: await getHeaders()
+    });
+    if (!response.ok) throw new Error(`Failed to delete link (HTTP ${response.status})`);
+    return response.json();
+};

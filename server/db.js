@@ -87,6 +87,28 @@ async function query(text, params) {
   return activePool.query(text, params);
 }
 
+// Runs fn(client) inside a transaction: committed if it resolves, rolled back if
+// it throws.
+async function withTransaction(fn) {
+  const activePool = getPool();
+  if (!activePool) {
+    throw new Error('Postgres is not configured (missing POSTGRES_URL/DATABASE_URL)');
+  }
+  await ensureSchema();
+  const client = await activePool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 function hasDb() {
   return Boolean(getConnectionString());
 }
@@ -95,4 +117,5 @@ module.exports = {
   hasDb,
   ensureSchema,
   query,
+  withTransaction,
 };

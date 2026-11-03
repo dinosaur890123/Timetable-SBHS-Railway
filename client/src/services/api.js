@@ -753,213 +753,49 @@ export const saveUserPreferences = async (studentId, preferences) => {
 };
 
 // Canvas Links API
-export const fetchCanvasLinks = async () => {
+
+// Sends a request to the Canvas links endpoints. Rejects with an Error whose
+// message is the server's explanation, and whose status is the HTTP status.
+const canvasRequest = async (path, { method = 'GET', body } = {}) => {
     const token = await getValidAccessToken();
     const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, { headers });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch canvas links: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const saveCanvasLinks = async (links) => {
-    const token = await getValidAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    // Normalize links map to { className: urlString } with absolute URLs
-    const normalizedLinks = {};
-    if (links && typeof links === 'object') {
-        Object.entries(links).forEach(([key, val]) => {
-            let url = typeof val === 'string' ? val : (val && typeof val === 'object' && val.url ? String(val.url) : null);
-            if (url) {
-                url = url.trim();
-                if (!/^https?:\/\//i.test(url)) {
-                    if (/^(courses\/\d+|\d+$)/i.test(url)) {
-                        const id = url.replace(/\D/g, '');
-                        url = `https://canvas.instructure.com/courses/${id}`;
-                    } else {
-                        url = `https://${url.replace(/^\/+/, '')}`;
-                    }
-                }
-                normalizedLinks[key] = url;
-            }
-        });
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-links`, {
-        method: 'POST',
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${SYSTEM_API_URL}/canvas-links${path}`, {
+        method,
         headers,
-        body: JSON.stringify({ links: normalizedLinks })
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to save canvas links: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const fetchSharedCanvasLink = async (className) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-links/shared/${encodeURIComponent(className)}`, { headers });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch shared canvas link: ${response.status}`);
-    }
-    return response.json();
-};
-
-// Crowdsourced Canvas Link Suggestions API
-export const submitCanvasLinkSuggestion = async (className, classNameFull, canvasUrl) => {
-    const token = await getValidAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ className, classNameFull, canvasUrl })
-    });
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to submit suggestion: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const fetchCanvasLinkSuggestions = async (userClasses) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions?userClasses=${encodeURIComponent(userClasses.join(','))}`, { headers });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch suggestions: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const verifyCanvasLinkSuggestion = async (suggestionId) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/${suggestionId}/verify`, {
-        method: 'POST',
-        headers
-    });
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to verify suggestion: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const rejectCanvasLinkSuggestion = async (suggestionId) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/${suggestionId}/reject`, {
-        method: 'POST',
-        headers
-    });
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to reject suggestion: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const fetchVerifiedCanvasLinks = async (classNames) => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-link-suggestions/verified?classNames=${encodeURIComponent(classNames.join(','))}`, { headers });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch verified links: ${response.status}`);
-    }
-    return response.json();
-};
-
-// Shared Canvas Courses API (one canonical course ID per class, school-wide)
-export const fetchCanvasCourses = async () => {
-    const token = await getValidAccessToken();
-    const headers = {};
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses`, { headers });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch canvas courses: ${response.status}`);
-    }
-    const data = await response.json();
-    // Handle both direct courses object and wrapped response
-    if (data.success && data.courses) {
-        return data.courses;
-    }
-    return data?.courses || {};
-};
-
-// Set the shared Canvas ID for a class. Resolves with { ok, alreadySet, course, error }.
-export const setCanvasCourse = async (className, courseId) => {
-    const token = await getValidAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ className, courseId })
+        body: body === undefined ? undefined : JSON.stringify(body)
     });
     const data = await response.json().catch(() => ({}));
-    
-    // Check if request was successful (HTTP 2xx)
-    if (response.ok && data.success) {
-        return { ok: true, course: data.course };
+    if (!response.ok) {
+        const error = new Error(data.message || data.error || `Canvas links request failed (${response.status})`);
+        error.status = response.status;
+        throw error;
     }
-    
-    // Handle errors
-    if (response.status === 409) {
-        return { ok: false, alreadySet: true, error: data.message || 'This class already has a shared Canvas course' };
-    }
-    
-    return { ok: false, alreadySet: false, error: data.message || data.error || 'Failed to save Canvas link' };
+    return data;
 };
 
-// Report an incorrect shared Canvas ID. Resolves with { ok, message, error }.
-export const reportCanvasCourse = async (className, suggestedCourseId, justification) => {
-    const token = await getValidAccessToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-courses/report`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ className, suggestedCourseId, justification })
-    });
-    const data = await response.json().catch(() => ({}));
-    
-    if (response.ok && data.success) {
-        return { ok: true, message: data.message };
-    }
-    
-    return { ok: false, error: data.message || data.error || 'Failed to submit report' };
-};
+// { links: [{ className, canvasUrl }], canvasHost, schoolYear }
+export const fetchCanvasLinks = () => canvasRequest('');
+
+// Saves one class's link. With classKey, a Canvas course link is also shared with
+// classmates. Resolves with { link, shared, community }.
+export const saveCanvasLink = (className, url, classKey) =>
+    canvasRequest(`/${encodeURIComponent(className)}`, { method: 'PUT', body: { url, classKey } });
+
+export const deleteCanvasLink = (className) =>
+    canvasRequest(`/${encodeURIComponent(className)}`, { method: 'DELETE' });
+
+// Adds links saved on this device by older versions, without replacing any.
+export const importCanvasLinks = (links) => canvasRequest('/import', { method: 'POST', body: { links } });
+
+// { classes: { [classKey]: { link, suggestions } } } for the student's classes.
+export const fetchCommunityCanvasLinks = (classKeys = []) =>
+    canvasRequest(`/community?classes=${encodeURIComponent(classKeys.join(','))}`);
+
+// vote: 1 = correct, -1 = wrong, 0 = clear. Resolves with { classKey, community }.
+export const voteCanvasLink = (id, vote) =>
+    canvasRequest(`/community/${encodeURIComponent(id)}/vote`, { method: 'POST', body: { vote } });
 
 // Build Notes API
 export const fetchBuildNotes = async () => {
