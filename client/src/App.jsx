@@ -56,7 +56,9 @@ import {
     saveUserPreferences,
     fetchBuildNotes,
     isScopeOutdated,
-    fetchStudentClipboardSessions
+    fetchStudentClipboardSessions,
+    fetchNextSchoolDay,
+    onCachedDataChange
 } from './services/api';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -151,10 +153,7 @@ function App() {
 
     // Offline detection
     useEffect(() => {
-        const handleOnline = () => {
-            setIsOffline(false);
-            setUsingCachedData(false);
-        };
+        const handleOnline = () => setIsOffline(false);
 
         const handleOffline = () => {
             setIsOffline(true);
@@ -169,33 +168,8 @@ function App() {
         };
     }, []);
 
-    // Detect when using cached data (failed API calls)
-    useEffect(() => {
-        const originalFetch = window.fetch;
-
-        const fetchWithOfflineDetection = async (...args) => {
-            try {
-                const response = await originalFetch(...args);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                setUsingCachedData(false);
-                return response;
-            } catch (error) {
-                // If we're offline or the request failed, we might be using cached data
-                if (isOffline || error.message.includes('Failed to fetch')) {
-                    setUsingCachedData(true);
-                }
-                throw error;
-            }
-        };
-
-        window.fetch = fetchWithOfflineDetection;
-
-        return () => {
-            window.fetch = originalFetch;
-        };
-    }, [isOffline]);
+    // "Cached" in the topbar: the service worker answered from the offline copy.
+    useEffect(() => onCachedDataChange(setUsingCachedData), []);
 
     // System State
     const [broadcast, setBroadcast] = useState(() => {
@@ -662,58 +636,6 @@ function App() {
         init();
     }, []);
 
-    // Helper function to find the next/current school day
-    const findNextSchoolDay = async (startDate = new Date()) => {
-        // First check if the start date (today) is a valid school day
-        try {
-            const data = await fetchDayTimetable(startDate);
-            const inner = data?.timetable?.timetable || data?.timetable;
-            const bells = data?.bells || [];
-            const routine = inner?.routine ? inner.routine.split(',') : [];
-
-            const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-            const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-
-            // Find the latest end time across all bells in the routine
-            const latestEnd = routine.reduce((max, bellId) => {
-                const bell = bells.find(b => b.bell === bellId);
-                if (!bell) return max;
-                const end = bell.endTime ? toMinutes(bell.endTime) : null;
-                return end !== null ? Math.max(max, end) : max;
-            }, -1);
-
-            // Check if this is today and school has ended
-            const isToday = isSameDay(startDate, new Date());
-            const schoolEnded = latestEnd === -1 || nowMinutes >= latestEnd;
-
-            // If it's a valid school day and (not today or school hasn't ended), return it
-            if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
-                if (!isToday || !schoolEnded) {
-                    return startDate;
-                }
-            }
-        } catch (e) {
-            console.error("Error checking school day", e);
-        }
-
-        // If today is not valid or school has ended, find the next school day
-        let nextDay = addDays(startDate, 1);
-        for (let i = 0; i < 42; i++) {
-            try {
-                const data = await fetchDayTimetable(nextDay);
-                const inner = data?.timetable?.timetable || data?.timetable;
-                if (inner?.periods && Object.keys(inner.periods).length > 0 && inner.routine) {
-                    return nextDay;
-                }
-            } catch (e) {
-                console.error("Error checking next school day", e);
-            }
-            nextDay = addDays(nextDay, 1);
-        }
-        // Fallback to next day if no school day found
-        return addDays(startDate, 1);
-    };
-
     // Fetch complete timetable in the background once authenticated
     useEffect(() => {
         if (!user) return;
@@ -734,13 +656,14 @@ function App() {
     useEffect(() => {
         if (!user || !isAuthenticated()) return;
 
-        const initializeDefaultDate = async () => {
-            const schoolDay = await findNextSchoolDay();
-            setDefaultDate(schoolDay);
-            setViewDate(schoolDay);
-        };
-
-        initializeDefaultDate();
+        // Today until its last bell, then the next school day. If that can't be worked out
+        // (offline with nothing saved), the app stays on today.
+        fetchNextSchoolDay()
+            .then(({ date }) => {
+                setDefaultDate(date);
+                setViewDate(date);
+            })
+            .catch(err => console.warn('Could not work out the next school day', err));
     }, [user]);
 
     // Show the chosen day at once: from the session's cache when it's there (refreshed quietly once it's
@@ -779,10 +702,10 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated()) return;
 
-        // Today until its last bell, then the next school day (skipping weekends). The days
-        // checked on the way are cached, so the timetable itself doesn't fetch them again.
-        findNextSchoolDay()
-            .then(railDate => fetchDayTimetable(railDate))
+        // Today until its last bell, then the next school day: the same answer the timetable
+        // opens on, from the same request.
+        fetchNextSchoolDay()
+            .then(({ date, data }) => data || fetchDayTimetable(date))
             .then(setRailTimetable)
             .catch(err => console.error("Failed to fetch rail timetable", err));
     }, [user]);
@@ -834,8 +757,12 @@ function App() {
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
     const resetToday = async () => {
-        const schoolDay = await findNextSchoolDay();
-        setViewDate(schoolDay);
+        try {
+            const { date } = await fetchNextSchoolDay();
+            setViewDate(date);
+        } catch {
+            setViewDate(defaultDate || new Date());
+        }
     };
 
     // Reset date when leaving the home timetable
