@@ -1019,6 +1019,16 @@ app.post('/api/canvas-link-suggestions', requireStudentAuth, async (req, res) =>
             return res.status(400).json({ error: 'Invalid canvas URL format' });
         }
 
+        // Check if user is admin
+        let isAdmin = false;
+        if (isDbEnabled) {
+            const adminCheck = await db.query(
+                `SELECT is_admin FROM app_users WHERE id = $1`,
+                [studentId]
+            );
+            isAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].is_admin === true;
+        }
+
         if (!isDbEnabled) {
             // Check if user already submitted for this class
             const existing = canvasLinkSuggestionsMemory.find(
@@ -1035,31 +1045,19 @@ app.post('/api/canvas-link-suggestions', requireStudentAuth, async (req, res) =>
                 canvasUrl: formattedUrl,
                 submittedBy: studentId,
                 verifiedBy: [],
-                verifiedCount: 0,
+                verifiedCount: isAdmin ? 2 : 0, // Auto-verify for admins
                 reports: 0,
-                status: 'pending',
+                status: isAdmin ? 'verified' : 'pending',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
             canvasLinkSuggestionsMemory.push(suggestion);
 
             await addLog('CANVAS_LINK_SUGGESTION', studentId, `Suggested canvas link for class ${className}`);
-            return res.json({ success: true, suggestion });
+            return res.json({ success: true, suggestion, autoVerified: isAdmin });
         }
 
-        // Check rate limit: max 5 submissions per day per user
-        const today = new Date().toISOString().split('T')[0];
-        const recentSubmissions = await db.query(
-            `SELECT COUNT(*) as count FROM canvas_link_suggestions
-             WHERE submitted_by = $1 AND DATE(created_at) = $2`,
-            [studentId, today]
-        );
-
-        if (parseInt(recentSubmissions.rows[0].count) >= 5) {
-            return res.status(429).json({ error: 'rate_limited', message: 'Maximum 5 submissions per day' });
-        }
-
-        // Check if user already submitted for this class
+        // Check if user already submitted for this class (1 per class limit)
         const existing = await db.query(
             `SELECT id FROM canvas_link_suggestions
              WHERE class_name = $1 AND submitted_by = $2`,
@@ -1071,15 +1069,19 @@ app.post('/api/canvas-link-suggestions', requireStudentAuth, async (req, res) =>
         }
 
         const id = crypto.randomUUID();
+        const status = isAdmin ? 'verified' : 'pending';
+        const verifiedCount = isAdmin ? 2 : 0;
+        const verifiedBy = isAdmin ? [studentId] : [];
+
         await db.query(
             `INSERT INTO canvas_link_suggestions (id, class_name, class_name_full, canvas_url, submitted_by, verified_by, verified_count, reports, status, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, '{}', 0, 0, 'pending', NOW(), NOW())`,
-            [id, String(className), String(classNameFull || className), formattedUrl, studentId]
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, NOW(), NOW())`,
+            [id, String(className), String(classNameFull || className), formattedUrl, studentId, verifiedBy, verifiedCount, status]
         );
 
         await addLog('CANVAS_LINK_SUGGESTION', studentId, `Suggested canvas link for class ${className}`);
 
-        res.json({ success: true, suggestionId: id });
+        res.json({ success: true, suggestionId: id, autoVerified: isAdmin });
     } catch (e) {
         console.error('Submit canvas link suggestion error:', e);
         res.status(500).json({ error: 'Failed to submit suggestion' });
@@ -1161,8 +1163,8 @@ app.post('/api/canvas-link-suggestions/:id/verify', requireStudentAuth, async (r
             suggestion.verifiedBy.push(studentId);
             suggestion.verifiedCount = suggestion.verifiedBy.length;
 
-            // Auto-verify if 3+ users confirm
-            if (suggestion.verifiedCount >= 3) {
+            // Auto-verify if 2+ users confirm
+            if (suggestion.verifiedCount >= 2) {
                 suggestion.status = 'verified';
             }
 
@@ -1195,8 +1197,8 @@ app.post('/api/canvas-link-suggestions/:id/verify', requireStudentAuth, async (r
         verifiedBy.push(studentId);
         const newCount = verifiedBy.length;
 
-        // Auto-verify if 3+ users confirm
-        const status = newCount >= 3 ? 'verified' : 'pending';
+        // Auto-verify if 2+ users confirm
+        const status = newCount >= 2 ? 'verified' : 'pending';
 
         await db.query(
             `UPDATE canvas_link_suggestions
