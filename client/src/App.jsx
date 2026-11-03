@@ -4,21 +4,42 @@ import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands,
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
 
-const Timetable = lazy(() => import('./components/Timetable'));
-const CalendarView = lazy(() => import('./components/CalendarView'));
-const DailyNotices = lazy(() => import('./components/DailyNotices'));
-const AdminPanel = lazy(() => import('./components/AdminPanel'));
+// Each page's code loads on its first visit, and is also fetched quietly once a signed-in app is idle
+// (see warmPages below) so switching pages never stops on "Loading view".
+const pageLoaders = {
+    timetable: () => import('./components/Timetable'),
+    calendar: () => import('./components/CalendarView'),
+    notices: () => import('./components/DailyNotices'),
+    awards: () => import('./components/AwardSchemeView'),
+    clipboard: () => import('./components/ClipboardView'),
+    study: () => import('./components/StudyView'),
+    feedback: () => import('./components/FeedbackView'),
+    canvasLinks: () => import('./components/CanvasLinksView'),
+    buildNotes: () => import('./components/BuildNotesView'),
+    settings: () => import('./components/SettingsView'),
+    admin: () => import('./components/AdminPanel')
+};
+
+const Timetable = lazy(pageLoaders.timetable);
+const CalendarView = lazy(pageLoaders.calendar);
+const DailyNotices = lazy(pageLoaders.notices);
+const AdminPanel = lazy(pageLoaders.admin);
 const LandingPage = lazy(() => import('./components/LandingPage'));
-const AwardSchemeView = lazy(() => import('./components/AwardSchemeView'));
-const ClipboardView = lazy(() => import('./components/ClipboardView'));
-const StudyView = lazy(() => import('./components/StudyView'));
-const FeedbackView = lazy(() => import('./components/FeedbackView'));
-const CanvasLinksView = lazy(() => import('./components/CanvasLinksView'));
-const BuildNotesView = lazy(() => import('./components/BuildNotesView'));
-const SettingsView = lazy(() => import('./components/SettingsView'));
+const AwardSchemeView = lazy(pageLoaders.awards);
+const ClipboardView = lazy(pageLoaders.clipboard);
+const StudyView = lazy(pageLoaders.study);
+const FeedbackView = lazy(pageLoaders.feedback);
+const CanvasLinksView = lazy(pageLoaders.canvasLinks);
+const BuildNotesView = lazy(pageLoaders.buildNotes);
+const SettingsView = lazy(pageLoaders.settings);
+
+const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
+    if (name !== 'admin' || isAdmin) load().catch(() => {});
+});
 
 import {
     fetchDayTimetable,
+    peekDayTimetable,
     fetchDailyNews,
     fetchUserInfo,
     isAuthenticated,
@@ -65,9 +86,10 @@ function App() {
         }
     });
     const [railTimetable, setRailTimetable] = useState(null);
-    
-    // In-memory cache for recently viewed timetable days (max 10 days)
-    const timetableCache = useRef(new Map());
+    // Which day `timetable` holds (the cached copy at start-up is today's), and the day on screen,
+    // so a reply for a day already left behind is dropped instead of shown.
+    const [timetableKey, setTimetableKey] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+    const viewedDayKey = useRef(null);
     const [completeTimetable, setCompleteTimetable] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_complete_timetable');
@@ -714,66 +736,35 @@ function App() {
         initializeDefaultDate();
     }, [user]);
 
-    // Fetch Timetable when date changes (with in-memory caching)
+    // Show the chosen day at once: from the session's cache when it's there (refreshed quietly once it's
+    // five minutes old), otherwise an empty skeleton rather than the previous day's classes under the new date.
     useEffect(() => {
         if (!isAuthenticated()) return;
 
         const dateKey = format(viewDate, 'yyyy-MM-dd');
-        
-        // Optimistic UI: show cached data immediately if available
-        if (timetableCache.current.has(dateKey)) {
-            setTimetable(timetableCache.current.get(dateKey));
-        }
+        viewedDayKey.current = dateKey;
 
-        const loadTimetable = async () => {
-            try {
-                const data = await fetchDayTimetable(viewDate);
-                
-                // Update cache (limit to 10 entries, remove oldest if needed)
-                if (timetableCache.current.size >= 10) {
-                    const firstKey = timetableCache.current.keys().next().value;
-                    timetableCache.current.delete(firstKey);
-                }
-                timetableCache.current.set(dateKey, data);
-                
+        fetchDayTimetable(viewDate)
+            .then(data => {
+                if (viewedDayKey.current !== dateKey) return;
                 setTimetable(data);
-
+                setTimetableKey(dateKey);
                 if (isSameDay(viewDate, new Date())) {
                     localStorage.setItem('cached_timetable', JSON.stringify(data));
                 }
-            } catch (err) {
-                console.error("Failed to fetch timetable", err);
-            }
-        };
-        loadTimetable();
+            })
+            .catch(err => console.error("Failed to fetch timetable", err));
     }, [viewDate, user]);
 
-    // Pre-fetch adjacent days in background for smoother navigation
+    // Warm the week around the day on screen, so the arrows rarely have to wait. Days already
+    // fetched (or on their way) aren't asked for again.
     useEffect(() => {
         if (!isAuthenticated()) return;
-
-        const prefetchDay = async (date) => {
-            const dateKey = format(date, 'yyyy-MM-dd');
-            if (timetableCache.current.has(dateKey)) return; // Already cached
-
-            try {
-                const data = await fetchDayTimetable(date);
-                if (timetableCache.current.size >= 10) {
-                    const firstKey = timetableCache.current.keys().next().value;
-                    timetableCache.current.delete(firstKey);
-                }
-                timetableCache.current.set(dateKey, data);
-            } catch (err) {
-                // Silent fail - prefetch is nice-to-have
-            }
-        };
-
-        // Prefetch previous and next day with a small delay
         const timer = setTimeout(() => {
-            prefetchDay(addDays(viewDate, -1));
-            prefetchDay(addDays(viewDate, 1));
-        }, 500);
-
+            [1, -1, 2, -2, 3, 4, 5, 6, 7].forEach(offset => {
+                fetchDayTimetable(addDays(viewDate, offset)).catch(() => {});
+            });
+        }, 120);
         return () => clearTimeout(timer);
     }, [viewDate, user]);
 
@@ -781,33 +772,12 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated()) return;
 
-        const loadRailTimetable = async () => {
-            try {
-                // Today until its last bell, then the next school day (skipping weekends)
-                const railDate = await findNextSchoolDay();
-                const dateKey = format(railDate, 'yyyy-MM-dd');
-                
-                // Check cache first
-                if (timetableCache.current.has(dateKey)) {
-                    setRailTimetable(timetableCache.current.get(dateKey));
-                    return;
-                }
-                
-                const data = await fetchDayTimetable(railDate);
-                
-                // Add to cache
-                if (timetableCache.current.size >= 10) {
-                    const firstKey = timetableCache.current.keys().next().value;
-                    timetableCache.current.delete(firstKey);
-                }
-                timetableCache.current.set(dateKey, data);
-                
-                setRailTimetable(data);
-            } catch (err) {
-                console.error("Failed to fetch rail timetable", err);
-            }
-        };
-        loadRailTimetable();
+        // Today until its last bell, then the next school day (skipping weekends). The days
+        // checked on the way are cached, so the timetable itself doesn't fetch them again.
+        findNextSchoolDay()
+            .then(railDate => fetchDayTimetable(railDate))
+            .then(setRailTimetable)
+            .catch(err => console.error("Failed to fetch rail timetable", err));
     }, [user]);
 
     // Fetch AI Briefing in background once notices are loaded
@@ -828,6 +798,18 @@ function App() {
         getAiData();
     }, [notices, user, aiDisabled]);
 
+    // Once signed in and idle, fetch every page's code so the first visit to each is instant.
+    useEffect(() => {
+        if (!user) return;
+        const warm = () => warmPages(user.role === 'Admin');
+        if ('requestIdleCallback' in window) {
+            const id = window.requestIdleCallback(warm, { timeout: 3000 });
+            return () => window.cancelIdleCallback(id);
+        }
+        const id = setTimeout(warm, 1500);
+        return () => clearTimeout(id);
+    }, [user?.role, !!user]);
+
     // Clipboard sessions for the timetable's one-line markers, fetched quietly in the background.
     useEffect(() => {
         if (!user?.studentId || !showClipboardEvents) return;
@@ -837,6 +819,11 @@ function App() {
     }, [user?.studentId, showClipboardEvents]);
 
     // Date Navigation Helpers
+    // The day on screen, read from the cache during render so the date and its classes always change
+    // together. Null while a day nobody has fetched yet is on its way.
+    const viewKey = format(viewDate, 'yyyy-MM-dd');
+    const dayTimetable = peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null);
+
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
     const resetToday = async () => {
@@ -952,20 +939,21 @@ function App() {
                         </div>
                     }>
 
-                        {/* Views cross-fade with a slight lift, so moving between pages feels continuous. */}
+                        {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
+                            transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap. */}
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={currentView}
-                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, filter: 'blur(6px)' }}
-                                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                exit={reduceMotion ? { opacity: 0, transition: { duration: 0.08 } } : { opacity: 0, y: -6, filter: 'blur(4px)', transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } }}
-                                transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
+                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
+                                transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
                             >
                             {/* HOME VIEW: greeting, the day's timetable and a side rail */}
                             {currentView === 'home' && (
                                 <Home
                                     user={user}
-                                    timetableData={timetable}
+                                    timetableData={dayTimetable}
                                     railTimetable={railTimetable}
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
@@ -1084,10 +1072,11 @@ function App() {
                                     )}
                                 >
                                     <Timetable
-                                        timetableData={timetable}
+                                        timetableData={dayTimetable}
                                         completeTimetable={completeTimetable}
                                         viewMode={timetableViewMode}
                                         clipboardSessions={showClipboardEvents ? clipboardSessions : []}
+                                        date={viewDate}
                                     />
                                 </Home>
                             )}

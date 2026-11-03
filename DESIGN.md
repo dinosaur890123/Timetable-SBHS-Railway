@@ -313,7 +313,7 @@ Skeletons use `bg-zinc-900/[0.05] dark:bg-white/[0.06]` with `animate-pulse-subt
 | Hover colour | Tailwind `transition-colors` (150ms) |
 | Tile lift / glow | `300ms cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | Page entrance | `animate-in fade-in slide-in-from-bottom-2` (tailwindcss-animate) |
-| Changing view | `App.jsx`: cross-fade with a 12px lift and 6px blur in (`0.32s`), out in `0.12s` |
+| Changing view | `App.jsx`: cross-fade with an 8px lift in (`0.2s`), out in `0.07s`. Opacity and transform only: no blur on whole pages, it stutters |
 | Press | global in `modern.css`: everything pressable dips to `--press-scale` (`.96`, `.98` for wide targets) in 90ms, then springs back past rest (`520ms cubic-bezier(.34,1.56,.64,1)`). Uses the `scale` property so it composes with framer-motion. Opt out with `data-no-press`; make a non-button pressable with `.press` |
 | Countdown digits | roll like an odometer, each digit a spring (`stiffness 380, damping 30`) |
 

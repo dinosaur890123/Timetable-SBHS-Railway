@@ -186,11 +186,34 @@ async function fetchWithAuth(endpoint) {
 // --- Endpoints ---
 
 // 1. Timetable
-export const fetchDayTimetable = async (date) => {
-    const dateStr = date ? `?date=${format(date, 'yyyy-MM-dd')}` : '';
-    const data = await fetchWithAuth(`/timetable/daytimetable.json${dateStr}`);
-    rememberSubjectColours(data);
-    return data;
+// Days fetched this session, and days on their way, so moving between days is instant and no day is
+// asked for twice. A day is trusted for five minutes, after which it's fetched again for late changes.
+const DAY_TTL = 5 * 60 * 1000;
+const DAY_CACHE_LIMIT = 120;
+const dayCache = new Map();
+const dayInFlight = new Map();
+const dayKey = (date) => format(date || new Date(), 'yyyy-MM-dd');
+
+// The day as last fetched, however old, or null. For showing something at once while it refreshes.
+export const peekDayTimetable = (date) => dayCache.get(dayKey(date))?.data ?? null;
+
+export const fetchDayTimetable = (date, { fresh = false } = {}) => {
+    const key = dayKey(date);
+    const hit = dayCache.get(key);
+    if (!fresh && hit && Date.now() - hit.at < DAY_TTL) return Promise.resolve(hit.data);
+    if (dayInFlight.has(key)) return dayInFlight.get(key);
+
+    const request = fetchWithAuth(`/timetable/daytimetable.json?date=${key}`)
+        .then(data => {
+            rememberSubjectColours(data);
+            dayCache.delete(key);
+            dayCache.set(key, { data, at: Date.now() });
+            if (dayCache.size > DAY_CACHE_LIMIT) dayCache.delete(dayCache.keys().next().value);
+            return data;
+        })
+        .finally(() => dayInFlight.delete(key));
+    dayInFlight.set(key, request);
+    return request;
 };
 
 export const fetchCompleteTimetable = async () => {

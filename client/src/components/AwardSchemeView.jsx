@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useCachedLoad } from '../utils/pageCache';
 import { Award, Shield, Compass, Sparkles, TrendingUp, Trophy, ListCollapse, Star, User } from 'lucide-react';
 import { 
     fetchStudentAwards,
@@ -14,70 +15,30 @@ import {
 
 const AwardSchemeView = ({ user }) => {
     const [activeTab, setActiveTab] = useState('my-awards');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
-    // Data states
-    const [awards, setAwards] = useState([]);
-    const [badges, setBadges] = useState([]);
-    const [decorations, setDecorations] = useState([]);
-    const [prizes, setPrizes] = useState([]);
-    const [rollover, setRollover] = useState(null);
-    const [globalAwards, setGlobalAwards] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [housePoints, setHousePoints] = useState([]);
-    const [nominations, setNominations] = useState([]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!user?.studentId) {
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            setError(null);
-            try {
-                const [
-                    awardsData,
-                    badgesData,
-                    decorationsData,
-                    prizesData,
-                    rolloverData,
-                    globalAwardsData,
-                    categoriesData,
-                    housePointsData,
-                    nominationsData
-                ] = await Promise.all([
-                    fetchStudentAwards(user.studentId).catch(() => []),
-                    fetchStudentBadges(user.studentId).catch(() => []),
-                    fetchStudentDecorations(user.studentId).catch(() => []),
-                    fetchStudentPrizes(user.studentId).catch(() => []),
-                    fetchStudentRollover(user.studentId).catch(() => null),
-                    fetchGlobalAwards().catch(() => []),
-                    fetchGlobalCategories().catch(() => []),
-                    fetchGlobalHousePoints().catch(() => []),
-                    fetchGlobalNominations().catch(() => [])
-                ]);
-
-                setAwards(awardsData);
-                setBadges(badgesData);
-                setDecorations(decorationsData);
-                setPrizes(prizesData);
-                setRollover(rolloverData);
-                setGlobalAwards(globalAwardsData);
-                setCategories(categoriesData);
-                setHousePoints(housePointsData);
-                setNominations(nominationsData);
-            } catch (err) {
-                console.error("Failed to load Award Scheme details", err);
-                setError("Failed to retrieve award scheme resources. Please try again later.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [user?.studentId]);
+    // Kept for the session: coming back shows the last copy at once while it refreshes.
+    const { data, loading, error: loadError } = useCachedLoad(user?.studentId ? `awards:${user.studentId}` : null, async () => {
+        const [
+            awards, badges, decorations, prizes, rollover,
+            globalAwards, categories, housePoints, nominations
+        ] = await Promise.all([
+            fetchStudentAwards(user.studentId).catch(() => []),
+            fetchStudentBadges(user.studentId).catch(() => []),
+            fetchStudentDecorations(user.studentId).catch(() => []),
+            fetchStudentPrizes(user.studentId).catch(() => []),
+            fetchStudentRollover(user.studentId).catch(() => null),
+            fetchGlobalAwards().catch(() => []),
+            fetchGlobalCategories().catch(() => []),
+            fetchGlobalHousePoints().catch(() => []),
+            fetchGlobalNominations().catch(() => [])
+        ]);
+        return { awards, badges, decorations, prizes, rollover, globalAwards, categories, housePoints, nominations };
+    });
+    const {
+        awards = [], badges = [], decorations = [], prizes = [], rollover = null,
+        globalAwards = [], categories = [], housePoints = [], nominations = []
+    } = data || {};
+    const error = loadError ? "Failed to retrieve award scheme resources. Please try again later." : null;
 
     if (loading) {
         return (

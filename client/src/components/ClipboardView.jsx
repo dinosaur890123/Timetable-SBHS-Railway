@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useCachedLoad } from '../utils/pageCache';
 import {
     fetchStudentClipboardAttendance,
     fetchStudentPreExplainedAbsences,
@@ -24,48 +25,20 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const ClipboardView = ({ user }) => {
     useNoteFlowFonts();
     const [activeTab, setActiveTab] = useState('calendar');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [openSession, setOpenSession] = useState(null);
 
-    const [attendance, setAttendance] = useState([]);
-    const [preExplained, setPreExplained] = useState([]);
-    const [sessions, setSessions] = useState([]);
-    const [teams, setTeams] = useState([]);
-    const [globalActivities, setGlobalActivities] = useState([]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!user?.studentId) {
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            setError(null);
-            try {
-                const [attData, preExpData, sessData, teamsData, actData] = await Promise.all([
-                    fetchStudentClipboardAttendance(user.studentId).catch(() => []),
-                    fetchStudentPreExplainedAbsences(user.studentId).catch(() => []),
-                    fetchStudentClipboardSessions(user.studentId).catch(() => []),
-                    fetchStudentClipboardTeams(user.studentId).catch(() => []),
-                    fetchGlobalActivities().catch(() => [])
-                ]);
-
-                setAttendance(attData);
-                setPreExplained(preExpData);
-                setSessions(sessData);
-                setTeams(teamsData);
-                setGlobalActivities(actData);
-            } catch (err) {
-                console.error("Failed to load Clipboard details", err);
-                setError("Clipboard couldn't be reached. Check your connection and try again.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [user?.studentId]);
+    // Kept for the session: coming back shows the last copy at once while it refreshes.
+    const { data, loading, error } = useCachedLoad(user?.studentId ? `clipboard:${user.studentId}` : null, async () => {
+        const [attendance, preExplained, sessions, teams, globalActivities] = await Promise.all([
+            fetchStudentClipboardAttendance(user.studentId).catch(() => []),
+            fetchStudentPreExplainedAbsences(user.studentId).catch(() => []),
+            fetchStudentClipboardSessions(user.studentId).catch(() => []),
+            fetchStudentClipboardTeams(user.studentId).catch(() => []),
+            fetchGlobalActivities().catch(() => [])
+        ]);
+        return { attendance, preExplained, sessions, teams, globalActivities };
+    });
+    const { attendance = [], preExplained = [], sessions = [], teams = [], globalActivities = [] } = data || {};
 
     if (loading) {
         return <div className="nf nf-cb nf-cb-state"><p className="nf-meta">Loading Clipboard…</p></div>;
@@ -75,7 +48,7 @@ const ClipboardView = ({ user }) => {
         return (
             <div className="nf nf-cb nf-cb-state">
                 <p style={{ fontWeight: 600 }}>Clipboard didn't load</p>
-                <p className="nf-meta">{error}</p>
+                <p className="nf-meta">Clipboard couldn't be reached. Check your connection and try again.</p>
             </div>
         );
     }

@@ -53,7 +53,16 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [] }) => {
+// Stands in for a day that's still on its way, the same shape as the rows that will replace it.
+const DaySkeleton = () => (
+    <ol className="-mx-3 space-y-1.5" aria-busy="true" aria-label="Loading timetable">
+        {Array.from({ length: 6 }, (_, i) => (
+            <li key={i} className="h-[62px] rounded-xl bg-zinc-900/[0.04] dark:bg-white/[0.05] animate-pulse-subtle" />
+        ))}
+    </ol>
+);
+
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
@@ -68,25 +77,41 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         return () => clearInterval(timer);
     }, []);
 
-    if (!timetableData || !timetableData.bells) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-555">
-                <div className="w-10 h-10 border-4 border-zinc-200 dark:border-zinc-800 border-t-zinc-400 dark:border-t-zinc-500 rounded-full animate-spin mb-4"></div>
-                Loading timetable...
-            </div>
-        );
-    }
+    if (!timetableData) return <DaySkeleton />;
+
+    // The day being looked at: the date asked for, else the one the timetable says it's for.
+    const todayKey = format(currentTime, 'yyyy-MM-dd');
+    const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
+    const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 
     const { bells, timetable } = timetableData;
     const innerTimetable = timetable?.timetable || timetable;
+    // Weekends and holidays have no bells or periods. A reply that has rolled on to a later school day
+    // counts as none too, so Monday's classes never show up under Saturday.
+    const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData.date || '') ? timetableData.date : viewedKey;
 
-    if (!innerTimetable || !innerTimetable.periods) {
+    if (!bells || !innerTimetable?.periods || servedKey > viewedKey) {
+        // No classes, but Clipboard still runs: Saturday sport, Sunday rowing and so on.
+        const nowKeyed = viewedKey < todayKey ? Infinity : viewedKey > todayKey ? -1 : minutesOf(currentTime);
+        const daySessions = clipboardSessions
+            .filter(s => dayKeyOf(s) === viewedKey)
+            .sort((a, b) => startOf(a) - startOf(b))
+            .map(s => ({ session: s, isPast: nowKeyed >= minutesOf(endOf(s) || startOf(s)) }));
+        const dayLabel = viewedKey === todayKey ? 'today' : `on ${format(date || new Date(`${viewedKey}T00:00`), 'EEEE')}`;
         return (
-            <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
-                <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">🎉</div>
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No Classes Today!</h3>
-                <p className="text-zinc-500">Enjoy your day off or do something fun.</p>
-            </div>
+            <MotionConfig reducedMotion="user">
+                <p className={`text-center text-sm text-zinc-400 dark:text-zinc-500 ${daySessions.length ? 'pt-2 pb-4' : 'py-10'}`}>
+                    No classes {dayLabel}
+                </p>
+                {daySessions.length > 0 && (
+                    <ol className="-mx-3 space-y-0.5">
+                        {daySessions.map(({ session, isPast }, i) => (
+                            <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={i} onOpen={setOpenSession} />
+                        ))}
+                    </ol>
+                )}
+                <SessionSheet session={openSession} onClose={() => setOpenSession(null)} />
+            </MotionConfig>
         );
     }
 
@@ -104,8 +129,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
     // Only the live day gets a "now" marker. Earlier days render fully past,
     // later days render with nothing current or up next.
-    const todayKey = format(currentTime, 'yyyy-MM-dd');
-    const viewedKey = timetableData.date || todayKey;
     const currentMinutes = !showNow || viewedKey > todayKey
         ? -1
         : viewedKey < todayKey
@@ -378,7 +401,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
     // Clipboard sessions on the viewed day slot in by start time: during school after the period they
     // start in, after school below "End of day".
-    const minutesOf = (date) => date.getHours() * 60 + date.getMinutes();
     const daySessions = viewMode === 'daily'
         ? clipboardSessions.filter(s => dayKeyOf(s) === viewedKey).map(s => {
             const at = minutesOf(startOf(s));

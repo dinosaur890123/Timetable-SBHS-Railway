@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
 import { fetchCalendarEvents, fetchDateInfo, fetchAssignments } from '../services/api';
@@ -28,6 +28,10 @@ const useMediaQuery = (query) => {
   }, [query]);
   return matches;
 };
+
+// Months loaded this session. Kept outside the component so leaving the Calendar and coming back
+// shows them at once (refreshed underneath) instead of starting empty.
+const monthCache = new Map();
 
 // Fetches a month's events and the student's assignments, merged into day groups.
 const loadMonth = async (monthDate) => {
@@ -277,18 +281,17 @@ const CalendarView = ({ user }) => {
   const isWide = useMediaQuery('(min-width: 1024px)');
 
   // Months already fetched, so going back is instant; each is still refreshed in the background.
-  const monthCache = useRef(new Map());
   const monthKey = monthKeyOf(currentDate);
 
   useEffect(() => {
     let cancelled = false;
-    const cached = monthCache.current.get(monthKey);
+    const cached = monthCache.get(monthKey);
     setEvents(cached || []);
     setLoading(!cached);
 
     loadMonth(currentDate)
       .then(merged => {
-        monthCache.current.set(monthKey, merged);
+        monthCache.set(monthKey, merged);
         if (!cancelled) setEvents(merged);
       })
       .catch(err => console.error(err))
