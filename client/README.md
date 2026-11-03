@@ -46,8 +46,10 @@ Go to your **Vercel Project Settings > Environment Variables** and ensure these 
 | Variable | Value |
 |----------|-------|
 | `VITE_SBHS_CLIENT_ID` | *Your App ID* |
-| `VITE_SBHS_CLIENT_SECRET` | *Your App Secret* |
 | `VITE_SBHS_REDIRECT_URI` | `https://timetable-sbhs-gcdd.vercel.app/` |
+| `SBHS_CLIENT_SECRET` | *Your App Secret* (server only) |
+
+The client secret is only read by the server, which exchanges sign-in codes with SBHS. Never put it in a `VITE_` variable: those are built into the public JavaScript.
 
 **Important:** After updating variables in Vercel, you must go to **Deployments** and click **Redeploy** on the latest commit for changes to take effect.
 

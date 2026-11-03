@@ -1,14 +1,40 @@
 import { format } from 'date-fns';
 import { rememberSubjectColours } from '../utils/timetable';
+import { normaliseList, normaliseIssuedAward, normaliseIssuedPrize, normaliseRollover, normaliseAward, normaliseHouse, normaliseNomination, normalisePrize } from '../utils/awardScheme';
 
 // Environment variables
 const CLIENT_ID = import.meta.env.VITE_SBHS_CLIENT_ID?.trim();
-const CLIENT_SECRET = import.meta.env.VITE_SBHS_CLIENT_SECRET?.trim();
 const REDIRECT_URI = import.meta.env.VITE_SBHS_REDIRECT_URI?.trim();
 
 const AUTH_ENDPOINT = 'https://auth.sbhs.net.au/authorize';
-const TOKEN_ENDPOINT = 'https://auth.sbhs.net.au/token';
 const API_BASE_URL = 'https://student.sbhs.net.au/api';
+// The app's own server. Sign-in goes through it so the SBHS client secret never
+// reaches the browser.
+const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
+const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
+
+// fetch with a time limit, so a server that stops answering shows an error
+// instead of a spinner that never ends. AI requests get longer.
+const timedFetch = async (url, options = {}, timeoutMs) => {
+    const limit = timeoutMs ?? (String(url).includes('/ai/') ? 60000 : 20000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), limit);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+        if (error?.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(limit / 1000)}s`);
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
+// Posts to the server's token endpoint, which adds the client secret for SBHS.
+const requestToken = (params) => timedFetch(TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+});
 
 // ns.sbhs.au/r/student_app grants access to the Core API on api.sbhs.net.au (award scheme, clipboard).
 export const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
@@ -16,8 +42,6 @@ export const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
 export const getOauthConfig = () => ({
   clientId: CLIENT_ID || '(Not configured)',
   redirectUri: REDIRECT_URI || '(Not configured)',
-  hasClientSecret: !!CLIENT_SECRET,
-  clientSecretLength: CLIENT_SECRET ? CLIENT_SECRET.length : 0
 });
 
 // --- Authentication ---
@@ -27,7 +51,8 @@ export const performLogin = () => {
     alert("Configuration Error: Missing Client ID or Redirect URI in .env");
     return;
   }
-  const state = Math.random().toString(36).substring(7);
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const state = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
   sessionStorage.setItem('sbhs_auth_state', state);
 
   const params = new URLSearchParams({
@@ -41,20 +66,22 @@ export const performLogin = () => {
   window.location.href = `${AUTH_ENDPOINT}?${params.toString()}`;
 };
 
-export const exchangeToken = async (code) => {
-  const formBody = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: code,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    redirect_uri: REDIRECT_URI
-  });
+// The sign-in redirect must carry the state this tab sent, or someone else
+// started it (e.g. a link that signs the student into another account).
+export const checkAuthState = (returnedState) => {
+  const expected = sessionStorage.getItem('sbhs_auth_state');
+  sessionStorage.removeItem('sbhs_auth_state');
+  // Tabs that lost sessionStorage (e.g. the redirect opened elsewhere) have
+  // nothing to compare; only a mismatch is rejected.
+  return !expected || expected === returnedState;
+};
 
+export const exchangeToken = async (code) => {
   try {
-    const response = await fetch(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody
+    const response = await requestToken({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI
     });
 
     if (!response.ok) {
@@ -117,13 +144,7 @@ export const refreshAccessToken = () => {
 
     refreshInFlight = (async () => {
         try {
-            const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: CLIENT_ID });
-            if (CLIENT_SECRET) body.set('client_secret', CLIENT_SECRET);
-            const response = await fetch(TOKEN_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body
-            });
+            const response = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
             if (!response.ok) {
                 // Another tab may have spent this refresh token first; use the pair it stored.
                 if (localStorage.getItem('sbhs_refresh_token') !== refreshToken && hasFreshToken()) return getAccessToken();
@@ -167,7 +188,7 @@ async function fetchWithAuth(endpoint) {
     const token = await getValidAccessToken();
     if (!token) throw new Error("No access token");
 
-    const send = (bearer) => fetch(`${API_BASE_URL}${endpoint}`, {
+    const send = (bearer) => timedFetch(`${API_BASE_URL}${endpoint}`, {
         headers: { 'Authorization': `Bearer ${bearer}` }
     });
     let response = await send(token);
@@ -244,11 +265,10 @@ export const fetchDateInfo = async (date) => {
 };
 
 // --- System API (Public) ---
-const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
 export const fetchSystemStatus = async () => {
     try {
-        const response = await fetch(`${SYSTEM_API_URL}/system/status`, {
+        const response = await timedFetch(`${SYSTEM_API_URL}/system/status`, {
             signal: AbortSignal.timeout(10000)
         });
         if (!response.ok) return null;
@@ -260,7 +280,7 @@ export const fetchSystemStatus = async () => {
 
 export const fetchAiBriefing = async (notices) => {
     const token = await getValidAccessToken();
-    const response = await fetch(`${SYSTEM_API_URL}/ai/briefing`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/ai/briefing`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -276,7 +296,7 @@ export const fetchAiBriefing = async (notices) => {
 
 export const fetchTimetableQa = async (question, timetable, currentMinutes, completeTimetable) => {
     const token = await getValidAccessToken();
-    const response = await fetch(`${SYSTEM_API_URL}/ai/timetable-qa`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/ai/timetable-qa`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -292,7 +312,7 @@ export const fetchTimetableQa = async (question, timetable, currentMinutes, comp
 
 export const fetchAiNotesSummarise = async (content, title) => {
     const token = await getValidAccessToken();
-    const response = await fetch(`${SYSTEM_API_URL}/ai/notes-summarise`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/ai/notes-summarise`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -309,7 +329,7 @@ export const fetchAiNotesSummarise = async (content, title) => {
 
 export const fetchAiQuizGenerate = async (payload) => {
     const token = await getValidAccessToken();
-    const response = await fetch(`${SYSTEM_API_URL}/ai/quiz-generate`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/ai/quiz-generate`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -330,7 +350,7 @@ async function fetchFromBackend(endpoint) {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${SYSTEM_API_URL}${endpoint}`, { headers });
+    const response = await timedFetch(`${SYSTEM_API_URL}${endpoint}`, { headers });
     if (!response.ok) {
         throw new Error(`Backend API Error ${response.status}: ${endpoint}`);
     }
@@ -344,120 +364,19 @@ export const fetchStudentAbsences = (studentId) => fetchFromBackend(`/students/$
 export const fetchStudentAbsenceDetail = (studentId, id) => fetchFromBackend(`/students/${studentId}/attendance/absences/${id}`);
 export const fetchStudentScanIns = (studentId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins`);
 export const fetchStudentScanInDetail = (studentId, dateId) => fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${dateId}`);
-export const fetchStudentAwards = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/award-scheme/awards`)
-    .then(data => {
-        const parseAwards = (items) => {
-            return items.map(item => {
-                if (item && item.title && item.points !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    title: item.award?.name || item.title || 'Unknown Award',
-                    description: item.nomination?.name || item.award?.category?.name || item.description || 'Issued Award',
-                    dateIssued: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : (item.dateIssued || ''),
-                    points: item.award?.points !== undefined ? item.award.points : (item.points || 0),
-                    category: item.award?.category?.name || item.category || ''
-                };
-            });
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseAwards(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseAwards(data);
-        }
-        return [];
-    });
-
-export const fetchStudentBadges = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/award-scheme/badges`)
-    .then(data => {
-        const parseBadges = (items) => {
-            return items.map(item => {
-                if (item && item.title && item.category !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    title: item.award?.name || item.title || 'Unknown Badge',
-                    category: item.award?.category?.name || item.category || 'Badge',
-                    dateIssued: item.date ? new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : (item.dateIssued || '')
-                };
-            });
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseBadges(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseBadges(data);
-        }
-        return [];
-    });
-
-export const fetchStudentDecorations = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/award-scheme/decorations`)
-    .then(data => {
-        const parseDecorations = (items) => {
-            return items.map(item => {
-                if (item && item.title && item.presentationNight !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    title: item.award?.name || item.title || 'Unknown Decoration',
-                    presentationNight: item.presentationNight || item.award?.metadata?.find(m => m.name === 'presentationNight')?.value || 'Presentation Night',
-                    year: item.year || (item.date ? new Date(item.date).getFullYear() : (item.year || ''))
-                };
-            });
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseDecorations(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseDecorations(data);
-        }
-        return [];
-    });
-
-export const fetchStudentPrizes = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/award-scheme/prizes`)
-    .then(data => {
-        const parsePrizes = (items) => {
-            return items.map(item => {
-                if (item && item.title && item.description !== undefined) {
-                    return item;
-                }
-                return {
-                    id: item.id || Math.random(),
-                    title: item.prize?.name || item.award?.name || item.title || 'Unknown Prize',
-                    description: item.prize?.tier ? `Tier ${item.prize.tier} prize` : (item.description || ''),
-                    year: item.year || (item.date ? new Date(item.date).getFullYear() : (item.year || ''))
-                };
-            });
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parsePrizes(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parsePrizes(data);
-        }
-        return [];
-    });
-
-export const fetchStudentRollover = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/award-scheme/rollover`)
-    .then(data => {
-        if (!data) return null;
-        const rollover = Array.isArray(data.member) ? data.member[0] : data;
-        if (!rollover) return null;
-        // Nominations carried over from last year, counting towards the next prize.
-        return {
-            nominationCount: rollover.nominationCount || 0,
-            prizeName: rollover.prize?.name || ''
-        };
-    });
+// Award scheme. The normalisers in utils/awardScheme.js keep the fields the Awards
+// page needs (dates, categories and groups, nominations, prizes).
+export const fetchStudentAwards = (studentId) =>
+    fetchFromBackend(`/students/${studentId}/award-scheme/awards`).then(data => normaliseList(data, normaliseIssuedAward));
+export const fetchStudentBadges = (studentId) =>
+    fetchFromBackend(`/students/${studentId}/award-scheme/badges`).then(data => normaliseList(data, normaliseIssuedAward));
+export const fetchStudentDecorations = (studentId) =>
+    fetchFromBackend(`/students/${studentId}/award-scheme/decorations`).then(data => normaliseList(data, normaliseIssuedAward));
+export const fetchStudentPrizes = (studentId) =>
+    fetchFromBackend(`/students/${studentId}/award-scheme/prizes`).then(data => normaliseList(data, normaliseIssuedPrize));
+// Nominations carried over from last year, counting towards a prize.
+export const fetchStudentRollover = (studentId) =>
+    fetchFromBackend(`/students/${studentId}/award-scheme/rollover`).then(normaliseRollover);
 
 const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
 const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
@@ -573,90 +492,17 @@ export const fetchStudentTimetableDates = (studentId) => fetchFromBackend(`/stud
 export const fetchStudentTimetableDateDetail = (studentId, date) => fetchFromBackend(`/students/${studentId}/timetable/dates/${date}`);
 
 // Global APIs
-export const fetchGlobalAwards = () => 
-    fetchFromBackend('/award-scheme/awards')
-    .then(data => {
-        const parseGlobalAwards = (items) => {
-            return items.filter(item => item && !item.archived).map(item => ({
-                id: item.id || Math.random(),
-                name: item.name || '',
-                points: item.points || 0,
-                description: item.category?.name || ''
-            }));
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseGlobalAwards(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseGlobalAwards(data);
-        }
-        return [];
-    });
-
+export const fetchGlobalAwards = () =>
+    fetchFromBackend('/award-scheme/awards').then(data => normaliseList(data, normaliseAward));
+export const fetchGlobalHousePoints = () =>
+    fetchFromBackend('/award-scheme/house-points').then(data => normaliseList(data, normaliseHouse));
+export const fetchGlobalNominations = () =>
+    fetchFromBackend('/award-scheme/nominations').then(data => normaliseList(data, normaliseNomination));
+export const fetchGlobalPrizes = () =>
+    fetchFromBackend('/award-scheme/prizes').then(data => normaliseList(data, normalisePrize));
 export const fetchGlobalAwardDetail = (id) => fetchFromBackend(`/award-scheme/awards/${id}`);
-
-export const fetchGlobalCategories = () => 
-    fetchFromBackend('/award-scheme/categories')
-    .then(data => {
-        const parseCategories = (items) => {
-            return items.filter(item => item && !item.archived).map(item => ({
-                id: item.id || Math.random(),
-                name: item.name || '',
-                type: item.type || ''
-            }));
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseCategories(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseCategories(data);
-        }
-        return [];
-    });
-
 export const fetchGlobalCategoryDetail = (id) => fetchFromBackend(`/award-scheme/categories/${id}`);
-
-export const fetchGlobalHousePoints = () => 
-    fetchFromBackend('/award-scheme/house-points')
-    .then(data => {
-        const parseHousePoints = (items) => {
-            return items.map(item => ({
-                house: item.name || item.house || '',
-                colour: item.color || null,
-                points: item.points || 0
-            })).sort((a, b) => b.points - a.points);
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseHousePoints(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseHousePoints(data);
-        }
-        return [];
-    });
-
-export const fetchGlobalNominations = () => 
-    fetchFromBackend('/award-scheme/nominations')
-    .then(data => {
-        const parseNominations = (items) => {
-            return items.map(item => ({
-                id: item.id || Math.random(),
-                name: item.name || '',
-                pointsRequired: item.pointsRequired || 0,
-                tier: item.tier || null
-            })).sort((a, b) => a.pointsRequired - b.pointsRequired);
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseNominations(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseNominations(data);
-        }
-        return [];
-    });
-
 export const fetchGlobalNominationDetail = (id) => fetchFromBackend(`/award-scheme/nominations/${id}`);
-export const fetchGlobalPrizes = () => fetchFromBackend('/award-scheme/prizes');
 export const fetchGlobalPrizeDetail = (id) => fetchFromBackend(`/award-scheme/prizes/${id}`);
 
 export const fetchGlobalActivities = () => 
@@ -717,7 +563,7 @@ export const saveAssignment = async (assignment) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${SYSTEM_API_URL}/assignments`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/assignments`, {
         method: 'POST',
         headers,
         body: JSON.stringify(assignment)
@@ -734,7 +580,7 @@ export const deleteAssignment = async (id) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${SYSTEM_API_URL}/assignments/${id}`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/assignments/${id}`, {
         method: 'DELETE',
         headers
     });
@@ -751,7 +597,7 @@ export const fetchUserPreferences = async (studentId) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, { headers });
+    const response = await timedFetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, { headers });
     if (!response.ok) {
         throw new Error(`Failed to fetch preferences: ${response.status}`);
     }
@@ -764,7 +610,7 @@ export const saveUserPreferences = async (studentId, preferences) => {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/users/${studentId}/preferences`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ preferences })
@@ -784,7 +630,7 @@ const canvasRequest = async (path, { method = 'GET', body } = {}) => {
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    const response = await fetch(`${SYSTEM_API_URL}/canvas-links${path}`, {
+    const response = await timedFetch(`${SYSTEM_API_URL}/canvas-links${path}`, {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body)
@@ -823,7 +669,7 @@ export const voteCanvasLink = (id, vote) =>
 // Build Notes API
 export const fetchBuildNotes = async () => {
     try {
-        const response = await fetch(`${SYSTEM_API_URL}/build-notes`);
+        const response = await timedFetch(`${SYSTEM_API_URL}/build-notes`);
         if (!response.ok) {
             throw new Error(`Failed to fetch build notes: ${response.status}`);
         }

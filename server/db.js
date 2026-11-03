@@ -109,6 +109,14 @@ async function withTransaction(fn) {
   }
 }
 
+// Closes the pool (used on shutdown).
+async function close() {
+  if (!pool) return;
+  const closing = pool;
+  pool = undefined;
+  await closing.end();
+}
+
 function hasDb() {
   return Boolean(getConnectionString());
 }
@@ -118,4 +126,5 @@ module.exports = {
   ensureSchema,
   query,
   withTransaction,
+  close,
 };

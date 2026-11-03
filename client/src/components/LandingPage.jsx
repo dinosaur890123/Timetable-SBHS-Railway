@@ -238,7 +238,7 @@ const AuthErrorDialog = ({ authError, onDismiss }) => {
           <div className="flex justify-between gap-4">
             <dt className="text-zinc-500">Client secret</dt>
             <dd className="text-zinc-300">
-              {config.hasClientSecret ? `Present (length ${config.clientSecretLength})` : 'Not present'}
+              Kept on the server (<code className="font-mono text-xs">SBHS_CLIENT_SECRET</code>)
             </dd>
           </div>
         </dl>
