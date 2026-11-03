@@ -267,7 +267,7 @@ export const ModernTopbar = ({
 export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = [] }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
-        { id: 'calendar', icon: CalendarDays, label: 'Calendar' },
+        { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
         { id: 'notes', icon: GraduationCap, label: 'NoteFlow' }
     ].filter(item => !hiddenPages.includes(item.id));
@@ -452,16 +452,16 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
 
 // Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut, hiddenPages = [] }) => {
-    // Quick actions for mobile (awards, clipboard, portal, canvas)
+    // Quick actions for mobile (awards, calendar, portal, canvas)
     const quickActions = [
         { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
-        { id: 'quick-clipboard', label: 'Clipboard', icon: Clipboard, run: () => setView('clipboard') },
+        { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
         { id: 'quick-canvas', label: 'Canvas', icon: BookOpen, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
     ].filter(action => {
         // Filter out if the corresponding page is hidden
         if (action.id === 'quick-awards') return !hiddenPages.includes('awards');
-        if (action.id === 'quick-clipboard') return !hiddenPages.includes('clipboard');
+        if (action.id === 'quick-calendar') return !hiddenPages.includes('calendar');
         return true; // portal and canvas are external links, not pages
     });
 

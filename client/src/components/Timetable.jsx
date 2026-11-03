@@ -370,22 +370,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                 );
                                             }
                                             
-                                            const canvasLink = getLink(classInfo.title);
                                             const cell = <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />;
 
                                             return (
                                                 <td key={dayIndex} className="px-2 py-2">
-                                                    {canvasLink ? (
-                                                        <a
-                                                            href={canvasLink}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="block"
-                                                        >
-                                                            {cell}
-                                                        </a>
-                                                    ) : cell}
+                                                    {cell}
                                                 </td>
                                             );
                                         })}
@@ -437,7 +426,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             currentMinutes={currentMinutes}
                             startMinutes={data.startMin}
                             endMinutes={data.endMin}
-                            canvasLink={getLink(data.periodInfo.title)}
+                            canvasLink={getLink(data.periodInfo.title, data.periodInfo.year)}
                         />
                     ))}
                     {routineData.length > 0 && (

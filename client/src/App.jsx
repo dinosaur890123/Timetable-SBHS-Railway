@@ -3,6 +3,7 @@ import Home from './components/Home';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
+import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
 
 // Each page's code loads on its first visit, and is also fetched quietly once a signed-in app is idle
 // (see warmPages below) so switching pages never stops on "Loading view".
@@ -881,7 +882,7 @@ function App() {
 
     return (
         <MotionConfig reducedMotion="user">
-        <CanvasLinksProvider>
+        <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
@@ -1246,6 +1247,9 @@ function App() {
                     })}
                 </div>
             )}
+
+            {/* Canvas Link Suggestions Toast */}
+            <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />
         </div>
         </CanvasLinksProvider>
         </MotionConfig>

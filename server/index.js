@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 
 const db = require('./db');
+const { registerCanvasLinkRoutes } = require('./canvasLinks');
 
 dotenv.config();
 
@@ -42,7 +43,6 @@ let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
 let sharedResources = []; // Shared resources memory fallback
 let notifications = []; // Notifications memory fallback
-let canvasLinksMemory = []; // Canvas links memory fallback
 let buildNotesMemory = [
     {
         id: 'initial-build-note',
@@ -737,267 +737,15 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
-// Helper to ensure canvas URL is absolute
-const formatCanvasUrl = (url) => {
-    if (!url || typeof url !== 'string') return null;
-    const trimmed = url.trim();
-    if (!trimmed) return null;
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    if (/^(courses\/\d+|\d+$)/i.test(trimmed)) {
-        const id = trimmed.replace(/\D/g, '');
-        return `https://canvas.instructure.com/courses/${id}`;
-    }
-    return `https://${trimmed.replace(/^\/+/, '')}`;
-};
-
-// GET /api/canvas-links - Get canvas links for current user
-app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        let links = [];
-
-        if (!isDbEnabled) {
-            const userLinks = canvasLinksMemory
-                .filter(l => l.studentId === studentId)
-                .map(l => ({ className: l.className, canvasUrl: l.canvasUrl, createdAt: l.createdAt, updatedAt: l.updatedAt }));
-            return res.json({ success: true, links: userLinks });
-        }
-
-        const result = await db.query(
-            `SELECT class_name, canvas_url, created_at, updated_at
-             FROM canvas_links
-             WHERE student_id = $1
-             ORDER BY class_name ASC`,
-            [studentId]
-        );
-
-        links = result.rows.map(row => ({
-            className: row.class_name,
-            canvasUrl: row.canvas_url,
-            createdAt: toIso(row.created_at),
-            updatedAt: toIso(row.updated_at)
-        }));
-
-        res.json({ success: true, links });
-    } catch (e) {
-        console.error('Get canvas links error:', e);
-        // Zero-failure: return empty array on any error
-        res.json({ success: true, links: [] });
-    }
-});
-
-// POST /api/canvas-links - Save canvas links for current user
-app.post('/api/canvas-links', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        const { links } = req.body || {};
-
-        if (!links || typeof links !== 'object') {
-            return res.status(400).json({ error: 'Invalid links data' });
-        }
-
-        if (!isDbEnabled) {
-            canvasLinksMemory = canvasLinksMemory.filter(l => l.studentId !== studentId);
-            const now = new Date().toISOString();
-            for (const [className, rawLink] of Object.entries(links)) {
-                const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
-                const canvasUrl = formatCanvasUrl(rawUrl);
-                if (!canvasUrl) continue;
-                canvasLinksMemory.push({
-                    id: crypto.randomUUID(),
-                    className: String(className),
-                    canvasUrl: String(canvasUrl),
-                    studentId,
-                    createdAt: now,
-                    updatedAt: now
-                });
-            }
-            return res.json({ success: true, message: 'Canvas links saved (memory fallback)' });
-        }
-
-        // Delete existing links for this user
-        await db.query(
-            `DELETE FROM canvas_links WHERE student_id = $1`,
-            [studentId]
-        );
-
-        // Insert new links
-        const entries = Object.entries(links);
-        for (const [className, rawLink] of entries) {
-            const rawUrl = typeof rawLink === 'string' ? rawLink : (rawLink && typeof rawLink === 'object' && rawLink.url ? String(rawLink.url) : null);
-            const canvasUrl = formatCanvasUrl(rawUrl);
-            if (!canvasUrl) continue;
-
-            const id = crypto.randomUUID();
-            await db.query(
-                `INSERT INTO canvas_links (id, class_name, canvas_url, student_id, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, NOW(), NOW())
-                 ON CONFLICT (class_name, student_id) 
-                 DO UPDATE SET canvas_url = $3, updated_at = NOW()`,
-                [id, String(className), String(canvasUrl), studentId]
-            );
-        }
-
-        await addLog('CANVAS_LINKS_UPDATE', studentId, `Updated ${entries.length} canvas links`);
-        res.json({ success: true, message: 'Canvas links saved successfully' });
-    } catch (e) {
-        console.error('Save canvas links error:', e);
-        res.status(500).json({ error: 'Failed to save canvas links' });
-    }
-});
-
-// GET /api/canvas-links/shared/:className - Get shared canvas link for a class (from any student)
-app.get('/api/canvas-links/shared/:className', requireStudentAuth, async (req, res) => {
-    try {
-        const { className } = req.params;
-
-        if (!className) {
-            return res.json({ success: true, link: null });
-        }
-
-        if (!isDbEnabled) {
-            const match = canvasLinksMemory.find(l => l.className === String(className));
-            return res.json({ success: true, link: match ? { canvasUrl: match.canvasUrl, studentId: match.studentId, updatedAt: match.updatedAt } : null });
-        }
-
-        const result = await db.query(
-            `SELECT canvas_url, student_id, updated_at
-             FROM canvas_links
-             WHERE class_name = $1
-             ORDER BY updated_at DESC
-             LIMIT 1`,
-            [String(className)]
-        );
-
-        if (result.rows.length === 0) {
-            return res.json({ success: true, link: null });
-        }
-
-        const row = result.rows[0];
-        res.json({
-            success: true,
-            link: {
-                canvasUrl: row.canvas_url,
-                studentId: row.student_id,
-                updatedAt: toIso(row.updated_at)
-            }
-        });
-    } catch (e) {
-        console.error('Get shared canvas link error:', e);
-        // Zero-failure: return null link on any error
-        res.json({ success: true, link: null });
-    }
-});
-
-// GET /api/canvas-courses - Get all shared canvas courses
-app.get('/api/canvas-courses', requireStudentAuth, async (req, res) => {
-    try {
-        let courses = {};
-
-        if (!isDbEnabled) {
-            return res.json({ success: true, courses });
-        }
-
-        const result = await db.query(
-            `SELECT class_name, course_id, set_by, created_at, updated_at
-             FROM canvas_courses
-             ORDER BY class_name ASC`,
-            []
-        );
-
-        courses = {};
-        result.rows.forEach(row => {
-            courses[row.class_name] = {
-                courseId: row.course_id,
-                url: `https://canvas.instructure.com/courses/${row.course_id}`,
-                setBy: row.set_by,
-                createdAt: toIso(row.created_at),
-                updatedAt: toIso(row.updated_at)
-            };
-        });
-
-        res.json({ success: true, courses });
-    } catch (e) {
-        console.error('Get canvas courses error:', e);
-        res.json({ success: true, courses: {} });
-    }
-});
-
-// POST /api/canvas-courses - Set shared canvas course for a class
-app.post('/api/canvas-courses', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        const { className, courseId } = req.body || {};
-
-        if (!className || !courseId) {
-            return res.status(400).json({ error: 'Class name and course ID are required' });
-        }
-
-        if (!isDbEnabled) {
-            return res.json({ success: true, course: { courseId, url: `https://canvas.instructure.com/courses/${courseId}`, setBy: studentId } });
-        }
-
-        // Check if already set
-        const existing = await db.query(
-            `SELECT course_id FROM canvas_courses WHERE class_name = $1`,
-            [String(className)]
-        );
-
-        if (existing.rows.length > 0) {
-            return res.status(409).json({ error: 'already_set', message: 'This class already has a shared Canvas course' });
-        }
-
-        const id = crypto.randomUUID();
-        await db.query(
-            `INSERT INTO canvas_courses (id, class_name, course_id, set_by, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-            [id, String(className), String(courseId), studentId]
-        );
-
-        await addLog('CANVAS_COURSE_SET', studentId, `Set canvas course ${courseId} for class ${className}`);
-
-        res.json({
-            success: true,
-            course: {
-                courseId: courseId,
-                url: `https://canvas.instructure.com/courses/${courseId}`,
-                setBy: studentId
-            }
-        });
-    } catch (e) {
-        console.error('Set canvas course error:', e);
-        res.status(500).json({ error: 'Failed to set canvas course' });
-    }
-});
-
-// POST /api/canvas-courses/report - Report incorrect shared canvas course
-app.post('/api/canvas-courses/report', requireStudentAuth, async (req, res) => {
-    try {
-        const studentId = String(req.user.studentId);
-        const { className, suggestedCourseId, justification } = req.body || {};
-
-        if (!className || !suggestedCourseId || !justification) {
-            return res.status(400).json({ error: 'Class name, suggested course ID, and justification are required' });
-        }
-
-        if (!isDbEnabled) {
-            return res.json({ success: true, message: 'Report submitted (memory fallback)' });
-        }
-
-        const id = crypto.randomUUID();
-        await db.query(
-            `INSERT INTO canvas_course_reports (id, class_name, suggested_course_id, justification, reported_by, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
-            [id, String(className), String(suggestedCourseId), String(justification), studentId]
-        );
-
-        await addLog('CANVAS_COURSE_REPORT', studentId, `Reported canvas course for class ${className}`);
-
-        res.json({ success: true, message: 'Report submitted successfully' });
-    } catch (e) {
-        console.error('Report canvas course error:', e);
-        res.status(500).json({ error: 'Failed to submit report' });
-    }
+// Canvas course links: students' own links and links shared between classmates.
+registerCanvasLinkRoutes(app, {
+    db,
+    isDbEnabled,
+    requireStudentAuth,
+    requireAdminAuth,
+    getUserById,
+    addLog,
+    getMemoryUsers: () => users
 });
 
 // GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
