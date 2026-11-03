@@ -237,7 +237,7 @@ export const summariseAwards = ({
     const areas = allAreas.filter(started).sort((a, b) => b.points - a.points || b.earned - a.earned);
     const areasNotStarted = allAreas.filter(a => !started(a)).map(a => a.name);
 
-    const nominationsThisYear = issued.filter(item => item.kind === 'nomination').length;
+    const nominationsAllTime = issued.filter(item => item.kind === 'nomination').length;
 
     const wonPrizes = new Map(prizes.map(p => [p.prize.id, p]));
     const prizeRows = prizeLadder
@@ -248,7 +248,7 @@ export const summariseAwards = ({
         if (!prizeRows.some(row => row.id === p.prize.id)) prizeRows.push({ ...p.prize, won: p });
     });
     prizeRows.forEach(p => {
-        p.state = p.won ? 'won' : p.nominationsRequired > 0 && nominationsThisYear >= p.nominationsRequired ? 'reached' : 'progress';
+        p.state = p.won ? 'won' : p.nominationsRequired > 0 && nominationsAllTime >= p.nominationsRequired ? 'reached' : 'progress';
     });
     const latestPrize = [...prizeRows].reverse().find(p => p.state === 'won') || null;
     const nextPrize = prizeRows.find(p => p.state !== 'won') || null;
@@ -307,7 +307,7 @@ export const summariseAwards = ({
         byCategory,
         nominationLadder,
         nextNomination,
-        nominationsThisYear,
+        nominationsAllTime,
         areas,
         areasNotStarted,
         prizeRows,

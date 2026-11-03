@@ -30,7 +30,7 @@ const Card = ({ children, className = '' }) => (
 );
 
 const CardTitle = ({ children, aside }) => (
-    <div className="flex items-baseline justify-between gap-3 mb-4">
+    <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="text-[15px] font-medium text-zinc-900 dark:text-white">{children}</h2>
         {aside && <span className="text-[12px] text-zinc-400 dark:text-zinc-500 tabular-nums">{aside}</span>}
     </div>
@@ -97,10 +97,10 @@ const prizeProgress = (prize, nominations) => {
 
 // The year at a glance: points, nominations, and prize.
 const SummaryCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount, nominationsThisYear, latestPrize, nextPrize, rollover } = summary;
+    const { totalPoints, housePoints, awardCount, nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
         <Card className="lg:col-span-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+            <div className="flex flex-wrap gap-6">
                 <Stat
                     label="Points"
                     value={totalPoints.toLocaleString('en-AU')}
@@ -108,15 +108,14 @@ const SummaryCard = ({ summary }) => {
                 />
                 <Stat
                     label="Nominations"
-                    value={nominationsThisYear}
-                    sub={rollover?.nominationCount > 0 ? `this year, +${rollover.nominationCount} carried over` : 'this year'}
+                    value={nominationsAllTime}
+                    sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
                 />
                 <Stat
-                    className="col-span-2 sm:col-span-1"
                     label="Prize"
                     value={latestPrize ? latestPrize.name : 'None yet'}
                     valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
-                    sub={prizeProgress(nextPrize, nominationsThisYear)}
+                    sub={prizeProgress(nextPrize, nominationsAllTime)}
                 />
             </div>
         </Card>
@@ -157,20 +156,16 @@ const StatusMark = ({ state }) => (
     </span>
 );
 
-// The levels of one area as a strip of segments: filled once earned.
+// The levels of one area as a smooth progress bar.
 const LevelStrip = ({ area }) => {
-    const nextNomination = Math.min(area.earned + 1, 30);
     const isComplete = area.earned >= 30;
+    const progress = Math.min(area.earned, 30) / 30;
     return (
-        <div className="flex gap-[3px] mt-1.5" aria-hidden>
-            {Array.from({ length: 30 }, (_, i) => (
-                <span
-                    key={i}
-                    className={`h-1 flex-1 max-w-4 rounded-full ${i < area.earned
-                        ? isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-zinc-900/70 dark:bg-white/70'
-                        : 'bg-zinc-900/[0.08] dark:bg-white/[0.09]'}`}
-                />
-            ))}
+        <div className="mt-1.5 h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
+            <div
+                className={`h-full rounded-full ${isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-zinc-900/70 dark:bg-white/70'}`}
+                style={{ width: `${progress * 100}%` }}
+            />
         </div>
     );
 };
@@ -186,7 +181,7 @@ const AreasCard = ({ summary }) => {
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => (
-                        <li key={area.id} className="py-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
+                        <li key={area.id} className="py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
                             <div className="min-w-0">
                                 <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{area.name}</div>
                                 <div className="flex items-center gap-2">
@@ -194,7 +189,6 @@ const AreasCard = ({ summary }) => {
                                     <span className="mt-1.5 text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">{Math.min(area.earned, 30)}/30</span>
                                 </div>
                             </div>
-                            <span className="text-right font-mono text-[13px] tabular-nums text-zinc-700 dark:text-zinc-300">{area.points.toLocaleString('en-AU')}<span className="text-zinc-400"> pts</span></span>
                         </li>
                     ))}
                 </ul>
@@ -211,26 +205,26 @@ const AreasCard = ({ summary }) => {
 };
 
 const PrizesCard = ({ summary }) => {
-    const { prizeRows, nominationsThisYear, rollover } = summary;
+    const { prizeRows, nominationsAllTime, rollover } = summary;
     if (prizeRows.length === 0) return null;
     return (
         <Card>
             <CardTitle>Prizes</CardTitle>
             <ul className="space-y-0.5">
                 {prizeRows.map(p => (
-                    <li key={p.id} className="py-1.5 flex items-center gap-3">
+                    <li key={p.id} className="py-1 flex items-center gap-3">
                         <StatusMark state={p.state} />
                         <span className={`flex-1 min-w-0 truncate text-[13.5px] ${p.state === 'progress' ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>{p.name}</span>
                         <span className="shrink-0 text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
                             {p.state === 'won' && (p.won.date ? formatDate(p.won.date, true) : 'Won')}
                             {p.state === 'reached' && <span className="text-zinc-700 dark:text-zinc-300">Reached</span>}
-                            {p.state === 'progress' && p.nominationsRequired > 0 && <span className="font-mono">{Math.min(nominationsThisYear, p.nominationsRequired)}/{p.nominationsRequired}</span>}
+                            {p.state === 'progress' && p.nominationsRequired > 0 && <span className="font-mono">{Math.min(nominationsAllTime, p.nominationsRequired)}/{p.nominationsRequired}</span>}
                         </span>
                     </li>
                 ))}
             </ul>
             {rollover?.nominationCount > 0 && (
-                <p className="mt-3 pt-3 border-t border-m-line text-[12px] text-zinc-500 dark:text-zinc-400">
+                <p className="mt-2 pt-2 border-t border-m-line text-[12px] text-zinc-500 dark:text-zinc-400">
                     {plural(rollover.nominationCount, 'nomination')} carried over{rollover.prize ? ` towards ${rollover.prize.name}` : ''}.
                 </p>
             )}
@@ -308,7 +302,11 @@ const RecordCard = ({ summary }) => {
                                         <div className="text-[13.5px] text-zinc-900 dark:text-white truncate sm:shrink-0 sm:max-w-[60%]">{entry.title}</div>
                                         {entry.detail && <div className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{entry.detail}</div>}
                                     </div>
-                                    {entry.points > 0 ? (
+                                    {entry.kind === 'nomination' && entry.points > 0 ? (
+                                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-300">+{entry.points}</span>
+                                    ) : entry.kind === 'nomination' ? (
+                                        <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full border border-m-line">{KIND_LABELS[entry.kind]}</span>
+                                    ) : entry.points > 0 ? (
                                         <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-300">+{entry.points}</span>
                                     ) : KIND_LABELS[entry.kind] ? (
                                         <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full border border-m-line">{KIND_LABELS[entry.kind]}</span>
