@@ -54,6 +54,28 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [clearingAiCache, setClearingAiCache] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(null);
 
+    // Close user menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const target = event.target;
+            // Check if click is outside all user menu dropdowns
+            const menuButton = target.closest('[data-user-menu-button]');
+            const menuDropdown = target.closest('[data-user-menu-dropdown]');
+            
+            if (!menuButton && !menuDropdown) {
+                setUserMenuOpen(null);
+            }
+        };
+
+        if (userMenuOpen !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [userMenuOpen]);
+
     // Build Notes State
     const [buildNotes, setBuildNotes] = useState([]);
     const [loadingBuildNotes, setLoadingBuildNotes] = useState(false);
@@ -1342,6 +1364,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                         </button>
                                         <div className="relative">
                                             <button
+                                                data-user-menu-button
                                                 onClick={() => setUserMenuOpen(userMenuOpen === user.id ? null : user.id)}
                                                 className="p-1 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                                 title="More Options"
@@ -1349,7 +1372,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                                 <MoreVertical size={16} />
                                             </button>
                                             {userMenuOpen === user.id && (
-                                                <div className="absolute right-0 top-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                                                <div data-user-menu-dropdown className="absolute right-0 top-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
                                                     <button
                                                         onClick={() => {
                                                             setUserMenuOpen(null);
