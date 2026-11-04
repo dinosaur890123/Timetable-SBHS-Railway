@@ -112,9 +112,18 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         if (status === 'ready' && classKeysParam) loadCommunity();
     }, [status, classKeysParam, loadCommunity]);
 
-    const keyFor = useCallback((title, year) => (
-        year != null && year !== '' ? classKey(year, title) : titleToKey.get(title) || null
-    ), [titleToKey]);
+    const keyFor = useCallback((title, year) => {
+        // Always use year if provided - this ensures exact matching across years
+        if (year != null && year !== '') {
+            return classKey(year, title);
+        }
+        // Fallback: only use title-only key if it's unique (not ambiguous across years)
+        const key = titleToKey.get(title);
+        if (key === null) {
+            console.warn('[canvasLinks] Class title is ambiguous across years, year is required:', title);
+        }
+        return key;
+    }, [titleToKey]);
 
     // The link for a class: the student's own, else the one their class agreed on
     // (unless they reported it), else a suggestion they backed themselves.
@@ -131,8 +140,7 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
     const saveLink = useCallback(async (title, input, year) => {
         const parsed = parseLinkInput(input, canvasHost);
         if (parsed.error) return { ok: false, error: parsed.error };
-        // Always use the exact classKey (year + title) for sharing - no fallback to ambiguous title-only key
-        const key = year != null && year !== '' ? classKey(year, title) : null;
+        const key = keyFor(title, year);
         try {
             const data = await saveCanvasLink(title, parsed.url, key || undefined);
             storeLinks(prev => ({ ...prev, [title]: data.link.canvasUrl }));

@@ -121,8 +121,7 @@ const cleanClassName = (value) => {
 const isClassKey = (value) => typeof value === 'string'
     && value.length > 0
     && value.length <= MAX_CLASS_NAME_LENGTH
-    && /^[\w .&+()/:-]+$/.test(value)
-    && /^\d+/.test(value); // Must start with a year (digit) to ensure exact matching
+    && /^[\w .&+()/:-]+$/.test(value);
 
 // "9 Maths 1" -> "Maths 1".
 const withoutYear = (title, year) => {
@@ -616,17 +615,24 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     const shareLink = async (req, { classKey, title, courseId }) => {
         const studentId = String(req.user.studentId);
         const year = currentSchoolYear();
+
+        // Check if user is admin first - admins can share for any class
+        const adminUser = await isAdmin(studentId);
+
         let cls;
-        try {
-            cls = await studentClass(req, classKey);
-        } catch (e) {
-            console.error('[canvas-links] Could not read timetable to share link:', e?.message || e);
-            return 'unverified';
-        }
-        // Match exactly by classKey - the year+shortTitle combination is the source of truth
-        if (!cls) {
-            console.warn('[canvas-links] Student not in class:', { studentId, classKey, title });
-            return 'not_in_class';
+        // Only verify class membership for non-admins
+        if (!adminUser) {
+            try {
+                cls = await studentClass(req, classKey);
+            } catch (e) {
+                console.error('[canvas-links] Could not read timetable to share link:', e?.message || e);
+                return 'unverified';
+            }
+            // Match exactly by classKey - the year+shortTitle combination is the source of truth
+            if (!cls) {
+                console.warn('[canvas-links] Student not in class:', { studentId, classKey, title });
+                return 'not_in_class';
+            }
         }
 
         if (!voteLimit(studentId)) return 'limit';
@@ -636,10 +642,12 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             if (await store.countSharedSince(studentId, since) >= DAILY_SHARED_LIMIT) return 'limit';
 
             // Auto-approve if user is admin
-            const adminUser = await isAdmin(studentId);
             const lockedStatus = adminUser ? 'verified' : null;
 
-            linkId = await store.createShared({ year, classKey, className: cls.name || title, courseId, studentId, lockedStatus });
+            // Ensure className includes year for clarity (e.g., "9 Maths 1" not just "Maths 1")
+            const className = cls?.name || (title.startsWith(String(year)) ? title : `${year} ${title}`);
+
+            linkId = await store.createShared({ year, classKey, className, courseId, studentId, lockedStatus });
             log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})${adminUser ? ' [Auto-approved as Admin]' : ''}`);
         }
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });

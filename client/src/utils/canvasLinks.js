@@ -5,13 +5,7 @@ export const DEFAULT_CANVAS_HOST = 'canvas.sbhs.net.au';
 
 // The key shared links use: year + short title, e.g. "9Ma1". Short titles repeat
 // across year groups, so the year has to be part of it.
-export const classKey = (year, title) => {
-    if (!year || year === '') {
-        console.warn('[canvasLinks] classKey called without year - this will prevent sharing:', { year, title });
-        return null;
-    }
-    return `${year}${title ?? ''}`;
-};
+export const classKey = (year, title) => `${year ?? ''}${title ?? ''}`;
 
 // Accepts a full link, a link without "https://", "courses/123" or a bare course
 // number. Returns { url, isCanvasCourse } or { error }.
@@ -51,13 +45,8 @@ export const collectClasses = (completeTimetable, timetableData) => {
     const classes = new Map();
     const add = (period) => {
         if (!isClassPeriod(period)) return;
-        // Only add classes with valid year information for exact matching
-        if (!period.year || period.year === '') {
-            console.warn('[canvasLinks] Skipping class without year:', period);
-            return;
-        }
         const key = classKey(period.year, period.title);
-        if (key && !classes.has(key)) classes.set(key, period);
+        if (!classes.has(key)) classes.set(key, period);
     };
 
     const cycle = completeTimetable?.timetable || completeTimetable;
