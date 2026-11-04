@@ -121,7 +121,8 @@ const cleanClassName = (value) => {
 const isClassKey = (value) => typeof value === 'string'
     && value.length > 0
     && value.length <= MAX_CLASS_NAME_LENGTH
-    && /^[\w .&+()/:-]+$/.test(value);
+    && /^[\w .&+()/:-]+$/.test(value)
+    && /^\d+/.test(value); // Must start with a year (digit) to ensure exact matching
 
 // "9 Maths 1" -> "Maths 1".
 const withoutYear = (title, year) => {
@@ -318,14 +319,14 @@ const createPgStore = (db) => {
             );
             return result.rows[0].n;
         },
-        async createShared({ year, classKey, className, courseId, studentId }) {
+        async createShared({ year, classKey, className, courseId, studentId, lockedStatus = null }) {
             const id = crypto.randomUUID();
             const result = await db.query(
-                `INSERT INTO canvas_class_links (id, class_key, school_year, class_name, course_id, submitted_by, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+                `INSERT INTO canvas_class_links (id, class_key, school_year, class_name, course_id, submitted_by, locked_status, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
                  ON CONFLICT (school_year, class_key, course_id) DO NOTHING
                  RETURNING id`,
-                [id, classKey, year, className, courseId, studentId]
+                [id, classKey, year, className, courseId, studentId, lockedStatus]
             );
             return result.rows[0]?.id || this.findShared(year, classKey, courseId);
         },
@@ -462,7 +463,7 @@ const createMemoryStore = (getMemoryUsers) => {
         async countSharedSince(studentId, since) {
             return shared.filter(l => l.submittedBy === studentId && new Date(l.createdAt) > since).length;
         },
-        async createShared({ year, classKey, className, courseId, studentId }) {
+        async createShared({ year, classKey, className, courseId, studentId, lockedStatus = null }) {
             const existing = await this.findShared(year, classKey, courseId);
             if (existing) return existing;
             const link = {
@@ -472,7 +473,7 @@ const createMemoryStore = (getMemoryUsers) => {
                 courseId,
                 schoolYear: year,
                 submittedBy: studentId,
-                lockedStatus: null,
+                lockedStatus,
                 createdAt: new Date().toISOString()
             };
             shared.push(link);
@@ -543,17 +544,26 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         const cached = classCache.get(studentId);
         if (cached && Date.now() - cached.at < CLASS_CACHE_MS) return cached.classes;
 
-        const response = await fetch(SBHS_TIMETABLE_URL, {
-            headers: { Authorization: req.headers.authorization },
-            signal: AbortSignal.timeout(8000)
-        });
-        if (!response.ok) throw new Error(`SBHS timetable request failed (${response.status})`);
-        const classes = extractClasses(await response.json());
+        try {
+            const response = await fetch(SBHS_TIMETABLE_URL, {
+                headers: { Authorization: req.headers.authorization },
+                signal: AbortSignal.timeout(8000)
+            });
+            if (!response.ok) {
+                console.error('[canvas-links] SBHS timetable request failed:', { status: response.status, studentId });
+                throw new Error(`SBHS timetable request failed (${response.status})`);
+            }
+            const data = await response.json();
+            const classes = extractClasses(data);
 
-        classCache.delete(studentId);
-        classCache.set(studentId, { at: Date.now(), classes });
-        if (classCache.size > CLASS_CACHE_MAX) classCache.delete(classCache.keys().next().value);
-        return classes;
+            classCache.delete(studentId);
+            classCache.set(studentId, { at: Date.now(), classes });
+            if (classCache.size > CLASS_CACHE_MAX) classCache.delete(classCache.keys().next().value);
+            return classes;
+        } catch (e) {
+            console.error('[canvas-links] Error fetching student timetable:', { studentId, error: e?.message || e });
+            throw e;
+        }
     };
 
     // The class (from the student's timetable) a class key names, or null if
@@ -567,6 +577,15 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     const isBlacklisted = async (studentId) => {
         try {
             return Boolean((await getUserById(studentId))?.blacklisted);
+        } catch {
+            return false;
+        }
+    };
+
+    const isAdmin = async (studentId) => {
+        try {
+            const user = await getUserById(studentId);
+            return user?.role === 'Admin';
         } catch {
             return false;
         }
@@ -601,18 +620,27 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         try {
             cls = await studentClass(req, classKey);
         } catch (e) {
-            console.warn('[canvas-links] Could not read timetable to share link:', e?.message || e);
+            console.error('[canvas-links] Could not read timetable to share link:', e?.message || e);
             return 'unverified';
         }
-        if (!cls || (cls.title && cls.title !== title)) return 'not_in_class';
+        // Match exactly by classKey - the year+shortTitle combination is the source of truth
+        if (!cls) {
+            console.warn('[canvas-links] Student not in class:', { studentId, classKey, title });
+            return 'not_in_class';
+        }
 
         if (!voteLimit(studentId)) return 'limit';
         let linkId = await store.findShared(year, classKey, courseId);
         if (!linkId) {
             const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
             if (await store.countSharedSince(studentId, since) >= DAILY_SHARED_LIMIT) return 'limit';
-            linkId = await store.createShared({ year, classKey, className: cls.name || title, courseId, studentId });
-            log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})`);
+
+            // Auto-approve if user is admin
+            const adminUser = await isAdmin(studentId);
+            const lockedStatus = adminUser ? 'verified' : null;
+
+            linkId = await store.createShared({ year, classKey, className: cls.name || title, courseId, studentId, lockedStatus });
+            log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})${adminUser ? ' [Auto-approved as Admin]' : ''}`);
         }
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });
         return 'shared';
@@ -656,8 +684,16 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             if (parsed.courseId && isClassKey(classKey)) {
                 try {
                     shared = await shareLink(req, { classKey, title: className, courseId: parsed.courseId });
+                    // Provide detailed error messages for specific failure cases
+                    if (shared === 'unverified') {
+                        console.warn('[canvas-links] Share unverified for student:', { studentId, classKey });
+                    } else if (shared === 'not_in_class') {
+                        console.warn('[canvas-links] Student not in class:', { studentId, classKey, className });
+                    } else if (shared === 'limit') {
+                        console.warn('[canvas-links] Rate limited:', { studentId });
+                    }
                 } catch (e) {
-                    console.error('[canvas-links] Share failed:', e);
+                    console.error('[canvas-links] Share failed:', { studentId, classKey, error: e?.message || e });
                     shared = 'error';
                 }
             }
@@ -724,7 +760,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                 const classes = await studentClasses(req);
                 if (classes) classKeys = [...classes.keys()];
             } catch (e) {
-                console.warn('[canvas-links] Timetable unavailable, using client class list:', e?.message || e);
+                console.warn('[canvas-links] Timetable unavailable, using client class list:', { studentId, error: e?.message || e });
             }
             if (!classKeys) {
                 classKeys = String(req.query.classes || '')
