@@ -23,6 +23,13 @@ import {
 } from './api';
 import { prefetchCached } from '../utils/pageCache';
 
+// A request's result, or the fallback if it failed. A 404 means SBHS has nothing for this student
+// (e.g. no rollover), which is an answer; anything else is a failure and marks the page incomplete.
+const settle = (promise, fallback) => promise.then(
+    value => ({ ok: true, value }),
+    error => ({ ok: error?.status === 404, value: fallback })
+);
+
 // --- Calendar ---
 
 // Fetches a month's events and the student's assignments, merged into day groups.
@@ -95,7 +102,7 @@ export const calendarPage = (studentId, monthDate) => ({
 
 // --- Awards ---
 
-const settle = (promise, fallback) => promise.then(value => ({ ok: true, value }), () => ({ ok: false, value: fallback }));
+
 
 export const awardsPage = (studentId) => ({
     key: `awards:${studentId}`,
@@ -125,14 +132,17 @@ export const awardsPage = (studentId) => ({
 export const clipboardPage = (studentId) => ({
     key: `clipboard:${studentId}`,
     load: async () => {
-        const [attendance, preExplained, sessions, teams, globalActivities] = await Promise.all([
-            fetchStudentClipboardAttendance(studentId).catch(() => []),
-            fetchStudentPreExplainedAbsences(studentId).catch(() => []),
-            fetchStudentClipboardSessions(studentId).catch(() => []),
-            fetchStudentClipboardTeams(studentId).catch(() => []),
-            fetchGlobalActivities().catch(() => [])
+        const results = await Promise.all([
+            settle(fetchStudentClipboardAttendance(studentId), []),
+            settle(fetchStudentPreExplainedAbsences(studentId), []),
+            settle(fetchStudentClipboardSessions(studentId), []),
+            settle(fetchStudentClipboardTeams(studentId), []),
+            settle(fetchGlobalActivities(), [])
         ]);
-        return { attendance, preExplained, sessions, teams, globalActivities };
+        // Nothing of the student's came back: that's a failure, not an empty Clipboard.
+        if (results.slice(0, 4).every(r => !r.ok)) throw new Error('Clipboard unavailable');
+        const [attendance, preExplained, sessions, teams, globalActivities] = results.map(r => r.value);
+        return { attendance, preExplained, sessions, teams, globalActivities, incomplete: results.some(r => !r.ok) };
     }
 });
 

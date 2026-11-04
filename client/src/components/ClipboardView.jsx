@@ -58,9 +58,15 @@ const ClipboardView = ({ user }) => {
                     ))}
                 </div>
                 <span className="nf-meta nf-cb-tally">
-                    {plural(teams.length, 'team')} Â· {plural(sessions.length, 'session')}
+                    {plural(teams.length, 'team')} · {plural(sessions.length, 'session')}
                 </span>
             </div>
+
+            {data?.incomplete && (
+                <p className="nf-meta" role="status" style={{ marginTop: '0.5rem' }}>
+                    Part of Clipboard couldn’t be loaded, so this may be incomplete. It’ll try again next time you open it.
+                </p>
+            )}
 
             <div className="nf-cb-body">
                 {activeTab === 'calendar' && (
@@ -76,7 +82,7 @@ const ClipboardView = ({ user }) => {
                                         <div className="nf-cb-rows__main">
                                             <b>{team.name}</b>
                                             <div className="nf-meta">
-                                                {[team.sportOrActivity, team.category].filter(Boolean).join(' Â· ')}
+                                                {[team.sportOrActivity, team.category].filter(Boolean).join(' · ')}
                                             </div>
                                         </div>
                                         {team.season && <span className="nf-meta tnum">{team.season}</span>}
@@ -111,7 +117,7 @@ const ClipboardView = ({ user }) => {
                                     <div className="nf-cb-rows__main">
                                         <b>{att.activity}</b>
                                         <div className="nf-meta">
-                                            {[att.date, att.recordedBy && `Marked by ${att.recordedBy}`].filter(Boolean).join(' Â· ')}
+                                            {[att.date, att.recordedBy && `Marked by ${att.recordedBy}`].filter(Boolean).join(' · ')}
                                         </div>
                                     </div>
                                     <span className={`nf-cb-status ${att.status === 'Present' ? 'nf-cb-status--ok' : ''}`}>

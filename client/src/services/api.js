@@ -17,12 +17,17 @@ const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
 // Whether the data on screen came from the offline copy. The service worker answers from its cache
 // when the network fails and marks those responses (see offlineMarker in vite.config.js); the next
 // real response clears it. Subscribers hear only actual changes.
+// SBHS and this app's own server are tracked separately, so a fresh reply from one doesn't hide
+// that the other is still coming from the offline copy.
+const cachedSources = { sbhs: false, app: false };
 let servingCachedData = false;
 const cachedDataListeners = new Set();
-const setServingCachedData = (value) => {
-    if (servingCachedData === value) return;
-    servingCachedData = value;
-    cachedDataListeners.forEach(listener => listener(value));
+const setSourceCached = (source, value) => {
+    cachedSources[source] = value;
+    const next = cachedSources.sbhs || cachedSources.app;
+    if (servingCachedData === next) return;
+    servingCachedData = next;
+    cachedDataListeners.forEach(listener => listener(next));
 };
 export const onCachedDataChange = (listener) => {
     cachedDataListeners.add(listener);
@@ -52,8 +57,9 @@ const timedFetch = async (url, options = {}, timeoutMs) => {
     const timer = setTimeout(() => controller.abort(), limit);
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
-        if (response.headers.get('X-Synchron-Cached')) setServingCachedData(true);
-        else if (response.ok) setServingCachedData(false);
+        const source = String(url).startsWith(API_BASE_URL) ? 'sbhs' : 'app';
+        if (response.headers.get('X-Synchron-Cached')) setSourceCached(source, true);
+        else if (response.ok) setSourceCached(source, false);
         return response;
     } catch (error) {
         if (error?.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(limit / 1000)}s`);
@@ -443,7 +449,9 @@ async function fetchFromBackend(endpoint) {
     }
     const response = await timedFetch(`${SYSTEM_API_URL}${endpoint}`, { headers });
     if (!response.ok) {
-        throw new Error(`Backend API Error ${response.status}: ${endpoint}`);
+        const error = new Error(`Backend API Error ${response.status}: ${endpoint}`);
+        error.status = response.status;
+        throw error;
     }
     return response.json();
 }

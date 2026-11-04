@@ -11,7 +11,8 @@ const inFlight = new Map();
 const FRESH_FOR = 60 * 1000;
 
 // Bump when the shape of what a page saves changes, so an old saved copy is never read back.
-const SAVED_PREFIX = 'page_cache:v1:';
+// v1 copies could hold an SBHS failure saved as empty data, so they're dropped.
+const SAVED_PREFIX = 'page_cache:v2:';
 // One page's data larger than this isn't saved on the device (it's still kept for the session).
 const MAX_SAVED_CHARS = 750 * 1000;
 
@@ -55,6 +56,11 @@ const writeSaved = (key, entry) => {
     }
 };
 
+// Copies saved by an older version are never read, so they're cleared out at start-up.
+savedKeys().filter(k => !k.startsWith(SAVED_PREFIX)).forEach(k => {
+    try { localStorage.removeItem(k); } catch { /* storage unavailable */ }
+});
+
 // The entry for a key: this session's, or the copy saved on the device.
 const lookup = (key) => {
     if (store.has(key)) return store.get(key);
@@ -67,6 +73,15 @@ export const loadCached = (key, load) => {
     if (inFlight.has(key)) return inFlight.get(key);
     const request = load()
         .then(value => {
+            // A load where part failed (value.incomplete) never replaces a complete copy, and is
+            // never saved on the device. It's kept for now but counts as stale, so the next visit
+            // tries again instead of trusting it.
+            if (value?.incomplete) {
+                const previous = lookup(key);
+                if (previous && !previous.value?.incomplete) return previous.value;
+                store.set(key, { value, at: 0 });
+                return value;
+            }
             const entry = { value, at: Date.now() };
             store.set(key, entry);
             writeSaved(key, entry);

@@ -2515,60 +2515,52 @@ const checkStudentAccess = async (req, res) => {
 // Asking for plain JSON returns collections as arrays rather than JSON-LD `member` wrappers.
 const SBHS_PORTAL_API = 'https://api.sbhs.net.au/api/core';
 
-// Main proxy/mock resolver for student endpoints
-const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
-    const isAuthorized = await checkStudentAccess(req, res);
-    if (!isAuthorized) return;
-    const studentId = req.params.studentId;
+// Forwards a GET to the SBHS Core API with the student's own token. Sample data is only used in
+// local development (no SBHS token). A real failure is reported as one (502, or SBHS's 401/403/404)
+// and never as empty data: the app saves what it loads, so "no data" must mean no data.
+// Fast failures (rate limits, 5xx, dropped connections) are retried once; a timeout isn't, so a
+// slow SBHS doesn't double the wait.
+const CORE_RETRYABLE = new Set([429, 500, 502, 503, 504]);
+const proxyToCore = async (req, res, path, generateMockData) => {
     const authHeader = req.headers['authorization'];
-    if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
+    if (process.env.BYPASS_AUTH === 'true' || !authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.json(generateMockData(req.user));
+    }
+    const url = new URL(`${SBHS_PORTAL_API}/${path}`);
+    Object.entries(req.query).forEach(([key, val]) => url.searchParams.append(key, String(val)));
+
+    let lastStatus = 502;
+    let detail = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 400));
         try {
-            const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/${subpath}`);
-            Object.entries(req.query).forEach(([key, val]) => {
-                url.searchParams.append(key, val);
-            });
-            const response = await fetch(url.toString(), {
+            const response = await fetch(url, {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(8000)
             });
-            if (response.ok) {
-                const data = await response.json();
-                return res.json(data);
-            }
-            const detail = (await response.text().catch(() => '')).slice(0, 300);
-            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}, falling back to mock: ${detail}`);
+            if (response.ok) return res.json(await response.json());
+            lastStatus = response.status;
+            detail = (await response.text().catch(() => '')).slice(0, 300);
+            if (!CORE_RETRYABLE.has(response.status)) break;
         } catch (e) {
-            console.error(`[proxy] SBHS API call failed for ${subpath}:`, e.message);
+            lastStatus = 502;
+            detail = e?.message || String(e);
+            if (e?.name === 'TimeoutError') break;
         }
     }
-    res.json(generateMockData(req.user));
+    console.warn(`[proxy] SBHS Core API ${lastStatus} for ${path}: ${detail}`);
+    res.status([401, 403, 404].includes(lastStatus) ? lastStatus : 502)
+        .json({ error: 'sbhs_unavailable', upstreamStatus: lastStatus });
 };
 
-// Generic resolver for global endpoints
-const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
-    const authHeader = req.headers['authorization'];
-    if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-            const url = new URL(`${SBHS_PORTAL_API}/${subpath}`);
-            Object.entries(req.query).forEach(([key, val]) => {
-                url.searchParams.append(key, val);
-            });
-            const response = await fetch(url.toString(), {
-                headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(8000)
-            });
-            if (response.ok) {
-                const data = await response.json();
-                return res.json(data);
-            }
-            const detail = (await response.text().catch(() => '')).slice(0, 300);
-            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}, falling back to mock: ${detail}`);
-        } catch (e) {
-            console.error(`[proxy] SBHS API call failed for global ${subpath}:`, e.message);
-        }
-    }
-    res.json(generateMockData(req.user));
+// Student endpoints: only the student themselves (or an admin).
+const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
+    if (!(await checkStudentAccess(req, res))) return;
+    return proxyToCore(req, res, `students/${encodeURIComponent(req.params.studentId)}/${subpath}`, generateMockData);
 };
+
+// School-wide endpoints (award catalogue, house points, activities).
+const resolveGlobalPortalApi = (req, res, subpath, generateMockData) => proxyToCore(req, res, subpath, generateMockData);
 
 const registerRoutePair = (path, middleware, handler) => {
     app.get(path, middleware, handler);
