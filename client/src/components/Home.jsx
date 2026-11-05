@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
-import { applyPeriodVariations, describeClass, isBreakBell, isCelebrationTeacher, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import { TeacherTreat, TreatBurst } from './TeacherTreat';
+import { TeacherTreat } from './TeacherTreat';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -113,7 +113,7 @@ const buildClipboardSlots = (sessions, dayKey) => {
 };
 
 const RailLabel = ({ children, aside }) => (
-    <div className="flex items-center justify-between gap-2 mb-3">
+    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">{children}</span>
         {aside}
     </div>
@@ -137,7 +137,7 @@ const RailCard = ({ children, colour, phase }) => {
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
-            className={`relative overflow-hidden rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
+            className={`relative overflow-hidden rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-3 sm:p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
         >
             {changedAt > 0 && (
                 <>
@@ -200,7 +200,7 @@ const ClassTitle = ({ period, className }) => {
 };
 
 const Where = ({ slot }) => (
-    <div className="mt-1 flex items-center gap-3 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
+    <div className="mt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <span className="tabular-nums shrink-0">{slot.bell.time}{slot.bell.endTime ? `–${slot.bell.endTime}` : ''}</span>
         {slot.period.room && (
             <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />{slot.period.room}</span>
@@ -212,7 +212,7 @@ const Where = ({ slot }) => (
 );
 
 const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
-    <div className="mt-4 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
+    <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
         <SubjectDot colour={slot.period.colour} />
@@ -253,17 +253,17 @@ const RollingText = ({ text }) => (
 );
 
 const Countdown = ({ mins, caption }) => (
-    <div className="flex items-baseline gap-2">
-        <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">
+    <div className="flex items-baseline gap-1.5 sm:gap-2">
+        <span className="text-[26px] sm:text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">
             <span className="sr-only">{formatCountdown(mins)}</span>
             <span aria-hidden><RollingText text={formatCountdown(mins)} /></span>
         </span>
-        <span className="text-[13px] text-zinc-500">{caption}</span>
+        <span className="text-xs sm:text-[13px] text-zinc-500">{caption}</span>
     </div>
 );
 
 const Progress = ({ value, colour }) => (
-    <div className="mt-4 h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
+    <div className="mt-2 sm:mt-4 h-0.5 sm:h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
         <div
             {...(colour ? subjectInk(colour) : {})}
             className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${colour ? 'subject-fill' : 'bg-accent'}`}
@@ -322,11 +322,10 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
-            {!isExtracurricular && isCelebrationTeacher(current.period.fullTeacher) && <TreatBurst />}
             <RailLabel aside={schoolLeft}>{label}</RailLabel>
-            <ClassTitle period={current.period} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
+            <ClassTitle period={current.period} className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
-            <div className="mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
+            <div className="mt-2 sm:mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
         </RailCard>

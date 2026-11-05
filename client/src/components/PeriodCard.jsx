@@ -1,8 +1,8 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { subjectInk, isCelebrationTeacher } from '../utils/timetable';
-import { TeacherTreat, TreatBurst } from './TeacherTreat';
+import { subjectInk } from '../utils/timetable';
+import { TeacherTreat } from './TeacherTreat';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
@@ -71,7 +71,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
-            {justStarted && isCelebrationTeacher(fullTeacher) && <TreatBurst />}
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
                 <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
