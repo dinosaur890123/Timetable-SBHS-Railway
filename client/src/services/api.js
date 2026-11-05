@@ -149,18 +149,15 @@ const clearTokens = () => {
 };
 
 // Refreshed tokens keep the scopes of the original sign-in, so a session from before
-// SCOPES changed has to sign in again to reach the Core API.
-const hasCurrentScopes = () => {
-    if (!getAccessToken() || localStorage.getItem('sbhs_token_scope') === SCOPES) return true;
-    clearTokens();
-    return false;
-};
+// SCOPES changed stays missing them until the student signs in again. That no longer
+// signs them out: isScopeOutdated() drives a re-sign-in banner, and the Core API
+// answers 403 for the features the old scopes can't reach.
 
 // Check if scopes are outdated without clearing tokens (for UI banner)
 export const isScopeOutdated = () => {
     const currentScope = localStorage.getItem('sbhs_token_scope');
-    const accessToken = localStorage.getItem('sbhs_access_token');
-    return !!accessToken && currentScope !== SCOPES;
+    const hasSession = !!localStorage.getItem('sbhs_access_token') || !!localStorage.getItem('sbhs_refresh_token');
+    return hasSession && currentScope !== SCOPES;
 };
 
 // Treat a token as expired a minute early so it can't lapse mid-request.
@@ -225,7 +222,8 @@ export const logout = (redirectToLogin = false) => {
 };
 
 // Signed in if the access token is still good, or can be renewed with the refresh token.
-export const isAuthenticated = () => hasCurrentScopes() && (hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token')));
+// Scope mismatches don't sign the student out; they only raise the re-sign-in banner.
+export const isAuthenticated = () => hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token'));
 
 // --- API Client ---
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { CalendarDays } from 'lucide-react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -36,13 +37,11 @@ const CycleCell = ({ classInfo, onSelect }) => {
             {...(tinted ? subjectInk(colour) : {})}
             className={`press press-soft min-h-[3.25rem] px-3 py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
                 isSelected
-                    ? 'bg-violet-100 dark:bg-violet-900/30 border-violet-400 dark:border-violet-500 shadow-md'
+                    ? 'bg-accent/10 border-accent/50 shadow-md'
                     : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800`
             }`}
         >
-            <span className={`text-xs font-bold leading-tight line-clamp-2 ${
-                isSelected ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-900 dark:text-white'
-            }`}>
+            <span className="text-xs font-bold leading-tight line-clamp-2 text-zinc-900 dark:text-white">
                 <span className="lg:hidden">{title}</span>
                 <span className="hidden lg:inline">{name}</span>
             </span>
@@ -213,10 +212,12 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const renderCycleView = () => {
         if (!completeTimetable) {
             return (
-                <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
-                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">📅</div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No Cycle Data</h3>
-                    <p className="text-zinc-500">Complete timetable data not available.</p>
+                <div className="rounded-2xl border border-m-line bg-m-card p-12 text-center mt-6">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-zinc-900/[0.04] dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400 grid place-items-center">
+                        <CalendarDays size={22} strokeWidth={1.8} />
+                    </div>
+                    <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-white mb-1">No cycle data</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Complete timetable data not available.</p>
                 </div>
             );
         }
@@ -315,23 +316,25 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
         if (periodSlots.length === 0) {
             return (
-                <div className="bg-white dark:bg-zinc-950 p-12 text-center border border-zinc-200 dark:border-zinc-850 mt-6 shadow-sm">
-                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 flex items-center justify-center mx-auto mb-4 text-3xl">📅</div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No Cycle Data</h3>
-                    <p className="text-zinc-500">No periods found in complete timetable.</p>
+                <div className="rounded-2xl border border-m-line bg-m-card p-12 text-center mt-6">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-zinc-900/[0.04] dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400 grid place-items-center">
+                        <CalendarDays size={22} strokeWidth={1.8} />
+                    </div>
+                    <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-white mb-1">No cycle data</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">No periods found in the complete timetable.</p>
                 </div>
             );
         }
 
         return (
-            <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl overflow-hidden">
+            <div className="rounded-2xl border border-m-line bg-m-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-                                <th className="px-4 py-3 text-left text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-24">Period</th>
+                            <tr className="bg-m-panel border-b border-m-line">
+                                <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-24">Period</th>
                                 {days.map(day => (
-                                    <th key={day} className="px-4 py-3 text-left text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                    <th key={day} className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
                                         {day.slice(0, 3)}
                                     </th>
                                 ))}
@@ -345,7 +348,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 const label = breakLabel(bellId);
                                 if (label) {
                                     return (
-                                        <tr key={bellId} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                        <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
                                             <td className="px-4 py-1.5 text-xs text-zinc-400 dark:text-zinc-500">{label}</td>
                                             <td colSpan={days.length} className="px-2 py-1.5">
                                                 <div className="h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
@@ -355,8 +358,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 }
 
                                 return (
-                                    <tr key={bellId} className="border-b border-zinc-100 dark:border-zinc-800 last:border-0">
-                                        <td className="px-4 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                    <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
+                                        <td className="px-4 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
                                             {bell.bellDisplay}
                                         </td>
                                         {days.map((_, dayIndex) => {
@@ -365,7 +368,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                             if (!classInfo) {
                                                 return (
                                                     <td key={dayIndex} className="px-2 py-2">
-                                                        <div className="min-h-[3.25rem] h-full bg-zinc-50 dark:bg-zinc-900/50 rounded-lg"></div>
+                                                        <div className="min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
                                                     </td>
                                                 );
                                             }

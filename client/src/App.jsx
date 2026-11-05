@@ -761,6 +761,39 @@ function App() {
 
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
+
+    // Arrow keys step through days on the home timetable, and a mostly-horizontal
+    // swipe does the same on touch screens. Both stand down while typing or when a
+    // layer (palette, date picker, AI modal) is open.
+    const layersOpen = paletteOpen || showDatePicker || showAiModal;
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (currentView !== 'home' || timetableViewMode !== 'daily' || layersOpen) return;
+            const el = e.target;
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            setViewDate(d => addDays(d, e.key === 'ArrowRight' ? 1 : -1));
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [currentView, timetableViewMode, layersOpen]);
+
+    const daySwipe = useRef(null);
+    const onDayTouchStart = (e) => {
+        const t = e.touches[0];
+        daySwipe.current = t ? { x: t.clientX, y: t.clientY } : null;
+    };
+    const onDayTouchEnd = (e) => {
+        const start = daySwipe.current;
+        daySwipe.current = null;
+        const t = e.changedTouches[0];
+        if (!start || !t || currentView !== 'home' || timetableViewMode !== 'daily' || layersOpen) return;
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        setViewDate(d => addDays(d, dx < 0 ? 1 : -1));
+    };
     const resetToday = async () => {
         try {
             const { date } = await fetchNextSchoolDay();
@@ -807,7 +840,7 @@ function App() {
         return (
             <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center transition-colors">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                    <div className="w-10 h-10 border-4 border-accent/25 border-t-accent rounded-full animate-spin"></div>
                     <p className="text-zinc-400 text-sm">Loading Synchron...</p>
                 </div>
             </div>
@@ -886,7 +919,7 @@ function App() {
                 <div className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto">
                     <Suspense fallback={
                         <div className="flex flex-col items-center justify-center p-12 gap-4">
-                            <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                            <div className="w-8 h-8 border-4 border-accent/25 border-t-accent rounded-full animate-spin"></div>
                             <p className="text-zinc-400 text-xs">Loading view...</p>
                         </div>
                     }>
@@ -896,6 +929,8 @@ function App() {
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={currentView}
+                                onTouchStart={onDayTouchStart}
+                                onTouchEnd={onDayTouchEnd}
                                 initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                                 animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
@@ -932,6 +967,11 @@ function App() {
                                             </div>
                         
                                             <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className="hidden md:flex items-center gap-1 mr-1" title="Arrow keys change the day; swipe works on touch screens">
+                                                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400 dark:text-zinc-500">←</kbd>
+                                                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400 dark:text-zinc-500">→</kbd>
+                                                    <span className="sr-only">Use the left and right arrow keys to change the day</span>
+                                                </span>
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
                                                         onClick={resetToday}

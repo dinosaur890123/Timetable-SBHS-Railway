@@ -119,7 +119,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
 
   if (allNotices.length === 0) {
     return (
-      <div className="w-full rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-16 text-center">
+      <div className="w-full rounded-2xl border border-m-line bg-m-card px-6 py-16 text-center">
         <Megaphone size={28} className="mx-auto mb-3 text-zinc-300 dark:text-zinc-700" />
         <p className="text-sm font-semibold text-zinc-900 dark:text-white">No notices today</p>
         <p className="mt-1 text-sm text-zinc-500">Check back tomorrow morning.</p>
@@ -129,11 +129,11 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="w-full max-w-3xl mx-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col md:h-[calc(100dvh-9rem)]">
-      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/50 shrink-0 space-y-3">
+    <div className="w-full max-w-3xl mx-auto bg-m-card border border-m-line rounded-2xl overflow-hidden flex flex-col md:h-[calc(100dvh-9rem)]">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-m-line bg-m-panel shrink-0 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-lg shrink-0">
+            <div className="p-2 bg-m-card border border-m-line text-zinc-900 dark:text-white rounded-lg shrink-0">
               <Megaphone size={16} />
             </div>
             <div className="min-w-0">
@@ -151,7 +151,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
               href="https://sbhs.co/hnpdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 text-xs font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700/50 transition-colors border border-zinc-200 dark:border-zinc-700"
+              className="shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg bg-m-card border border-m-line text-zinc-700 dark:text-zinc-200 text-xs font-medium hover:bg-zinc-900/[0.03] transition-colors"
               title="View latest High Notes PDF"
             >
               <FileText size={14} />
@@ -162,7 +162,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
               value={filterView}
               onChange={(e) => setFilterView(e.target.value)}
               aria-label="Filter notices by year"
-              className="shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="shrink-0 bg-m-card border border-m-line text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {FILTER_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -180,7 +180,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search notices"
-            className="w-full h-10 pl-9 pr-9 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-search-cancel-button]:hidden"
+            className="w-full h-10 pl-9 pr-9 rounded-lg bg-m-card border border-m-line text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -208,7 +208,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+          <div className="divide-y divide-zinc-900/[0.05] dark:divide-white/[0.05]">
             {displayNotices.map((notice, idx) => (
               <NoticeItem key={notice.id ?? `${notice.title}-${idx}`} notice={notice} index={idx} />
             ))}
