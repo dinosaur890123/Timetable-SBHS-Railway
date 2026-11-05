@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
-import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, isBreakBell, isCelebrationTeacher, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { TeacherTreat, TreatBurst } from './TeacherTreat';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -58,11 +59,23 @@ const buildSlots = (timetableData) => {
         }
 
         if (bellId === 'RC' || period.title?.toLowerCase().includes('roll call')) return null;
+        // An empty Period 0 is just a gap before school starts.
+        if (isBreak && String(bellId) === '0') return null;
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
         return { bellId, bell, period, isBreak, startMin, endMin };
-    }).filter(Boolean);
+    }).filter(Boolean).reduce((rows, slot) => {
+        // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one.
+        const prev = rows[rows.length - 1];
+        const label = slot.period.title?.replace(/\s*\d+$/, '');
+        if (prev?.isBreak && slot.isBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
+            prev.endMin = slot.endMin;
+            return rows;
+        }
+        rows.push(slot);
+        return rows;
+    }, []);
 };
 
 const isClass = (slot) => !slot.isBreak && slot.period.title && slot.period.title !== 'Free Period';
@@ -193,7 +206,7 @@ const Where = ({ slot }) => (
             <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />{slot.period.room}</span>
         )}
         {slot.period.fullTeacher && (
-            <span className="inline-flex items-center gap-1 min-w-0"><UserRound size={12} className="shrink-0" /><span className="truncate">{slot.period.fullTeacher}</span></span>
+            <span className="inline-flex items-center gap-1 min-w-0"><UserRound size={12} className="shrink-0" /><span className="truncate">{slot.period.fullTeacher}</span><TeacherTreat name={slot.period.fullTeacher} /></span>
         )}
     </div>
 );
@@ -261,12 +274,10 @@ const Progress = ({ value, colour }) => (
 
 // What matters at this moment: the current class with a countdown, or what's first up.
 const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
-    const classes = slots.filter(isClass);
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
     const allSlots = [...slots, ...clipboardSlots].sort((a, b) => a.startMin - b.startMin);
-    const allClasses = allSlots.filter(s => !s.isBreak);
 
-    if (allClasses.length === 0) return null;
+    if (allSlots.length === 0) return null;
 
     const dayStart = allSlots[0].startMin;
     const dayEnd = allSlots[allSlots.length - 1].endMin;
@@ -274,17 +285,23 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     if (!isLive || nowMin >= dayEnd) return null;
 
     if (nowMin < dayStart) {
+        const first = allSlots[0];
         return (
             <RailCard phase="before-school">
                 <RailLabel>Before school</RailLabel>
-                <Countdown mins={allClasses[0].startMin - nowMin} caption="until first class" />
-                <ThenLine slot={allClasses[0]} prefix="First" />
+                <Countdown
+                    mins={first.startMin - nowMin}
+                    caption={first.isBreak
+                        ? `until ${first.period.title.replace(/\s*\d+$/, '')}`
+                        : first.isExtracurricular ? 'until first session' : 'until first class'}
+                />
+                <ThenLine slot={first} prefix="First" />
             </RailCard>
         );
     }
 
     const current = allSlots.find(s => nowMin >= s.startMin && nowMin < s.endMin);
-    const next = allClasses.find(s => s.startMin >= (current ? current.endMin : nowMin));
+    const next = allSlots.find(s => s.startMin >= (current ? current.endMin : nowMin));
     const schoolLeft = <span className="text-[12px] text-zinc-400 tabular-nums">{formatDuration(dayEnd - nowMin)} left today</span>;
 
     if (!current || (!isClass(current) && !current.isExtracurricular)) {
@@ -305,6 +322,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
+            {!isExtracurricular && isCelebrationTeacher(current.period.fullTeacher) && <TreatBurst />}
             <RailLabel aside={schoolLeft}>{label}</RailLabel>
             <ClassTitle period={current.period} className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
             <Where slot={current} />
@@ -317,7 +335,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboardSessions = [], dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboardSessions = [], dayNav, onDayTouchStart, onDayTouchEnd, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -342,14 +360,16 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboard
     const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : format(new Date(`${dayKey}T00:00`), 'EEEE');
 
     const firstClass = slots.find(isClass);
-    const dayStart = slots[0]?.startMin;
-    const dayEnd = slots[slots.length - 1]?.endMin;
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
     const hasExtracurriculars = clipboardSlots.length > 0;
+    // The rail's window starts two hours before the earliest thing of the day —
+    // a 7am training session counts, not just the first school bell.
+    const dayStart = [slots[0]?.startMin, clipboardSlots[0]?.startMin].filter(n => n != null).reduce((a, b) => Math.min(a, b), Infinity);
+    const dayEnd = slots.length ? slots[slots.length - 1].endMin : -Infinity;
     // Extend dayEnd if extracurriculars go after school
     const extendedDayEnd = hasExtracurriculars ? Math.max(dayEnd, clipboardSlots[clipboardSlots.length - 1].endMin) : dayEnd;
     // The side rail only earns its place while the day is happening: up to two hours
-    // before the first bell until the last one (including extracurriculars).
+    // before the first event until the last one (including extracurriculars).
     const showRail = !isCycle && isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
 
     const status = [
@@ -370,7 +390,12 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboard
                 {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
             </header>
 
-            <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
+            {/* Everything under the greeting and date bar swipes between days on touch screens. */}
+            <div
+                className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}
+                onTouchStart={onDayTouchStart}
+                onTouchEnd={onDayTouchEnd}
+            >
                 {/* On phones the countdown sits above the list so it's seen first */}
                 {rail && <div className="lg:hidden">{rail}</div>}
                 <section className="min-w-0">

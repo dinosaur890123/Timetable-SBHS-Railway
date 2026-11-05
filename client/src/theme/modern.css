@@ -250,3 +250,27 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   html[data-ui="modern"] .md\:h-\[calc\(100dvh-9rem\)\] { height: calc(100dvh / var(--ui-scale) - 9rem); }
   html[data-ui="modern"] .md\:min-h-\[calc\(100dvh-1rem\)\] { min-height: calc(100dvh / var(--ui-scale) - 1rem); }
 }
+
+/* ---------- Teacher treat: a slow twinkle beside two favourite teachers ---------- */
+.teacher-treat { animation: treat-twinkle 3.2s ease-in-out infinite; transform-origin: center; }
+@keyframes treat-twinkle {
+  0%, 100% { opacity: .45; transform: scale(.85) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.05) rotate(14deg); }
+}
+
+/* ---------- Ambient light on phones ----------
+   Below md the main panel fills the whole screen, so the page glow is hidden and
+   the panel glow's blobs sit mostly above the viewport behind the blurred topbar.
+   Drop the blobs into view, stretch the wash down the screen and lift it a touch. */
+@media (max-width: 767px) {
+  .ambient { opacity: .5; }
+  .dark .ambient { opacity: .32; }
+  .ambient--panel {
+    height: 100%;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
+  }
+  .ambient__blob--a { width: 85%; top: -14%; left: -22%; }
+  .ambient__blob--b { width: 80%; top: -20%; right: -24%; }
+  .ambient__blob--c { width: 65%; top: -4%; left: 24%; }
+}

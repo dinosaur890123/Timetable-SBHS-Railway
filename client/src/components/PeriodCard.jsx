@@ -1,7 +1,8 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { subjectInk } from '../utils/timetable';
+import { subjectInk, isCelebrationTeacher } from '../utils/timetable';
+import { TeacherTreat, TreatBurst } from './TeacherTreat';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
@@ -70,6 +71,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
+            {justStarted && isCelebrationTeacher(fullTeacher) && <TreatBurst />}
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
                 <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
@@ -111,6 +113,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
                         </span>
                     )}
+                    <TeacherTreat name={fullTeacher} />
                 </div>
             </div>
 
@@ -122,6 +125,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}
+                        <TeacherTreat name={fullTeacher} />
                         <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
                 </div>

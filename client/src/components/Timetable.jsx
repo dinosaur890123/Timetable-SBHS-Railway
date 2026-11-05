@@ -35,18 +35,18 @@ const CycleCell = ({ classInfo, onSelect }) => {
             onClick={onSelect}
             title={name}
             {...(tinted ? subjectInk(colour) : {})}
-            className={`press press-soft min-h-[3.25rem] px-3 py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+            className={`press press-soft min-h-[2.75rem] sm:min-h-[3.25rem] px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
                 isSelected
                     ? 'bg-accent/10 border-accent/50 shadow-md'
                     : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800`
             }`}
         >
-            <span className="text-xs font-bold leading-tight line-clamp-2 text-zinc-900 dark:text-white">
+            <span className="text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 text-zinc-900 dark:text-white">
                 <span className="lg:hidden">{title}</span>
                 <span className="hidden lg:inline">{name}</span>
             </span>
             {room && (
-                <span className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{room}</span>
+                <span className="mt-0.5 text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{room}</span>
             )}
         </div>
     );
@@ -228,13 +228,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         const bells = completeTimetable.bells || timetableData?.bells || [];
         const timetableStructure = completeTimetable.timetable || completeTimetable;
 
-        // "Lunch 1" -> "Lunch" for break bells; null for anything else.
-        const breakLabel = (bellId) => {
-            const bell = bells.find(b => b.bell === bellId);
-            if (!bell || !isBreakBell(bellId, { title: bell.bellDisplay })) return null;
-            return bell.bellDisplay.replace(/\s*\d+$/, '');
-        };
-
         // Get all unique period slots across all days
         const allPeriodSlots = new Set();
         days.forEach((_, dayIndex) => {
@@ -254,11 +247,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (!bellA || !bellB) return 0;
             return bellA.time.localeCompare(bellB.time);
         }).filter(bellId => {
-            // Breaks have no class but still mark the shape of the day; an empty Period 0 does not.
+            // The cycle grid shows teaching periods only; breaks don't earn a row.
             const bell = bells.find(b => b.bell === bellId);
-            if (isBreakBell(bellId, { title: bell?.bellDisplay })) {
-                return bellId !== 'RC' && String(bellId) !== '0';
-            }
+            if (isBreakBell(bellId, { title: bell?.bellDisplay })) return false;
 
             // Check if this period has at least one class across all days
             const hasAnyClass = days.some((_, dayIndex) => {
@@ -280,10 +271,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             });
             
             return hasAnyClass;
-        }).filter((bellId, i, slots) => {
-            // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
-            const label = breakLabel(bellId);
-            return !label || label !== breakLabel(slots[i - 1]);
         });
 
         // Get class info for a specific day and period
@@ -332,9 +319,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     <table className="w-full">
                         <thead>
                             <tr className="bg-m-panel border-b border-m-line">
-                                <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-24">Period</th>
+                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-14 sm:w-24">Period</th>
                                 {days.map(day => (
-                                    <th key={day} className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
+                                    <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
                                         {day.slice(0, 3)}
                                     </th>
                                 ))}
@@ -345,21 +332,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 const bell = bells.find(b => b.bell === bellId);
                                 if (!bell) return null;
 
-                                const label = breakLabel(bellId);
-                                if (label) {
-                                    return (
-                                        <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                            <td className="px-4 py-1.5 text-xs text-zinc-400 dark:text-zinc-500">{label}</td>
-                                            <td colSpan={days.length} className="px-2 py-1.5">
-                                                <div className="h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
-                                            </td>
-                                        </tr>
-                                    );
-                                }
-
                                 return (
                                     <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                        <td className="px-4 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                        <td className="px-2 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
                                             {bell.bellDisplay}
                                         </td>
                                         {days.map((_, dayIndex) => {
@@ -367,8 +342,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                             
                                             if (!classInfo) {
                                                 return (
-                                                    <td key={dayIndex} className="px-2 py-2">
-                                                        <div className="min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
+                                                    <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                        <div className="min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
                                                     </td>
                                                 );
                                             }
@@ -376,7 +351,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                             const cell = <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />;
 
                                             return (
-                                                <td key={dayIndex} className="px-2 py-2">
+                                                <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
                                                     {cell}
                                                 </td>
                                             );

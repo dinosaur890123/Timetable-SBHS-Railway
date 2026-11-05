@@ -929,8 +929,6 @@ function App() {
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={currentView}
-                                onTouchStart={onDayTouchStart}
-                                onTouchEnd={onDayTouchEnd}
                                 initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                                 animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
@@ -945,6 +943,8 @@ function App() {
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
                                     clipboardSessions={showClipboardEvents ? clipboardSessions : []}
+                                    onDayTouchStart={onDayTouchStart}
+                                    onDayTouchEnd={onDayTouchEnd}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">

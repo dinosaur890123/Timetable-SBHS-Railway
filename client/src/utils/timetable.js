@@ -150,6 +150,28 @@ export const subjectInk = (colour) => {
     return { style: { '--subject': colour }, 'data-tone': l > 0.65 ? 'pale' : l < 0.06 ? 'deep' : 'mid' };
 };
 
+// Two teachers get a quiet hat-tip in the UI: a twinkling sparkle beside their
+// name and a small burst of dots when their period starts. Easy to miss on
+// purpose — extend the list if another teacher earns it.
+const CELEBRATION_TEACHERS = [
+    { surname: 'eggleton', initial: 'j' },
+    { surname: 'knox', initial: 'd' }
+];
+
+// Matches "J Eggleton", "Eggleton, J", "John Eggleton", "D Knox" and so on:
+// the surname must appear and the expected initial must show up as a token,
+// the start of the first name, or the trailing initial.
+export const isCelebrationTeacher = (name) => {
+    if (!name) return false;
+    const tokens = name.toLowerCase().replace(/[.,]/g, ' ').split(/\s+/).filter(Boolean);
+    return CELEBRATION_TEACHERS.some(({ surname, initial }) => {
+        if (!tokens.includes(surname)) return false;
+        return tokens.some(t => t === initial)
+            || tokens[0]?.startsWith(initial)
+            || tokens[tokens.length - 1] === initial;
+    });
+};
+
 // Full name and colour for a period. `daySubjects` is the day timetable's subjects map and
 // `subjectIndex` comes from indexSubjects(); either may be missing. Falls back to the short code.
 export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
