@@ -934,7 +934,7 @@ function App() {
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
-            <main className="relative isolate flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+            <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
                 <ModernTopbar
                     currentView={currentView}
                     setView={setCurrentView}
@@ -980,7 +980,7 @@ function App() {
                 )}
 
                 <div
-                    className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto"
+                    className="relative flex-1 p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto w-full"
                     onTouchStart={onDayTouchStart}
                     onTouchEnd={onDayTouchEnd}
                 >
