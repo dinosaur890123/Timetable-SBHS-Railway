@@ -68,10 +68,9 @@ const Segmented = ({ value, onChange }) => (
                 >
                     {active && (
                         <motion.span
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-[0_1px_2px_rgb(0_0_0/0.05)]"
+                            layoutId="awards-mode"
+                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                            className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
                         />
                     )}
                     <span className="relative">{view.label}</span>
@@ -260,11 +259,18 @@ const RecordCard = ({ summary }) => {
                             type="button"
                             aria-pressed={activeYear === Number(f.id)}
                             onClick={() => { setSelectedYear(Number(f.id)); setExpanded(false); }}
-                            className={`h-7 px-2.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-colors ${activeYear === Number(f.id)
-                                ? 'bg-zinc-900/[0.06] text-zinc-900 dark:bg-white/[0.08] dark:text-white'
-                                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:hover:text-white dark:hover:bg-white/[0.04]'}`}
+                            className={`relative px-2.5 h-7 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors ${activeYear === Number(f.id)
+                                ? 'text-zinc-900 dark:text-white'
+                                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
                         >
-                            {f.label} <span className="ml-0.5 tabular-nums text-zinc-400">{f.count}</span>
+                            {activeYear === Number(f.id) && (
+                                <motion.span
+                                    layoutId="awards-year"
+                                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                                    className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
+                                />
+                            )}
+                            <span className="relative">{f.label} <span className="ml-0.5 tabular-nums text-zinc-400">{f.count}</span></span>
                         </button>
                     ))}
                 </div>

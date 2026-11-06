@@ -178,7 +178,7 @@ export const ModernTopbar = ({
             : { label: 'Synced', dot: 'bg-emerald-500', icon: null };
 
     return (
-        <header className="sticky top-0 z-30 h-14 flex items-center justify-between gap-3 px-4 md:px-6 bg-m-panel/80 backdrop-blur-xl border-b border-m-line">
+        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 bg-m-panel/80 backdrop-blur-xl border-b border-m-line">
             <div className="flex items-center gap-3 min-w-0">
                 <button onClick={() => setView('home')} className="md:hidden" aria-label="Home">
                     <BrandMark />
