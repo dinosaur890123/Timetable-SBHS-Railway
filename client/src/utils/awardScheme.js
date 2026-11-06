@@ -221,7 +221,7 @@ export const summariseAwards = ({
     const allAreas = [...areaGroups.values()].map(levels => {
         levels.sort((a, b) => a.pointsRequired - b.pointsRequired);
         const earned = levels.filter(n => n.state === 'earned');
-        const next = levels.find(n => n.state === 'progress') || null;
+        const next = levels.find(n => n.state !== 'earned') || null;
         return {
             id: String(levels[0].fromGroup ?? 'all'),
             name: areaName(levels),

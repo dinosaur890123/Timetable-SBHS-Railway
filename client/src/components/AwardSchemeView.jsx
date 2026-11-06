@@ -40,6 +40,16 @@ const Empty = ({ children }) => (
     <p className="py-8 text-center text-sm text-zinc-400">{children}</p>
 );
 
+// Cards flow into columns and pack upwards, so short cards don't leave dead space.
+// Items read column-by-column rather than row-by-row.
+const Masonry = ({ children, className = 'columns-1 md:columns-2 lg:columns-3' }) => (
+    <div className={`gap-4 ${className}`}>
+        {React.Children.map(children, child => (
+            <div className="mb-4 break-inside-avoid">{child}</div>
+        ))}
+    </div>
+);
+
 // A thin bar. The accent marks progress the student is working towards; other
 // bars stay neutral or take a house's own colour.
 const Bar = ({ value, max, tone = 'neutral', colour }) => {
@@ -81,10 +91,10 @@ const Segmented = ({ value, onChange }) => (
 
 // --- My progress -----------------------------------------------------------
 
-const Stat = ({ label, value, sub, className = '', valueClass = 'text-2xl sm:text-3xl tracking-[-0.03em]' }) => (
+const Stat = ({ label, value, sub, className = '', valueClass = 'text-2xl sm:text-3xl tracking-[-0.03em]', accent = false }) => (
     <div className={`min-w-0 ${className}`}>
         <Eyebrow>{label}</Eyebrow>
-        <div className={`mt-1.5 font-semibold tabular-nums text-zinc-900 dark:text-white truncate ${valueClass}`}>{value}</div>
+        <div className={`mt-1.5 font-semibold tabular-nums ${accent ? 'text-accent' : 'text-zinc-900 dark:text-white'} truncate ${valueClass}`}>{value}</div>
         {sub && <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{sub}</p>}
     </div>
 );
@@ -99,11 +109,12 @@ const prizeProgress = (prize, nominations) => {
 const SummaryCard = ({ summary }) => {
     const { totalPoints, housePoints, awardCount, nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
-        <Card className="lg:col-span-2">
+        <Card>
             <div className="flex flex-wrap gap-6">
                 <Stat
                     label="Points"
                     value={totalPoints.toLocaleString('en-AU')}
+                    accent
                     sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
                 />
                 <Stat
@@ -111,12 +122,19 @@ const SummaryCard = ({ summary }) => {
                     value={nominationsAllTime}
                     sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
                 />
-                <Stat
-                    label="Prize"
-                    value={latestPrize ? latestPrize.name : 'None yet'}
-                    valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
-                    sub={prizeProgress(nextPrize, nominationsAllTime)}
-                />
+                <div className="min-w-0 flex-1">
+                    <Stat
+                        label="Prize"
+                        value={latestPrize ? latestPrize.name : 'None yet'}
+                        valueClass="text-xl sm:text-2xl tracking-[-0.02em] leading-[1.25] sm:leading-[1.5]"
+                        sub={prizeProgress(nextPrize, nominationsAllTime)}
+                    />
+                    {nextPrize?.nominationsRequired > 0 && nextPrize.state !== 'won' && (
+                        <div className="mt-2 max-w-[220px]">
+                            <Bar value={Math.min(nominationsAllTime, nextPrize.nominationsRequired)} max={nextPrize.nominationsRequired} tone="accent" />
+                        </div>
+                    )}
+                </div>
             </div>
         </Card>
     );
@@ -156,41 +174,63 @@ const StatusMark = ({ state }) => (
     </span>
 );
 
-// The levels of one area as a smooth progress bar.
+// The progress of one area towards its next nomination level, as a bar.
 const LevelStrip = ({ area }) => {
-    const isComplete = area.earned >= 30;
-    const progress = Math.min(area.earned, 30) / 30;
+    const next = area.next;
+    const required = next?.pointsRequired || 0;
+    const points = Math.min(next?.points ?? area.points, required);
+    const progress = required > 0 ? points / required : 0;
+    const isComplete = area.complete;
     return (
-        <div className="mt-1.5 h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
+        <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
             <div
-                className={`h-full rounded-full ${isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-zinc-900/70 dark:bg-white/70'}`}
+                className={`h-full rounded-full transition-[width] duration-500 ${isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-accent'}`}
                 style={{ width: `${progress * 100}%` }}
             />
         </div>
     );
 };
 
-// One row per area: points, levels earned, and how far to the next level.
+// One row per area: points towards the next nomination level.
 const AreasCard = ({ summary }) => {
     const { areas, areasNotStarted } = summary;
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
 
     return (
-        <Card className="lg:col-span-2">
-            <CardTitle>Nominations by area</CardTitle>
+        <Card>
+            <CardTitle aside={areas.length > 0 ? `${areas.length} ${areas.length === 1 ? 'area' : 'areas'}` : null}>Points by area</CardTitle>
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
-                    {areas.map(area => (
-                        <li key={area.id} className="py-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2">
-                            <div className="min-w-0">
-                                <div className="text-[13.5px] text-zinc-900 dark:text-white truncate">{area.name}</div>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 min-w-0"><LevelStrip area={area} /></div>
-                                    <span className="mt-1.5 text-[11px] font-mono tabular-nums text-zinc-400 shrink-0">{Math.min(area.earned, 30)}/30</span>
+                    {areas.map(area => {
+                        const next = area.next;
+                        const required = next?.pointsRequired || 0;
+                        const points = next?.points ?? area.points;
+                        return (
+                            <li key={area.id} className="py-3">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <div className="text-[13.5px] font-medium text-zinc-900 dark:text-white truncate">{area.name}</div>
+                                    <div className="shrink-0 text-[11px] font-mono tabular-nums text-zinc-400">
+                                        {area.earned > 0 && <span className="text-zinc-500 dark:text-zinc-400">{area.earned}/{area.levels} levels</span>}
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
-                    ))}
+                                <div className="mt-1.5 flex items-center gap-3">
+                                    <div className="flex-1 min-w-0"><LevelStrip area={area} /></div>
+                                    <span className="shrink-0 text-[12px] font-mono tabular-nums text-zinc-600 dark:text-zinc-300">
+                                        {area.complete
+                                            ? `${area.earned} earned`
+                                            : `${Math.min(points, required).toLocaleString('en-AU')}/${required.toLocaleString('en-AU')}`}
+                                    </span>
+                                </div>
+                                {!area.complete && next && (
+                                    <div className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400 truncate">
+                                        {next.remaining > 0
+                                            ? `${next.remaining.toLocaleString('en-AU')} pts to ${next.name}`
+                                            : `${next.name} reached`}
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
                 </ul>
             ) : (
                 <Empty>Points you earn will count towards nominations here.</Empty>
@@ -266,7 +306,7 @@ const RecordCard = ({ summary }) => {
     }));
 
     return (
-        <Card className="lg:col-span-3">
+        <Card>
             <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>Your record</CardTitle>
 
             {yearFilters.length > 1 && (
@@ -302,12 +342,8 @@ const RecordCard = ({ summary }) => {
                                         <div className="text-[13.5px] text-zinc-900 dark:text-white truncate sm:shrink-0 sm:max-w-[60%]">{entry.title}</div>
                                         {entry.detail && <div className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{entry.detail}</div>}
                                     </div>
-                                    {entry.kind === 'nomination' && entry.points > 0 ? (
-                                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-300">+{entry.points}</span>
-                                    ) : entry.kind === 'nomination' ? (
-                                        <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full border border-m-line">{KIND_LABELS[entry.kind]}</span>
-                                    ) : entry.points > 0 ? (
-                                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-300">+{entry.points}</span>
+                                    {entry.points > 0 ? (
+                                        <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">+{entry.points}</span>
                                     ) : KIND_LABELS[entry.kind] ? (
                                         <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400 px-2 py-0.5 rounded-full border border-m-line">{KIND_LABELS[entry.kind]}</span>
                                     ) : null}
@@ -383,13 +419,13 @@ const EarnView = ({ summary }) => {
             {groups.length === 0 ? (
                 <Card><Empty>No awards match “{query.trim()}”.</Empty></Card>
             ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Masonry className="columns-1 md:columns-2">
                     {groups.map(g => (
                         <Card key={g.name}>
                             <CardTitle aside={plural(g.items.length, 'award')}>{g.name}</CardTitle>
                             <ul className="divide-y divide-m-line -my-2.5">
                                 {g.items.map(a => (
-                                    <li key={a.id} className="py-2.5 flex items-center gap-3">
+                                    <li key={a.id} className="py-2.5 flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]">
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
                                             {(a.housePoints > 0 || a.received > 0) && (
@@ -400,7 +436,7 @@ const EarnView = ({ summary }) => {
                                                 </div>
                                             )}
                                         </div>
-                                        <span className="shrink-0 font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-300">
+                                        <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
                                             {a.points} {a.points === 1 ? 'pt' : 'pts'}
                                         </span>
                                     </li>
@@ -408,7 +444,7 @@ const EarnView = ({ summary }) => {
                             </ul>
                         </Card>
                     ))}
-                </div>
+                </Masonry>
             )}
         </div>
     );
@@ -465,13 +501,13 @@ const AwardSchemeView = ({ user }) => {
             )}
 
             {view === 'overview' ? (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <Masonry>
                     <SummaryCard summary={summary} />
                     <HouseCard houses={summary.houseStandings} />
                     <AreasCard summary={summary} />
                     <PrizesCard summary={summary} />
                     <RecordCard summary={summary} />
-                </div>
+                </Masonry>
             ) : (
                 <EarnView summary={summary} />
             )}
