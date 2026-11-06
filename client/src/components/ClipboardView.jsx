@@ -13,6 +13,37 @@ const TABS = [
 ];
 
 
+// Stands in for Clipboard while it loads: the same tab bar and month sheet that replace it.
+const ClipboardSkeleton = () => (
+    <div className="nf nf-cb animate-pulse-subtle" aria-busy="true" aria-label="Loading Clipboard">
+        <div className="nf-cb-bar">
+            <div className="nf-cb-skel-tabs">
+                {TABS.map(tab => <span key={tab.id} className="nf-cb-skel-tab" />)}
+            </div>
+        </div>
+        <div className="nf-cb-body">
+            <div className="nf-cb-skel-head">
+                <span className="nf-cb-skel-month" />
+                <span className="nf-cb-skel-nav"><i /><i /><i /></span>
+            </div>
+            <div className="nf-sheet nf-cal__sheet">
+                <div className="nf-cb-skel-grid">
+                    <div className="nf-cb-skel-week">
+                        {Array.from({ length: 7 }, (_, i) => <div key={i} className="nf-cb-skel-dow" />)}
+                    </div>
+                    {Array.from({ length: 6 }, (_, w) => (
+                        <div key={w} className="nf-cb-skel-week">
+                            {Array.from({ length: 7 }, (_, d) => (
+                                <div key={d} className="nf-cb-skel-day"><span className="nf-cb-skel-num" /></div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 // Clipboard, drawn in NoteFlow's language. The calendar is the main tab; any session
 // pops out with its location, opponent and notes.
 const ClipboardView = ({ user }) => {
@@ -26,7 +57,7 @@ const ClipboardView = ({ user }) => {
     const { attendance = [], preExplained = [], sessions = [], teams = [], globalActivities = [] } = data || {};
 
     if (loading) {
-        return <div className="nf nf-cb nf-cb-state"><p className="nf-meta">Loading Clipboard…</p></div>;
+        return <ClipboardSkeleton />;
     }
 
     if (error) {

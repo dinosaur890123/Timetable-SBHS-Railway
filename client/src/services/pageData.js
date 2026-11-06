@@ -99,17 +99,19 @@ const settle = (promise, fallback) => promise.then(value => ({ ok: true, value }
 
 export const awardsPage = (studentId) => ({
     key: `awards:${studentId}`,
-    load: async () => {
+    // `previous` is the saved copy: a section that fails keeps its old data rather
+    // than being stored as empty, so the backup survives an outage.
+    load: async (previous) => {
         const results = await Promise.all([
-            settle(fetchStudentAwards(studentId), []),
-            settle(fetchStudentBadges(studentId), []),
-            settle(fetchStudentDecorations(studentId), []),
-            settle(fetchStudentPrizes(studentId), []),
-            settle(fetchStudentRollover(studentId), null),
-            settle(fetchGlobalAwards(), []),
-            settle(fetchGlobalNominations(), []),
-            settle(fetchGlobalPrizes(), []),
-            settle(fetchGlobalHousePoints(), [])
+            settle(fetchStudentAwards(studentId), previous?.awards ?? []),
+            settle(fetchStudentBadges(studentId), previous?.badges ?? []),
+            settle(fetchStudentDecorations(studentId), previous?.decorations ?? []),
+            settle(fetchStudentPrizes(studentId), previous?.prizes ?? []),
+            settle(fetchStudentRollover(studentId), previous?.rollover ?? null),
+            settle(fetchGlobalAwards(), previous?.catalog ?? []),
+            settle(fetchGlobalNominations(), previous?.nominations ?? []),
+            settle(fetchGlobalPrizes(), previous?.prizeLadder ?? []),
+            settle(fetchGlobalHousePoints(), previous?.houses ?? [])
         ]);
         const [awards, badges, decorations, prizes, rollover, catalog, nominations, prizeLadder, houses] = results.map(r => r.value);
         if (!results[0].ok && !results[5].ok) throw new Error('Award scheme unavailable');
@@ -124,14 +126,20 @@ export const awardsPage = (studentId) => ({
 
 export const clipboardPage = (studentId) => ({
     key: `clipboard:${studentId}`,
-    load: async () => {
-        const [attendance, preExplained, sessions, teams, globalActivities] = await Promise.all([
-            fetchStudentClipboardAttendance(studentId).catch(() => []),
-            fetchStudentPreExplainedAbsences(studentId).catch(() => []),
-            fetchStudentClipboardSessions(studentId).catch(() => []),
-            fetchStudentClipboardTeams(studentId).catch(() => []),
-            fetchGlobalActivities().catch(() => [])
+    // `previous` is the saved copy: a section that fails keeps its old data rather
+    // than being stored as empty, so the backup survives an outage.
+    load: async (previous) => {
+        const results = await Promise.all([
+            settle(fetchStudentClipboardAttendance(studentId), previous?.attendance ?? []),
+            settle(fetchStudentPreExplainedAbsences(studentId), previous?.preExplained ?? []),
+            settle(fetchStudentClipboardSessions(studentId), previous?.sessions ?? []),
+            settle(fetchStudentClipboardTeams(studentId), previous?.teams ?? []),
+            settle(fetchGlobalActivities(), previous?.globalActivities ?? [])
         ]);
+        // Nothing answered at all: keep the saved copy (and the Cached badge) rather
+        // than storing five empty lists over it.
+        if (!results.some(r => r.ok)) throw new Error('Clipboard unavailable');
+        const [attendance, preExplained, sessions, teams, globalActivities] = results.map(r => r.value);
         return { attendance, preExplained, sessions, teams, globalActivities };
     }
 });

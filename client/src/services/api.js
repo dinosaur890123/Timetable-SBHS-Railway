@@ -1,6 +1,8 @@
 import { format } from 'date-fns';
 import { rememberSubjectColours } from '../utils/timetable';
-import { clearPageCache } from '../utils/pageCache';
+import { clearPageCache, setServingCachedData } from '../utils/pageCache';
+// The "Cached" topbar badge lives in pageCache so failed page refreshes can raise it too.
+export { onCachedDataChange } from '../utils/pageCache';
 import { normaliseList, normaliseIssuedAward, normaliseIssuedPrize, normaliseRollover, normaliseAward, normaliseHouse, normaliseNomination, normalisePrize } from '../utils/awardScheme';
 
 // Environment variables
@@ -13,22 +15,6 @@ const API_BASE_URL = 'https://student.sbhs.net.au/api';
 // reaches the browser.
 const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
-
-// Whether the data on screen came from the offline copy. The service worker answers from its cache
-// when the network fails and marks those responses (see offlineMarker in vite.config.js); the next
-// real response clears it. Subscribers hear only actual changes.
-let servingCachedData = false;
-const cachedDataListeners = new Set();
-const setServingCachedData = (value) => {
-    if (servingCachedData === value) return;
-    servingCachedData = value;
-    cachedDataListeners.forEach(listener => listener(value));
-};
-export const onCachedDataChange = (listener) => {
-    cachedDataListeners.add(listener);
-    listener(servingCachedData);
-    return () => cachedDataListeners.delete(listener);
-};
 
 // Service worker caches holding the student's own data, emptied whenever the account changes.
 const PRIVATE_CACHES = ['sbhs-data', 'app-data'];
@@ -48,18 +34,28 @@ const clearOfflineData = async () => {
 // instead of a spinner that never ends. AI requests get longer.
 const timedFetch = async (url, options = {}, timeoutMs) => {
     const limit = timeoutMs ?? (String(url).includes('/ai/') ? 60000 : 20000);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), limit);
-    try {
-        const response = await fetch(url, { ...options, signal: controller.signal });
-        if (response.headers.get('X-Synchron-Cached')) setServingCachedData(true);
+    // The service worker falls back to its offline copy when the network is too
+    // slow, which can happen while the device still reports being online. In that
+    // case give the network a couple more chances before settling for the copy.
+    const CACHED_RETRIES = 2;
+    const RETRY_DELAY = 3000;
+    for (let attempt = 0; ; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), limit);
+        let response;
+        try {
+            response = await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+            if (error?.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(limit / 1000)}s`);
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+        const servedFromCache = !!response.headers.get('X-Synchron-Cached');
+        if (servedFromCache) setServingCachedData(true);
         else if (response.ok) setServingCachedData(false);
-        return response;
-    } catch (error) {
-        if (error?.name === 'AbortError') throw new Error(`Request timed out after ${Math.round(limit / 1000)}s`);
-        throw error;
-    } finally {
-        clearTimeout(timer);
+        if (!servedFromCache || !navigator.onLine || attempt >= CACHED_RETRIES) return response;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     }
 };
 

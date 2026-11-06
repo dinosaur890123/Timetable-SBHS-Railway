@@ -1,5 +1,21 @@
 import { useEffect, useState } from 'react';
 
+// Whether the data on screen came from a backup copy rather than the network: the
+// service worker's offline copy (services/api.js) or a saved page whose refresh failed.
+// Subscribers hear only actual changes.
+let servingCachedData = false;
+const cachedDataListeners = new Set();
+export const setServingCachedData = (value) => {
+    if (servingCachedData === value) return;
+    servingCachedData = value;
+    cachedDataListeners.forEach(listener => listener(value));
+};
+export const onCachedDataChange = (listener) => {
+    cachedDataListeners.add(listener);
+    listener(servingCachedData);
+    return () => cachedDataListeners.delete(listener);
+};
+
 // What each page has loaded, so opening it shows that at once and refreshes quietly underneath,
 // instead of starting again from a spinner. Kept in memory for the session and saved on the device,
 // so it also survives closing the app. Loads already on their way are shared.
@@ -65,12 +81,20 @@ const lookup = (key) => {
 
 export const loadCached = (key, load) => {
     if (inFlight.has(key)) return inFlight.get(key);
-    const request = load()
+    // The last copy is handed to the load so a failed section can fall back to it
+    // instead of overwriting the backup with an empty placeholder.
+    const previous = lookup(key)?.value;
+    const request = load(previous)
         .then(value => {
             const entry = { value, at: Date.now() };
             store.set(key, entry);
             writeSaved(key, entry);
             return value;
+        })
+        .catch(err => {
+            // A failed refresh leaves the saved copy on screen: that's cached data.
+            if (previous !== undefined) setServingCachedData(true);
+            throw err;
         })
         .finally(() => inFlight.delete(key));
     inFlight.set(key, request);
