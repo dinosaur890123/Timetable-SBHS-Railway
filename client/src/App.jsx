@@ -967,11 +967,6 @@ function App() {
                                             </div>
                         
                                             <div className="flex items-center gap-1.5 shrink-0">
-                                                <span className="hidden md:flex items-center gap-1 mr-1" title="Arrow keys change the day; swipe works on touch screens">
-                                                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400 dark:text-zinc-500">←</kbd>
-                                                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400 dark:text-zinc-500">→</kbd>
-                                                    <span className="sr-only">Use the left and right arrow keys to change the day</span>
-                                                </span>
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
                                                         onClick={resetToday}
