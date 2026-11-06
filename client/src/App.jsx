@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef, lazy, Suspense, useMemo } from 'react';
+import React, { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import Home from './components/Home';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
@@ -21,18 +22,36 @@ const pageLoaders = {
     admin: () => import('./components/AdminPanel')
 };
 
-const Timetable = lazy(pageLoaders.timetable);
-const CalendarView = lazy(pageLoaders.calendar);
-const DailyNotices = lazy(pageLoaders.notices);
-const AdminPanel = lazy(pageLoaders.admin);
-const LandingPage = lazy(() => import('./components/LandingPage'));
-const AwardSchemeView = lazy(pageLoaders.awards);
-const ClipboardView = lazy(pageLoaders.clipboard);
-const StudyView = lazy(pageLoaders.study);
-const FeedbackView = lazy(pageLoaders.feedback);
-const CanvasLinksView = lazy(pageLoaders.canvasLinks);
-const BuildNotesView = lazy(pageLoaders.buildNotes);
-const SettingsView = lazy(pageLoaders.settings);
+// React.lazy caches a failed chunk forever, so a lazy page gets a few retries before
+// it gives up and the error boundary shows its retry card.
+const lazyPage = (loader) => {
+    const Lazy = React.lazy(async () => {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                const mod = await loader();
+                if (mod) return mod;
+                throw new Error('Chunk loaded empty');
+            } catch (err) {
+                if (attempt >= 2) throw err;
+                await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+            }
+        }
+    });
+    return Lazy;
+};
+
+const Timetable = lazyPage(pageLoaders.timetable);
+const CalendarView = lazyPage(pageLoaders.calendar);
+const DailyNotices = lazyPage(pageLoaders.notices);
+const AdminPanel = lazyPage(pageLoaders.admin);
+const LandingPage = lazyPage(() => import('./components/LandingPage'));
+const AwardSchemeView = lazyPage(pageLoaders.awards);
+const ClipboardView = lazyPage(pageLoaders.clipboard);
+const StudyView = lazyPage(pageLoaders.study);
+const FeedbackView = lazyPage(pageLoaders.feedback);
+const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
+const BuildNotesView = lazyPage(pageLoaders.buildNotes);
+const SettingsView = lazyPage(pageLoaders.settings);
 
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
@@ -923,7 +942,7 @@ function App() {
                             <p className="text-zinc-400 text-xs">Loading view...</p>
                         </div>
                     }>
-
+                        <ErrorBoundary resetKey={currentView}>
                         {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
                             transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap. */}
                         <AnimatePresence mode="wait" initial={false}>
@@ -1124,6 +1143,7 @@ function App() {
                             )}
                             </motion.div>
                         </AnimatePresence>
+                        </ErrorBoundary>
                     </Suspense>
                 </div>
 

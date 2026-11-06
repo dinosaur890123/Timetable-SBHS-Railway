@@ -228,6 +228,9 @@ export const summariseAwards = ({
             points: levels[0].points,
             levels: levels.length,
             earned: earned.length,
+            // Points the processed (earned) nominations already account for; only
+            // points past this carry over into the next nomination.
+            basePoints: earned.length ? Math.max(...earned.map(n => n.pointsRequired)) : 0,
             reached: levels.filter(n => n.state === 'reached').length,
             next,
             complete: !next

@@ -141,31 +141,34 @@ const AreasCard = ({ summary }) => {
 
     return (
         <Card>
-            <CardTitle aside={areas.length > 0 ? `${areas.length} ${areas.length === 1 ? 'area' : 'areas'}` : null}>Points by area</CardTitle>
+            <CardTitle aside={areas.length > 0 ? `${areas.length} ${areas.length === 1 ? 'area' : 'areas'}` : null}>Progress</CardTitle>
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => {
-                        const next30 = Math.floor(area.points / 30) * 30 + 30;
-                        const progress = (area.points % 30) / 30;
+                        // Points past the last processed nomination carry into the next one.
+                        // Until that nomination is officially issued, the overflow shows green.
+                        const next = area.next;
+                        const base = area.basePoints || 0;
+                        const required = next ? Math.max(1, next.pointsRequired - base) : 0;
+                        const toward = next ? Math.max(0, next.points - base) : area.points;
+                        const reached = next?.state === 'reached';
+                        const progress = required > 0 ? Math.min(1, toward / required) : 1;
+                        const tone = reached ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-300';
+                        const fill = reached ? 'bg-emerald-500' : 'bg-accent';
                         return (
                             <li key={area.id} className="py-3">
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <div className="text-[13.5px] font-medium text-zinc-900 dark:text-white truncate">{area.name}</div>
-                                    <div className="shrink-0 text-[11px] font-mono tabular-nums text-zinc-400">
-                                        {area.earned > 0 && <span className="text-zinc-500 dark:text-zinc-400">{area.earned}/{area.levels} levels</span>}
-                                    </div>
-                                </div>
+                                <div className="text-[13.5px] font-medium text-zinc-900 dark:text-white truncate">{area.name}</div>
                                 <div className="mt-1.5 flex items-center gap-3">
                                     <div className="flex-1 min-w-0">
                                         <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
                                             <div
-                                                className="h-full rounded-full bg-accent transition-[width] duration-500"
+                                                className={`h-full rounded-full transition-[width] duration-500 ${fill}`}
                                                 style={{ width: `${progress * 100}%` }}
                                             />
                                         </div>
                                     </div>
-                                    <span className="shrink-0 text-[12px] font-mono tabular-nums text-zinc-600 dark:text-zinc-300">
-                                        {area.points % 30}/30
+                                    <span className={`shrink-0 text-[12px] font-mono tabular-nums ${tone}`}>
+                                        {required > 0 ? `${toward}/${required}` : `${area.points} pts`}
                                     </span>
                                 </div>
                             </li>
@@ -433,7 +436,7 @@ const AwardSchemeView = ({ user }) => {
         return (
             <div className="space-y-4" aria-busy="true" aria-label="Loading awards">
                 <div className="h-8 w-56 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
                     <div className="space-y-4">
                         <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
                         <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
@@ -475,7 +478,7 @@ const AwardSchemeView = ({ user }) => {
             )}
 
             {view === 'overview' ? (
-                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]">
                     <div className="space-y-4">
                         <PrizeBanner summary={summary} />
                         <RecordCard summary={summary} />
