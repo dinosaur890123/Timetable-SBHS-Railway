@@ -61,8 +61,9 @@ const Segmented = ({ id, options, value, onChange }) => (
                 >
                     {active && (
                         <motion.span
-                            layoutId={`seg-${id}`}
-                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.15 }}
                             className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
                         />
                     )}

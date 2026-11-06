@@ -12,7 +12,6 @@ const TABS = [
     { id: 'absences', label: 'Absences' }
 ];
 
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // Clipboard, drawn in NoteFlow's language. The calendar is the main tab; any session
 // pops out with its location, opponent and notes.
@@ -57,9 +56,6 @@ const ClipboardView = ({ user }) => {
                         </button>
                     ))}
                 </div>
-                <span className="nf-meta nf-cb-tally">
-                    {plural(teams.length, 'team')} Â· {plural(sessions.length, 'session')}
-                </span>
             </div>
 
             <div className="nf-cb-body">

@@ -936,15 +936,11 @@ function App() {
                 )}
 
                 <div className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto">
-                    <Suspense fallback={
-                        <div className="flex flex-col items-center justify-center p-12 gap-4">
-                            <div className="w-8 h-8 border-4 border-accent/25 border-t-accent rounded-full animate-spin"></div>
-                            <p className="text-zinc-400 text-xs">Loading view...</p>
-                        </div>
-                    }>
                         <ErrorBoundary resetKey={currentView}>
                         {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
-                            transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap. */}
+                            transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap.
+                            Suspense sits inside the keyed div: a lazy page suspends on its own, so AnimatePresence
+                            never loses track of the exiting view mid-swap. */}
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={currentView}
@@ -953,6 +949,12 @@ function App() {
                                 exit={{ opacity: 0, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
                                 transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
                             >
+                            <Suspense fallback={
+                                <div className="flex flex-col items-center justify-center p-12 gap-4">
+                                    <div className="w-8 h-8 border-4 border-accent/25 border-t-accent rounded-full animate-spin"></div>
+                                    <p className="text-zinc-400 text-xs">Loading view...</p>
+                                </div>
+                            }>
                             {/* HOME VIEW: greeting, the day's timetable and a side rail */}
                             {currentView === 'home' && (
                                 <Home
@@ -1141,10 +1143,10 @@ function App() {
                                     setView={setCurrentView}
                                 />
                             )}
+                            </Suspense>
                             </motion.div>
                         </AnimatePresence>
                         </ErrorBoundary>
-                    </Suspense>
                 </div>
 
                 {/* AI Assistant Popout Modal */}

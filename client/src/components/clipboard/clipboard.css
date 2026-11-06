@@ -25,6 +25,7 @@ html[data-ui] .nf .nf-cb-btn--bare:hover { background: var(--wash); color: var(-
 
 .nf-cb-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 24px; border-bottom: 1px solid var(--rule); }
 .nf-cb-tabs { display: flex; gap: 22px; overflow-x: auto; scrollbar-width: none; }
+.nf-cb-tabs::-webkit-scrollbar { display: none; }
 html[data-ui] .nf .nf-cb-tab {
   position: relative; padding: 10px 0 12px; border: 0; border-radius: 0; background: none;
   font: 500 15px/1 var(--sans); letter-spacing: -.01em; color: var(--ink-3); white-space: nowrap; cursor: pointer;
@@ -34,8 +35,6 @@ html[data-ui] .nf .nf-cb-tab[aria-selected="true"] { color: var(--ink); font-wei
 html[data-ui] .nf .nf-cb-tab[aria-selected="true"]::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--rule-ink);
 }
-.nf-cb-tally { padding-bottom: 12px; }
-
 .nf-cb-body { padding-top: 28px; }
 .nf-cb .nf-head { margin-top: 44px; }
 .nf-cb-empty { padding: 36px 0; text-align: center; color: var(--ink-3); }
