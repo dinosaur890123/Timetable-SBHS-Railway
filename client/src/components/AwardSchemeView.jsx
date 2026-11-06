@@ -7,7 +7,8 @@ import { awardsPage } from '../services/pageData';
 
 const VIEWS = [
     { id: 'overview', label: 'My progress' },
-    { id: 'earn', label: 'Ways to earn points' }
+    { id: 'earn', label: 'Ways to earn points' },
+    { id: 'house', label: 'House standings' }
 ];
 
 const RECORD_PREVIEW = 8;
@@ -38,16 +39,6 @@ const CardTitle = ({ children, aside }) => (
 
 const Empty = ({ children }) => (
     <p className="py-8 text-center text-sm text-zinc-400">{children}</p>
-);
-
-// Cards flow into columns and pack upwards, so short cards don't leave dead space.
-// Items read column-by-column rather than row-by-row.
-const Masonry = ({ children, className = 'columns-1 md:columns-2 lg:columns-3' }) => (
-    <div className={`gap-4 ${className}`}>
-        {React.Children.map(children, child => (
-            <div className="mb-4 break-inside-avoid">{child}</div>
-        ))}
-    </div>
 );
 
 // A thin bar. The accent marks progress the student is working towards; other
@@ -105,18 +96,13 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-// The year at a glance: points, nominations, and prize.
-const SummaryCard = ({ summary }) => {
-    const { totalPoints, housePoints, awardCount, nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
+// Prize and nominations banner — no total points shown.
+const PrizeBanner = ({ summary }) => {
+    const { nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
         <Card>
+            <CardTitle>Overview</CardTitle>
             <div className="flex flex-wrap gap-6">
-                <Stat
-                    label="Points"
-                    value={totalPoints.toLocaleString('en-AU')}
-                    accent
-                    sub={awardCount === 0 ? 'No awards yet this year' : [plural(awardCount, 'award'), housePoints > 0 && `${housePoints.toLocaleString('en-AU')} house pts`].filter(Boolean).join(' · ')}
-                />
                 <Stat
                     label="Nominations"
                     value={nominationsAllTime}
@@ -140,32 +126,6 @@ const SummaryCard = ({ summary }) => {
     );
 };
 
-const HouseCard = ({ houses }) => {
-    const leader = houses[0]?.points || 0;
-    return (
-        <Card>
-            <CardTitle>House standings</CardTitle>
-            {houses.length === 0 ? (
-                <Empty>No house points yet.</Empty>
-            ) : (
-                <ol className="space-y-2.5">
-                    {houses.map((house, index) => (
-                        <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
-                            <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
-                            <span className="flex items-center gap-2 min-w-0">
-                                <span aria-hidden className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" style={house.colour ? { backgroundColor: house.colour } : undefined} />
-                                <span className="truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
-                            </span>
-                            <Bar value={house.points} max={leader} colour={house.colour} />
-                            <span className="font-mono text-[12px] tabular-nums text-zinc-500 text-right">{house.points.toLocaleString('en-AU')}</span>
-                        </li>
-                    ))}
-                </ol>
-            )}
-        </Card>
-    );
-};
-
 const StatusMark = ({ state }) => (
     <span className={`grid place-items-center w-4 h-4 rounded-full shrink-0 ${state === 'won'
         ? 'bg-accent text-accent-contrast'
@@ -174,24 +134,7 @@ const StatusMark = ({ state }) => (
     </span>
 );
 
-// The progress of one area towards its next nomination level, as a bar.
-const LevelStrip = ({ area }) => {
-    const next = area.next;
-    const required = next?.pointsRequired || 0;
-    const points = Math.min(next?.points ?? area.points, required);
-    const progress = required > 0 ? points / required : 0;
-    const isComplete = area.complete;
-    return (
-        <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
-            <div
-                className={`h-full rounded-full transition-[width] duration-500 ${isComplete ? 'bg-green-700 dark:bg-green-600' : 'bg-accent'}`}
-                style={{ width: `${progress * 100}%` }}
-            />
-        </div>
-    );
-};
-
-// One row per area: points towards the next nomination level.
+// Points by area: progress toward the next 30-point block.
 const AreasCard = ({ summary }) => {
     const { areas, areasNotStarted } = summary;
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
@@ -202,9 +145,8 @@ const AreasCard = ({ summary }) => {
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => {
-                        const next = area.next;
-                        const required = next?.pointsRequired || 0;
-                        const points = next?.points ?? area.points;
+                        const next30 = Math.floor(area.points / 30) * 30 + 30;
+                        const progress = (area.points % 30) / 30;
                         return (
                             <li key={area.id} className="py-3">
                                 <div className="flex items-baseline justify-between gap-3">
@@ -214,20 +156,18 @@ const AreasCard = ({ summary }) => {
                                     </div>
                                 </div>
                                 <div className="mt-1.5 flex items-center gap-3">
-                                    <div className="flex-1 min-w-0"><LevelStrip area={area} /></div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden" aria-hidden>
+                                            <div
+                                                className="h-full rounded-full bg-accent transition-[width] duration-500"
+                                                style={{ width: `${progress * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
                                     <span className="shrink-0 text-[12px] font-mono tabular-nums text-zinc-600 dark:text-zinc-300">
-                                        {area.complete
-                                            ? `${area.earned} earned`
-                                            : `${Math.min(points, required).toLocaleString('en-AU')}/${required.toLocaleString('en-AU')}`}
+                                        {area.points % 30}/30
                                     </span>
                                 </div>
-                                {!area.complete && next && (
-                                    <div className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400 truncate">
-                                        {next.remaining > 0
-                                            ? `${next.remaining.toLocaleString('en-AU')} pts to ${next.name}`
-                                            : `${next.name} reached`}
-                                    </div>
-                                )}
                             </li>
                         );
                     })}
@@ -280,11 +220,11 @@ const RecordCard = ({ summary }) => {
     const [selectedYear, setSelectedYear] = useState(null);
     const [expanded, setExpanded] = useState(false);
 
-    // Group timeline by year
+    // Group timeline by year, points-only (ignore prizes, badges, decorations)
     const yearGroups = useMemo(() => {
         const groups = new Map();
         timeline.forEach(entry => {
-            if (!entry.date) return;
+            if (!entry.date || entry.kind === 'prize' || entry.kind === 'badge' || entry.kind === 'decoration') return;
             const year = new Date(entry.date).getFullYear();
             if (!groups.has(year)) groups.set(year, []);
             groups.get(year).push(entry);
@@ -294,7 +234,6 @@ const RecordCard = ({ summary }) => {
             .sort((a, b) => b.year - a.year);
     }, [timeline]);
 
-    // Default to the most recent year
     const activeYear = selectedYear ?? (yearGroups[0]?.year ?? null);
     const shown = activeYear ? yearGroups.find(g => g.year === activeYear)?.entries ?? [] : [];
     const visible = expanded ? shown : shown.slice(0, RECORD_PREVIEW);
@@ -307,7 +246,7 @@ const RecordCard = ({ summary }) => {
 
     return (
         <Card>
-            <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>Your record</CardTitle>
+            <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>My record</CardTitle>
 
             {yearFilters.length > 1 && (
                 <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
@@ -327,8 +266,8 @@ const RecordCard = ({ summary }) => {
                 </div>
             )}
 
-            {timeline.length === 0 ? (
-                <Empty>Awards you receive this year will appear here.</Empty>
+            {shown.length === 0 ? (
+                <Empty>No point awards this year yet.</Empty>
             ) : (
                 <>
                     <ul className="divide-y divide-m-line">
@@ -362,6 +301,35 @@ const RecordCard = ({ summary }) => {
                         </button>
                     )}
                 </>
+            )}
+        </Card>
+    );
+};
+
+// --- House standings view ------------------------------------------------------
+
+const HouseView = ({ summary }) => {
+    const { houseStandings } = summary;
+    const leader = houseStandings[0]?.points || 0;
+    return (
+        <Card>
+            <CardTitle>House standings</CardTitle>
+            {houseStandings.length === 0 ? (
+                <Empty>No house points yet.</Empty>
+            ) : (
+                <ol className="space-y-2.5">
+                    {houseStandings.map((house, index) => (
+                        <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
+                            <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
+                            <span className="flex items-center gap-2 min-w-0">
+                                <span aria-hidden className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" style={house.colour ? { backgroundColor: house.colour } : undefined} />
+                                <span className="truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
+                            </span>
+                            <Bar value={house.points} max={leader} colour={house.colour} />
+                            <span className="font-mono text-[12px] tabular-nums text-zinc-500 text-right">{house.points.toLocaleString('en-AU')}</span>
+                        </li>
+                    ))}
+                </ol>
             )}
         </Card>
     );
@@ -419,7 +387,7 @@ const EarnView = ({ summary }) => {
             {groups.length === 0 ? (
                 <Card><Empty>No awards match “{query.trim()}”.</Empty></Card>
             ) : (
-                <Masonry className="columns-1 md:columns-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {groups.map(g => (
                         <Card key={g.name}>
                             <CardTitle aside={plural(g.items.length, 'award')}>{g.name}</CardTitle>
@@ -444,7 +412,7 @@ const EarnView = ({ summary }) => {
                             </ul>
                         </Card>
                     ))}
-                </Masonry>
+                </div>
             )}
         </div>
     );
@@ -465,9 +433,15 @@ const AwardSchemeView = ({ user }) => {
         return (
             <div className="space-y-4" aria-busy="true" aria-label="Loading awards">
                 <div className="h-8 w-56 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
-                <div className="grid gap-4 lg:grid-cols-3">
-                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle lg:col-span-2" />
-                    <div className="h-56 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-4">
+                        <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                        <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    </div>
+                    <div className="space-y-4">
+                        <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                        <div className="h-40 rounded-2xl bg-zinc-900/[0.05] dark:bg-white/[0.06] animate-pulse-subtle" />
+                    </div>
                 </div>
             </div>
         );
@@ -501,13 +475,18 @@ const AwardSchemeView = ({ user }) => {
             )}
 
             {view === 'overview' ? (
-                <Masonry>
-                    <SummaryCard summary={summary} />
-                    <HouseCard houses={summary.houseStandings} />
-                    <AreasCard summary={summary} />
-                    <PrizesCard summary={summary} />
-                    <RecordCard summary={summary} />
-                </Masonry>
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                    <div className="space-y-4">
+                        <PrizeBanner summary={summary} />
+                        <RecordCard summary={summary} />
+                    </div>
+                    <div className="space-y-4">
+                        <AreasCard summary={summary} />
+                        <PrizesCard summary={summary} />
+                    </div>
+                </div>
+            ) : view === 'house' ? (
+                <HouseView summary={summary} />
             ) : (
                 <EarnView summary={summary} />
             )}
