@@ -57,6 +57,23 @@ const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
 
+// The day the app opens on: the next school day, unless a Clipboard session falls on a
+// weekend day before it (Saturday sport, Sunday rowing) — the earliest such day wins.
+const weekendClipboardDay = (schoolDay, sessions = []) => {
+    const schoolKey = format(schoolDay, 'yyyy-MM-dd');
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    let best = null;
+    for (const s of sessions) {
+        if (s.cancelled || !s.start) continue;
+        const start = new Date(s.start);
+        const dow = start.getDay();
+        if (dow !== 0 && dow !== 6) continue;
+        const key = format(start, 'yyyy-MM-dd');
+        if (key >= todayKey && key < schoolKey && (!best || key < best)) best = key;
+    }
+    return best ? new Date(`${best}T00:00`) : schoolDay;
+};
+
 import {
     fetchDayTimetable,
     peekDayTimetable,
@@ -680,14 +697,20 @@ function App() {
     useEffect(() => {
         if (!user || !isAuthenticated()) return;
 
-        // Today until its last bell, then the next school day. If that can't be worked out
-        // (offline with nothing saved), the app stays on today.
-        fetchNextSchoolDay()
-            .then(({ date }) => {
-                setDefaultDate(date);
-                setViewDate(date);
-            })
-            .catch(err => console.warn('Could not work out the next school day', err));
+        // Today until its last bell, then the next school day — or the next weekend day
+        // with a Clipboard session when there is one before it. If that can't be worked
+        // out (offline with nothing saved), the app stays on today.
+        (async () => {
+            try {
+                const { date } = await fetchNextSchoolDay();
+                const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
+                const openDay = weekendClipboardDay(date, sessions);
+                setDefaultDate(openDay);
+                setViewDate(openDay);
+            } catch (err) {
+                console.warn('Could not work out the next school day', err);
+            }
+        })();
     }, [user]);
 
     // Show the chosen day at once: from the session's cache when it's there (refreshed quietly once it's
@@ -765,11 +788,30 @@ function App() {
     }, [user?.role, !!user]);
 
     // Clipboard sessions for the timetable's one-line markers, fetched quietly in the background.
+    // One request shared by the markers, the weekend open-day exception and "Today".
+    const clipboardSessionsRequest = useRef({ id: null, promise: null });
+    const loadClipboardSessions = () => {
+        const id = user?.studentId;
+        if (!id) return Promise.resolve(clipboardSessions);
+        if (clipboardSessionsRequest.current.id !== id) {
+            clipboardSessionsRequest.current = {
+                id,
+                promise: fetchStudentClipboardSessions(id)
+                    .then(sessions => {
+                        setClipboardSessions(sessions || []);
+                        return sessions || [];
+                    })
+                    .catch(err => {
+                        console.error("Failed to load Clipboard sessions:", err);
+                        return clipboardSessions;
+                    })
+            };
+        }
+        return clipboardSessionsRequest.current.promise;
+    };
     useEffect(() => {
         if (!user?.studentId || !showClipboardEvents) return;
-        fetchStudentClipboardSessions(user.studentId)
-            .then(sessions => setClipboardSessions(sessions || []))
-            .catch(err => console.error("Failed to load Clipboard sessions:", err));
+        loadClipboardSessions();
     }, [user?.studentId, showClipboardEvents]);
 
     // Date Navigation Helpers
@@ -782,8 +824,9 @@ function App() {
     const prevDay = () => setViewDate(d => addDays(d, -1));
 
     // Arrow keys step through days on the home timetable, and a mostly-horizontal
-    // swipe does the same on touch screens. Both stand down while typing or when a
-    // layer (palette, date picker, AI modal) is open.
+    // swipe does the same anywhere on the page (the handlers sit on the content
+    // container, so they still work over a no-classes day's empty space). Both
+    // stand down while typing or when a layer (palette, date picker, AI modal) is open.
     const layersOpen = paletteOpen || showDatePicker || showAiModal;
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -816,7 +859,8 @@ function App() {
     const resetToday = async () => {
         try {
             const { date } = await fetchNextSchoolDay();
-            setViewDate(date);
+            const sessions = showClipboardEvents && user?.studentId ? await loadClipboardSessions() : [];
+            setViewDate(weekendClipboardDay(date, sessions));
         } catch {
             setViewDate(defaultDate || new Date());
         }
@@ -935,7 +979,11 @@ function App() {
                     </div>
                 )}
 
-                <div className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto">
+                <div
+                    className="relative p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto"
+                    onTouchStart={onDayTouchStart}
+                    onTouchEnd={onDayTouchEnd}
+                >
                         <ErrorBoundary resetKey={currentView}>
                         {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
                             transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap.
@@ -964,8 +1012,6 @@ function App() {
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
                                     clipboardSessions={showClipboardEvents ? clipboardSessions : []}
-                                    onDayTouchStart={onDayTouchStart}
-                                    onDayTouchEnd={onDayTouchEnd}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">

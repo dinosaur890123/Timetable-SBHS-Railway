@@ -334,7 +334,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboardSessions = [], dayNav, onDayTouchStart, onDayTouchEnd, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboardSessions = [], dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -389,12 +389,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboard
                 {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
             </header>
 
-            {/* Everything under the greeting and date bar swipes between days on touch screens. */}
-            <div
-                className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}
-                onTouchStart={onDayTouchStart}
-                onTouchEnd={onDayTouchEnd}
-            >
+            {/* Day swipes are handled on the page container in App, so they work
+                even over the empty space of a no-classes day. */}
+            <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
                 {/* On phones the countdown sits above the list so it's seen first */}
                 {rail && <div className="lg:hidden">{rail}</div>}
                 <section className="min-w-0">
