@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Search, Trophy, Award, Medal, Sparkles, Shield, ChevronDown } from 'lucide-react';
+import { Check, Search, Trophy, Award, Medal, Sparkles, Shield, ChevronDown, X, Plus } from 'lucide-react';
 import { useCachedLoad } from '../utils/pageCache';
 import { summariseAwards, RECORD_KINDS } from '../utils/awardScheme';
 import { awardsPage } from '../services/pageData';
 
 const VIEWS = [
     { id: 'overview', label: 'My progress' },
-    { id: 'earn', label: 'Ways to earn points' },
+    { id: 'earn', label: 'Earn' },
     { id: 'house', label: 'House standings' }
 ];
 
@@ -376,11 +376,139 @@ const HouseView = ({ summary }) => {
     );
 };
 
-// --- Ways to earn points ------------------------------------------------------
+// --- Earn view ----------------------------------------------------------------------
+
+const PlanningCard = ({ summary, plannedAwards, onRemove }) => {
+    if (plannedAwards.length === 0) return null;
+
+    const totalPlannedPoints = plannedAwards.reduce((sum, a) => sum + a.points, 0);
+    const totalHousePoints = plannedAwards.reduce((sum, a) => sum + (a.housePoints || 0), 0);
+
+    // Calculate hypothetical changes
+    const hypothetical = useMemo(() => {
+        const { nominationsAllTime, prizeRows, areas, nextNomination } = summary;
+
+        // Add planned points to current progress
+        const plannedCategoryPoints = new Map();
+        plannedAwards.forEach(a => {
+            const catName = a.category?.name || 'Other';
+            plannedCategoryPoints.set(catName, (plannedCategoryPoints.get(catName) || 0) + a.points);
+        });
+
+        // Hypothetical nominations
+        const hypotheticalNominations = nominationsAllTime + plannedAwards.filter(a => a.type === 'nomination').length;
+
+        // Hypothetical prizes
+        const hypotheticalPrizeRows = prizeRows.map(p => {
+            if (p.state === 'won') return p;
+            const newProgress = p.nominationsRequired > 0 ?
+                Math.min(hypotheticalNominations, p.nominationsRequired) : 0;
+            const newState = p.nominationsRequired > 0 && hypotheticalNominations >= p.nominationsRequired ? 'reached' : 'progress';
+            return { ...p, state: newState };
+        });
+
+        // Hypothetical areas (30-point breakdowns)
+        const hypotheticalAreas = areas.map(area => {
+            const plannedPoints = plannedAwards
+                .filter(a => a.category?.name === area.name)
+                .reduce((sum, a) => sum + a.points, 0);
+            const newPoints = area.points + plannedPoints;
+            const newBase = area.basePoints || 0;
+            const newRequired = area.next ? Math.max(1, area.next.pointsRequired - newBase) : 0;
+            const newToward = area.next ? Math.max(0, area.next.points - newBase) + plannedPoints : newPoints;
+            const newProgress = newRequired > 0 ? Math.min(1, newToward / newRequired) : 1;
+            const newReached = area.next?.state === 'reached' || (area.next && newToward >= newRequired);
+            return { ...area, points: newPoints, progress: newProgress, reached: newReached };
+        });
+
+        return {
+            nominations: hypotheticalNominations,
+            prizes: hypotheticalPrizeRows,
+            areas: hypotheticalAreas
+        };
+    }, [summary, plannedAwards]);
+
+    return (
+        <Card>
+            <CardTitle aside={plural(plannedAwards.length, 'planned award')}>Plan</CardTitle>
+            <div className="mb-4">
+                <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                    {totalPlannedPoints} {totalPlannedPoints === 1 ? 'point' : 'points'} planned
+                    {totalHousePoints > 0 && ` · ${plural(totalHousePoints, 'house point')}`}
+                </p>
+            </div>
+
+            {plannedAwards.length > 0 && (
+                <>
+                    <ul className="divide-y divide-m-line -my-2.5 mb-4">
+                        {plannedAwards.map(a => (
+                            <li key={a.id} className="py-2.5 flex items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
+                                    <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                        {a.category?.name || 'Other'}
+                                    </div>
+                                </div>
+                                <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
+                                    +{a.points}
+                                </span>
+                                <button
+                                    onClick={() => onRemove(a.id)}
+                                    className="shrink-0 p-1 rounded-md hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.05] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                    aria-label={`Remove ${a.name}`}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="border-t border-m-line pt-4 space-y-4">
+                        <div>
+                            <Eyebrow className="mb-2">Hypothetical Progress</Eyebrow>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Stat
+                                    label="Nominations"
+                                    value={hypothetical.nominations}
+                                    sub={`+${hypothetical.nominations - summary.nominationsAllTime}`}
+                                    accent={hypothetical.nominations > summary.nominationsAllTime}
+                                />
+                                <Stat
+                                    label="Prizes"
+                                    value={hypothetical.prizes.filter(p => p.state === 'won' || p.state === 'reached').length}
+                                    sub={`${hypothetical.prizes.filter(p => p.state === 'reached').length} reached`}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <Eyebrow className="mb-2">Area Progress (30-point blocks)</Eyebrow>
+                            <ul className="space-y-2">
+                                {hypothetical.areas.map(area => (
+                                    <li key={area.id} className="py-1.5">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[13px] text-zinc-900 dark:text-white">{area.name}</span>
+                                            <span className="text-[12px] font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
+                                                {area.points} pts
+                                                {area.progress > 0 && ` · ${Math.round(area.progress * 100)}%`}
+                                            </span>
+                                        </div>
+                                        <Bar value={area.points} max={area.next ? area.next.pointsRequired : 30} tone={area.reached ? 'accent' : 'neutral'} />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </>
+            )}
+        </Card>
+    );
+};
 
 const EarnView = ({ summary }) => {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState('all');
+    const [plannedAwards, setPlannedAwards] = useState([]);
     const term = query.trim().toLowerCase();
 
     const groups = summary.catalogByCategory
@@ -391,6 +519,14 @@ const EarnView = ({ summary }) => {
         }))
         .filter(g => g.items.length > 0);
 
+    const handleAddAward = (award) => {
+        setPlannedAwards(prev => [...prev, { ...award, id: `${award.id}-${Date.now()}` }]);
+    };
+
+    const handleRemoveAward = (id) => {
+        setPlannedAwards(prev => prev.filter(a => a.id !== id));
+    };
+
     if (summary.catalogByCategory.length === 0) {
         return <Card><Empty>The list of awards isn’t available right now.</Empty></Card>;
     }
@@ -399,7 +535,7 @@ const EarnView = ({ summary }) => {
         <div className="space-y-4">
             <Card>
                 <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-3">
-                    Every award in the scheme and the points it’s worth. Points in an area count towards its nominations.
+                    Search the award scheme to see what you can earn. Click an award to add it to your plan.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                     <label className="relative flex-1">
@@ -425,6 +561,20 @@ const EarnView = ({ summary }) => {
                 </div>
             </Card>
 
+            <Card>
+                <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                    <a href="https://sydneyhigh.school/wellbeing/award-scheme" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                        View the full award scheme
+                    </a>
+                </p>
+            </Card>
+
+            <PlanningCard
+                summary={summary}
+                plannedAwards={plannedAwards}
+                onRemove={handleRemoveAward}
+            />
+
             {groups.length === 0 ? (
                 <Card><Empty>No awards match “{query.trim()}”.</Empty></Card>
             ) : (
@@ -448,6 +598,13 @@ const EarnView = ({ summary }) => {
                                         <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
                                             {a.points} {a.points === 1 ? 'pt' : 'pts'}
                                         </span>
+                                        <button
+                                            onClick={() => handleAddAward(a)}
+                                            className="shrink-0 p-1 rounded-md hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.05] text-zinc-400 hover:text-accent"
+                                            aria-label={`Add ${a.name} to plan`}
+                                        >
+                                            <Plus size={14} />
+                                        </button>
                                     </li>
                                 ))}
                             </ul>
