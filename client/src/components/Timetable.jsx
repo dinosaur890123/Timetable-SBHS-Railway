@@ -66,7 +66,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
     const [openSession, setOpenSession] = useState(null);
-    const [cycleWeek, setCycleWeek] = useState(null);
     useNoteFlowFonts(clipboardSessions.length > 0);
     // Which row was live at the last tick, and when that last changed (see startedBell below).
     const bellWatch = useRef({ key: undefined, at: 0 });
@@ -77,21 +76,20 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         return () => clearInterval(timer);
     }, []);
 
-    // Cycle mode draws the whole week from completeTimetable, so it doesn't wait on the day.
-    if (!timetableData && viewMode !== 'cycle') return <DaySkeleton />;
+    if (!timetableData) return <DaySkeleton />;
 
     // The day being looked at: the date asked for, else the one the timetable says it's for.
     const todayKey = format(currentTime, 'yyyy-MM-dd');
-    const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData?.date || todayKey);
+    const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 
-    const { bells, timetable } = timetableData || {};
+    const { bells, timetable } = timetableData;
     const innerTimetable = timetable?.timetable || timetable;
     // Weekends and holidays have no bells or periods. A reply that has rolled on to a later school day
     // counts as none too, so Monday's classes never show up under Saturday.
-    const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData?.date || '') ? timetableData.date : viewedKey;
+    const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData.date || '') ? timetableData.date : viewedKey;
 
-    if (viewMode === 'daily' && (!bells || !innerTimetable?.periods || servedKey > viewedKey)) {
+    if (!bells || !innerTimetable?.periods || servedKey > viewedKey) {
         // No classes, but Clipboard still runs: Saturday sport, Sunday rowing and so on.
         const nowKeyed = viewedKey < todayKey ? Infinity : viewedKey > todayKey ? -1 : minutesOf(currentTime);
         const daySessions = clipboardSessions
@@ -116,10 +114,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         );
     }
 
-    const { periods = {} } = innerTimetable || {};
-    const routine = innerTimetable?.routine ? innerTimetable.routine.split(',') : [];
-    const classVariations = timetableData?.classVariations || {};
-    const roomVariations = timetableData?.roomVariations || {};
+    const { periods } = innerTimetable;
+    const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
+    const classVariations = timetableData.classVariations || {};
+    const roomVariations = timetableData.roomVariations || {};
     const daySubjects = timetable?.subjects;
     const subjectIndex = indexSubjects(completeTimetable);
 
@@ -224,41 +222,17 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             );
         }
 
-        const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        
         // Handle different possible data structures
         const bells = completeTimetable.bells || timetableData?.bells || [];
         const timetableStructure = completeTimetable.timetable || completeTimetable;
 
-        // The complete timetable can hold several cycle weeks ("Monday A", "Monday B", ...).
-        // Group the day entries by that letter so every week type can be shown.
-        const weekGroups = new Map(); // letter -> Map(weekday -> dayData)
-        Object.entries(timetableStructure?.days || {}).forEach(([key, dayData]) => {
-            const name = String(dayData?.dayname || '').trim();
-            const match = name.match(/^([A-Za-z]+)(?:\s+([A-Za-z]))?$/);
-            let weekday = match && weekdays.includes(match[1]) ? match[1] : null;
-            const letter = match?.[2] ? match[2].toUpperCase() : '';
-            if (!weekday) {
-                const n = parseInt(key, 10);
-                weekday = Number.isInteger(n) && n >= 1 && n <= weekdays.length ? weekdays[n - 1] : null;
-            }
-            if (!weekday) return;
-            if (!weekGroups.has(letter)) weekGroups.set(letter, new Map());
-            weekGroups.get(letter).set(weekday, dayData);
-        });
-
-        const weekLetters = [...weekGroups.keys()];
-        // Default to the week of the day being viewed ("Monday B" -> B), else the first group.
-        const dayLetter = (innerTimetable?.dayname || '').trim().split(/\s+/).pop()?.toUpperCase();
-        const activeLetter = cycleWeek && weekGroups.has(cycleWeek)
-            ? cycleWeek
-            : (weekGroups.has(dayLetter) ? dayLetter : weekLetters[0]);
-        const dayMap = weekGroups.get(activeLetter) || new Map();
-
-        // Get all unique period slots across all days of the active week
+        // Get all unique period slots across all days
         const allPeriodSlots = new Set();
-        weekdays.forEach(weekday => {
-            const dayData = dayMap.get(weekday);
+        days.forEach((_, dayIndex) => {
+            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
+            const dayData = timetableStructure?.days?.[dayIndex + 1];
             if (dayData?.routine) {
                 dayData.routine.split(',').forEach(bellId => {
                     const bell = bells.find(b => b.bell === bellId);
@@ -266,7 +240,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 });
             }
         });
-
+        
         const periodSlots = Array.from(allPeriodSlots).sort((a, b) => {
             const bellA = bells.find(bell => bell.bell === a);
             const bellB = bells.find(bell => bell.bell === b);
@@ -278,32 +252,33 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (isBreakBell(bellId, { title: bell?.bellDisplay })) return false;
 
             // Check if this period has at least one class across all days
-            const hasAnyClass = weekdays.some(weekday => {
-                const dayData = dayMap.get(weekday);
+            const hasAnyClass = days.some((_, dayIndex) => {
+                const dayData = timetableStructure?.days?.[dayIndex + 1];
                 if (!dayData) return false;
-
+                
                 const periods = dayData.periods || {};
                 const periodInfo = periods[bellId];
-
+                
                 // No period info at all
                 if (!periodInfo) return false;
-
+                
                 // Filter out breaks, roll call, and free periods
                 if (isBreakBell(bellId, periodInfo)) return false;
                 if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return false;
                 if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return false;
-
+                
                 return true;
             });
-
+            
             return hasAnyClass;
         });
 
         // Get class info for a specific day and period
-        const getClassInfo = (weekday, bellId) => {
-            const dayData = dayMap.get(weekday);
+        const getClassInfo = (dayIndex, bellId) => {
+            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
+            const dayData = timetableStructure?.days?.[dayIndex + 1];
             if (!dayData) return null;
-
+            
             const periods = dayData.periods || {};
             let periodInfo = periods[bellId] || null;
             
@@ -340,28 +315,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
         return (
             <div className="rounded-2xl border border-m-line bg-m-card overflow-hidden">
-                {weekLetters.length > 1 && (
-                    <div className="flex gap-1 px-3 sm:px-4 pt-3">
-                        {weekLetters.map(letter => (
-                            <button
-                                key={letter || 'none'}
-                                onClick={() => setCycleWeek(letter)}
-                                className={`px-3 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                                    activeLetter === letter
-                                        ? 'bg-accent/15 text-accent'
-                                        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05]'
-                                }`}
-                            >
-                                {letter ? `Week ${letter}` : 'Week'}
-                            </button>
-                        ))}
-                    </div>
-                )}
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="bg-m-panel border-b border-m-line">
-                                {weekdays.map(day => (
+                                {days.map(day => (
                                     <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
                                         {day.slice(0, 3)}
                                     </th>
@@ -375,21 +333,21 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
                                 return (
                                     <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                        {weekdays.map(weekday => {
-                                            const classInfo = getClassInfo(weekday, bellId);
-
+                                        {days.map((_, dayIndex) => {
+                                            const classInfo = getClassInfo(dayIndex, bellId);
+                                            
                                             if (!classInfo) {
                                                 return (
-                                                    <td key={weekday} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                    <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
                                                         <div className="min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
                                                     </td>
                                                 );
                                             }
-
+                                            
                                             const cell = <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />;
 
                                             return (
-                                                <td key={weekday} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
                                                     {cell}
                                                 </td>
                                             );
