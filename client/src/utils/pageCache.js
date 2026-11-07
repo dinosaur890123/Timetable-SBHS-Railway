@@ -27,7 +27,7 @@ const inFlight = new Map();
 const FRESH_FOR = 60 * 1000;
 
 // Bump when the shape of what a page saves changes, so an old saved copy is never read back.
-const SAVED_PREFIX = 'page_cache:v1:';
+const SAVED_PREFIX = 'page_cache:v2:';
 // One page's data larger than this isn't saved on the device (it's still kept for the session).
 const MAX_SAVED_CHARS = 750 * 1000;
 

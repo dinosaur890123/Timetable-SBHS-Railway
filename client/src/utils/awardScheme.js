@@ -27,7 +27,7 @@ export const unwrap = (data) => {
 const normaliseCategory = (raw) => {
     const c = asObject(raw);
     if (!c) return null;
-    return { id: String(c.id ?? c.name ?? ''), name: c.name || 'Other', group: c.group ?? null, type: c.type || '' };
+    return { id: String(c.id ?? c.name ?? ''), name: c.name || 'Other', group: c.group ?? null, type: c.type || c.categoryType || '' };
 };
 
 export const normaliseAward = (raw) => {
@@ -39,7 +39,7 @@ export const normaliseAward = (raw) => {
         points: toNumber(a.points),
         housePoints: toNumber(a.housePoints),
         tier: a.tier ?? null,
-        type: a.type || '',
+        type: a.type || a.awardType || '',
         category: normaliseCategory(a.category),
         archived: Boolean(a.archived)
     };
@@ -79,7 +79,7 @@ export const normaliseIssuedAward = (raw) => {
         points: toNumber(item.points),
         housePoints: 0,
         tier: null,
-        type: item.type || '',
+        type: item.type || item.awardType || '',
         category: item.category ? { id: String(item.category), name: String(item.category), group: null, type: '' } : null,
         archived: false
     };
@@ -87,7 +87,7 @@ export const normaliseIssuedAward = (raw) => {
         id: String(item.id ?? `${award.id}:${item.date ?? ''}`),
         date: item.date || null,
         award,
-        type: item.type || award.type || award.category?.type || '',
+        type: item.type || item.awardType || award.type || award.category?.type || '',
         nomination: normaliseNomination(item.nomination)
     };
 };
@@ -267,6 +267,7 @@ export const summariseAwards = ({
             date: item.date,
             title: item.nomination?.name && item.kind === 'nomination' ? item.nomination.name : item.award.name,
             type: item.type,
+            categoryType: item.award.category?.type || '',
             // A nomination's own category is just its tier ("TIER 4 NOMINATION").
             detail: item.kind === 'nomination'
                 ? `Nomination${item.nomination.tier != null ? ` · level ${item.nomination.tier}` : ''}`

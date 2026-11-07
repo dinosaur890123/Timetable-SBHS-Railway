@@ -16,6 +16,12 @@ const RECORD_PREVIEW = 8;
 // Award types that aren't shown on the student's record (they surface elsewhere).
 const HIDDEN_RECORD_TYPES = new Set(['nomination', 'prize tier awarded']);
 
+// Award name patterns that aren't shown on the student's record.
+const HIDDEN_RECORD_PATTERNS = [
+    /nomination/i,
+    /prize tier awarded/i
+];
+
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const formatDate = (iso, withYear = false) => {
@@ -228,10 +234,14 @@ const NominationsCard = ({ summary }) => {
             <ul className="divide-y divide-m-line">
                 {nominationsByYear.map(g => (
                     <li key={g.year} className="py-2.5 flex gap-3">
-                        <span className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400 pt-0.5">{g.year}</span>
-                        <span className="flex-1 min-w-0 text-[13.5px] leading-6 text-zinc-900 dark:text-white">
-                            {g.names.join(' · ')}
-                        </span>
+                        <span className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 pt-0.5">{g.year}</span>
+                        <div className="flex-1 min-w-0 flex flex-wrap gap-1.5">
+                            {g.names.map(name => (
+                                <span key={name} className="px-2 py-0.5 rounded-md bg-accent/20 text-[13px] text-zinc-900 dark:text-white">
+                                    {name}
+                                </span>
+                            ))}
+                        </div>
                     </li>
                 ))}
             </ul>
@@ -252,7 +262,11 @@ const RecordCard = ({ summary }) => {
         const groups = new Map();
         timeline.forEach(entry => {
             if (!entry.date || entry.kind === 'prize' || entry.kind === 'badge' || entry.kind === 'decoration') return;
-            if (HIDDEN_RECORD_TYPES.has(String(entry.type || '').trim().toLowerCase())) return;
+            const typeToCheck = String(entry.type || entry.categoryType || '').trim().toLowerCase();
+            if (HIDDEN_RECORD_TYPES.has(typeToCheck)) return;
+            // Also filter by title/detail patterns (e.g., "Academic 5 Nomination", "Silver Prize tier awarded")
+            const titleToCheck = String(entry.title || entry.detail || '').toLowerCase();
+            if (HIDDEN_RECORD_PATTERNS.some(p => p.test(titleToCheck))) return;
             const year = new Date(entry.date).getFullYear();
             if (!groups.has(year)) groups.set(year, []);
             groups.get(year).push(entry);
