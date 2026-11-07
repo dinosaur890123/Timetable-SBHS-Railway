@@ -336,7 +336,6 @@ const LandingPage = ({ authError, clearAuthError }) => {
                     Sign in with SBHS
                     <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
-                  <span className="text-xs text-zinc-500">Free. Uses your student portal login.</span>
                 </div>
                 <p className="mt-6 max-w-sm text-xs leading-relaxed text-zinc-500 dark:text-zinc-600">
                   Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.

@@ -39,6 +39,7 @@ export const normaliseAward = (raw) => {
         points: toNumber(a.points),
         housePoints: toNumber(a.housePoints),
         tier: a.tier ?? null,
+        type: a.type || '',
         category: normaliseCategory(a.category),
         archived: Boolean(a.archived)
     };
@@ -78,6 +79,7 @@ export const normaliseIssuedAward = (raw) => {
         points: toNumber(item.points),
         housePoints: 0,
         tier: null,
+        type: item.type || '',
         category: item.category ? { id: String(item.category), name: String(item.category), group: null, type: '' } : null,
         archived: false
     };
@@ -85,6 +87,7 @@ export const normaliseIssuedAward = (raw) => {
         id: String(item.id ?? `${award.id}:${item.date ?? ''}`),
         date: item.date || null,
         award,
+        type: item.type || award.type || award.category?.type || '',
         nomination: normaliseNomination(item.nomination)
     };
 };
@@ -263,6 +266,7 @@ export const summariseAwards = ({
             kind: item.kind,
             date: item.date,
             title: item.nomination?.name && item.kind === 'nomination' ? item.nomination.name : item.award.name,
+            type: item.type,
             // A nomination's own category is just its tier ("TIER 4 NOMINATION").
             detail: item.kind === 'nomination'
                 ? `Nomination${item.nomination.tier != null ? ` · level ${item.nomination.tier}` : ''}`
@@ -271,6 +275,20 @@ export const summariseAwards = ({
         })),
         ...prizes.map(p => ({ id: `p:${p.id}`, kind: 'prize', date: p.date, title: p.prize.name, detail: p.prize.tier != null ? `Tier ${p.prize.tier}` : '', points: 0 }))
     ].sort(byDateDesc);
+
+    // Nominations earned, grouped by year (names only, deduped).
+    const nominationsByYearMap = new Map();
+    issued.forEach(item => {
+        if (item.kind !== 'nomination' || !item.date || !item.nomination?.name) return;
+        const year = new Date(item.date).getFullYear();
+        if (Number.isNaN(year)) return;
+        if (!nominationsByYearMap.has(year)) nominationsByYearMap.set(year, []);
+        const names = nominationsByYearMap.get(year);
+        if (!names.includes(item.nomination.name)) names.push(item.nomination.name);
+    });
+    const nominationsByYear = [...nominationsByYearMap.entries()]
+        .map(([year, names]) => ({ year, names }))
+        .sort((a, b) => b.year - a.year);
 
     const kindCounts = {};
     timeline.forEach(entry => { kindCounts[entry.kind] = (kindCounts[entry.kind] || 0) + 1; });
@@ -311,6 +329,7 @@ export const summariseAwards = ({
         nominationLadder,
         nextNomination,
         nominationsAllTime,
+        nominationsByYear,
         areas,
         areasNotStarted,
         prizeRows,

@@ -13,6 +13,9 @@ const VIEWS = [
 
 const RECORD_PREVIEW = 8;
 
+// Award types that aren't shown on the student's record (they surface elsewhere).
+const HIDDEN_RECORD_TYPES = new Set(['nomination', 'prize tier awarded']);
+
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const formatDate = (iso, withYear = false) => {
@@ -215,6 +218,27 @@ const PrizesCard = ({ summary }) => {
     );
 };
 
+const NominationsCard = ({ summary }) => {
+    const { nominationsByYear } = summary;
+    if (nominationsByYear.length === 0) return null;
+    const total = nominationsByYear.reduce((sum, g) => sum + g.names.length, 0);
+    return (
+        <Card>
+            <CardTitle aside={plural(total, 'nomination')}>Nominations</CardTitle>
+            <ul className="divide-y divide-m-line">
+                {nominationsByYear.map(g => (
+                    <li key={g.year} className="py-2.5 flex gap-3">
+                        <span className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400 pt-0.5">{g.year}</span>
+                        <span className="flex-1 min-w-0 text-[13.5px] leading-6 text-zinc-900 dark:text-white">
+                            {g.names.join(' · ')}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+};
+
 const KIND_ICONS = { award: Award, nomination: Sparkles, badge: Shield, decoration: Medal, prize: Trophy };
 const KIND_LABELS = { nomination: 'Nomination', badge: 'Badge', decoration: 'Presentation night', prize: 'Prize' };
 
@@ -228,6 +252,7 @@ const RecordCard = ({ summary }) => {
         const groups = new Map();
         timeline.forEach(entry => {
             if (!entry.date || entry.kind === 'prize' || entry.kind === 'badge' || entry.kind === 'decoration') return;
+            if (HIDDEN_RECORD_TYPES.has(String(entry.type || '').trim().toLowerCase())) return;
             const year = new Date(entry.date).getFullYear();
             if (!groups.has(year)) groups.set(year, []);
             groups.get(year).push(entry);
@@ -488,6 +513,7 @@ const AwardSchemeView = ({ user }) => {
                 <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]">
                     <div className="space-y-4">
                         <PrizeBanner summary={summary} />
+                        <NominationsCard summary={summary} />
                         <RecordCard summary={summary} />
                     </div>
                     <div className="space-y-4">
