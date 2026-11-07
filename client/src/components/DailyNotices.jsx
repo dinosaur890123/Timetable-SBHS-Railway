@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { Megaphone, Users, ChevronDown, ChevronUp, Search, X, SearchX, FileText, ExternalLink } from 'lucide-react';
 import { motion, MotionConfig } from 'framer-motion';
+import { useNoteFlowFonts } from './study/noteflow';
 
 const FILTER_OPTIONS = [
   { value: 'curated', label: 'For you' },
@@ -18,14 +19,14 @@ const stripHtml = (html = '') => html.replace(/<[^>]*>/g, ' ');
 const PriorityBadge = ({ notice }) => {
   if (notice.isMeeting === 1) {
     return (
-      <span className="shrink-0 px-2 py-0.5 rounded-md text-[12px] font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+      <span className="nf-serif shrink-0 px-2.5 py-1 rounded-md text-[13px] leading-none bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
         Meeting
       </span>
     );
   }
   if (notice.priority >= 4) {
     return (
-      <span className="shrink-0 px-2 py-0.5 rounded-md text-[12px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+      <span className="nf-serif shrink-0 px-2.5 py-1 rounded-md text-[13px] leading-none bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
         High priority
       </span>
     );
@@ -94,6 +95,7 @@ const NoticeItem = ({ notice, index }) => {
 };
 
 const DailyNotices = ({ notices, aiBriefing, user }) => {
+  useNoteFlowFonts();
   const allNotices = aiBriefing && aiBriefing.sortedNotices ? aiBriefing.sortedNotices : (notices?.notices || []);
   const [filterView, setFilterView] = useState('curated');
   const [query, setQuery] = useState('');

@@ -11,8 +11,12 @@
 .sage-accent { color: #4F2A7F; }
 .dark .sage-accent { color: #C2A8F5; }
 
+/* Instrument Serif for small labels — the upright sibling of .sage-name. */
+.nf-serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+
 /* The popout sheet: .nf-pop gives the size and radius, .nf-sheet the paper. */
 .nf .sage-pop { background: var(--sheet); color: var(--ink); }
+.nf .sage-pop .nf-pop__title { margin-top: 14px; }
 
 .nf .sage-body { margin-top: 18px; }
 .nf .sage-hint { margin: 0 0 12px; }

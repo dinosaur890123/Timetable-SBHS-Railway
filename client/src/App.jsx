@@ -1270,7 +1270,6 @@ function App() {
                             >
                                 <X size={16} strokeWidth={1.75} />
                             </button>
-                            <span className="nf-meta">Timetable assistant</span>
                             <h3 className="nf-pop__title">
                                 <Hl still={reduceMotion} delay={0.15}><span className="sage-name">Sage</span></Hl>
                             </h3>
