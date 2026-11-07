@@ -102,6 +102,7 @@ import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
+import { useNoteFlowFonts } from './components/study/noteflow';
 
 function App() {
     // State
@@ -264,6 +265,8 @@ function App() {
 
     // Timetable AI Modal States
     const [showAiModal, setShowAiModal] = useState(false);
+    // Sage's serif face loads only when the modal or the palette can show its name.
+    useNoteFlowFonts(showAiModal || paletteOpen);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
     const [aiQaLoading, setAiQaLoading] = useState(false);
@@ -382,7 +385,7 @@ function App() {
             setAiAnswer(data.answer || "I couldn't generate an answer. Please try again.");
         } catch (err) {
             console.error("AI Q&A failed:", err);
-            setAiAnswer("Failed to connect to the AI assistant. Please check your network and try again.");
+            setAiAnswer("Couldn't reach Sage. Please check your network and try again.");
         } finally {
             setAiQaLoading(false);
         }
@@ -814,6 +817,45 @@ function App() {
         loadClipboardSessions();
     }, [user?.studentId, showClipboardEvents]);
 
+    // Weekend Clipboard exception, part two: once the sessions on the weekend day it
+    // opened on have all ended, move on to the next day that has something on — a
+    // Clipboard session if one comes before the next school day, else that school day.
+    // No polling: a single timeout is set for the moment the last session ends.
+    useEffect(() => {
+        if (!user?.studentId || !showClipboardEvents) return;
+        const now = new Date();
+        const dow = now.getDay();
+        if ((dow !== 0 && dow !== 6) || !isSameDay(viewDate, now)) return;
+        const todays = clipboardSessions.filter(s => !s.cancelled && s.start && isSameDay(new Date(s.start), now));
+        if (todays.length === 0) return;
+
+        const advance = () => {
+            const at = new Date();
+            const stillToday = clipboardSessions.filter(s => !s.cancelled && s.start && isSameDay(new Date(s.start), at));
+            if (stillToday.length === 0 || !stillToday.every(s => new Date(s.end || s.start) < at)) return;
+            // Sessions are sorted by start, so the first future one names the next
+            // Clipboard day.
+            const nextSessionDay = clipboardSessions
+                .filter(s => !s.cancelled && s.start && new Date(s.start) > at)
+                .map(s => format(new Date(s.start), 'yyyy-MM-dd'))[0];
+            fetchNextSchoolDay()
+                .then(({ date }) => {
+                    const schoolKey = format(date, 'yyyy-MM-dd');
+                    const targetKey = nextSessionDay && nextSessionDay < schoolKey ? nextSessionDay : schoolKey;
+                    setViewDate(current => (isSameDay(current, at) ? new Date(`${targetKey}T00:00`) : current));
+                })
+                .catch(() => {});
+        };
+
+        const lastEnd = Math.max(...todays.map(s => new Date(s.end || s.start).getTime()));
+        if (lastEnd <= now.getTime()) {
+            advance();
+            return;
+        }
+        const timer = setTimeout(advance, lastEnd - now.getTime() + 1000);
+        return () => clearTimeout(timer);
+    }, [user?.studentId, showClipboardEvents, clipboardSessions, viewDate]);
+
     // Date Navigation Helpers
     // The day on screen, read from the cache during render so the date and its classes always change
     // together. Null while a day nobody has fetched yet is on its way.
@@ -1045,11 +1087,11 @@ function App() {
                                                 {!aiDisabled && (
                                                     <button
                                                         onClick={() => setShowAiModal(true)}
-                                                        aria-label="Ask AI about your timetable"
+                                                        aria-label="Ask Sage about your timetable"
                                                         className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
                                                     >
                                                         <Sparkles size={13} sm:size={14} className="text-accent" />
-                                                        <span className="hidden sm:inline">Ask AI</span>
+                                                        <span className="hidden sm:inline">Ask Sage</span>
                                                     </button>
                                                 )}
                                             </div>
@@ -1195,7 +1237,7 @@ function App() {
                         </ErrorBoundary>
                 </div>
 
-                {/* AI Assistant Popout Modal */}
+                {/* AI popout modal */}
                 {showAiModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                         <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl max-w-md w-full relative overflow-hidden rounded-2xl animate-in zoom-in-95 duration-200">
@@ -1203,8 +1245,8 @@ function App() {
                             <div className="flex items-center justify-between p-4 border-b border-zinc-150 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/20">
                                 <div className="flex items-center gap-2">
                                     <Sparkles size={14} className="text-violet-600 dark:text-violet-400 animate-pulse" />
-                                    <h3 className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-                                        Timetable AI Assistant
+                                    <h3 className="sage-name text-2xl text-zinc-900 dark:text-white">
+                                        Sage
                                     </h3>
                                 </div>
                                 <button
@@ -1230,7 +1272,7 @@ function App() {
                                                 value={aiQuestion}
                                                 onChange={(e) => setAiQuestion(e.target.value)}
                                                 disabled={aiQaLoading}
-                                                placeholder={aiQaLoading ? "AI is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
+                                                placeholder={aiQaLoading ? "Sage is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
                                                 className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
                                             />
                                             <button

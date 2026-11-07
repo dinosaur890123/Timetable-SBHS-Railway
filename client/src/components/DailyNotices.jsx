@@ -63,12 +63,6 @@ const NoticeItem = ({ notice, index }) => {
         <PriorityBadge notice={notice} />
       </div>
 
-      {notice.priorityReason && (
-        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
-          ✨ {notice.priorityReason}
-        </p>
-      )}
-
       <div
         ref={contentRef}
         className={`mt-2 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0 break-words ${expanded ? '' : 'line-clamp-3'}`}

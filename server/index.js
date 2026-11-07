@@ -2088,15 +2088,13 @@ const generateBriefing = async (notices) => {
         displayYears: n.displayYears || 'All Students'
     }));
 
-    const systemPrompt = `You are a school assistant. Summarize the daily school notices and prioritize them.
+    const systemPrompt = `You are a school assistant. Prioritize the daily school notices.
 Return a JSON object in this exact format:
 {
-  "briefing": "A friendly, engaging morning summary of the key notices (2-3 sentences max). Ensure you highlight important school-wide dates, sporting updates, or co-curricular requirements.",
   "prioritizedNotices": [
     {
       "index": 0, // The index of the notice in the original array
-      "priority": 3, // 1 to 5, where 5 is highest/urgent (meetings today, deadlines, important year assemblies) and 1 is lowest
-      "reason": "Brief reason for this priority rating"
+      "priority": 3 // 1 to 5, where 5 is highest/urgent (meetings today, deadlines, important year assemblies) and 1 is lowest
     }
   ]
 }

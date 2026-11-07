@@ -203,8 +203,8 @@ const SettingsView = ({
             </Section>
 
             <Section label="Features">
-                <Row title="AI assistant" description="Daily notice briefings and answers to questions about your timetable.">
-                    <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI assistant" />
+                <Row title="AI features" description="Prioritised daily notices and answers to questions about your timetable.">
+                    <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI features" />
                 </Row>
                 <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
                     <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard on timetable" />

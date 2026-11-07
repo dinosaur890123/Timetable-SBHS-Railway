@@ -91,6 +91,14 @@
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Sage's name, in NoteFlow's serif italic — reads like a person, not a feature.
+   The face itself is loaded lazily by useNoteFlowFonts when Sage is opened. */
+.sage-name {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
 /* Subject colours, straight from the timetable API (props from subjectInk() in utils/timetable.js).
    Very pale colours deepen on light surfaces and very dark ones lift on dark surfaces. */
 [data-tone] { --subject-ink: var(--subject); }
