@@ -53,6 +53,26 @@ const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
 const BuildNotesView = lazyPage(pageLoaders.buildNotes);
 const SettingsView = lazyPage(pageLoaders.settings);
 
+// Tiny markdown for Sage's replies: **bold**, *italic*, `code`, lists, paragraphs.
+// Everything is HTML-escaped first, so the model's text can't inject markup.
+const sageInline = (s) => s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+
+const sageMarkdown = (md) => {
+    if (!md.trim()) return '';
+    return md.split(/\n{2,}/).map((block) => {
+        const lines = block.split('\n').filter(l => l.trim());
+        if (lines.length && lines.every(l => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l))) {
+            const tag = /^\s*\d/.test(lines[0]) ? 'ol' : 'ul';
+            return `<${tag}>${lines.map(l => `<li>${sageInline(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))}</li>`).join('')}</${tag}>`;
+        }
+        return `<p>${lines.map(sageInline).join('<br>')}</p>`;
+    }).join('');
+};
+
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
@@ -273,6 +293,7 @@ function App() {
     useNoteFlowFonts(showAiModal || paletteOpen);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
+    const [aiShown, setAiShown] = useState('');
     const [aiQaLoading, setAiQaLoading] = useState(false);
 
     // Date Picker State
@@ -394,6 +415,19 @@ function App() {
             setAiQaLoading(false);
         }
     };
+
+    // Once the answer lands, type it out like a chat reply. Reduced motion gets it whole.
+    useEffect(() => {
+        if (!aiAnswer) { setAiShown(''); return; }
+        if (reduceMotion) { setAiShown(aiAnswer); return; }
+        let i = 0;
+        const id = setInterval(() => {
+            i += 2;
+            setAiShown(aiAnswer.slice(0, i));
+            if (i >= aiAnswer.length) clearInterval(id);
+        }, 24);
+        return () => clearInterval(id);
+    }, [aiAnswer, reduceMotion]);
 
     // Poll System Status (low frequency to minimize performance cost)
     useEffect(() => {
@@ -1243,14 +1277,7 @@ function App() {
 
                 {/* Sage popout — NoteFlow's ink-on-paper, like the Clipboard sheets */}
                 {showAiModal && (
-                    <div
-                        className="nf nf-pop-scrim animate-in fade-in duration-200"
-                        onClick={() => {
-                            setShowAiModal(false);
-                            setAiQuestion('');
-                            setAiAnswer('');
-                        }}
-                    >
+                    <div className="nf nf-pop-scrim animate-in fade-in duration-200">
                         <div
                             role="dialog"
                             aria-modal="true"
@@ -1293,10 +1320,18 @@ function App() {
                                         {aiQaLoading ? "Asking…" : "Ask"}
                                     </button>
                                 </form>
-                                {aiAnswer && (
-                                    <div className="sage-answer animate-in fade-in slide-in-from-top-1 duration-200">
-                                        <span className="sage-answer__who sage-name">Sage</span>
-                                        <p>{aiAnswer}</p>
+                                {(aiQaLoading || aiAnswer) && (
+                                    <div className="sage-answer animate-in fade-in duration-200">
+                                        {aiAnswer ? (
+                                            <div
+                                                className="sage-answer__md"
+                                                dangerouslySetInnerHTML={{
+                                                    __html: sageMarkdown(aiShown) + (aiShown.length < aiAnswer.length ? '<span class="sage-caret" aria-hidden="true"></span>' : '')
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className="sage-typing" role="status"><i aria-hidden="true" />Sage is typing</span>
+                                        )}
                                     </div>
                                 )}
                             </div>
