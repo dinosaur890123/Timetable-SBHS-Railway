@@ -13,15 +13,6 @@ const VIEWS = [
 
 const RECORD_PREVIEW = 8;
 
-// Award types that aren't shown on the student's record (they surface elsewhere).
-const HIDDEN_RECORD_TYPES = new Set(['nomination', 'prize tier awarded']);
-
-// Award name patterns that aren't shown on the student's record.
-const HIDDEN_RECORD_PATTERNS = [
-    /nomination/i,
-    /prize tier awarded/i
-];
-
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const formatDate = (iso, withYear = false) => {
@@ -262,11 +253,12 @@ const RecordCard = ({ summary }) => {
         const groups = new Map();
         timeline.forEach(entry => {
             if (!entry.date || entry.kind === 'prize' || entry.kind === 'badge' || entry.kind === 'decoration') return;
-            const typeToCheck = String(entry.type || entry.categoryType || '').trim().toLowerCase();
-            if (HIDDEN_RECORD_TYPES.has(typeToCheck)) return;
-            // Also filter by title/detail patterns (e.g., "Academic 5 Nomination", "Silver Prize tier awarded")
-            const titleToCheck = String(entry.title || entry.detail || '').toLowerCase();
-            if (HIDDEN_RECORD_PATTERNS.some(p => p.test(titleToCheck))) return;
+            // Filter out nominations and prize tier awards (they surface elsewhere)
+            if (entry.kind === 'nomination') return;
+            const titleToCheck = String(entry.title || '').toLowerCase();
+            const detailToCheck = String(entry.detail || '').toLowerCase();
+            if (titleToCheck.includes('nomination') || detailToCheck.includes('nomination') ||
+                titleToCheck.includes('prize tier') || detailToCheck.includes('prize tier')) return;
             const year = new Date(entry.date).getFullYear();
             if (!groups.has(year)) groups.set(year, []);
             groups.get(year).push(entry);
