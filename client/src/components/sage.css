@@ -1,0 +1,45 @@
+/* ==========================================================================
+   Sage — the timetable's AI, in the same ink-on-paper language as NoteFlow and
+   the Clipboard popouts: a serif italic name, warm paper, one violet accent.
+   The popout reuses .nf-pop / .nf-cb-btn from clipboard.css; everything here
+   is scoped to .nf (tokens from study/noteflow.css) except .sage-accent,
+   which tints the Sparkles mark anywhere Sage is named.
+   ========================================================================== */
+
+@import './clipboard/clipboard.css';
+
+.sage-accent { color: #4F2A7F; }
+.dark .sage-accent { color: #C2A8F5; }
+
+/* The popout sheet: .nf-pop gives the size and radius, .nf-sheet the paper. */
+.nf .sage-pop { background: var(--sheet); color: var(--ink); }
+
+.nf .sage-body { margin-top: 18px; }
+.nf .sage-hint { margin: 0 0 12px; }
+
+/* The question field, a warm wash that brightens to the sheet on focus. */
+html[data-ui] .nf .sage-input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 14px;
+  border: 1px solid var(--rule-2); border-radius: 12px;
+  background: var(--wash); color: var(--ink);
+  font: 500 14px/1 var(--sans); letter-spacing: -.01em;
+  transition: background-color 110ms cubic-bezier(.2, .7, .2, 1), border-color 110ms;
+}
+html[data-ui] .nf .sage-input::placeholder { color: var(--ink-4); }
+html[data-ui] .nf .sage-input:hover { border-color: var(--ink-4); }
+html[data-ui] .nf .sage-input:focus {
+  outline: none; background: var(--sheet); border-color: var(--ink);
+}
+html[data-ui] .nf .sage-input:disabled { opacity: .55; }
+
+/* The answer, written back on a ruled note. */
+.nf .sage-answer {
+  margin-top: 16px; padding: 14px 16px;
+  border: 1px solid var(--rule); border-radius: 12px;
+  background: var(--wash);
+}
+.nf .sage-answer__who { display: block; margin-bottom: 4px; font-size: 15px; color: var(--ink); }
+.nf .sage-answer p {
+  margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-2);
+  white-space: pre-line;
+}

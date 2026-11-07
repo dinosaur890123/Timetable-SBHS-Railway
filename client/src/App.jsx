@@ -105,7 +105,8 @@ import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
-import { useNoteFlowFonts } from './components/study/noteflow';
+import { Hl, useNoteFlowFonts } from './components/study/noteflow';
+import './components/sage.css';
 
 function App() {
     // State
@@ -1093,8 +1094,8 @@ function App() {
                                                         aria-label="Ask Sage about your timetable"
                                                         className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
                                                     >
-                                                        <Sparkles size={13} sm:size={14} className="text-accent" />
-                                                        <span className="hidden sm:inline">Ask Sage</span>
+                                                        <Sparkles size={13} sm:size={14} className="sage-accent" />
+                                                        <span className="hidden sm:inline sage-name">Ask Sage</span>
                                                     </button>
                                                 )}
                                             </div>
@@ -1240,59 +1241,65 @@ function App() {
                         </ErrorBoundary>
                 </div>
 
-                {/* AI popout modal */}
+                {/* Sage popout — NoteFlow's ink-on-paper, like the Clipboard sheets */}
                 {showAiModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl max-w-md w-full relative overflow-hidden rounded-2xl animate-in zoom-in-95 duration-200">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-4 border-b border-zinc-150 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/20">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles size={14} className="text-violet-600 dark:text-violet-400 animate-pulse" />
-                                    <h3 className="sage-name text-2xl text-zinc-900 dark:text-white">
-                                        Sage
-                                    </h3>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setShowAiModal(false);
-                                        setAiQuestion('');
-                                        setAiAnswer('');
-                                    }}
-                                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-zinc-800 dark:hover:text-white transition-colors"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
+                    <div
+                        className="nf nf-pop-scrim animate-in fade-in duration-200"
+                        onClick={() => {
+                            setShowAiModal(false);
+                            setAiQuestion('');
+                            setAiAnswer('');
+                        }}
+                    >
+                        <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Ask Sage"
+                            className="nf nf-sheet nf-pop sage-pop animate-in zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                type="button"
+                                className="nf-cb-btn nf-cb-btn--bare nf-pop__close"
+                                onClick={() => {
+                                    setShowAiModal(false);
+                                    setAiQuestion('');
+                                    setAiAnswer('');
+                                }}
+                                aria-label="Close"
+                            >
+                                <X size={16} strokeWidth={1.75} />
+                            </button>
+                            <span className="nf-meta">Timetable assistant</span>
+                            <h3 className="nf-pop__title">
+                                <Hl still={reduceMotion} delay={0.15}><span className="sage-name">Sage</span></Hl>
+                            </h3>
 
-                            {/* Body / Form */}
-                            <div className="p-5 space-y-4">
-                                        <div className="text-xs text-zinc-500 font-semibold mb-1">
-                                            Ask questions about classes, rooms, teachers, or times
-                                        </div>
-                                        <form onSubmit={handleAskAiQuestion} className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={aiQuestion}
-                                                onChange={(e) => setAiQuestion(e.target.value)}
-                                                disabled={aiQaLoading}
-                                                placeholder={aiQaLoading ? "Sage is typing..." : "e.g. What room is my next class? or Who teaches Period 2?"}
-                                                className="flex-1 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-black dark:focus:border-white transition-all font-medium disabled:opacity-50"
-                                            />
-                                            <button
-                                                type="submit"
-                                                disabled={aiQaLoading || !aiQuestion.trim()}
-                                                className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                                            >
-                                                {aiQaLoading ? "Asking..." : "Ask"}
-                                            </button>
-                                        </form>
-                                        {aiAnswer && (
-                                            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-850 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                <p className="text-xs font-semibold text-zinc-850 dark:text-zinc-200 leading-relaxed">
-                                                    💡 {aiAnswer}
-                                                </p>
-                                            </div>
-                                        )}
+                            <div className="sage-body">
+                                <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, or times.</p>
+                                <form onSubmit={handleAskAiQuestion} className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={aiQuestion}
+                                        onChange={(e) => setAiQuestion(e.target.value)}
+                                        disabled={aiQaLoading}
+                                        placeholder={aiQaLoading ? "Sage is typing…" : "e.g. What room is my next class?"}
+                                        className="sage-input"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={aiQaLoading || !aiQuestion.trim()}
+                                        className="nf-btn nf-btn--ink shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        {aiQaLoading ? "Asking…" : "Ask"}
+                                    </button>
+                                </form>
+                                {aiAnswer && (
+                                    <div className="sage-answer animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <span className="sage-answer__who sage-name">Sage</span>
+                                        <p>{aiAnswer}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

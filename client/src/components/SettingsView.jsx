@@ -203,7 +203,7 @@ const SettingsView = ({
             </Section>
 
             <Section label="Features">
-                <Row title="AI features" description="Prioritised daily notices and answers to questions about your timetable.">
+                <Row title={<>AI features <span className="sage-name">by Sage</span></>} description="Prioritised daily notices and answers to questions about your timetable.">
                     <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI features" />
                 </Row>
                 <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">

@@ -437,7 +437,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                                             onClick={() => executeCommand(command)}
                                             className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left text-sm transition-colors ${active ? 'bg-zinc-900/[0.05] dark:bg-white/[0.06] text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-300'}`}
                                         >
-                                            <Icon size={15} className={active ? 'text-accent' : 'text-zinc-400'} />
+                                            <Icon size={15} className={command.iconClassName || (active ? 'text-accent' : 'text-zinc-400')} />
                                             <span className={`flex-1 ${command.labelClassName || ''}`}>{command.label}</span>
                                             {command.hint && <span className="text-xs text-zinc-400">{command.hint}</span>}
                                             {active && <CornerDownLeft size={13} className="text-zinc-400" />}
@@ -518,6 +518,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
             group: 'Actions', 
             label: 'Ask Sage', 
             labelClassName: 'sage-name',
+            iconClassName: 'sage-accent',
             keywords: 'ai sage question', 
             icon: Sparkles, 
             run: onAskAi 
