@@ -59,13 +59,16 @@ const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]
 
 // The day the app opens on: the next school day, unless a Clipboard session falls on a
 // weekend day before it (Saturday sport, Sunday rowing) — the earliest such day wins.
+// Sessions already over don't count: a finished Saturday morning shouldn't reopen Saturday.
 const weekendClipboardDay = (schoolDay, sessions = []) => {
     const schoolKey = format(schoolDay, 'yyyy-MM-dd');
     const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const now = Date.now();
     let best = null;
     for (const s of sessions) {
         if (s.cancelled || !s.start) continue;
         const start = new Date(s.start);
+        if (new Date(s.end || s.start).getTime() <= now) continue;
         const dow = start.getDay();
         if (dow !== 0 && dow !== 6) continue;
         const key = format(start, 'yyyy-MM-dd');
@@ -847,11 +850,11 @@ function App() {
                 .catch(() => {});
         };
 
+        // Only a session still running earns the auto-advance. A day whose sessions
+        // are already over is somewhere the student can visit freely — going back to
+        // it must not throw them forward again.
         const lastEnd = Math.max(...todays.map(s => new Date(s.end || s.start).getTime()));
-        if (lastEnd <= now.getTime()) {
-            advance();
-            return;
-        }
+        if (lastEnd <= now.getTime()) return;
         const timer = setTimeout(advance, lastEnd - now.getTime() + 1000);
         return () => clearTimeout(timer);
     }, [user?.studentId, showClipboardEvents, clipboardSessions, viewDate]);
