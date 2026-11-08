@@ -152,13 +152,19 @@ const withoutYear = (title, year) => {
     return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
 };
 
+// Sport blocks ("SP9", "Sport 9") have no course page.
+const isSportTitle = (title) => {
+    const t = String(title || '').toLowerCase();
+    return t.includes('sport') || /^sp[\s-]?\d/.test(t);
+};
+
 // The student's classes from SBHS's timetable.json, keyed by year + short title.
 const extractClasses = (data) => {
     const timetable = data?.timetable?.days || data?.timetable?.subjects ? data.timetable : data;
     const classes = new Map();
     const add = (year, title, name) => {
         const shortTitle = String(title ?? '').trim();
-        if (!shortTitle) return;
+        if (!shortTitle || isSportTitle(shortTitle)) return;
         const key = `${year ?? ''}${shortTitle}`;
         if (!isClassKey(key)) return;
         if (classes.has(key)) return;
@@ -426,6 +432,12 @@ const createPgStore = (db) => {
         async removeShared(id) {
             const result = await db.query(`DELETE FROM canvas_class_links WHERE id = $1`, [id]);
             return result.rowCount > 0;
+        },
+        // Drops links from earlier school years; votes cascade with their links.
+        async pruneBefore(year) {
+            const shared = await db.query('DELETE FROM canvas_class_links WHERE school_year < $1', [year]);
+            const personal = await db.query('DELETE FROM canvas_links WHERE school_year < $1', [year]);
+            return { shared: shared.rowCount || 0, personal: personal.rowCount || 0 };
         }
     };
 };
@@ -541,6 +553,21 @@ const createMemoryStore = (getMemoryUsers) => {
                 if (v.linkId === id) votes.delete(key);
             }
             return true;
+        },
+        async pruneBefore(year) {
+            const removedLinkIds = new Set(shared.filter(l => l.schoolYear < year).map(l => l.id));
+            const sharedBefore = shared.length;
+            for (let i = shared.length - 1; i >= 0; i -= 1) {
+                if (shared[i].schoolYear < year) shared.splice(i, 1);
+            }
+            for (const [key, v] of votes) {
+                if (removedLinkIds.has(v.linkId)) votes.delete(key);
+            }
+            const personalBefore = personal.length;
+            for (let i = personal.length - 1; i >= 0; i -= 1) {
+                if (personal[i].year < year) personal.splice(i, 1);
+            }
+            return { shared: sharedBefore - shared.length, personal: personalBefore - personal.length };
         }
     };
 };
@@ -557,6 +584,21 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     const log = (action, studentId, details) => {
         Promise.resolve(addLog(action, studentId, details)).catch(() => {});
     };
+
+    // Links are kept per school year; clear earlier years' rows on boot and
+    // daily so the feature resets each calendar year.
+    const pruneOldLinks = async () => {
+        try {
+            const removed = await store.pruneBefore(currentSchoolYear());
+            if (removed.shared || removed.personal) {
+                log('CANVAS_LINKS_PRUNE', 'SYSTEM', `Cleared ${removed.shared} shared and ${removed.personal} personal Canvas links from earlier years`);
+            }
+        } catch (e) {
+            console.error('[canvas-links] Failed to prune old links:', e?.message || e);
+        }
+    };
+    pruneOldLinks();
+    setInterval(pruneOldLinks, 24 * 60 * 60 * 1000).unref();
 
     // The student's classes from their own SBHS timetable, or null when auth is
     // bypassed for local development (then any class is accepted).

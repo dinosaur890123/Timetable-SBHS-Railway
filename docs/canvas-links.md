@@ -30,6 +30,11 @@ keyed by the class's short title (`Ma1`). Any web link is allowed. They're saved
 class at a time, so saving one class never touches another. The app keeps a read-only
 copy on the device for offline use; that copy is never written back to the server.
 
+Everything resets each calendar year (Sydney time): on boot and daily, the server
+deletes personal and shared links from earlier school years, so students re-enter
+their links and classes vote again. The Settings red dot on Canvas links comes back
+until a student has saved at least one link.
+
 **Shared links** (`canvas_class_links`, `canvas_class_link_votes`) are keyed by year
 group and class (`9Ma1`) within a school year. Short titles repeat across year groups,
 and courses change each year. When a student saves a link to a course on

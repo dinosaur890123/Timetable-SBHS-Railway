@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useCanvasLinks } from '../context/CanvasLinksContext';
 
 const ACCENTS = [
     { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
@@ -36,11 +37,14 @@ const Row = ({ title, description, children, stack = false }) => (
 );
 
 // A row that navigates somewhere else in the app.
-const LinkRow = ({ icon: Icon, title, description, onClick }) => (
+const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
     <button onClick={onClick} className="group w-full px-4 py-3.5 sm:px-5 flex items-center gap-3 text-left hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025] transition-colors first:rounded-t-2xl last:rounded-b-2xl">
         <Icon size={16} strokeWidth={1.8} className="shrink-0 text-zinc-400" />
         <div className="min-w-0 flex-1">
-            <div className="text-[14px] font-medium text-zinc-900 dark:text-white">{title}</div>
+            <div className="flex items-center gap-2 text-[14px] font-medium text-zinc-900 dark:text-white">
+                {title}
+                {dot && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" aria-label="Not set up" />}
+            </div>
             {description && <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">{description}</p>}
         </div>
         <ChevronRight size={16} className="shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5" />
@@ -98,6 +102,10 @@ const SettingsView = ({
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
     const { isInstalled, dismiss, showIOSInstructions } = usePWAInstall();
+    const { links: canvasLinks, status: canvasLinksStatus } = useCanvasLinks();
+    // Red dot until the student has saved at least one link; links reset each
+    // calendar year, so it comes back then too.
+    const canvasLinksMissing = canvasLinksStatus !== 'loading' && Object.keys(canvasLinks).length === 0;
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -189,6 +197,7 @@ const SettingsView = ({
                     icon={BookOpen}
                     title="Canvas links"
                     description="Open a class's Canvas page straight from your timetable."
+                    dot={canvasLinksMissing}
                     onClick={() => setView('canvas-links')}
                 />
                 <LinkRow
