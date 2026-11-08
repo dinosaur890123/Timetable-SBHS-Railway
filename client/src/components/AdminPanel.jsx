@@ -427,6 +427,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
     const [updatingConfig, setUpdatingConfig] = useState(false);
     const [customModelName, setCustomModelName] = useState('');
+    const [enteringCustomModel, setEnteringCustomModel] = useState(false);
 
     // Admin-only Sage tester: works even while AI is disabled for students.
     const [sageQuestion, setSageQuestion] = useState('');
@@ -485,9 +486,15 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     }, [stats?.aiModel]);
 
+    const modelOptions = stats?.aiProvider === 'gemini'
+        ? (stats?.availableGeminiModels || [])
+        : (stats?.availableHackClubModels || []);
+    const showModelInput = enteringCustomModel || (!!customModelName && !modelOptions.includes(customModelName));
+
     const handleProviderChange = async (e) => {
         const selectedProvider = e.target.value;
-        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-2.5';
+        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
+        setEnteringCustomModel(false);
         setUpdatingConfig(true);
         try {
             await updateAiConfig(selectedProvider, defaultModel);
@@ -1510,27 +1517,46 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                         {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
                         <div className="flex gap-2 w-full sm:w-auto">
-                            <input
-                                type="text"
-                                list="ai-models-datalist"
-                                value={customModelName}
-                                disabled={updatingConfig}
-                                onChange={(e) => setCustomModelName(e.target.value)}
-                                onKeyDown={handleModelKeyDown}
-                                placeholder="Enter model name..."
-                                className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
-                            />
-                            <datalist id="ai-models-datalist">
-                                {stats?.aiProvider === 'gemini' ? (
-                                    stats?.availableGeminiModels?.map(m => (
-                                        <option key={m} value={m} />
-                                    ))
-                                ) : (
-                                    stats?.availableHackClubModels?.map(m => (
-                                        <option key={m} value={m} />
-                                    ))
-                                )}
-                            </datalist>
+                            {showModelInput ? (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={customModelName}
+                                        disabled={updatingConfig}
+                                        onChange={(e) => setCustomModelName(e.target.value)}
+                                        onKeyDown={handleModelKeyDown}
+                                        placeholder="Enter model name..."
+                                        className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
+                                    />
+                                    {modelOptions.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setEnteringCustomModel(false); setCustomModelName(modelOptions[0]); }}
+                                            className="px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-zinc-700 rounded-lg transition-colors"
+                                        >
+                                            List
+                                        </button>
+                                    )}
+                                </>
+                            ) : (
+                                <select
+                                    value={customModelName}
+                                    disabled={updatingConfig}
+                                    onChange={(e) => {
+                                        if (e.target.value === '__custom__') {
+                                            setEnteringCustomModel(true);
+                                        } else {
+                                            setCustomModelName(e.target.value);
+                                        }
+                                    }}
+                                    className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
+                                >
+                                    {modelOptions.map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                    <option value="__custom__">Custom…</option>
+                                </select>
+                            )}
                             <button
                                 type="button"
                                 onClick={handleModelSave}

@@ -495,6 +495,14 @@ function App() {
         if (aiBlocked) setAiBriefing(null);
     }, [aiBlocked]);
 
+    // Sage is a timetable companion — on mobile, dismiss it when navigating
+    // to any page other than the timetable.
+    useEffect(() => {
+        if (showAiModal && currentView !== 'home' && window.matchMedia('(max-width: 767px)').matches) {
+            setShowAiModal(false);
+        }
+    }, [currentView, showAiModal]);
+
     // Theme Config
     useEffect(() => {
         localStorage.setItem('theme', theme);

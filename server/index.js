@@ -2240,6 +2240,7 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
         const systemStateObj = await getSystemState();
         const activeProvider = systemStateObj.aiProvider || 'hackclub';
         const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
+        const providerName = activeProvider === 'gemini' ? 'Google Gemini' : activeProvider === 'hackclub' ? 'Hack Club AI' : activeProvider;
 
         // Construct a prompt with timetable context, complete cycle, date details, and current time
         const todayDateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -2251,7 +2252,7 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
 - Today's timetable: ${JSON.stringify(timetable)}
 - Full cycle timetable (all days): ${JSON.stringify(completeTimetable)}
 
-Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline non-timetable questions politely. If asked about storage: questions + timetable go to an AI provider, answers aren't stored in our DB, questions may be logged — never claim nothing is stored. Don't assume teacher genders.`;
+Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline non-timetable questions politely. If asked about storage or who processes data: questions + timetable are sent to ${providerName} to generate the answer; answers aren't stored in our DB; questions may be logged — never claim nothing is stored. Don't assume teacher genders.`;
 
         let answer = '';
 
