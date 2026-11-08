@@ -422,12 +422,15 @@ const PlanView = ({ summary }) => {
             return { ...area, plannedPoints, earned, toward, required };
         });
 
+        // Total nominations = sum of earned nominations across all areas
+        const totalNominations = areaBreakdown.reduce((sum, area) => sum + area.earned, 0);
+
         return {
             totalPlannedPoints,
             currentPoints,
             totalPoints,
             currentNominations: summary.nominationsAllTime,
-            totalNominations: summary.nominationsAllTime + plannedAwards.filter(a => a.type === 'nomination').length,
+            totalNominations,
             projectedPrize,
             areaBreakdown
         };

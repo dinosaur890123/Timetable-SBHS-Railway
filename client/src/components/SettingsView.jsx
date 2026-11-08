@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Download, Monitor, Smartphone, Share2, PlusCircle, X } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
@@ -97,7 +97,7 @@ const SettingsView = ({
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
-    const { isInstalled, platform, install, dismiss, showIOSInstructions, showInstallButton } = usePWAInstall();
+    const { isInstalled, dismiss, showIOSInstructions } = usePWAInstall();
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -120,11 +120,10 @@ const SettingsView = ({
                 </button>
             </div>
 
-            {/* PWA Install Section - Always show if not installed */}
-            {!isInstalled && (showIOSInstructions || showInstallButton) && (
+            {/* PWA Install Section - iOS only; other platforms use the browser's native install UI */}
+            {!isInstalled && showIOSInstructions && (
                 <Section label="Install App">
-                    {showIOSInstructions ? (
-                        <div className="px-4 py-3.5 sm:px-5 relative">
+                    <div className="px-4 py-3.5 sm:px-5 relative">
                             <button
                                 onClick={dismiss}
                                 className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
@@ -143,30 +142,7 @@ const SettingsView = ({
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                    ) : showInstallButton ? (
-                        <Row 
-                            title="Install app" 
-                            description={`Add Synchron to your ${platform === 'android' ? 'device' : 'computer'} for quick access.`}
-                        >
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={install}
-                                    className="flex items-center gap-2 h-9 px-4 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
-                                >
-                                    <Download size={14} />
-                                    <span>Install</span>
-                                </button>
-                                <button
-                                    onClick={dismiss}
-                                    className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                    aria-label="Dismiss"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        </Row>
-                    ) : null}
+                    </div>
                 </Section>
             )}
 

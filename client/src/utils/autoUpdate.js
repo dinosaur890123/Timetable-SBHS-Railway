@@ -68,6 +68,9 @@ export const startAutoUpdate = () => {
         onNeedReload: checkForUpdate,
     });
 
+    // Version polling only makes sense against a real deploy; in dev /version.json doesn't exist
+    if (!import.meta.env.PROD) return;
+
     // A lazy view's chunk is missing because a newer deploy replaced it: reload to pick up that deploy
     window.addEventListener('vite:preloadError', (event) => {
         // If we reloaded for this a moment ago and it's still failing, let the error surface instead of looping

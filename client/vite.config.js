@@ -38,6 +38,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Registered from src/utils/autoUpdate.js so reloads are coordinated with the version check
       injectRegister: false,
+      // Run a service worker in `vite dev` too, so beforeinstallprompt fires and the
+      // install prompt can be tested locally (only works on localhost/HTTPS origins)
+      devOptions: {
+        enabled: true,
+      },
       // public/manifest.json is the app's manifest (linked from index.html), so don't generate a second one
       manifest: false,
       workbox: {
