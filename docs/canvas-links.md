@@ -16,8 +16,9 @@ Optional environment variables on the server:
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `CANVAS_HOST` | `canvas.sbhs.net.au` | The school's Canvas. Only course links on this host are shared, and bare course numbers become links here. |
-| `CANVAS_ALIAS_HOSTS` | (none) | Comma-separated hosts that serve the same courses, e.g. the school's `*.instructure.com` address. Links on them are rewritten to `CANVAS_HOST`. |
+| `CANVAS_HOST` | `sydneyboyshigh.instructure.com` | The school's Canvas. Only course links on this host (or the aliases below) are shared, and bare course numbers become links here. |
+| `CANVAS_ALIAS_HOSTS` | (none) | Comma-separated hosts that serve the same courses, e.g. `canvas.sbhs.net.au`. Links on them are rewritten to `CANVAS_HOST`. |
+| `WELLIO_HOST` | `app.wellioeducation.com` | Wellio hosts some classes instead of Canvas. `…/schools/<id>` links are shared too and kept as pasted. |
 | `CANVAS_LINK_CONFIRMATIONS` | `2` | Students who must back a link (the one who shared it counts) before the whole class gets it. |
 | `CANVAS_LINK_REJECTIONS` | `3` | Reports that hide a link, once they match or outnumber its backers. |
 | `CANVAS_LINK_DAILY_SUGGESTIONS` | `10` | New shared links one student can create per day. |
@@ -32,7 +33,8 @@ copy on the device for offline use; that copy is never written back to the serve
 **Shared links** (`canvas_class_links`, `canvas_class_link_votes`) are keyed by year
 group and class (`9Ma1`) within a school year. Short titles repeat across year groups,
 and courses change each year. When a student saves a link to a course on
-`CANVAS_HOST`, it's shared with their class as their vote for it. Classmates are asked
+`CANVAS_HOST` or a school page on `WELLIO_HOST`, it's shared with their class as
+their vote for it. Classmates are asked
 once whether it's right ("Yes, use it" / "Wrong link" / "Not now", which hides it for
 a week). A student's class uses the link with the most net backing that has reached
 `CANVAS_LINK_CONFIRMATIONS` backers. Their own link always takes priority.
@@ -42,8 +44,9 @@ a week). A student's class uses the link with the most net backing that has reac
 - **Class membership is checked server-side.** Before accepting a shared link or a
   vote, the server reads the student's own SBHS timetable using their sign-in token
   (cached for 6 hours). Students can only affect classes they're actually in.
-- **Only Canvas course links are shared**, stored as a course number and rebuilt as
-  `https://CANVAS_HOST/courses/<n>`. A shared link can't point anywhere else.
+- **Only Canvas and Wellio course links are shared**, stored as a course number
+  or Wellio path and rebuilt as `https://CANVAS_HOST/courses/<n>` or
+  `https://WELLIO_HOST/schools/<id>`. A shared link can't point anywhere else.
 - **One vote per student.** Votes are one row per student and counts are worked out
   on read, so repeated clicks don't stack and concurrent votes can't be lost. Backing
   a link drops the student's backing of the class's other links.

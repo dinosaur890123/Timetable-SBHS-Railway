@@ -5,7 +5,7 @@ import { describeClass, indexSubjects, subjectInk } from '../utils/timetable';
 
 const SAVED_MESSAGES = {
   shared: 'Saved, and shared with your class',
-  not_canvas: 'Saved. Only Canvas course links are shared with classmates'
+  not_canvas: 'Saved. Only Canvas or Wellio course links are shared with classmates'
 };
 
 const buttonPrimary = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90 transition-opacity disabled:opacity-50';
@@ -142,10 +142,10 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
           <Info size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed space-y-1">
             <p>
-              Open the course in Canvas and paste its address, e.g. <code className="font-mono break-all">https://{canvasHost}/courses/12345</code>, or just the course number.
+              Open the course in Canvas or Wellio and paste its address, e.g. <code className="font-mono break-all">https://{canvasHost}/courses/12345</code> or <code className="font-mono break-all">https://app.wellioeducation.com/schools/12345</code>, or just the course number.
             </p>
             <p>
-              Canvas course links are shared anonymously with others in the same class, and used for everyone once a classmate confirms them. Other links stay private to you.
+              Canvas and Wellio course links are shared anonymously with others in the same class, and used for everyone once a classmate confirms them. Other links stay private to you.
             </p>
           </div>
         </div>

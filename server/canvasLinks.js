@@ -10,8 +10,9 @@
 // The rules that keep shared links honest:
 // - The server reads the student's own SBHS timetable before it accepts a
 //   shared link or a vote, so only students in a class can affect its link.
-// - Only https://<CANVAS_HOST>/courses/<id> links are shared. Nothing else
-//   leaves the student's own account.
+// - Only https://sydneyboyshigh.instructure.com/courses/<id> and
+//   https://app.wellioeducation.com/schools/<id> links are shared (Canvas or
+//   Wellio course pages). Nothing else leaves the student's own account.
 // - Each student has one vote per link and backs at most one link per class.
 //   Votes are stored one row per student, and counts are worked out when read,
 //   so they can't drift and concurrent votes can't be lost.
@@ -38,10 +39,18 @@ const hostList = (value) => String(value || '')
     .map(h => h.trim().toLowerCase())
     .filter(Boolean);
 
-const CANVAS_HOST = hostList(process.env.CANVAS_HOST)[0] || 'canvas.sbhs.net.au';
+const CANVAS_HOST = hostList(process.env.CANVAS_HOST)[0] || 'sydneyboyshigh.instructure.com';
 // Other hostnames that serve the same Canvas courses (e.g. the school's
-// <name>.instructure.com address). Links on them are rewritten to CANVAS_HOST.
-const CANVAS_HOSTS = new Set([CANVAS_HOST, ...hostList(process.env.CANVAS_ALIAS_HOSTS)]);
+// canvas.<domain> address). Links on them are rewritten to CANVAS_HOST.
+const CANVAS_HOSTS = new Set([
+    CANVAS_HOST,
+    'sydneyboyshigh.instructure.com',
+    'canvas.sbhs.net.au',
+    ...hostList(process.env.CANVAS_ALIAS_HOSTS)
+]);
+// Wellio hosts some classes instead of Canvas. A Wellio link is stored as
+// "wellio:" + its path so the full address can be rebuilt exactly.
+const WELLIO_HOST = (hostList(process.env.WELLIO_HOST)[0] || 'app.wellioeducation.com').toLowerCase();
 // Earlier versions turned a bare course number into a canvas.instructure.com
 // link. Stored links of exactly that form are read back on CANVAS_HOST.
 const LEGACY_COURSE_URL = /^https?:\/\/canvas\.instructure\.com\/courses\/(\d{1,12})\/?$/i;
@@ -60,7 +69,9 @@ const currentSchoolYear = () => Number(
     new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', year: 'numeric' }).format(new Date())
 );
 
-const courseUrl = (courseId) => `https://${CANVAS_HOST}/courses/${courseId}`;
+const courseUrl = (courseId) => String(courseId).startsWith('wellio:')
+    ? `https://${WELLIO_HOST}/${String(courseId).slice('wellio:'.length)}`
+    : `https://${CANVAS_HOST}/courses/${courseId}`;
 
 // The course ID when a URL points at a course on the school's Canvas.
 const canvasCourseId = (url) => {
@@ -69,9 +80,19 @@ const canvasCourseId = (url) => {
     return match ? match[1] : null;
 };
 
-// Accepts a full link, a link without "https://", "courses/123" or a bare course
-// number. Returns { url, courseId } (courseId only for school Canvas courses), or
-// null when the input isn't a usable web link.
+// The stored id when a URL points at a Wellio school/class page:
+// "wellio:" + the path after the host (e.g. "wellio:schools/12345").
+const wellioCourseId = (url) => {
+    if (url.hostname.toLowerCase() !== WELLIO_HOST) return null;
+    const path = url.pathname.replace(/\/+$/, '');
+    if (!/^\/schools\/[A-Za-z0-9/_-]+$/.test(path) || path.length > 200) return null;
+    return `wellio:${path.slice(1)}`;
+};
+
+// Accepts a full link, a link without "https://", "courses/123",
+// "schools/123" or a bare course number. Returns { url, courseId } (courseId
+// only for school Canvas or Wellio course pages), or null when the input
+// isn't a usable web link.
 const parseLinkInput = (raw) => {
     if (typeof raw !== 'string') return null;
     let value = raw.trim();
@@ -81,6 +102,8 @@ const parseLinkInput = (raw) => {
         value = courseUrl(value);
     } else if (/^\/?courses\/\d{1,12}(?:[/?#]|$)/i.test(value)) {
         value = `https://${CANVAS_HOST}/${value.replace(/^\/+/, '')}`;
+    } else if (/^\/?schools\/[A-Za-z0-9/_-]+(?:[/?#]|$)/i.test(value)) {
+        value = `https://${WELLIO_HOST}/${value.replace(/^\/+/, '')}`;
     } else if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
         value = `https://${value.replace(/^\/+/, '')}`;
     }
@@ -95,10 +118,10 @@ const parseLinkInput = (raw) => {
     if (url.username || url.password) return null;
     if (!url.hostname.includes('.')) return null;
 
-    const courseId = canvasCourseId(url);
+    const courseId = canvasCourseId(url) || wellioCourseId(url);
     if (courseId) {
         url.protocol = 'https:';
-        url.hostname = CANVAS_HOST;
+        url.hostname = courseId.startsWith('wellio:') ? WELLIO_HOST : CANVAS_HOST;
         url.port = '';
     }
     return { url: url.toString(), courseId };
@@ -525,7 +548,7 @@ const createMemoryStore = (getMemoryUsers) => {
 // ---------------------------------------------------------------------------
 // Routes.
 
-const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, requireAdminAuth, getUserById, addLog, getMemoryUsers }) => {
+const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, requireAdminAuth, getUserById, isAdminUser, addLog, getMemoryUsers }) => {
     const store = isDbEnabled ? createPgStore(db) : createMemoryStore(getMemoryUsers);
     const writeLimit = makeLimiter(30, 60 * 1000);
     const voteLimit = makeLimiter(40, 60 * 60 * 1000);
@@ -581,10 +604,12 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     };
 
+    // Same rule as the admin routes: DB role 'Admin', the ADMIN_IDS bootstrap
+    // list, or everyone while auth is bypassed for local development.
     const isAdmin = async (studentId) => {
+        if (process.env.BYPASS_AUTH === 'true') return true;
         try {
-            const user = await getUserById(studentId);
-            return user?.role === 'Admin';
+            return await isAdminUser(studentId);
         } catch {
             return false;
         }
@@ -649,6 +674,14 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
 
             linkId = await store.createShared({ year, classKey, className, courseId, studentId, lockedStatus });
             log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})${adminUser ? ' [Auto-approved as Admin]' : ''}`);
+        } else if (adminUser) {
+            // An admin backing a link that's still waiting on votes pins it,
+            // unless another admin already hid it.
+            const existing = await store.getShared(linkId);
+            if (existing && !existing.lockedStatus) {
+                await store.setLock(linkId, 'verified');
+                log('CANVAS_LINK_MODERATE', studentId, `Auto-verified shared link ${linkId} for ${classKey} (${year})`);
+            }
         }
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });
         return 'shared';
@@ -680,7 +713,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
 
             const parsed = parseLinkInput(req.body?.url);
             if (!parsed) {
-                return res.status(400).json({ error: 'invalid_url', message: `That doesn’t look like a link. Paste the course’s address from Canvas, e.g. https://${CANVAS_HOST}/courses/12345.` });
+                return res.status(400).json({ error: 'invalid_url', message: `That doesn’t look like a link. Paste the course’s address, e.g. https://${CANVAS_HOST}/courses/12345 or https://${WELLIO_HOST}/schools/12345.` });
             }
 
             const year = currentSchoolYear();

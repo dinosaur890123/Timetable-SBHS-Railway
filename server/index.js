@@ -838,6 +838,7 @@ registerCanvasLinkRoutes(app, {
     requireStudentAuth,
     requireAdminAuth,
     getUserById,
+    isAdminUser,
     addLog,
     getMemoryUsers: () => users
 });

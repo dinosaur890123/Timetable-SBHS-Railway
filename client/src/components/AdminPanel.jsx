@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest } from '../services/adminApi';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell, Pin, ExternalLink, Flag } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
@@ -14,6 +14,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [deletionRequests, setDeletionRequests] = useState([]);
+    const [canvasReports, setCanvasReports] = useState([]);
+    const [canvasReportBusy, setCanvasReportBusy] = useState(null);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -174,6 +176,36 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             loadBuildNotes();
         }
     }, [isAuthenticated, activeTab]);
+
+    // Shared class links students have reported, shown on the Notifications tab.
+    const loadCanvasReports = async () => {
+        try {
+            const data = await fetchAdminCanvasLinks();
+            setCanvasReports((data?.links || [])
+                .filter(l => l.reports > 0)
+                .sort((a, b) => b.reports - a.reports));
+        } catch (err) {
+            console.error('Admin: failed to load Canvas link reports:', err);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab === 'notifications') {
+            loadCanvasReports();
+        }
+    }, [isAuthenticated, activeTab]);
+
+    const handleCanvasReportAction = async (link, action) => {
+        setCanvasReportBusy(link.id);
+        try {
+            await action();
+            await loadCanvasReports();
+        } catch (err) {
+            alert(err.message || 'Failed to update link');
+        } finally {
+            setCanvasReportBusy(null);
+        }
+    };
 
     const handleSaveNote = async (e) => {
         e.preventDefault();
@@ -1968,6 +2000,85 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
 {
     activeTab === 'notifications' && (
+        <>
+        {canvasReports.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200 mb-6">
+                <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                        <Flag size={16} className="text-red-500" />
+                        Reported Canvas &amp; Wellio links
+                    </h3>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                        {canvasReports.length} reported
+                    </span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
+                            <tr>
+                                <th className="px-6 py-3">Class</th>
+                                <th className="px-6 py-3">Link</th>
+                                <th className="px-6 py-3 text-right">Backed</th>
+                                <th className="px-6 py-3 text-right">Reported</th>
+                                <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                            {canvasReports.map(link => {
+                                const busy = canvasReportBusy === link.id;
+                                const statusLabel = link.lockedStatus === 'verified' ? 'Pinned' : link.lockedStatus === 'rejected' ? 'Hidden' : link.status === 'verified' ? 'In use' : link.status === 'rejected' ? 'Auto-hidden' : 'Waiting';
+                                return (
+                                    <tr key={link.id} className="dark:text-zinc-200">
+                                        <td className="px-6 py-3">
+                                            <div className="font-semibold text-zinc-900 dark:text-white">{link.className}</div>
+                                            <div className="text-zinc-500 text-xs font-mono">{link.classKey}</div>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <a href={link.canvasUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-zinc-600 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400">
+                                                {link.canvasUrl.replace(/^https:\/\//, '')} <ExternalLink size={11} />
+                                            </a>
+                                            <div className="text-zinc-400 text-[11px]">by {link.submittedBy}</div>
+                                        </td>
+                                        <td className="px-6 py-3 text-right tabular-nums">{link.confirmations}</td>
+                                        <td className="px-6 py-3 text-right tabular-nums font-semibold text-red-600 dark:text-red-400">{link.reports}</td>
+                                        <td className="px-6 py-3">
+                                            <span className={`inline-flex whitespace-nowrap px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                                link.status === 'verified' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : link.status === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                            }`}>{statusLabel}</span>
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <div className="flex justify-end gap-1">
+                                                {link.lockedStatus !== 'verified' && (
+                                                    <button disabled={busy} onClick={() => handleCanvasReportAction(link, () => setAdminCanvasLinkStatus(link.id, 'verified'))} className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50" title="Pin as the class's link">
+                                                        <Pin size={14} />
+                                                    </button>
+                                                )}
+                                                {link.lockedStatus !== 'rejected' && (
+                                                    <button disabled={busy} onClick={() => handleCanvasReportAction(link, () => setAdminCanvasLinkStatus(link.id, 'rejected'))} className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50" title="Hide">
+                                                        <EyeOff size={14} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    disabled={busy}
+                                                    onClick={() => window.confirm(`Delete this link and its votes for ${link.className}?`) && handleCanvasReportAction(link, () => deleteAdminCanvasLink(link.id))}
+                                                    className="p-1.5 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        )}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-3">
@@ -2078,6 +2189,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </table>
             </div>
         </div>
+        </>
     )
 }
 
