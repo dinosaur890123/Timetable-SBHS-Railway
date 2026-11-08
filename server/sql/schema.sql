@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   broadcast_type TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'hackclub',
   ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
+  ai_disabled BOOLEAN NOT NULL DEFAULT FALSE,
   version TEXT NOT NULL DEFAULT '1.0.0',
   hidden_pages JSONB NOT NULL DEFAULT '[]',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS ai_cache (
 -- Migrations
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_provider TEXT NOT NULL DEFAULT 'hackclub';
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_disabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS ai_usage_logs (

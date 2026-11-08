@@ -58,6 +58,7 @@ let systemState = {
     broadcast: null, // { message: "...", type: "info/warning/error" }
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b',
+    aiDisabled: false,
     hiddenPages: []
 };
 
@@ -201,16 +202,27 @@ async function readSystemState() {
     if (!isDbEnabled) {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
+        if (systemState.aiDisabled === undefined) systemState.aiDisabled = false;
         if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
     }
 
-    const result = await db.query(
-        'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at FROM system_state WHERE id = 1',
-        []
-    );
+    let result;
+    try {
+        result = await db.query(
+            'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, ai_disabled, hidden_pages, updated_at FROM system_state WHERE id = 1',
+            []
+        );
+    } catch (e) {
+        // Pre-migration databases lack ai_disabled; read without it rather than fail.
+        if (!/ai_disabled/.test(e?.message || '')) throw e;
+        result = await db.query(
+            'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at FROM system_state WHERE id = 1',
+            []
+        );
+    }
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', hidden_pages: [], updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, hidden_pages: [], updated_at: null };
     let hiddenPages = [];
     if (Array.isArray(row.hidden_pages)) {
         hiddenPages = row.hidden_pages;
@@ -226,6 +238,7 @@ async function readSystemState() {
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b',
+        aiDisabled: Boolean(row.ai_disabled),
         hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
 }
@@ -263,6 +276,31 @@ async function setAiConfig(provider, model) {
     );
 
     return { aiProvider: cleanProvider, aiModel: cleanModel };
+}
+
+async function setAiDisabled(disabled) {
+    const value = Boolean(disabled);
+    if (!isDbEnabled) {
+        systemState.aiDisabled = value;
+        return value;
+    }
+
+    systemStateCache = null;
+    try {
+        await db.query(
+            'UPDATE system_state SET ai_disabled = $1, updated_at = NOW() WHERE id = 1',
+            [value]
+        );
+    } catch (e) {
+        // Self-heal databases that haven't run the schema migration yet.
+        if (!/ai_disabled/.test(e?.message || '')) throw e;
+        await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_disabled BOOLEAN NOT NULL DEFAULT FALSE');
+        await db.query(
+            'UPDATE system_state SET ai_disabled = $1, updated_at = NOW() WHERE id = 1',
+            [value]
+        );
+    }
+    return value;
 }
 
 async function setAiModel(model) {
@@ -675,6 +713,28 @@ const requireAdminAuth = async (req, res, next) => {
 
 // Enforce admin privileges for general requireAuth routes
 const requireAuth = requireAdminAuth;
+
+// True when the requester is an admin (DB role, or the bootstrap admin list).
+const isAdminUser = async (studentId) => {
+    try {
+        const dbUser = await getUserById(studentId);
+        if (dbUser) return dbUser.role === 'Admin';
+    } catch (e) {
+        console.error('[auth] Admin role check failed:', e?.message || e);
+    }
+    return getAdminIds().includes(String(studentId));
+};
+
+// When an admin disables AI, student-facing AI endpoints answer 503 so clients
+// can show a maintenance notice. Admins keep access so they can still test.
+// Returns true when the response was already sent.
+const aiUnderMaintenance = async (req, res) => {
+    const state = await getSystemState();
+    if (!state.aiDisabled) return false;
+    if (await isAdminUser(String(req.user?.studentId || ''))) return false;
+    res.status(503).json({ error: 'Sage is under maintenance' });
+    return true;
+};
 
 // Routes
 // POST /api/register - Auto-register users on login (DB-backed)
@@ -1460,6 +1520,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             memoryUsage: process.memoryUsage().heapUsed,
             aiProvider: state.aiProvider || 'hackclub',
             aiModel: state.aiModel || 'qwen/qwen3-32b',
+            aiDisabled: Boolean(state.aiDisabled),
             hiddenPages: state.hiddenPages || [],
             availableHackClubModels,
             availableGeminiModels: [
@@ -1541,6 +1602,7 @@ app.get('/api/system/status', (req, res) => {
             res.json({
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
+                aiDisabled: Boolean(state.aiDisabled),
                 hiddenPages: state.hiddenPages || []
             });
         } catch (e) {
@@ -1622,6 +1684,22 @@ app.post('/api/system/ai-config', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI config error:', e);
         res.status(500).json({ error: 'Failed to update AI configuration' });
+    }
+});
+
+// POST /api/system/ai-disabled (Admin only: global AI kill switch)
+app.post('/api/system/ai-disabled', requireAuth, async (req, res) => {
+    try {
+        const { disabled } = req.body || {};
+        if (typeof disabled !== 'boolean') {
+            return res.status(400).json({ error: 'disabled must be a boolean' });
+        }
+        const aiDisabled = await setAiDisabled(disabled);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `AI features ${aiDisabled ? 'DISABLED' : 'ENABLED'} for all students`);
+        res.json({ success: true, aiDisabled });
+    } catch (e) {
+        console.error('Update AI disabled error:', e);
+        res.status(500).json({ error: 'Failed to update AI status' });
     }
 });
 
@@ -2118,6 +2196,7 @@ const briefingInFlight = new Map(); // dateKey -> Promise
 
 // POST /api/ai/briefing
 app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res) => {
+    if (await aiUnderMaintenance(req, res)) return;
     const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
     const clientNotices = Array.isArray(req.body?.notices) ? req.body.notices.slice(0, 200) : [];
     const fallback = (notices) => res.json({
@@ -2150,6 +2229,7 @@ app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res)
 
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
+    if (await aiUnderMaintenance(req, res)) return;
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
@@ -2343,6 +2423,7 @@ async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMim
 
 // POST /api/ai/notes-summarise
 app.post('/api/ai/notes-summarise', requireStudentAuth, aiLimit, async (req, res) => {
+    if (await aiUnderMaintenance(req, res)) return;
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
@@ -2373,6 +2454,7 @@ app.post('/api/ai/notes-summarise', requireStudentAuth, aiLimit, async (req, res
 
 // POST /api/ai/quiz-generate
 app.post('/api/ai/quiz-generate', requireStudentAuth, aiLimit, async (req, res) => {
+    if (await aiUnderMaintenance(req, res)) return;
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);

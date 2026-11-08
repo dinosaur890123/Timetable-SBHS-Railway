@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote } from '../services/adminApi';
-import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote } from '../services/adminApi';
+import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
-const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages }) => {
+const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, timetable, completeTimetable }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -428,6 +428,29 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [updatingConfig, setUpdatingConfig] = useState(false);
     const [customModelName, setCustomModelName] = useState('');
 
+    // Admin-only Sage tester: works even while AI is disabled for students.
+    const [sageQuestion, setSageQuestion] = useState('');
+    const [sageAnswer, setSageAnswer] = useState('');
+    const [sageLoading, setSageLoading] = useState(false);
+
+    const handleAskSage = async (e) => {
+        e.preventDefault();
+        if (!sageQuestion.trim() || sageLoading) return;
+        setSageLoading(true);
+        setSageAnswer('');
+        try {
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const data = await fetchTimetableQa(sageQuestion.trim(), timetable, currentMinutes, completeTimetable);
+            setSageAnswer(data.answer || "Couldn't generate an answer. Please try again.");
+        } catch (err) {
+            console.error("Admin Sage test failed:", err);
+            setSageAnswer("Couldn't reach Sage. Please check your network and try again.");
+        } finally {
+            setSageLoading(false);
+        }
+    };
+
     // Hidden pages state (localStorage-based)
     const [availablePages] = useState([
         { id: 'home', label: 'My Synchron' },
@@ -489,6 +512,20 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             loadData();
         } catch (err) {
             alert("Failed to update AI briefing model.");
+        } finally {
+            setUpdatingConfig(false);
+        }
+    };
+
+    const handleToggleAiDisabled = async () => {
+        const target = !stats?.aiDisabled;
+        setUpdatingConfig(true);
+        try {
+            await setAiDisabled(target);
+            setStats(prev => prev ? { ...prev, aiDisabled: target } : null);
+            loadData();
+        } catch (err) {
+            alert("Failed to update AI status.");
         } finally {
             setUpdatingConfig(false);
         }
@@ -587,14 +624,14 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`admin-tab-btn flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-semibold transition-all border whitespace-nowrap
+            className={`admin-tab-btn flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap
         ${activeTab === id
-                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 border-transparent'
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
                 }`}
         >
-            <Icon size={18} />
-            <span className="hidden sm:inline">{label}</span>
+            <Icon size={16} />
+            <span>{label}</span>
         </button>
     );
 
@@ -622,28 +659,37 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div className="shrink-0">
+            <header className="flex items-center justify-between gap-4">
+                <div>
                     <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <ShieldCheck className="w-8 h-8 text-green-500" />
                         Admin Dashboard
                     </h1>
-                    <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-1">
                         Manage users and system settings
                     </p>
                 </div>
-                <div className="admin-tabs-container flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
-                    <TabButton id="overview" label="Overview" icon={Activity} />
-                    <TabButton id="users" label="Users" icon={Users} />
-                    <TabButton id="analytics" label="Analytics" icon={BarChart3} />
-                    <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
-                    <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
-                    <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
-                    <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
-                    <TabButton id="settings" label="Settings" icon={Settings} />
-                    {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
-                </div>
+                <button
+                    onClick={loadData}
+                    disabled={loading}
+                    className="shrink-0 flex items-center gap-2 h-9 px-3 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors disabled:opacity-50"
+                >
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    <span className="hidden sm:inline">Refresh</span>
+                </button>
             </header>
+
+            <nav className="admin-tabs-container flex gap-1 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 p-1.5 -mx-1 px-1">
+                <TabButton id="overview" label="Overview" icon={Activity} />
+                <TabButton id="users" label="Users" icon={Users} />
+                <TabButton id="analytics" label="Analytics" icon={BarChart3} />
+                <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
+                <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
+                <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
+                <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
+                <TabButton id="settings" label="Settings" icon={Settings} />
+                {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
+            </nav>
 
             {apiError && (sessionExpired ? (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl flex flex-wrap items-center gap-3">
@@ -1496,6 +1542,64 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             </button>
                         </div>
                     </div>
+                </div>
+
+                {/* AI Kill Switch */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <Brain size={16} />
+                            Disable AI for Students
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">
+                            {stats?.aiDisabled
+                                ? 'AI is disabled — everyone sees a maintenance notice in the app. Use the tester below to verify.'
+                                : 'When enabled, all AI features (Ask Sage, briefings, summaries, quizzes) return a maintenance notice for everyone.'}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleToggleAiDisabled}
+                        disabled={updatingConfig || stats?.aiDisabled === undefined}
+                        className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50 ${
+                            stats?.aiDisabled
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`}
+                    >
+                        {stats?.aiDisabled ? 'Re-enable AI' : 'Disable AI'}
+                    </button>
+                </div>
+
+                {/* Admin-only Sage tester — bypasses the student-facing AI kill switch */}
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                        <Sparkles size={16} />
+                        Test Sage (Admin Only)
+                    </h4>
+                    <p className="text-xs text-zinc-550 mt-1 mb-3">
+                        Ask Sage a timetable question. Works even while AI is disabled for students.
+                    </p>
+                    <form onSubmit={handleAskSage} className="flex gap-2">
+                        <input
+                            type="text"
+                            value={sageQuestion}
+                            onChange={(e) => setSageQuestion(e.target.value)}
+                            disabled={sageLoading}
+                            placeholder={sageLoading ? "Sage is typing…" : "e.g. What room is my next class?"}
+                            className="flex-1 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
+                        />
+                        <button
+                            type="submit"
+                            disabled={sageLoading || !sageQuestion.trim()}
+                            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg text-sm disabled:opacity-50"
+                        >
+                            {sageLoading ? "Asking…" : "Ask"}
+                        </button>
+                    </form>
+                    {sageAnswer && (
+                        <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{sageAnswer}</p>
+                    )}
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">

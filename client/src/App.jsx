@@ -170,6 +170,7 @@ function App() {
     });
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
+    const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const reduceMotion = useReducedMotion();
@@ -399,6 +400,10 @@ function App() {
 
     const handleAskAiQuestion = async (e) => {
         e.preventDefault();
+        if (aiBlocked) {
+            setAiAnswer('Sage is under maintenance. Please check back later.');
+            return;
+        }
         if (!aiQuestion.trim() || aiQaLoading) return;
 
         setAiQaLoading(true);
@@ -443,6 +448,7 @@ function App() {
                 if (systemData) {
                     setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
+                    setAiGloballyDisabled(!!systemData.aiDisabled);
                     if (Array.isArray(systemData.hiddenPages)) {
                         setHiddenPages(systemData.hiddenPages);
                         localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
@@ -474,6 +480,9 @@ function App() {
     }, []);
 
     const isSignedIn = !!user;
+    // Admins can disable AI app-wide; it then shows maintenance to everyone in
+    // the normal UI. Admins still reach Sage through the admin panel's tester.
+    const aiBlocked = aiGloballyDisabled;
 
     // Theme Config
     useEffect(() => {
@@ -800,7 +809,7 @@ function App() {
 
     // Fetch AI Briefing in background once notices are loaded
     useEffect(() => {
-        if (aiDisabled || !user || !notices || !notices.notices || notices.notices.length === 0) return;
+        if (aiDisabled || aiBlocked || !user || !notices || !notices.notices || notices.notices.length === 0) return;
 
         const getAiData = async () => {
             setAiLoading(true);
@@ -814,7 +823,7 @@ function App() {
             }
         };
         getAiData();
-    }, [notices, user, aiDisabled]);
+    }, [notices, user, aiDisabled, aiBlocked]);
 
     // Once signed in and idle, fetch every page's code so the first visit to each is instant.
     useEffect(() => {
@@ -1249,7 +1258,7 @@ function App() {
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} timetable={timetable} completeTimetable={completeTimetable} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
@@ -1302,6 +1311,12 @@ function App() {
                             </h3>
 
                             <div className="sage-body">
+                                {aiBlocked ? (
+                                    <div className="sage-answer animate-in fade-in duration-200">
+                                        <p className="nf-meta sage-hint">Sage is under maintenance. Please check back later.</p>
+                                    </div>
+                                ) : (
+                                <>
                                 <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, or times.</p>
                                 <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                     <input
@@ -1333,6 +1348,8 @@ function App() {
                                             <span className="sage-typing" role="status"><i aria-hidden="true" />Sage is typing</span>
                                         )}
                                     </div>
+                                )}
+                                </>
                                 )}
                             </div>
                         </div>
