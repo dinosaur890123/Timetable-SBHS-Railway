@@ -484,6 +484,12 @@ function App() {
     // the normal UI. Admins still reach Sage through the admin panel's tester.
     const aiBlocked = aiGloballyDisabled;
 
+    // Drop any briefing already loaded so notices revert to their raw order
+    // the moment AI is switched off.
+    useEffect(() => {
+        if (aiBlocked) setAiBriefing(null);
+    }, [aiBlocked]);
+
     // Theme Config
     useEffect(() => {
         localStorage.setItem('theme', theme);
@@ -1230,7 +1236,7 @@ function App() {
 
                             {/* NOTICES VIEW */}
                             {currentView === 'notices' && (
-                                <DailyNotices notices={notices} aiBriefing={aiBriefing} user={user} />
+                                <DailyNotices notices={notices} aiBriefing={aiBlocked ? null : aiBriefing} user={user} />
                             )}
 
                             {/* AWARD SCHEME VIEW */}

@@ -1549,25 +1549,30 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
                             <Brain size={16} />
-                            Disable AI for Students
+                            AI features for everyone
                         </h4>
                         <p className="text-xs text-zinc-550 mt-1">
                             {stats?.aiDisabled
-                                ? 'AI is disabled — everyone sees a maintenance notice in the app. Use the tester below to verify.'
-                                : 'When enabled, all AI features (Ask Sage, briefings, summaries, quizzes) return a maintenance notice for everyone.'}
+                                ? 'Disabled — Ask Sage, briefings, summaries and quizzes show a maintenance notice. Use the tester below to verify.'
+                                : 'When disabled, all AI features (Ask Sage, briefings, summaries, quizzes) return a maintenance notice for everyone.'}
                         </p>
                     </div>
                     <button
                         type="button"
+                        role="switch"
+                        aria-checked={!stats?.aiDisabled}
+                        aria-label="AI features"
                         onClick={handleToggleAiDisabled}
                         disabled={updatingConfig || stats?.aiDisabled === undefined}
-                        className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium shadow-sm disabled:opacity-50 ${
-                            stats?.aiDisabled
-                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                : 'bg-red-600 hover:bg-red-700 text-white'
+                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${
+                            stats?.aiDisabled ? 'bg-zinc-300 dark:bg-zinc-700' : 'bg-green-500'
                         }`}
                     >
-                        {stats?.aiDisabled ? 'Re-enable AI' : 'Disable AI'}
+                        <span
+                            className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                                stats?.aiDisabled ? 'translate-x-0' : 'translate-x-5'
+                            }`}
+                        />
                     </button>
                 </div>
 

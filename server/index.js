@@ -725,13 +725,14 @@ const isAdminUser = async (studentId) => {
     return getAdminIds().includes(String(studentId));
 };
 
-// When an admin disables AI, student-facing AI endpoints answer 503 so clients
-// can show a maintenance notice. Admins keep access so they can still test.
-// Returns true when the response was already sent.
-const aiUnderMaintenance = async (req, res) => {
+// When an admin disables AI, the student-facing AI endpoints answer 503 so
+// clients can show a maintenance notice. Only timetable-qa (Ask Sage) lets
+// admins through, so the admin panel tester keeps working; every other AI
+// feature is dead for everyone. Returns true when the response was sent.
+const aiUnderMaintenance = async (req, res, { allowAdmin = false } = {}) => {
     const state = await getSystemState();
     if (!state.aiDisabled) return false;
-    if (await isAdminUser(String(req.user?.studentId || ''))) return false;
+    if (allowAdmin && await isAdminUser(String(req.user?.studentId || ''))) return false;
     res.status(503).json({ error: 'Sage is under maintenance' });
     return true;
 };
@@ -2229,7 +2230,7 @@ app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res)
 
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
-    if (await aiUnderMaintenance(req, res)) return;
+    if (await aiUnderMaintenance(req, res, { allowAdmin: true })) return;
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
