@@ -169,8 +169,9 @@ function App() {
         }
     });
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
-    const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_disabled') === 'true');
+    const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
     const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
+    const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const reduceMotion = useReducedMotion();
@@ -370,7 +371,7 @@ function App() {
             const preferences = {
                 theme,
                 colorTheme,
-                aiDisabled,
+                aiOptIn: !aiDisabled,
                 ambientLight,
                 showClipboardEvents,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
@@ -502,7 +503,11 @@ function App() {
     }, [theme, isSignedIn]);
 
     useEffect(() => {
-        localStorage.setItem('ai_disabled', aiDisabled ? 'true' : 'false');
+        if (aiDisabled) {
+            localStorage.removeItem('ai_opt_in');
+        } else {
+            localStorage.setItem('ai_opt_in', 'true');
+        }
         savePreferences();
     }, [aiDisabled]);
 
@@ -682,9 +687,13 @@ function App() {
                                 setColorTheme(prefs.colorTheme);
                                 localStorage.setItem('color_theme', prefs.colorTheme);
                             }
-                            if (prefs.aiDisabled !== undefined) {
-                                setAiDisabled(prefs.aiDisabled);
-                                localStorage.setItem('ai_disabled', prefs.aiDisabled ? 'true' : 'false');
+                            if (prefs.aiOptIn !== undefined) {
+                                setAiDisabled(!prefs.aiOptIn);
+                                if (prefs.aiOptIn) {
+                                    localStorage.setItem('ai_opt_in', 'true');
+                                } else {
+                                    localStorage.removeItem('ai_opt_in');
+                                }
                             }
                             if (prefs.ambientLight !== undefined) {
                                 setAmbientLight(prefs.ambientLight);
@@ -1074,6 +1083,28 @@ function App() {
                     </div>
                 )}
 
+                {aiDisabled && !aiGloballyDisabled && !aiBannerDismissed && (
+                    <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/50 text-violet-800 dark:text-violet-300">
+                        <Sparkles size={18} className="shrink-0" />
+                        <span className="flex-1 min-w-[200px]">
+                            Meet <span className="sage-name">Sage</span> — ask questions about your timetable. AI features are off by default; enable them below or in Settings.
+                        </span>
+                        <button
+                            onClick={() => setAiDisabled(false)}
+                            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors"
+                        >
+                            Enable AI
+                        </button>
+                        <button
+                            onClick={() => setAiBannerDismissed(true)}
+                            aria-label="Dismiss"
+                            className="p-1.5 rounded-lg text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
+
                 <div
                     className="relative flex-1 p-4 md:p-8 pb-28 md:pb-12 max-w-7xl mx-auto w-full"
                     onTouchStart={onDayTouchStart}
@@ -1324,6 +1355,7 @@ function App() {
                                 ) : (
                                 <>
                                 <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, or times.</p>
+                                <p className="nf-meta sage-hint">Sage sends your question and timetable to an AI provider to answer. Answers aren't stored on our servers.</p>
                                 <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                     <input
                                         type="text"

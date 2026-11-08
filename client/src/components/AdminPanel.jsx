@@ -614,7 +614,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             String(log.studentId || '').toLowerCase().includes(term) ||
             studentName.toLowerCase().includes(term) ||
             String(log.question || '').toLowerCase().includes(term) ||
-            String(log.answer || '').toLowerCase().includes(term) ||
             String(log.model || '').toLowerCase().includes(term) ||
             String(log.provider || '').toLowerCase().includes(term)
         );
@@ -1073,7 +1072,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                 <h4 className="text-base font-bold text-zinc-900 dark:text-white">
                                     Timetable Text AI Activity
                                 </h4>
-                                <p className="text-xs text-zinc-500 mt-1">Audit log of student questions and AI responses</p>
+                                <p className="text-xs text-zinc-500 mt-1">Audit log of student AI questions</p>
                             </div>
                         </div>
                         <div className="relative w-full md:w-72">
@@ -1639,7 +1638,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             <Sparkles size={16} className="text-purple-500" />
                             Clear AI Cache
                         </h4>
-                        <p className="text-xs text-zinc-500 mt-1">Clear cached daily briefings and prioritized notices from the database and memory</p>
+                        <p className="text-xs text-zinc-500 mt-1">Clear cached daily notice rankings from the database and memory</p>
                     </div>
                     <button
                         onClick={handleClearAiCache}
@@ -2169,7 +2168,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </div>
                 <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
                     {/* Metadata */}
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
+                    <div className="grid grid-cols-3 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
                         <div>
                             <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Provider</span>
                             <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingAiLog.provider}</span>
@@ -2178,9 +2177,15 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Model</span>
                             <span className="font-bold text-zinc-900 dark:text-white">{viewingAiLog.model}</span>
                         </div>
+                        <div>
+                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
+                            <span className={`font-bold ${viewingAiLog.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                {viewingAiLog.status === 'error' ? 'Error' : 'OK'}
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Question & Answer bubbles */}
+                    {/* Question */}
                     <div className="space-y-4 text-left">
                         <div className="space-y-1.5">
                             <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Question</span>
@@ -2188,13 +2193,9 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                 {viewingAiLog.question}
                             </div>
                         </div>
-
-                        <div className="space-y-1.5">
-                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">AI Response</span>
-                            <div className="p-4 bg-purple-50/30 dark:bg-purple-950/20 text-zinc-900 dark:text-zinc-50 rounded-2xl rounded-tr-none border border-purple-100/20 dark:border-purple-900/30 text-sm whitespace-pre-wrap">
-                                {viewingAiLog.answer}
-                            </div>
-                        </div>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                            AI responses are not stored.
+                        </p>
                     </div>
                 </div>
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">

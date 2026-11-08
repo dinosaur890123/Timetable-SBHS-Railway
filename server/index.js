@@ -135,13 +135,13 @@ const addLog = async (action, user, details) => {
     );
 };
 
-const addAiLog = async (studentId, question, answer, provider, model) => {
+const addAiLog = async (studentId, question, provider, model, status = 'ok') => {
     const log = {
         id: crypto.randomUUID(),
         timestamp: new Date(),
         studentId: studentId || 'UNKNOWN',
         question: question || '',
-        answer: answer || '',
+        status: status || 'ok',
         provider: provider || 'unknown',
         model: model || 'unknown'
     };
@@ -154,8 +154,8 @@ const addAiLog = async (studentId, question, answer, provider, model) => {
 
     try {
         await db.query(
-            'INSERT INTO ai_usage_logs (id, created_at, student_id, question, answer, provider, model) VALUES ($1, NOW(), $2, $3, $4, $5, $6)',
-            [log.id, log.studentId, log.question, log.answer, log.provider, log.model]
+            'INSERT INTO ai_usage_logs (id, created_at, student_id, question, status, provider, model) VALUES ($1, NOW(), $2, $3, $4, $5, $6)',
+            [log.id, log.studentId, log.question, log.status, log.provider, log.model]
         );
     } catch (err) {
         console.error('Failed to write AI log to DB:', err);
@@ -2102,8 +2102,6 @@ const briefingLimit = rateLimit(
 );
 const clip = (value, max) => String(value ?? '').slice(0, max);
 
-const meetingsFirst = (notices) => [...notices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-
 // Today's notices, straight from SBHS with the student's own token. The briefing
 // is shared by every student, so it must never be built from notices a client
 // sent in.
@@ -2117,16 +2115,19 @@ const fetchTodaysNotices = async (authHeader) => {
     return Array.isArray(data?.notices) ? data.notices : [];
 };
 
+// Only the AI's ranking is cached — [{index, priority}] numbers, never notice
+// content. Clients sort their own locally-fetched notices with it.
 const readBriefingCache = async (dateKey) => {
     if (aiMemoryCache[dateKey]) return aiMemoryCache[dateKey];
     if (!isDbEnabled) return null;
     try {
         const cacheResult = await db.query(
-            'SELECT briefing, prioritized_notices FROM ai_cache WHERE date_key = $1',
+            'SELECT notice_priorities FROM ai_cache WHERE date_key = $1',
             [dateKey]
         );
         if (cacheResult.rows.length === 0) return null;
-        const cached = { briefing: cacheResult.rows[0].briefing, sortedNotices: cacheResult.rows[0].prioritized_notices };
+        const cached = cacheResult.rows[0].notice_priorities;
+        if (!Array.isArray(cached)) return null;
         aiMemoryCache[dateKey] = cached;
         return cached;
     } catch (err) {
@@ -2135,13 +2136,13 @@ const readBriefingCache = async (dateKey) => {
     }
 };
 
-const writeBriefingCache = async (dateKey, result) => {
-    aiMemoryCache[dateKey] = result;
+const writeBriefingCache = async (dateKey, priorities) => {
+    aiMemoryCache[dateKey] = priorities;
     if (!isDbEnabled) return;
     try {
         await db.query(
-            'INSERT INTO ai_cache (date_key, briefing, prioritized_notices) VALUES ($1, $2, $3::jsonb) ON CONFLICT (date_key) DO UPDATE SET briefing = EXCLUDED.briefing, prioritized_notices = EXCLUDED.prioritized_notices, created_at = NOW()',
-            [dateKey, result.briefing, JSON.stringify(result.sortedNotices)]
+            'INSERT INTO ai_cache (date_key, notice_priorities) VALUES ($1, $2::jsonb) ON CONFLICT (date_key) DO UPDATE SET notice_priorities = EXCLUDED.notice_priorities, created_at = NOW()',
+            [dateKey, JSON.stringify(priorities)]
         );
     } catch (err) {
         console.error('[ai-cache] Failed to write cache to DB:', err);
@@ -2157,7 +2158,7 @@ const parseAiJson = (aiText) => {
 };
 
 const generateBriefing = async (notices) => {
-    if (notices.length === 0) return { briefing: 'No notices for today.', sortedNotices: [] };
+    if (notices.length === 0) return { priorities: [] };
 
     const promptNotices = notices.map((n, i) => ({
         index: i,
@@ -2183,12 +2184,7 @@ Return ONLY the JSON. Do not include markdown code block wraps.`;
     const parsed = parseAiJson(aiText);
     const priorities = Array.isArray(parsed.prioritizedNotices) ? parsed.prioritizedNotices : [];
 
-    const sortedNotices = notices.map((n, i) => {
-        const prio = priorities.find(p => p.index === i);
-        return { ...n, priority: prio ? prio.priority : 1, priorityReason: prio ? prio.reason : '' };
-    }).sort((a, b) => b.priority - a.priority);
-
-    return { briefing: parsed.briefing || 'Here is your notices summary for today.', sortedNotices };
+    return { priorities };
 };
 
 // One briefing is generated per day; students who ask while it's being made wait
@@ -2199,32 +2195,28 @@ const briefingInFlight = new Map(); // dateKey -> Promise
 app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res) => {
     if (await aiUnderMaintenance(req, res)) return;
     const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
-    const clientNotices = Array.isArray(req.body?.notices) ? req.body.notices.slice(0, 200) : [];
-    const fallback = (notices) => res.json({
-        briefing: 'Welcome to your notices for today! Check out co-curricular meetings and activities below.',
-        sortedNotices: meetingsFirst(notices)
-    });
 
     try {
         const cached = await readBriefingCache(dateKey);
-        if (cached) return res.json(cached);
+        if (cached) return res.json({ priorities: cached });
 
         if (!briefingInFlight.has(dateKey)) {
             const job = (async () => {
                 const notices = await fetchTodaysNotices(req.headers.authorization);
                 const result = await generateBriefing(notices);
-                await writeBriefingCache(dateKey, result);
-                console.log(`[ai] Briefing cached for ${dateKey}`);
+                await writeBriefingCache(dateKey, result.priorities);
+                console.log(`[ai] Briefing priorities cached for ${dateKey}`);
                 return result;
             })().finally(() => briefingInFlight.delete(dateKey));
             briefingInFlight.set(dateKey, job);
         }
-        res.json(await briefingInFlight.get(dateKey));
+        const result = await briefingInFlight.get(dateKey);
+        res.json({ priorities: result.priorities });
     } catch (err) {
-        // Nothing is cached, so the next request tries again. The client's own
-        // notices are only echoed back to that client, sorted.
-        console.error('[ai] Briefing failed, returning fallback:', err?.message || err);
-        fallback(clientNotices);
+        // Nothing is cached, so the next request tries again. The client keeps
+        // its own notice order when priorities come back null.
+        console.error('[ai] Briefing failed:', err?.message || err);
+        res.json({ priorities: null });
     }
 });
 
@@ -2252,7 +2244,7 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
         const todayDateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const todayDayname = timetable?.timetable?.dayname || timetable?.dayname || 'Unknown';
 
-        const systemPrompt = `You are a helpful school assistant. Answer the student's question about their daily timetable schedule.
+        const systemPrompt = `You are a helpful school assistant named Sage. Answer the student's question about their daily timetable schedule.
 You are given:
 1. Today's Date: ${todayDateStr}
 2. Today's Timetable Cycle Day Name: ${todayDayname} (e.g. "Day 1A", "Day 2B").
@@ -2267,6 +2259,7 @@ Guidelines:
 - You can answer questions about today's classes, tomorrow's schedule, or any specific cycle day (e.g. Day 2B) because you have the complete 2-week cycle timetable.
 - If they ask about "tomorrow" or "Wednesday", calculate what cycle day it corresponds to based on Today's Date and Today's Cycle Day Name (e.g., if today is Monday Day 1A, tomorrow Tuesday is Day 2A; if today is Friday Day 5A, next Monday is Day 1B). Note that school days only run Monday to Friday.
 - If the question is outside the scope of school schedules, teacher names, room locations, or term dates, politely say so.
+- If asked whether you store data, be honest: the question and timetable context are sent to an AI provider to generate the answer, answers are not stored in our database, and questions may be logged for admin review. Never claim that no data is stored anywhere.
 
 Answer the student's question:`;
 
@@ -2335,13 +2328,13 @@ Answer the student's question:`;
             }
         }
 
-        await addAiLog(req.user?.studentId || 'UNKNOWN', question, answer, activeProvider, activeModel);
+        await addAiLog(req.user?.studentId || 'UNKNOWN', question, activeProvider, activeModel);
         res.json({ answer });
 
     } catch (err) {
         console.error('[ai-timetable-qa] Failed:', err);
         const errMsg = 'Failed to generate answer';
-        await addAiLog(req.user?.studentId || 'UNKNOWN', req.body?.question || 'Unknown Question', `Error: ${err.message || err}`, activeProvider || 'unknown', activeModel || 'unknown').catch(() => {});
+        await addAiLog(req.user?.studentId || 'UNKNOWN', req.body?.question || 'Unknown Question', 'unknown', 'unknown', 'error').catch(() => {});
         res.status(500).json({ error: errMsg });
     }
 });
@@ -2444,7 +2437,7 @@ app.post('/api/ai/notes-summarise', requireStudentAuth, aiLimit, async (req, res
 
         const { aiText, activeProvider, activeModel } = await runAiPrompt(systemPrompt, userPrompt, systemStateObj, 'text/plain');
 
-        await addAiLog(req.user?.studentId || 'UNKNOWN', `Summarise: ${title || 'Untitled'}`, aiText, activeProvider, activeModel);
+        await addAiLog(req.user?.studentId || 'UNKNOWN', `Summarise: ${title || 'Untitled'}`, activeProvider, activeModel);
         res.json({ summary: aiText });
 
     } catch (err) {
@@ -2505,7 +2498,7 @@ Return ONLY the JSON array. Do not include markdown code block wraps.`;
 
         const questions = JSON.parse(jsonText);
 
-        await addAiLog(req.user?.studentId || 'UNKNOWN', `Quiz: ${source === 'note' ? 'From Note' : topic}`, `Generated ${questions.length} questions`, activeProvider, activeModel);
+        await addAiLog(req.user?.studentId || 'UNKNOWN', `Quiz: ${source === 'note' ? 'From Note' : topic}`, activeProvider, activeModel);
         res.json({ questions });
 
     } catch (err) {
@@ -2536,7 +2529,7 @@ app.get('/api/ai/logs', requireAuth, async (req, res) => {
             return res.json(aiUsageLogs);
         }
         const result = await db.query(
-            'SELECT id, created_at, student_id, question, answer, provider, model FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100',
+            'SELECT id, created_at, student_id, question, status, provider, model FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100',
             []
         );
         const out = result.rows.map(row => ({
@@ -2544,7 +2537,7 @@ app.get('/api/ai/logs', requireAuth, async (req, res) => {
             timestamp: row.created_at,
             studentId: row.student_id,
             question: row.question,
-            answer: row.answer,
+            status: row.status,
             provider: row.provider,
             model: row.model
         }));

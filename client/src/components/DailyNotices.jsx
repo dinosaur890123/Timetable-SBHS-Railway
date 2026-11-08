@@ -96,7 +96,21 @@ const NoticeItem = ({ notice, index }) => {
 
 const DailyNotices = ({ notices, aiBriefing, user }) => {
   useNoteFlowFonts();
-  const allNotices = aiBriefing && aiBriefing.sortedNotices ? aiBriefing.sortedNotices : (notices?.notices || []);
+  const baseNotices = notices?.notices || [];
+  // The server only returns the AI's ranking ([{index, priority}]); the notices
+  // themselves stay client-side. Indices refer to the original array order.
+  const allNotices = useMemo(() => {
+    const prios = aiBriefing?.priorities;
+    const byIndex = Array.isArray(prios) && prios.length > 0
+      ? new Map(prios.map(p => [p.index, p.priority ?? 1]))
+      : null;
+    if (!byIndex) {
+      return [...baseNotices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
+    }
+    return baseNotices
+      .map((n, i) => ({ ...n, priority: byIndex.get(i) ?? 1 }))
+      .sort((a, b) => b.priority - a.priority);
+  }, [baseNotices, aiBriefing]);
   const [filterView, setFilterView] = useState('curated');
   const [query, setQuery] = useState('');
 

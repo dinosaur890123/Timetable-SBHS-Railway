@@ -43,8 +43,7 @@ CREATE INDEX IF NOT EXISTS logs_created_at_idx ON logs (created_at DESC);
 
 CREATE TABLE IF NOT EXISTS ai_cache (
   date_key TEXT PRIMARY KEY, -- 'YYYY-MM-DD' (Sydney time)
-  briefing TEXT NOT NULL,
-  prioritized_notices JSONB NOT NULL,
+  notice_priorities JSONB NOT NULL, -- AI-generated [{index, priority}] only; no notice content
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -59,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ai_usage_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   student_id TEXT NOT NULL,
   question TEXT NOT NULL,
-  answer TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ok',
   provider TEXT NOT NULL,
   model TEXT NOT NULL
 );
@@ -228,3 +227,13 @@ CREATE TABLE IF NOT EXISTS app_build_notes (
 );
 
 CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);
+
+-- Privacy: purge stored AI-derived/API content, then reshape the AI tables.
+-- Runs last so both tables exist on fresh databases; idempotent on re-runs.
+DELETE FROM ai_usage_logs;
+DELETE FROM ai_cache;
+ALTER TABLE ai_usage_logs DROP COLUMN IF EXISTS answer;
+ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ok';
+ALTER TABLE ai_cache DROP COLUMN IF EXISTS briefing;
+ALTER TABLE ai_cache DROP COLUMN IF EXISTS prioritized_notices;
+ALTER TABLE ai_cache ADD COLUMN IF NOT EXISTS notice_priorities JSONB;

@@ -179,7 +179,7 @@ const SettingsView = ({
             </Section>
 
             <Section label="Features">
-                <Row title={<>AI features <span className="sage-name">by Sage</span></>} description="Prioritised daily notices and answers to questions about your timetable.">
+                <Row title={<>AI features <span className="sage-name">by Sage</span></>} description="Off by default. When enabled: prioritised daily notices and answers to questions about your timetable.">
                     <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI features" />
                 </Row>
                 <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
@@ -197,6 +197,13 @@ const SettingsView = ({
                     description="See the latest updates, bug fixes, and changelog."
                     onClick={() => setView('build-notes')}
                 />
+            </Section>
+
+            <Section label="AI & privacy">
+                <Row title="What AI features send" description="When enabled, Sage, notice ranking, note summaries and quizzes send the relevant content — your question, timetable, or note text — to an AI provider to generate a response. Timetable and notice data comes straight from SBHS to your device.">
+                </Row>
+                <Row title="What's stored" description="AI answers are not stored. Questions are logged for admin review, and daily notice rankings are cached so the AI isn't called repeatedly.">
+                </Row>
             </Section>
 
             <Section label="Help">
