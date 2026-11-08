@@ -1604,6 +1604,7 @@ app.get('/api/system/status', (req, res) => {
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
                 aiDisabled: Boolean(state.aiDisabled),
+                aiProvider: state.aiProvider || 'hackclub',
                 hiddenPages: state.hiddenPages || []
             });
         } catch (e) {

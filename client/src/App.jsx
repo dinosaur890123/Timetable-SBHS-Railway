@@ -172,6 +172,7 @@ function App() {
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
     const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
     const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
+    const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const reduceMotion = useReducedMotion();
@@ -450,6 +451,9 @@ function App() {
                     setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setAiGloballyDisabled(!!systemData.aiDisabled);
+                    if (systemData.aiProvider) {
+                        setAiProviderName(systemData.aiProvider === 'gemini' ? 'Google Gemini' : systemData.aiProvider === 'hackclub' ? 'Hack Club AI' : systemData.aiProvider);
+                    }
                     if (Array.isArray(systemData.hiddenPages)) {
                         setHiddenPages(systemData.hiddenPages);
                         localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
@@ -1307,6 +1311,7 @@ function App() {
                                     setColorTheme={setColorTheme}
                                     aiDisabled={aiDisabled}
                                     setAiDisabled={setAiDisabled}
+                                    aiProviderName={aiProviderName}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
                                     showClipboardEvents={showClipboardEvents}
@@ -1355,7 +1360,7 @@ function App() {
                                 ) : (
                                 <>
                                 <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, or times.</p>
-                                <p className="nf-meta sage-hint">Sage sends your question and timetable to an AI provider to answer. Answers aren't stored on our servers.</p>
+                                <p className="nf-meta sage-hint">Sage sends your question and relevant information to {aiProviderName} to answer. Answers aren't stored on our servers.</p>
                                 <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                     <input
                                         type="text"
