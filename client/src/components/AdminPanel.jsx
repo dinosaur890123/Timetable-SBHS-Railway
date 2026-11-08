@@ -1552,8 +1552,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         </h4>
                         <p className="text-xs text-zinc-550 mt-1">
                             {stats?.aiDisabled
-                                ? 'Disabled — Ask Sage, briefings, summaries and quizzes show a maintenance notice. Use the tester below to verify.'
-                                : 'When disabled, all AI features (Ask Sage, briefings, summaries, quizzes) return a maintenance notice for everyone.'}
+                                ? 'Disabled — Ask Sage and notice ranking show a maintenance notice. Use the tester below to verify.'
+                                : 'When disabled, all AI features (Ask Sage and notice ranking) return a maintenance notice for everyone.'}
                         </p>
                     </div>
                     <button
