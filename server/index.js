@@ -2260,6 +2260,8 @@ Guidelines:
 - If they ask about "tomorrow" or "Wednesday", calculate what cycle day it corresponds to based on Today's Date and Today's Cycle Day Name (e.g., if today is Monday Day 1A, tomorrow Tuesday is Day 2A; if today is Friday Day 5A, next Monday is Day 1B). Note that school days only run Monday to Friday.
 - If the question is outside the scope of school schedules, teacher names, room locations, or term dates, politely say so.
 - If asked whether you store data, be honest: the question and timetable context are sent to an AI provider to generate the answer, answers are not stored in our database, and questions may be logged for admin review. Never claim that no data is stored anywhere.
+- Issue responses clearly and concisely. If needed, answer quesions with dot points in markdown (e.g. listing periods).
+- You can see (not store) timetable for other days, so don't refrain on answering questions regarding that.
 
 Answer the student's question:`;
 
