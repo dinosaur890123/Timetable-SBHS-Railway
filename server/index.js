@@ -42,6 +42,7 @@ let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
+let deletionRequests = []; // Data deletion requests memory fallback
 let buildNotesMemory = [
     {
         id: 'initial-build-note',
@@ -520,6 +521,26 @@ async function deleteUserById(id) {
 
     const result = await db.query('DELETE FROM app_users WHERE id = $1 RETURNING id', [String(id)]);
     return result.rows.length > 0;
+}
+
+// Removes every row the server holds for a student. The app_users delete
+// cascades to notes, assignments, Canvas links, feedback, notifications and
+// resource shares; the student-keyed tables without a foreign key are cleaned
+// up by hand. Audit logs are kept — they prune after 30 days.
+async function deleteStudentData(studentId) {
+    const id = String(studentId);
+    if (!isDbEnabled) {
+        users = users.filter(u => String(u.id) !== id);
+        notes = notes.filter(n => String(n.studentId) !== id);
+        assignments = assignments.filter(a => String(a.studentId) !== id);
+        feedbackEntries = feedbackEntries.filter(f => String(f.studentId) !== id);
+        aiUsageLogs = aiUsageLogs.filter(l => String(l.studentId) !== id);
+        return;
+    }
+
+    await db.query('DELETE FROM ai_usage_logs WHERE student_id = $1', [id]);
+    await db.query('DELETE FROM canvas_class_link_votes WHERE student_id = $1', [id]);
+    await db.query('DELETE FROM app_users WHERE id = $1', [id]);
 }
 
 async function listLogs(limit = 100) {
@@ -1895,6 +1916,180 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Delete user error:', e);
         res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// --- Data Deletion Requests (Privacy page → admin panel) ---
+
+const DELETION_REQUEST_COLS = 'id, student_id, name, email, status, created_at, updated_at';
+
+const formatDeletionRequest = (row) => ({
+    id: row.id,
+    studentId: row.student_id ?? row.studentId,
+    name: row.name ?? null,
+    email: row.email ?? null,
+    status: row.status ?? 'pending',
+    createdAt: toIso(row.created_at ?? row.createdAt),
+    updatedAt: toIso(row.updated_at ?? row.updatedAt)
+});
+
+const findPendingDeletionRequest = async (studentId) => {
+    if (!isDbEnabled) {
+        return deletionRequests.find(r => String(r.studentId) === studentId && r.status === 'pending') || null;
+    }
+    const result = await db.query(
+        `SELECT ${DELETION_REQUEST_COLS} FROM data_deletion_requests WHERE student_id = $1 AND status = 'pending'`,
+        [studentId]
+    );
+    return result.rows.length > 0 ? formatDeletionRequest(result.rows[0]) : null;
+};
+
+// GET /api/privacy/deletion-request - The signed-in student's latest request, if any
+app.get('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        let request = null;
+        if (!isDbEnabled) {
+            request = deletionRequests.find(r => String(r.studentId) === studentId) || null;
+        } else {
+            const result = await db.query(
+                `SELECT ${DELETION_REQUEST_COLS} FROM data_deletion_requests WHERE student_id = $1 ORDER BY created_at DESC LIMIT 1`,
+                [studentId]
+            );
+            if (result.rows.length > 0) request = formatDeletionRequest(result.rows[0]);
+        }
+        res.json({ request: request ? formatDeletionRequest(request) : null });
+    } catch (e) {
+        console.error('Deletion request fetch error:', e);
+        res.status(500).json({ error: 'Failed to fetch deletion request' });
+    }
+});
+
+// POST /api/privacy/deletion-request - Student asks for their server-side data to be deleted
+app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        const name = [req.user.givenName, req.user.surname].filter(Boolean).join(' ').trim() || null;
+        const email = req.user.email ? String(req.user.email) : null;
+
+        // One open request per student; a repeat click returns the existing one.
+        const existing = await findPendingDeletionRequest(studentId);
+        if (existing) {
+            return res.status(200).json({ success: true, request: existing, alreadyRequested: true });
+        }
+
+        let request;
+        if (!isDbEnabled) {
+            const now = new Date();
+            request = { id: crypto.randomUUID(), studentId, name, email, status: 'pending', createdAt: now, updatedAt: now };
+            deletionRequests.unshift(request);
+        } else {
+            const result = await db.query(
+                `INSERT INTO data_deletion_requests (id, student_id, name, email, status, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())
+                 RETURNING ${DELETION_REQUEST_COLS}`,
+                [crypto.randomUUID(), studentId, name, email]
+            );
+            request = formatDeletionRequest(result.rows[0]);
+        }
+
+        await addLog('PRIVACY', studentId, 'Requested deletion of all server-side data');
+        res.status(201).json({ success: true, request: formatDeletionRequest(request) });
+    } catch (e) {
+        // A concurrent request can win the partial unique index; return theirs.
+        if (e?.code === '23505') {
+            try {
+                const studentId = String(req.user.studentId);
+                const existing = await findPendingDeletionRequest(studentId);
+                if (existing) return res.status(200).json({ success: true, request: existing, alreadyRequested: true });
+            } catch { /* fall through to the 500 */ }
+        }
+        console.error('Deletion request submit error:', e);
+        res.status(500).json({ error: 'Failed to submit deletion request' });
+    }
+});
+
+// GET /api/admin/deletion-requests - List all deletion requests for the admin panel
+app.get('/api/admin/deletion-requests', requireAuth, async (req, res) => {
+    try {
+        let requests;
+        if (!isDbEnabled) {
+            requests = deletionRequests.map(r => {
+                const u = users.find(user => String(user.id) === String(r.studentId));
+                return {
+                    ...formatDeletionRequest(r),
+                    name: u?.name || r.name || 'Unknown Student',
+                    email: u?.email || r.email || `${r.studentId}@student.sbhs.nsw.edu.au`
+                };
+            });
+        } else {
+            const result = await db.query(
+                `SELECT d.id, d.student_id, d.name, d.email, d.status, d.created_at, d.updated_at,
+                        u.name AS user_name, u.email AS user_email
+                 FROM data_deletion_requests d
+                 LEFT JOIN app_users u ON d.student_id = u.id
+                 ORDER BY d.created_at DESC`
+            );
+            requests = result.rows.map(row => ({
+                ...formatDeletionRequest(row),
+                name: row.user_name || row.name || 'Unknown Student',
+                email: row.user_email || row.email || `${row.student_id}@student.sbhs.nsw.edu.au`
+            }));
+        }
+        res.json(requests);
+    } catch (e) {
+        console.error('Deletion requests list error:', e);
+        res.status(500).json({ error: 'Failed to fetch deletion requests' });
+    }
+});
+
+// PUT /api/admin/deletion-requests/:id - 'completed' deletes the student's data; 'dismissed' closes the request
+app.put('/api/admin/deletion-requests/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body || {};
+        if (!['completed', 'dismissed'].includes(status)) {
+            return res.status(400).json({ error: 'Status must be completed or dismissed' });
+        }
+
+        // Resolve the pending request first so a failed deletion leaves it open for a retry.
+        let existing = null;
+        if (!isDbEnabled) {
+            existing = deletionRequests.find(r => String(r.id) === String(id)) || null;
+        } else {
+            const found = await db.query(
+                `SELECT ${DELETION_REQUEST_COLS} FROM data_deletion_requests WHERE id = $1`,
+                [String(id)]
+            );
+            if (found.rows.length > 0) existing = formatDeletionRequest(found.rows[0]);
+        }
+        if (!existing) return res.status(404).json({ error: 'Request not found' });
+        if (existing.status !== 'pending') return res.status(409).json({ error: 'Request already resolved' });
+
+        if (status === 'completed') {
+            await deleteStudentData(existing.studentId);
+        }
+
+        let updated;
+        if (!isDbEnabled) {
+            existing.status = status;
+            existing.updatedAt = new Date();
+            updated = formatDeletionRequest(existing);
+        } else {
+            const result = await db.query(
+                `UPDATE data_deletion_requests SET status = $1, updated_at = NOW()
+                 WHERE id = $2 RETURNING ${DELETION_REQUEST_COLS}`,
+                [status, String(id)]
+            );
+            updated = formatDeletionRequest(result.rows[0]);
+        }
+
+        await addLog('PRIVACY', req.user?.studentId || 'ADMIN',
+            `${status === 'completed' ? 'Fulfilled' : 'Dismissed'} data deletion request for ${existing.studentId || id}`);
+        res.json({ success: true, request: updated });
+    } catch (e) {
+        console.error('Deletion request update error:', e);
+        res.status(500).json({ error: 'Failed to update deletion request' });
     }
 });
 

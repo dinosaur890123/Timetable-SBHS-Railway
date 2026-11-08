@@ -217,6 +217,24 @@ CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications (user_id);
 CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read);
 CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
 
+-- Data deletion requests: students ask from the Privacy page; admins fulfil
+-- them from the panel. student_id is deliberately not a foreign key so the
+-- request record survives the account deletion it triggers.
+CREATE TABLE IF NOT EXISTS data_deletion_requests (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  name TEXT NULL,
+  email TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'completed', 'dismissed'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One open request per student; resolved requests don't block a new one.
+CREATE UNIQUE INDEX IF NOT EXISTS data_deletion_requests_pending_key
+  ON data_deletion_requests (student_id) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS data_deletion_requests_created_at_idx ON data_deletion_requests (created_at DESC);
+
 -- Build Notes migration
 CREATE TABLE IF NOT EXISTS app_build_notes (
   id TEXT PRIMARY KEY,

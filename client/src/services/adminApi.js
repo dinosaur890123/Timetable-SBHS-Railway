@@ -348,6 +348,39 @@ export const bulkDeleteFeedback = async (feedbackIds) => {
     }
 };
 
+// Data deletion requests (Privacy page → admin panel)
+export const fetchDeletionRequests = async () => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/deletion-requests`, {
+            headers: await getHeaders()
+        });
+        if (!response.ok) throw new Error(`Failed to fetch deletion requests (HTTP ${response.status})`);
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
+// status: 'completed' deletes the student's server-side data, 'dismissed' closes the request.
+export const updateDeletionRequest = async (id, status) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/admin/deletion-requests/${id}`, {
+            method: 'PUT',
+            headers: await getHeaders(),
+            body: JSON.stringify({ status })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to update deletion request');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const toggleUserBlacklist = async (userId, blacklisted) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/users/${userId}`, {

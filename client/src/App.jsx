@@ -1052,7 +1052,7 @@ function App() {
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
-            <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-x-hidden overflow-y-auto bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+            <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-hidden bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
                 <ModernTopbar
                     currentView={currentView}
                     setView={setCurrentView}
@@ -1067,6 +1067,7 @@ function App() {
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
 
+                <div className="relative flex-1 min-h-0 flex flex-col overflow-x-hidden overflow-y-auto">
                 {maintenance && user?.role === 'Admin' && (
                     <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex items-center gap-3 text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400 border">
                         <AlertTriangle size={18} className="shrink-0" />
@@ -1414,7 +1415,7 @@ function App() {
                     </div>
                 )}
 
-
+                </div>
             </main>
 
             <ModernDock

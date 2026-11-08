@@ -632,6 +632,35 @@ export const saveUserPreferences = async (studentId, preferences) => {
     return response.json();
 };
 
+// Data deletion requests (Privacy page). The server notifies admins, who
+// fulfil the request from the admin panel.
+export const fetchDeletionRequest = async () => {
+    const token = await getValidAccessToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await timedFetch(`${SYSTEM_API_URL}/privacy/deletion-request`, { headers });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch deletion request: ${response.status}`);
+    }
+    return response.json();
+};
+
+export const requestDataDeletion = async () => {
+    const token = await getValidAccessToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await timedFetch(`${SYSTEM_API_URL}/privacy/deletion-request`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `Failed to request data deletion: ${response.status}`);
+    }
+    return data;
+};
+
 // Canvas Links API
 
 // Sends a request to the Canvas links endpoints. Rejects with an Error whose

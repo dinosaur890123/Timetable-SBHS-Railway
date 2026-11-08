@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Shield, Database, Cpu, Eye, Trash2, Lock, Server, Smartphone, LogOut } from 'lucide-react';
+import { fetchDeletionRequest, requestDataDeletion } from '../services/api';
 
 const Section = ({ icon: Icon, title, children }) => (
     <section className="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
@@ -40,24 +41,45 @@ const Tag = ({ children, colour = 'zinc' }) => {
     );
 };
 
-const TableRow = ({ what, where, when, canDelete }) => (
-    <div className="px-5 py-3.5 grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_1.5fr_1.5fr_auto] gap-x-4 gap-y-1 items-start">
-        <div className="text-[13px] font-medium text-zinc-800 dark:text-zinc-200 col-span-2 sm:col-span-1">{what}</div>
-        <div className="hidden sm:flex flex-wrap gap-1">{where}</div>
-        <div className="hidden sm:flex flex-wrap gap-1">{when}</div>
-        <div className="flex gap-1 col-span-2 sm:col-span-1 flex-wrap">{canDelete}</div>
-    </div>
+const GlanceRow = ({ what, where, when, canDelete }) => (
+    <tr className="align-top">
+        <td className="px-5 py-3.5 text-[13px] font-medium text-zinc-800 dark:text-zinc-200">{what}</td>
+        <td className="px-5 py-3.5"><div className="flex flex-wrap gap-1">{where}</div></td>
+        <td className="px-5 py-3.5"><div className="flex flex-wrap gap-1">{when}</div></td>
+        <td className="px-5 py-3.5"><div className="flex flex-wrap gap-1">{canDelete}</div></td>
+    </tr>
 );
 
-const TableHeader = () => (
-    <div className="px-5 py-2.5 hidden sm:grid grid-cols-[2fr_1.5fr_1.5fr_auto] gap-4 bg-zinc-50/80 dark:bg-white/[0.015] border-b border-zinc-900/[0.06] dark:border-white/[0.06]">
-        {['What', 'Stored where', 'Kept for', 'Deletable?'].map(h => (
-            <div key={h} className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:text-zinc-500">{h}</div>
-        ))}
-    </div>
-);
+const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
+    const [deletionRequest, setDeletionRequest] = useState(null);
+    const [requestState, setRequestState] = useState('idle'); // idle | sending | error
+    const [requestError, setRequestError] = useState('');
 
-const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => (
+    useEffect(() => {
+        let cancelled = false;
+        fetchDeletionRequest()
+            .then(data => { if (!cancelled) setDeletionRequest(data?.request || null); })
+            .catch(() => { /* privacy page still works if the request can't be loaded */ });
+        return () => { cancelled = true; };
+    }, []);
+
+    const handleRequestDeletion = async () => {
+        if (!window.confirm('Request deletion of your account and all server-side data? An admin will review the request. Once completed, this cannot be undone.')) return;
+        setRequestState('sending');
+        setRequestError('');
+        try {
+            const data = await requestDataDeletion();
+            setDeletionRequest(data.request || null);
+            setRequestState('idle');
+        } catch (e) {
+            setRequestError(e.message || 'Failed to send the request. Please try again.');
+            setRequestState('error');
+        }
+    };
+
+    const pendingRequest = deletionRequest?.status === 'pending' ? deletionRequest : null;
+
+    return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         {/* Back */}
@@ -197,67 +219,79 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => (
 
         {/* Data-at-a-glance table */}
         <Section icon={Eye} title="Data at a glance">
-            <TableHeader />
-            <TableRow
+            <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[620px]">
+                    <thead>
+                        <tr className="border-b border-zinc-900/[0.06] dark:border-white/[0.06]">
+                            {['What', 'Stored where', 'Kept for', 'Deletable?'].map(h => (
+                                <th key={h} className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:text-zinc-500 font-medium">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
+            <GlanceRow
                 what="Timetable, notices, awards, attendance"
                 where={<><Tag colour="blue">Your device only</Tag></>}
                 when={<Tag colour="zinc">Session / offline cache</Tag>}
                 canDelete={<Tag colour="green">Sign out</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="SBHS access &amp; refresh tokens"
                 where={<Tag colour="blue">localStorage</Tag>}
                 when={<Tag colour="zinc">Until sign-out</Tag>}
                 canDelete={<Tag colour="green">Sign out</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="Account (ID, name, email, year)"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">Until deleted</Tag>}
-                canDelete={<Tag colour="green">Contact admin</Tag>}
+                canDelete={<Tag colour="green">Request below</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="UI preferences &amp; AI opt-in"
                 where={<><Tag colour="blue">localStorage</Tag><Tag colour="amber">Synchron server</Tag></>}
                 when={<Tag colour="zinc">Until changed</Tag>}
-                canDelete={<Tag colour="green">Sign out / contact admin</Tag>}
+                canDelete={<Tag colour="green">Sign out / request below</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="Canvas links"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">Until deleted</Tag>}
                 canDelete={<Tag colour="green">From Canvas Links page</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="Study notes &amp; assignments"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">Until deleted</Tag>}
                 canDelete={<Tag colour="green">From Study page</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="Feedback submissions"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">90 days after archival</Tag>}
                 canDelete={<Tag colour="zinc">Auto-purged</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="Sage question text (AI log)"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">Admin-prunable</Tag>}
-                canDelete={<Tag colour="green">Contact admin</Tag>}
+                canDelete={<Tag colour="green">Request below</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="AI answers"
                 where={<Tag colour="green">Never stored</Tag>}
                 when={<Tag>—</Tag>}
                 canDelete={<Tag>—</Tag>}
             />
-            <TableRow
+            <GlanceRow
                 what="AI briefing notice priorities"
                 where={<Tag colour="amber">Synchron server (index only)</Tag>}
                 when={<Tag colour="zinc">1 day / clearable by admin</Tag>}
                 canDelete={<Tag colour="green">Admin can clear cache</Tag>}
             />
+                    </tbody>
+                </table>
+            </div>
         </Section>
 
         {/* Deleting your data */}
@@ -267,10 +301,47 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => (
                 Your account record, notes, and Canvas links remain on the server so they're ready when you sign back in.
             </Item>
             <Item label="Requesting full deletion">
-                To have your account and all associated server-side data removed, contact the Synchron admin via the feedback form.
-                Admin-level deletion removes your account row, notes, assignments, Canvas links, and AI log entries.
+                Use the button below to ask for your account and all associated server-side data to be removed.
+                The request appears in the admin panel, where an admin reviews and processes it.
+                Admin-level deletion removes your account row, notes, assignments, Canvas links, feedback, and AI log entries.
             </Item>
         </Section>
+
+        {/* Request deletion */}
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] dark:bg-red-500/[0.06] p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+                <Trash2 size={18} className="shrink-0 text-red-500 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                    <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-white">Request data deletion</h2>
+                    <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        Sends a request to the Synchron admins to permanently delete your account and everything stored
+                        against it on our servers. SBHS data on your device is cleared separately by signing out.
+                    </p>
+                    {pendingRequest ? (
+                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 text-[13px] font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Deletion requested{pendingRequest.createdAt ? ` on ${new Date(pendingRequest.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}` : ''} — pending admin review
+                        </div>
+                    ) : deletionRequest?.status === 'completed' ? (
+                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[13px] font-medium">
+                            Your server-side data has been deleted.
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleRequestDeletion}
+                            disabled={requestState === 'sending'}
+                            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors"
+                        >
+                            <Trash2 size={15} />
+                            {requestState === 'sending' ? 'Sending request…' : 'Request data deletion'}
+                        </button>
+                    )}
+                    {requestError && (
+                        <p className="mt-3 text-[13px] text-red-600 dark:text-red-400">{requestError}</p>
+                    )}
+                </div>
+            </div>
+        </div>
 
         {/* Offline / PWA */}
         <Section icon={Smartphone} title="Offline &amp; PWA usage">
@@ -286,6 +357,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => (
             Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
         </p>
     </div>
-);
+    );
+};
 
 export default PrivacyView;

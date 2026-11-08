@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote } from '../services/adminApi';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
@@ -13,6 +13,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [logs, setLogs] = useState([]);
     const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
+    const [deletionRequests, setDeletionRequests] = useState([]);
     const [currentBroadcast, setCurrentBroadcast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState(null);
@@ -42,6 +43,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
     const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('open');
+    const [deletionStatusFilter, setDeletionStatusFilter] = useState('pending');
+    const [resolvingDeletionId, setResolvingDeletionId] = useState(null);
     const [roleFilter, setRoleFilter] = useState('All');
     const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [viewingFeedback, setViewingFeedback] = useState(null); // Feedback object for detail modal
@@ -109,15 +112,17 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             fetchLogs(),
             fetchSystemStatus(),
             fetchAiLogs(),
-            fetchAdminFeedback()
+            fetchAdminFeedback(),
+            fetchDeletionRequests()
         ]);
-        const [usersRes, statsRes, logsRes, systemRes, aiLogsRes, feedbackRes] = results;
+        const [usersRes, statsRes, logsRes, systemRes, aiLogsRes, feedbackRes, deletionRes] = results;
 
         if (usersRes.status === 'fulfilled') setUsers(usersRes.value || []);
         if (statsRes.status === 'fulfilled') setStats(statsRes.value);
         if (logsRes.status === 'fulfilled') setLogs(logsRes.value || []);
         if (aiLogsRes.status === 'fulfilled') setAiLogs(aiLogsRes.value || []);
         if (feedbackRes.status === 'fulfilled') setFeedback(feedbackRes.value || []);
+        if (deletionRes.status === 'fulfilled') setDeletionRequests(deletionRes.value || []);
         if (systemRes.status === 'fulfilled') {
             setCurrentBroadcast(systemRes.value?.broadcast || null);
             if (Array.isArray(systemRes.value?.hiddenPages)) {
@@ -127,7 +132,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             }
         }
 
-        const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback'];
+        const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback', 'deletion requests'];
         const failed = results
             .map((res, i) => (res.status === 'rejected' ? { label: labels[i], reason: res.reason } : null))
             .filter(Boolean);
@@ -211,6 +216,23 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             await loadBuildNotes();
         } catch (err) {
             alert(`Failed to delete build note: ${err.message}`);
+        }
+    };
+
+    const handleResolveDeletionRequest = async (request, status) => {
+        const action = status === 'completed'
+            ? `delete ALL server-side data for ${request.name} (${request.studentId})? This cannot be undone.`
+            : `dismiss the data deletion request from ${request.name} (${request.studentId})?`;
+        if (!window.confirm(`Are you sure you want to ${action}`)) return;
+
+        setResolvingDeletionId(request.id);
+        try {
+            await updateDeletionRequest(request.id, status);
+            await loadData();
+        } catch (err) {
+            alert(err.message || 'Failed to update deletion request');
+        } finally {
+            setResolvingDeletionId(null);
         }
     };
 
@@ -691,6 +713,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                 <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                 <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
+                <TabButton id="notifications" label="Notifications" icon={Bell} />
                 <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
                 <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
                 <TabButton id="settings" label="Settings" icon={Settings} />
@@ -1932,6 +1955,121 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                                 </span>
                                             );
                                         })()}
+                                    </td>
+                                </tr>
+                            ));
+                        })()}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+{
+    activeTab === 'notifications' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                        <Bell size={16} />
+                        Notifications
+                    </h3>
+                    {deletionRequests.some(r => r.status === 'pending') && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
+                            {deletionRequests.filter(r => r.status === 'pending').length} pending
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                    <select
+                        value={deletionStatusFilter}
+                        onChange={(e) => setDeletionStatusFilter(e.target.value)}
+                        className="px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="dismissed">Dismissed</option>
+                        <option value="All">All Requests</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
+                        <tr>
+                            <th className="px-6 py-4">Student</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Requested</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        {(() => {
+                            const filtered = deletionRequests.filter(r =>
+                                deletionStatusFilter === 'All' || r.status === deletionStatusFilter
+                            );
+
+                            if (filtered.length === 0) {
+                                return (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
+                                            No deletion requests{deletionStatusFilter !== 'All' ? ` with status "${deletionStatusFilter}"` : ''}.
+                                        </td>
+                                    </tr>
+                                );
+                            }
+
+                            return filtered.map((req) => (
+                                <tr key={req.id}>
+                                    <td className="px-6 py-4">
+                                        <div className="font-semibold text-zinc-900 dark:text-white">{req.name}</div>
+                                        <div className="text-zinc-500 text-xs font-mono">{req.studentId}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{req.email}</td>
+                                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                                        {req.createdAt ? new Date(req.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {(() => {
+                                            const statusClass = {
+                                                pending: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                                                completed: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                                                dismissed: 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
+                                            }[req.status] || 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700';
+                                            return (
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 border text-xs font-semibold capitalize ${statusClass}`}>
+                                                    {req.status}
+                                                </span>
+                                            );
+                                        })()}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {req.status === 'pending' ? (
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleResolveDeletionRequest(req, 'dismissed')}
+                                                    disabled={resolvingDeletionId === req.id}
+                                                    className="text-xs font-semibold px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 rounded-lg transition-colors border border-zinc-200/20 disabled:opacity-50"
+                                                >
+                                                    Dismiss
+                                                </button>
+                                                <button
+                                                    onClick={() => handleResolveDeletionRequest(req, 'completed')}
+                                                    disabled={resolvingDeletionId === req.id}
+                                                    className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-950/60 dark:text-red-400 rounded-lg transition-colors flex items-center gap-1 border border-red-200/20 disabled:opacity-50"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    {resolvingDeletionId === req.id ? 'Working…' : 'Delete data'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="text-right text-xs text-zinc-400">
+                                                {req.updatedAt ? new Date(req.updatedAt).toLocaleDateString() : ''}
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ));
