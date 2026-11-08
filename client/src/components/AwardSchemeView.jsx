@@ -402,41 +402,32 @@ const PlanView = ({ summary }) => {
 
     // Calculate hypothetical projections
     const projections = useMemo(() => {
-        if (plannedAwards.length === 0) return null;
-
         const totalPlannedPoints = plannedAwards.reduce((sum, a) => sum + a.points, 0);
         const currentPoints = summary.totalPoints;
         const totalPoints = currentPoints + totalPlannedPoints;
 
-        // Nominations: /30 rule
-        const currentNominations = Math.floor(currentPoints / 30);
-        const currentRemainder = currentPoints % 30;
-        const totalNominations = Math.floor(totalPoints / 30);
-        const totalRemainder = totalPoints % 30;
-
         // Prize projection
         const nextPrize = summary.prizeRows.find(p => p.state !== 'won');
-        const projectedPrize = nextPrize && totalNominations >= nextPrize.nominationsRequired ? nextPrize : null;
+        const projectedPrize = nextPrize && summary.nominationsAllTime + plannedAwards.filter(a => a.type === 'nomination').length >= nextPrize.nominationsRequired ? nextPrize : null;
 
-        // Area breakdown
+        // Area breakdown using actual nomination levels
         const areaBreakdown = summary.areas.map(area => {
             const plannedPoints = plannedAwards
                 .filter(a => a.category?.name === area.name)
                 .reduce((sum, a) => sum + a.points, 0);
-            const newPoints = area.points + plannedPoints;
-            const nominations = Math.floor(newPoints / 30);
-            const remainder = newPoints % 30;
-            return { ...area, plannedPoints, newPoints, nominations, remainder };
+            const base = area.basePoints || 0;
+            const required = area.next ? Math.max(1, area.next.pointsRequired - base) : 0;
+            const toward = area.next ? Math.max(0, area.next.points - base) + plannedPoints : area.points + plannedPoints;
+            const earned = area.earned + (area.next && toward >= required ? 1 : 0);
+            return { ...area, plannedPoints, earned, toward, required };
         });
 
         return {
             totalPlannedPoints,
             currentPoints,
             totalPoints,
-            currentNominations,
-            currentRemainder,
-            totalNominations,
-            totalRemainder,
+            currentNominations: summary.nominationsAllTime,
+            totalNominations: summary.nominationsAllTime + plannedAwards.filter(a => a.type === 'nomination').length,
             projectedPrize,
             areaBreakdown
         };
@@ -477,43 +468,38 @@ const PlanView = ({ summary }) => {
                 </div>
             </Card>
 
-            {/* Search Results */}
-            {groups.length === 0 ? (
-                <Card><Empty>No awards match “{query.trim()}”.</Empty></Card>
-            ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {groups.map(g => (
-                        <Card key={g.name}>
-                            <CardTitle aside={plural(g.items.length, 'award')}>{g.name}</CardTitle>
-                            <ul className="divide-y divide-m-line -my-2.5">
-                                {g.items.map(a => (
-                                    <li key={a.id} className="py-2.5 flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
-                                            {(a.housePoints > 0 || a.received > 0) && (
-                                                <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                                                    {a.received > 0 && <span className="text-zinc-700 dark:text-zinc-300">Received{a.received > 1 ? ` ×${a.received}` : ''}</span>}
-                                                    {a.received > 0 && a.housePoints > 0 && ' · '}
-                                                    {a.housePoints > 0 && plural(a.housePoints, 'house point')}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
-                                            {a.points} {a.points === 1 ? 'pt' : 'pts'}
-                                        </span>
-                                        <button
-                                            onClick={() => handleAddAward(a)}
-                                            className="shrink-0 p-1 rounded-md hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.05] text-zinc-400 hover:text-accent"
-                                            aria-label={`Add ${a.name} to plan`}
-                                        >
-                                            <Plus size={14} />
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </Card>
-                    ))}
-                </div>
+            {/* Search Results (compact) */}
+            {groups.length > 0 && (
+                <Card>
+                    <CardTitle aside={plural(groups.reduce((sum, g) => sum + g.items.length, 0), 'award')}>Search Results</CardTitle>
+                    <ul className="divide-y divide-m-line -my-2.5">
+                        {groups.flatMap(g => g.items).slice(0, 10).map(a => (
+                            <li key={a.id} className="py-2.5 flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]">
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
+                                    <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                        {a.category?.name || 'Other'}
+                                    </div>
+                                </div>
+                                <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
+                                    {a.points} {a.points === 1 ? 'pt' : 'pts'}
+                                </span>
+                                <button
+                                    onClick={() => handleAddAward(a)}
+                                    className="shrink-0 p-1 rounded-md hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.05] text-zinc-400 hover:text-accent"
+                                    aria-label={`Add ${a.name} to plan`}
+                                >
+                                    <Plus size={14} />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    {groups.reduce((sum, g) => sum + g.items.length, 0) > 10 && (
+                        <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
+                            Showing first 10 results. Refine your search to see more.
+                        </p>
+                    )}
+                </Card>
             )}
 
             {/* Planned Awards & Projections */}
@@ -555,10 +541,10 @@ const PlanView = ({ summary }) => {
                                     <div className="flex items-center justify-between mb-1">
                                         <span className="text-[13.5px] text-zinc-900 dark:text-white">{area.name}</span>
                                         <span className="text-[12px] font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
-                                            {area.newPoints} pts · {area.nominations} noms · {area.remainder}/30
+                                            {area.earned} earned · {area.next ? `${area.next.pointsRequired} pts needed` : 'Complete'}
                                         </span>
                                     </div>
-                                    <Bar value={area.newPoints % 30} max={30} tone="accent" />
+                                    <Bar value={area.toward} max={area.required} tone="accent" />
                                 </div>
                             ))}
                         </div>
@@ -571,7 +557,7 @@ const PlanView = ({ summary }) => {
                             <Stat
                                 label="Total Nominations"
                                 value={projections.totalNominations}
-                                sub={`${projections.totalRemainder}/30 remainder`}
+                                sub={`+${projections.totalNominations - projections.currentNominations}`}
                                 accent={projections.totalNominations > projections.currentNominations}
                             />
                             <Stat
@@ -585,11 +571,48 @@ const PlanView = ({ summary }) => {
                 </>
             )}
 
-            {/* Empty state */}
+            {/* Current Status (no hypothetical) */}
             {plannedAwards.length === 0 && (
-                <Card>
-                    <Empty>Add awards from the search above to see projections</Empty>
-                </Card>
+                <>
+                    <Card>
+                        <CardTitle>Nominations Breakdown</CardTitle>
+                        <div className="space-y-4">
+                            {summary.areas.map(area => {
+                                const base = area.basePoints || 0;
+                                const required = area.next ? Math.max(1, area.next.pointsRequired - base) : 0;
+                                const toward = area.next ? Math.max(0, area.next.points - base) : area.points;
+                                return (
+                                    <div key={area.id} className="py-2">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[13.5px] text-zinc-900 dark:text-white">{area.name}</span>
+                                            <span className="text-[12px] font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
+                                                {area.earned} earned · {area.next ? `${area.next.pointsRequired} pts needed` : 'Complete'}
+                                            </span>
+                                        </div>
+                                        <Bar value={toward} max={required} tone="neutral" />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <CardTitle>Current Status</CardTitle>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Stat
+                                label="Total Nominations"
+                                value={summary.nominationsAllTime}
+                                sub="All time"
+                            />
+                            <Stat
+                                label="Current Prize"
+                                value={summary.latestPrize ? summary.latestPrize.name : 'None yet'}
+                                valueClass="text-lg"
+                                sub={summary.nextPrize ? `Next: ${summary.nextPrize.name} at ${summary.nextPrize.nominationsRequired} noms` : 'Keep earning!'}
+                            />
+                        </div>
+                    </Card>
+                </>
             )}
 
             {/* Full scheme link */}
