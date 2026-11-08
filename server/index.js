@@ -135,12 +135,15 @@ const addLog = async (action, user, details) => {
     );
 };
 
+// Logs one AI interaction for admin visibility and rate-limit auditing.
+// question MUST be the student's raw typed text only (capped at 500 chars by the
+// caller). No timetable JSON, system-prompt context, or AI-generated answer is stored.
 const addAiLog = async (studentId, question, provider, model, status = 'ok') => {
     const log = {
         id: crypto.randomUUID(),
         timestamp: new Date(),
         studentId: studentId || 'UNKNOWN',
-        question: question || '',
+        question: String(question || '').slice(0, 500), // cap enforced defensively
         status: status || 'ok',
         provider: provider || 'unknown',
         model: model || 'unknown'
@@ -2252,7 +2255,7 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
 - Today's timetable: ${JSON.stringify(timetable)}
 - Full cycle timetable (all days): ${JSON.stringify(completeTimetable)}
 
-Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline non-timetable questions politely. If asked about storage or who processes data: questions + timetable are sent to ${providerName} to generate the answer; answers aren't stored in our DB; questions may be logged — never claim nothing is stored. Don't assume teacher genders.`;
+Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline non-timetable questions politely. If asked about storage or who processes data: your typed question and timetable are sent to ${providerName} to generate the answer; only your typed question text (not timetable data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
 
         let answer = '';
 
@@ -2325,7 +2328,7 @@ Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for 
     } catch (err) {
         console.error('[ai-timetable-qa] Failed:', err);
         const errMsg = 'Failed to generate answer';
-        await addAiLog(req.user?.studentId || 'UNKNOWN', req.body?.question || 'Unknown Question', 'unknown', 'unknown', 'error').catch(() => {});
+        await addAiLog(req.user?.studentId || 'UNKNOWN', clip(req.body?.question || '', 500).trim(), 'unknown', 'unknown', 'error').catch(() => {});
         res.status(500).json({ error: errMsg });
     }
 });

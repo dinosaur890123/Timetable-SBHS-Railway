@@ -19,6 +19,7 @@ const pageLoaders = {
     canvasLinks: () => import('./components/CanvasLinksView'),
     buildNotes: () => import('./components/BuildNotesView'),
     settings: () => import('./components/SettingsView'),
+    privacy: () => import('./components/PrivacyView'),
     admin: () => import('./components/AdminPanel')
 };
 
@@ -51,6 +52,7 @@ const StudyView = lazyPage(pageLoaders.study);
 const FeedbackView = lazyPage(pageLoaders.feedback);
 const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
 const BuildNotesView = lazyPage(pageLoaders.buildNotes);
+const PrivacyView = lazyPage(pageLoaders.privacy);
 const SettingsView = lazyPage(pageLoaders.settings);
 
 // Tiny markdown for Sage's replies: **bold**, *italic*, `code`, lists, paragraphs.
@@ -1304,6 +1306,11 @@ function App() {
                             {/* BUILD NOTES VIEW */}
                             {currentView === 'build-notes' && (
                                 <BuildNotesView onBack={() => setCurrentView('profile')} />
+                            )}
+
+                            {/* PRIVACY VIEW */}
+                            {currentView === 'privacy' && (
+                                <PrivacyView onBack={() => setCurrentView('profile')} aiProviderName={aiProviderName} />
                             )}
 
                             {/* ADMIN VIEW */}

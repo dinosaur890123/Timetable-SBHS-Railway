@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS ai_usage_logs (
   id TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   student_id TEXT NOT NULL,
+  -- Raw text typed by the student only (max 500 chars). No timetable JSON,
+  -- system prompt context, or AI-generated answer is ever stored here.
   question TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'ok',
   provider TEXT NOT NULL,

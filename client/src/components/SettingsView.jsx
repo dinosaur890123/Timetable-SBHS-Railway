@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
@@ -199,11 +199,13 @@ const SettingsView = ({
                 />
             </Section>
 
-            <Section label="AI & privacy">
-                <Row title="What AI features send" description={`When enabled, Sage and notice ranking send your question and relevant information to ${aiProviderName} to generate a response. Timetable and notice data comes straight from the SBHS API to your device.`}>
-                </Row>
-                <Row title="What's stored" description="AI answers are not stored. Questions are logged for admin review, and daily notice rankings are cached so the AI isn't called repeatedly.">
-                </Row>
+            <Section label="Privacy">
+                <LinkRow
+                    icon={Shield}
+                    title="Privacy & data"
+                    description="What Synchron stores, what goes to the AI provider, and how to delete your data."
+                    onClick={() => setView('privacy')}
+                />
             </Section>
 
             <Section label="Help">
