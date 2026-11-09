@@ -4,7 +4,6 @@ import { Bell, Check, CheckCircle2, ExternalLink, FileCode, Info, Sparkles, User
 import { formatDistanceToNow } from 'date-fns';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNotifications } from '../context/NotificationsContext';
-import { useNotificationsDrawer } from '../context/NotificationsDrawerContext';
 
 // Suggestion ids the student has already seen in the panel; anything else
 // counts as unread and keeps the red dot on the bell.
@@ -46,22 +45,20 @@ const pageHidden = () => {
 };
 
 // Top-bar bell: the one-stop shop for notifications. Timed-out toasts are
-// archived here, every unanswered class-link suggestion is listed too —
+// archived here, and every unanswered class-link suggestion is listed too —
 // including ones the student dismissed with "Not now" — so ignored prompts
-// still get voted on instead of stalling a link's verification, and app-level
-// notices (Sage AI opt-in, new build notes) surface as drawer sections.
-const NotificationBell = () => {
+// still get voted on instead of stalling a link's verification.
+const CanvasLinkNotifications = ({
+    aiDisabled = false,
+    aiGloballyDisabled = false,
+    aiBannerDismissed = false,
+    onEnableAi,
+    onDismissAi,
+    buildNotes = [],
+    onOpenBuildNotes
+}) => {
     const { pending, vote, linkNotices, markLinkNoticesRead } = useCanvasLinks();
     const { items: notices, remove: removeNotice, clear: clearNotices } = useNotifications();
-    const {
-        aiDisabled = false,
-        aiGloballyDisabled = false,
-        aiBannerDismissed = false,
-        onEnableAi,
-        onDismissAi,
-        buildNotes = [],
-        onOpenBuildNotes
-    } = useNotificationsDrawer();
     const [open, setOpen] = useState(false);
     const [seen, setSeen] = useState(() => readSeen(SEEN_KEY));
     const [seenNotices, setSeenNotices] = useState(() => readSeen(NOTICE_SEEN_KEY));
@@ -438,4 +435,4 @@ const NotificationBell = () => {
     );
 };
 
-export default NotificationBell;
+export default CanvasLinkNotifications;

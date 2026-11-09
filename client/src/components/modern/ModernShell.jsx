@@ -5,7 +5,7 @@ import {
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
-import NotificationBell from '../NotificationBell';
+import CanvasLinkNotifications from '../CanvasLinkNotifications';
 
 export const VIEW_LABELS = {
     home: 'My Synchron',
@@ -170,7 +170,9 @@ const IconButton = ({ children, className = '', ...props }) => (
 
 export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
-    isOffline, usingCachedData, timetableViewMode, setTimetableViewMode
+    isOffline, usingCachedData, timetableViewMode, setTimetableViewMode,
+    aiDisabled, aiGloballyDisabled, aiBannerDismissed, onEnableAi, onDismissAi,
+    buildNotes = [], onOpenBuildNotes
 }) => {
     const status = isOffline
         ? { label: 'Offline', dot: 'bg-amber-500', icon: WifiOff }
@@ -241,7 +243,15 @@ export const ModernTopbar = ({
                     <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
                 )}
 
-                <NotificationBell />
+                <CanvasLinkNotifications
+                    aiDisabled={aiDisabled}
+                    aiGloballyDisabled={aiGloballyDisabled}
+                    aiBannerDismissed={aiBannerDismissed}
+                    onEnableAi={onEnableAi}
+                    onDismissAi={onDismissAi}
+                    buildNotes={buildNotes}
+                    onOpenBuildNotes={onOpenBuildNotes}
+                />
 
                 <IconButton onClick={toggleTheme} aria-label="Toggle colour mode" title="Toggle colour mode">
                     <AnimatePresence mode="wait" initial={false}>

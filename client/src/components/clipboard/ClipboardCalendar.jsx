@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-    addDays, addMonths, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isToday, isWeekend,
+    addDays, addMonths, endOfMonth, endOfWeek, format, isSameDay, isToday, isWeekend,
     startOfMonth, startOfWeek
 } from 'date-fns';
 import { Hl } from '../study/noteflow';
@@ -39,11 +39,11 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
         return rows;
     }, [month]);
 
-    const choose = (day) => {
-        setSelected(day);
-        if (!isSameMonth(day, month)) setMonth(startOfMonth(day));
+    const choose = (day) => setSelected(day);
+    const goToday = () => {
+        setSelected(new Date());
+        setMonth(startOfMonth(new Date()));
     };
-    const goToday = () => choose(new Date());
 
     const selectedSessions = selected ? sessionsOn(sessions, selected) : [];
 
