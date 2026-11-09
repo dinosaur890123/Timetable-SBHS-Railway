@@ -33,26 +33,23 @@ export const termsPage = () => ({
     load: () => fetchTerms()
 });
 
-// The spans between consecutive terms — the school holidays.
-const termBreaks = (termsData) => {
-    const bounds = Object.values(termsData?.terms || {})
+// The terms' start–end spans, straight from the API.
+const termSpans = (termsData) =>
+    Object.values(termsData?.terms || {})
         .map(t => ({ start: t?.start?.date, end: t?.end?.date }))
         .filter(t => /^\d{4}-\d{2}-\d{2}$/.test(t.start || '') && /^\d{4}-\d{2}-\d{2}$/.test(t.end || ''))
         .sort((a, b) => a.start.localeCompare(b.start));
-    const breaks = [];
-    for (let i = 0; i < bounds.length - 1; i++) {
-        if (bounds[i].end < bounds[i + 1].start) breaks.push({ start: bounds[i].end, end: bounds[i + 1].start });
-    }
-    return breaks;
-};
 
 // What a date is closed for, if anything: a named public holiday or staff development
-// day, or any day between one term's last day and the next term's first.
+// day, or "School holidays" for any day outside every term's bounds. No terms data
+// means nothing can be called closed.
 export const closureLabel = (date, termsData) => {
     const key = format(date, 'yyyy-MM-dd');
     const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
     if (named) return named;
-    return termBreaks(termsData).some(b => key > b.start && key < b.end) ? 'School holidays' : null;
+    const spans = termSpans(termsData);
+    if (spans.length === 0) return null;
+    return spans.some(t => key >= t.start && key <= t.end) ? null : 'School holidays';
 };
 
 // --- Calendar ---
