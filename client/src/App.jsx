@@ -1206,7 +1206,7 @@ function App() {
                                                 <button
                                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                                     aria-label="Choose date"
-                                                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
+                                                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[210px]"
                                                 >
                                                     <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline leading-none">{format(viewDate, 'EEEE')}</span>
                                                     <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden leading-none">{format(viewDate, 'EEE')}</span>
