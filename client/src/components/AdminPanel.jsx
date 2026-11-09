@@ -770,18 +770,32 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const weekActive = stats?.activeThisWeek || 0;
     const inactiveCount = stats?.totalUsers ? Math.max(0, stats.totalUsers - weekActive) : 0;
 
+    const filteredFeedback = feedback.filter(fb => {
+        const term = feedbackSearchTerm.toLowerCase();
+        const matchesSearch =
+            fb.ticketNumber?.toLowerCase().includes(term) ||
+            fb.details?.toLowerCase().includes(term) ||
+            fb.name?.toLowerCase().includes(term) ||
+            fb.email?.toLowerCase().includes(term) ||
+            fb.studentId?.toLowerCase().includes(term);
+        const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`admin-tab-btn flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap
+            title={label}
+            aria-label={label}
+            className={`admin-tab-btn flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap
         ${activeTab === id
                     ? 'bg-black text-white dark:bg-white dark:text-black'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-800'
                 }`}
         >
             <Icon size={16} />
-            <span>{label}</span>
+            <span className="hidden sm:inline">{label}</span>
         </button>
     );
 
@@ -829,7 +843,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </button>
             </header>
 
-            <nav className="admin-tabs-container flex gap-1 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 p-1.5 -mx-1 px-1">
+            <nav className="admin-tabs-container flex flex-wrap gap-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 p-1.5">
                 <TabButton id="overview" label="Overview" icon={Activity} />
                 <TabButton id="users" label="Users" icon={Users} />
                 <TabButton id="analytics" label="Analytics" icon={BarChart3} />
@@ -862,80 +876,50 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
         {activeTab === 'overview' && (
             <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-4">
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Users size={60} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-zinc-500">Total Users</p>
-                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">
-                                {loading ? '...' : (stats?.totalUsers || users.length || 0)}
-                            </h3>
-                            <div className={`text-xs mt-2 flex items-center gap-1 ${
-                                stats?.systemStatus === 'Maintenance' ? 'text-red-500' : 'text-green-600'
-                            }`}>
-                                <Zap size={14} />
-                                {stats?.systemStatus === 'Maintenance' ? 'Maintenance Mode' : 'System Operational'}
-                            </div>
-                        </div>
-                    </div>
-                
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Activity size={60} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-zinc-500">System Status</p>
-                            <h3 className="text-3xl font-bold text-green-600 mt-1">
-                                {loading ? '...' : (stats?.systemStatus || 'Operational')}
-                            </h3>
-                             <div className="text-xs text-zinc-500 mt-2">
-                                Uptime: {stats ? Math.floor(stats.uptime / 60) + 'm' : '0m'}
-                            </div>
-                        </div>
-                    </div>
-
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Zap size={60} />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                        label="Total Users"
+                        value={loading ? '…' : (stats?.totalUsers || users.length || 0)}
+                        description={stats?.systemStatus === 'Maintenance' ? 'Maintenance mode active' : 'Registered accounts'}
+                        icon={Users}
+                        iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                    />
+                    <StatCard
+                        label="System Status"
+                        value={loading ? '…' : (stats?.systemStatus || 'Operational')}
+                        description={`Uptime: ${stats ? Math.floor(stats.uptime / 60) + 'm' : '0m'}`}
+                        icon={Activity}
+                        iconClass={stats?.systemStatus === 'Maintenance'
+                            ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                            : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'}
+                    />
+                    <StatCard
+                        label="Server Load"
+                        value={stats ? Math.round(stats.memoryUsage / 1024 / 1024) : 0}
+                        description="MB of memory in use"
+                        icon={Zap}
+                        iconClass="bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+                    />
+                    <StatCard
+                        label="Active Sessions"
+                        value={loading ? '…' : (stats?.activeSessions || 0)}
+                        description="Currently signed in"
+                        icon={Radio}
+                        iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400"
+                    />
                 </div>
-                <div>
-                    <p className="text-sm font-medium text-zinc-500">Server Load</p>
-                    <div className="flex items-end gap-2 mt-1">
-                        <h3 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                            {stats ? Math.round(stats.memoryUsage / 1024 / 1024) : 0}
-                        </h3>
-                        <span className="text-sm font-medium text-zinc-400 mb-1">MB</span>
-                    </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 mt-3 overflow-hidden">
-                        <div className="h-full bg-black dark:bg-white animate-pulse" style={{ width: '45%' }}></div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Users size={60} />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-zinc-500">Active Sessions</p>
-                    <h3 className="text-3xl font-bold text-zinc-900 dark:text-white mt-1">
-                        {loading ? '...' : (stats?.activeSessions || 0)}
-                    </h3>
-                </div>
-            </div>
-        </div>
 
         {/* System Diagnostics & Year Distribution Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* System Diagnostics & Connection Checks */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 font-mono text-xs rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
-                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                        <ShieldCheck className="text-zinc-950 dark:text-zinc-100" size={16} />
-                        System Health & Database Diagnostics
-                    </h4>
+                    <PanelHeader
+                        icon={ShieldCheck}
+                        tone="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
+                        title="System Health & Diagnostics"
+                        subtitle="Postgres config, connection, and runtime info"
+                    />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-900/50">
                             <span className="text-zinc-500 block mb-1">Postgres Configured</span>
@@ -980,10 +964,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             {/* Year Group Student Distribution */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
-                    <h4 className="text-sm font-bold uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                        <BarChart3 className="text-zinc-950 dark:text-zinc-100" size={16} />
-                        Year Group Student Distribution
-                    </h4>
+                    <PanelHeader
+                        icon={Users}
+                        tone="bg-blue-50 text-blue-600 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30"
+                        title="Year Group Distribution"
+                        subtitle="Students by year level"
+                    />
                     <YearDistribution dist={stats?.yearDistribution} />
                 </div>
             </div>
@@ -1255,14 +1241,13 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
 {
     activeTab === 'broadcast' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-2xl shadow-sm max-w-2xl mx-auto">
-            <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-600">
-                    <Radio size={32} />
-                </div>
-                <h2 className="text-2xl font-bold dark:text-white">System Broadcast</h2>
-                <p className="text-zinc-500 mt-2">Send a global alert message to all active users</p>
-            </div>
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm max-w-2xl mx-auto">
+            <PanelHeader
+                icon={Radio}
+                tone="bg-blue-50 text-blue-600 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30"
+                title="System Broadcast"
+                subtitle="Send a global alert message to all active users"
+            />
 
             {currentBroadcast && (
                 <div className={`mb-6 p-4 border rounded-xl ${
@@ -1373,7 +1358,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">User Management</h3>
+                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                        User Management
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {filteredUsers.length}
+                        </span>
+                    </h3>
                     <div className="flex gap-2">
                         {selectedUsers.size > 0 && (
                             <button 
@@ -1546,10 +1536,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 {
     activeTab === 'settings' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-semibold dark:text-white mb-4">Admin Controls</h3>
-            <p className="text-zinc-500 text-sm mb-6">
-                Perform system maintenance tasks.
-            </p>
+            <PanelHeader
+                icon={Settings}
+                tone="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
+                title="Admin Controls"
+                subtitle="Perform system maintenance tasks."
+            />
             <div className="space-y-4">
                 {/* AI Provider Config */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
@@ -1803,10 +1795,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 {
     activeTab === 'hidden-pages' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-semibold dark:text-white mb-4">Access Hidden Pages</h3>
-            <p className="text-zinc-500 text-sm mb-6">
-                These pages are hidden from navigation but can still be accessed here.
-            </p>
+            <PanelHeader
+                icon={EyeOff}
+                tone="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
+                title="Access Hidden Pages"
+                subtitle="These pages are hidden from navigation but can still be accessed here."
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {availablePages.filter(page => hiddenPages.includes(page.id)).map(page => (
                     <button
@@ -1838,7 +1832,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">Feedback Management</h3>
+                    <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                        Feedback Management
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {filteredFeedback.length}
+                        </span>
+                    </h3>
                     <div className="flex gap-2">
                         {selectedFeedback.size > 0 && (
                             <>
@@ -1892,35 +1891,20 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
-                        {(() => {
-                            const filteredFeedback = feedback.filter(fb => {
-                                const matchesSearch = 
-                                    fb.ticketNumber?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.details?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.name?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.email?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.studentId?.toLowerCase().includes(feedbackSearchTerm.toLowerCase());
-                                const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
-                                return matchesSearch && matchesStatus;
-                            });
-
-                            return (
-                                <tr>
-                                    <th className="px-6 py-4 w-12 text-center">
-                                        <input 
-                                            type="checkbox" 
-                                            className="rounded border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-blue-500"
-                                            checked={filteredFeedback.length > 0 && filteredFeedback.every(f => selectedFeedback.has(f.id))}
-                                            onChange={() => toggleSelectAllFeedback(filteredFeedback)}
-                                        />
-                                    </th>
-                                    <th className="px-6 py-4">Feedback ID</th>
-                                    <th className="px-6 py-4">Submitting User</th>
-                                    <th className="px-6 py-4">Email</th>
-                                    <th className="px-6 py-4">Severity</th>
-                                </tr>
-                            );
-                        })()}
+                        <tr>
+                            <th className="px-6 py-4 w-12 text-center">
+                                <input
+                                    type="checkbox"
+                                    className="rounded border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-blue-500"
+                                    checked={filteredFeedback.length > 0 && filteredFeedback.every(f => selectedFeedback.has(f.id))}
+                                    onChange={() => toggleSelectAllFeedback(filteredFeedback)}
+                                />
+                            </th>
+                            <th className="px-6 py-4">Feedback ID</th>
+                            <th className="px-6 py-4">Submitting User</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Severity</th>
+                        </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                         {loading ? (
@@ -1932,29 +1916,13 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                     </div>
                                 </td>
                             </tr>
-                        ) : (() => {
-                            const filteredFeedback = feedback.filter(fb => {
-                                const matchesSearch = 
-                                    fb.ticketNumber?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.details?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.name?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.email?.toLowerCase().includes(feedbackSearchTerm.toLowerCase()) ||
-                                    fb.studentId?.toLowerCase().includes(feedbackSearchTerm.toLowerCase());
-                                const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
-                                return matchesSearch && matchesStatus;
-                            });
-
-                            if (filteredFeedback.length === 0) {
-                                return (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-8 text-center text-zinc-550">
-                                            No feedback requests found.
-                                        </td>
-                                    </tr>
-                                );
-                            }
-
-                            return filteredFeedback.map((fb) => (
+                        ) : filteredFeedback.length === 0 ? (
+                            <tr>
+                                <td colSpan="5" className="px-6 py-8 text-center text-zinc-550">
+                                    No feedback requests found.
+                                </td>
+                            </tr>
+                        ) : filteredFeedback.map((fb) => (
                                 <tr 
                                     key={fb.id} 
                                     onClick={() => setViewingFeedback(fb)}
@@ -2003,8 +1971,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                         })()}
                                     </td>
                                 </tr>
-                            ));
-                        })()}
+                            ))}
                     </tbody>
                 </table>
             </div>

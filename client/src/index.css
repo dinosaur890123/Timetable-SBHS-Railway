@@ -121,30 +121,16 @@ html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb,
 @media (orientation: landscape) {
   .admin-tabs-container {
     display: flex !important;
-    flex-flow: row nowrap !important;
+    flex-flow: row wrap !important;
     gap: 0.25rem !important;
     width: auto !important;
-    /* More tabs than fit: scroll sideways rather than cut the first ones off */
     min-width: 0;
     max-width: 100%;
-    overflow-x: auto !important;
-    scrollbar-width: none;
-  }
-  .admin-tabs-container::-webkit-scrollbar {
-    display: none;
   }
   .admin-tabs-container .admin-tab-btn {
     padding: 0.25rem 0.5rem !important;
     font-size: 0.75rem !important;
     gap: 0.25rem !important;
-  }
-  .admin-tabs-container .admin-tab-btn span {
-    display: inline !important;
-    font-size: 0.75rem !important;
-  }
-  .admin-tabs-container .admin-tab-btn svg {
-    width: 14px !important;
-    height: 14px !important;
   }
 }
 
