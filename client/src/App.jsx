@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, Suspense, useMemo } from 'react';
+import React, { useEffect, useState, useRef, Suspense, useMemo, useCallback } from 'react';
 import Home from './components/Home';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands, useModernShellEffects } from './components/modern/ModernShell';
@@ -75,6 +75,10 @@ const sageMarkdown = (md) => {
     }).join('');
 };
 
+const TOAST_TIMEOUT_MS = 8000;
+const PERSISTENT_TOAST_TIMEOUT_MS = 30000;
+const ARCHIVED_NOTICE_LIMIT = 100;
+
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
@@ -127,6 +131,7 @@ import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
+import { NotificationsContext } from './context/NotificationsContext';
 import { Hl, useNoteFlowFonts } from './components/study/noteflow';
 import './components/sage.css';
 
@@ -358,6 +363,26 @@ function App() {
 
     // Toast Notification States
     const [toasts, setToasts] = useState([]);
+    // Timed-out toasts move here so the top-bar bell stays the one-stop shop
+    // for everything the app has tried to tell you.
+    const [archivedNotices, setArchivedNotices] = useState([]);
+
+    const archiveNotice = useCallback((notice) => {
+        setArchivedNotices(prev => [notice, ...prev.slice(0, ARCHIVED_NOTICE_LIMIT - 1)]);
+    }, []);
+
+    const removeNotice = useCallback((id) => {
+        setArchivedNotices(prev => prev.filter(n => n.id !== id));
+    }, []);
+
+    const clearNotices = useCallback(() => setArchivedNotices([]), []);
+
+    const notificationsValue = useMemo(() => ({
+        items: archivedNotices,
+        archive: archiveNotice,
+        remove: removeNotice,
+        clear: clearNotices
+    }), [archivedNotices, archiveNotice, removeNotice, clearNotices]);
 
     // Debounced preference save
     const savePreferencesTimeout = useRef(null);
@@ -395,11 +420,11 @@ function App() {
         const id = Date.now() + Math.random().toString(36).substr(2, 9);
         setToasts(prev => [...prev, { id, title, message, type }]);
 
-        if (!persistent) {
-            setTimeout(() => {
-                setToasts(prev => prev.filter(t => t.id !== id));
-            }, 8000);
-        }
+        // Ignored toasts don't vanish — they move into the notifications panel.
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+            archiveNotice({ id: `notice-${id}`, title, message, type, at: Date.now() });
+        }, persistent ? PERSISTENT_TOAST_TIMEOUT_MS : TOAST_TIMEOUT_MS);
     };
 
     const handleAskAiQuestion = async (e) => {
@@ -1048,6 +1073,7 @@ function App() {
     return (
         <MotionConfig reducedMotion="user">
         <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable}>
+        <NotificationsContext.Provider value={notificationsValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
@@ -1468,6 +1494,7 @@ function App() {
             {/* Canvas Link Suggestions Toast */}
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />
         </div>
+        </NotificationsContext.Provider>
         </CanvasLinksProvider>
         </MotionConfig>
     );

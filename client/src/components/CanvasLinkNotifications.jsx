@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Check, ExternalLink, Users, X } from 'lucide-react';
+import { Bell, Check, CheckCircle2, ExternalLink, Info, Users, X } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { useNotifications } from '../context/NotificationsContext';
 
 // Suggestion ids the student has already seen in the panel; anything else
 // counts as unread and keeps the red dot on the bell.
 const SEEN_KEY = 'canvas_link_seen';
+const NOTICE_SEEN_KEY = 'archived_notice_seen';
 const SEEN_MAX = 300;
 
-const readSeen = () => {
+const readSeen = (key) => {
     try {
-        const raw = localStorage.getItem(SEEN_KEY);
+        const raw = localStorage.getItem(key);
         const list = raw ? JSON.parse(raw) : [];
         return new Set(Array.isArray(list) ? list : []);
     } catch {
@@ -18,9 +21,9 @@ const readSeen = () => {
     }
 };
 
-const writeSeen = (seen) => {
+const writeSeen = (key, seen) => {
     try {
-        localStorage.setItem(SEEN_KEY, JSON.stringify([...seen].slice(-SEEN_MAX)));
+        localStorage.setItem(key, JSON.stringify([...seen].slice(-SEEN_MAX)));
     } catch {
         // Storage blocked: the dot just reappears next visit.
     }
@@ -35,34 +38,58 @@ const pageHidden = () => {
     }
 };
 
-// Top-bar bell listing every unanswered class-link suggestion, including ones
-// the student dismissed with "Not now" — so ignored prompts still get voted on
-// instead of stalling a link's verification.
+// Top-bar bell: the one-stop shop for notifications. Timed-out toasts are
+// archived here, and every unanswered class-link suggestion is listed too —
+// including ones the student dismissed with "Not now" — so ignored prompts
+// still get voted on instead of stalling a link's verification.
 const CanvasLinkNotifications = () => {
     const { pending, vote } = useCanvasLinks();
+    const { items: notices, remove: removeNotice, clear: clearNotices } = useNotifications();
     const [open, setOpen] = useState(false);
-    const [seen, setSeen] = useState(readSeen);
+    const [seen, setSeen] = useState(() => readSeen(SEEN_KEY));
+    const [seenNotices, setSeenNotices] = useState(() => readSeen(NOTICE_SEEN_KEY));
     const [busyId, setBusyId] = useState(null);
     const [hidden, setHidden] = useState(pageHidden);
     const rootRef = useRef(null);
 
-    const unread = useMemo(() => pending.filter(p => !seen.has(p.id)), [pending, seen]);
+    // The canvas-links page can be switched off app-wide; timed-out toasts are
+    // still worth listing, so only the suggestions section hides with it.
+    const linksVisible = !hidden;
+    const shownPending = linksVisible ? pending : [];
+
+    const unread = useMemo(() => shownPending.filter(p => !seen.has(p.id)), [shownPending, seen]);
+    const unreadNotices = useMemo(() => notices.filter(n => !seenNotices.has(n.id)), [notices, seenNotices]);
+    const badgeCount = unread.length + unreadNotices.length;
+    const totalItems = notices.length + shownPending.length;
 
     const markSeen = (items = pending) => {
         if (items.length === 0) return;
         setSeen(prev => {
             const next = new Set(prev);
             items.forEach(p => next.add(p.id));
-            writeSeen(next);
+            writeSeen(SEEN_KEY, next);
+            return next;
+        });
+    };
+
+    const markNoticesSeen = (items = notices) => {
+        if (items.length === 0) return;
+        setSeenNotices(prev => {
+            const next = new Set(prev);
+            items.forEach(n => next.add(n.id));
+            writeSeen(NOTICE_SEEN_KEY, next);
             return next;
         });
     };
 
     // While the panel is open everything in it counts as seen.
     useEffect(() => {
-        if (open) markSeen();
+        if (open) {
+            markSeen();
+            markNoticesSeen();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pending]);
+    }, [open, pending, notices]);
 
     useEffect(() => {
         if (!open) return undefined;
@@ -78,7 +105,7 @@ const CanvasLinkNotifications = () => {
         };
     }, [open]);
 
-    if (hidden) return null;
+    if (hidden && notices.length === 0) return null;
 
     const send = async (item, value) => {
         setBusyId(item.id);
@@ -91,13 +118,13 @@ const CanvasLinkNotifications = () => {
         <div className="relative" ref={rootRef}>
             <button
                 onClick={() => setOpen(o => !o)}
-                aria-label={unread.length ? `${unread.length} link suggestions to review` : 'Link suggestions'}
+                aria-label={badgeCount ? `${badgeCount} notifications` : 'Notifications'}
                 aria-expanded={open}
-                title="Class link suggestions"
+                title="Notifications"
                 className="relative w-8 h-8 grid place-items-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
             >
                 <Bell size={16} />
-                {unread.length > 0 && (
+                {badgeCount > 0 && (
                     <span className="absolute top-1 right-1 flex">
                         <span className="absolute inline-flex w-2 h-2 rounded-full bg-red-500 opacity-75 animate-ping" />
                         <span className="relative inline-flex w-2 h-2 rounded-full bg-red-500" />
@@ -115,63 +142,123 @@ const CanvasLinkNotifications = () => {
                         className="absolute right-0 top-10 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-2xl border border-m-line bg-m-card m-shadow-lg"
                     >
                         <div className="flex items-center justify-between px-4 py-3 border-b border-m-line">
-                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Class link suggestions</h3>
-                            {pending.length > 0 && (
-                                <span className="text-xs text-zinc-500">{pending.length} to review</span>
-                            )}
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</h3>
+                            <div className="flex items-center gap-3">
+                                {totalItems > 0 && (
+                                    <span className="text-xs text-zinc-500">{totalItems} new</span>
+                                )}
+                                {notices.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={clearNotices}
+                                        className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                    >
+                                        Clear all
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
-                        {pending.length === 0 ? (
-                            <p className="px-4 py-8 text-center text-sm text-zinc-500">Nothing to review — you’re all caught up.</p>
+                        {totalItems === 0 ? (
+                            <p className="px-4 py-8 text-center text-sm text-zinc-500">Nothing to review - you’re all caught up.</p>
                         ) : (
-                            <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
-                                {pending.map(item => (
-                                    <li key={item.id} className="px-4 py-3 space-y-2">
-                                        <div className="flex items-start gap-2.5">
-                                            <div className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                                                <Users size={13} className="text-violet-600 dark:text-violet-400" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                                                    {item.className || item.title}
-                                                </div>
-                                                <div className="text-xs text-zinc-500">
-                                                    {item.confirmations === 1 ? '1 classmate' : `${item.confirmations} classmates`} shared this link
-                                                </div>
-                                            </div>
+                            <>
+                                {notices.length > 0 && (
+                                    <section>
+                                        <div className="px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                                            Updates
                                         </div>
-                                        <a
-                                            href={item.canvasUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-2.5 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-lg text-[11px] font-mono text-zinc-600 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-                                        >
-                                            <span className="flex-1 min-w-0 truncate">{item.canvasUrl}</span>
-                                            <ExternalLink size={12} className="shrink-0" />
-                                        </a>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => send(item, 1)}
-                                                disabled={busyId === item.id}
-                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
-                                            >
-                                                <Check size={13} />
-                                                {busyId === item.id ? 'Saving…' : 'Yes, use it'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => send(item, -1)}
-                                                disabled={busyId === item.id}
-                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
-                                            >
-                                                <X size={13} />
-                                                Wrong link
-                                            </button>
+                                        <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
+                                            {notices.map(item => {
+                                                const isResolved = item.type === 'resolved';
+                                                const Icon = isResolved ? CheckCircle2 : Info;
+                                                return (
+                                                    <li key={item.id} className="px-4 py-3 flex items-start gap-2.5">
+                                                        <Icon size={15} className={`shrink-0 mt-0.5 ${isResolved ? 'text-green-600 dark:text-green-400' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-sm text-zinc-900 dark:text-white leading-snug">
+                                                                <span className="font-semibold">{item.title}</span>
+                                                                {item.message && (
+                                                                    <span className="text-zinc-600 dark:text-zinc-300"> — {item.message}</span>
+                                                                )}
+                                                            </div>
+                                                            {item.at && (
+                                                                <div className="mt-0.5 text-[11px] text-zinc-400">
+                                                                    {formatDistanceToNow(new Date(item.at), { addSuffix: true })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeNotice(item.id)}
+                                                            aria-label="Dismiss"
+                                                            className="shrink-0 mt-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </section>
+                                )}
+
+                                {shownPending.length > 0 && (
+                                    <section>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                            Class link suggestions
                                         </div>
-                                    </li>
-                                ))}
-                            </ul>
+                                        <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
+                                            {shownPending.map(item => (
+                                                <li key={item.id} className="px-4 py-3 space-y-2">
+                                                    <div className="flex items-start gap-2.5">
+                                                        <div className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                                                            <Users size={13} className="text-violet-600 dark:text-violet-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
+                                                                {item.className || item.title}
+                                                            </div>
+                                                            <div className="text-xs text-zinc-500">
+                                                                {item.confirmations === 1 ? '1 classmate' : `${item.confirmations} classmates`} shared this link
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <a
+                                                        href={item.canvasUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 px-2.5 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-lg text-[11px] font-mono text-zinc-600 dark:text-zinc-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                                                    >
+                                                        <span className="flex-1 min-w-0 truncate">{item.canvasUrl}</span>
+                                                        <ExternalLink size={12} className="shrink-0" />
+                                                    </a>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => send(item, 1)}
+                                                            disabled={busyId === item.id}
+                                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            <Check size={13} />
+                                                            {busyId === item.id ? 'Saving…' : 'Yes, use it'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => send(item, -1)}
+                                                            disabled={busyId === item.id}
+                                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                                                        >
+                                                            <X size={13} />
+                                                            Wrong link
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+                                )}
+                            </>
                         )}
                     </motion.div>
                 )}
