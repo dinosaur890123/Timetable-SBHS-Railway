@@ -23,7 +23,7 @@ import {
     fetchStudentClipboardTeams,
     fetchGlobalActivities
 } from './api';
-import { loadCached, prefetchCached } from '../utils/pageCache';
+import { prefetchCached } from '../utils/pageCache';
 
 // --- School calendar ---
 
@@ -33,8 +33,6 @@ export const termsPage = () => ({
     key: 'terms:v1',
     load: () => fetchTerms()
 });
-const loadTerms = () => loadCached(termsPage().key, termsPage().load);
-
 // Every day's school flags for a month, for the picker's timetable dots.
 export const schoolDaysPage = (monthDate) => ({
     key: `schooldays:${format(monthDate, 'yyyy-MM')}`,
@@ -73,12 +71,10 @@ const loadMonth = async (monthDate) => {
   const start = startOfMonth(monthDate);
   const end = endOfMonth(monthDate);
 
-  const [eventsData, daysData, assignmentsData, termsData, monthDays] = await Promise.all([
+  const [eventsData, daysData, assignmentsData] = await Promise.all([
     fetchCalendarEvents(start, end),
     fetchDateInfo(monthDate).catch(() => null),
-    fetchAssignments().catch(() => ({ success: true, assignments: [] })),
-    loadTerms().catch(() => null),
-    fetchDaysInfo(start, end).catch(() => null)
+    fetchAssignments().catch(() => ({ success: true, assignments: [] }))
   ]);
 
   const mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
@@ -129,26 +125,6 @@ const loadMonth = async (monthDate) => {
 
     mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
   }
-
-  // School closures as all-day items: named holidays first in the day panel, so they
-  // read before the day's classes and assessments.
-  const monthLength = end.getDate();
-  for (let day = 1; day <= monthLength; day++) {
-    const date = new Date(start.getFullYear(), start.getMonth(), day);
-    const label = closureLabel(date, termsData, monthDays?.[format(date, 'yyyy-MM-dd')]);
-    if (!label) continue;
-
-    const dateStr = format(date, 'yyyy-MM-dd');
-    let group = mergedEvents.find(g => g.info?.date === dateStr);
-    if (!group) {
-      group = { info: { date: dateStr }, items: [] };
-      mergedEvents.push(group);
-    }
-    if (!group.items.some(item => item.title === label)) {
-      group.items.unshift({ title: label, type: 'holiday' });
-    }
-  }
-  mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
 
   return mergedEvents;
 };

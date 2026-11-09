@@ -383,15 +383,10 @@ function App() {
         return days;
     }, [calendarMonth]);
 
-    // School days and closures for the picker's month: a blue dot marks days with a
-    // timetable, and the tooltip names holidays and term breaks.
+    // School closures for the picker's month: a blue dot marks holidays, staff
+    // development days and term breaks, and the tooltip names them.
     const { data: pickerDays } = useCachedLoad(user ? schoolDaysPage(calendarMonth).key : null, schoolDaysPage(calendarMonth).load);
     const { data: pickerTerms } = useCachedLoad(user ? termsPage().key : null, termsPage().load);
-
-    const pickerHasTimetable = (date) => {
-        const info = pickerDays?.[format(date, 'yyyy-MM-dd')];
-        return !!info && (Number(info.dayNumber) > 0 || Number(info.week) > 0);
-    };
 
     const handleDateSelect = (date) => {
         setViewDate(date);
@@ -1312,7 +1307,7 @@ function App() {
                                                                         }`}
                                                                     >
                                                                         {format(date, 'd')}
-                                                                        {pickerHasTimetable(date) && (
+                                                                        {closure && (
                                                                             <span aria-hidden="true" className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-blue-500" />
                                                                         )}
                                                                     </button>

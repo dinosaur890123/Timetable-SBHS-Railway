@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
-import { calendarPage } from '../services/pageData';
+import { calendarPage, schoolDaysPage, termsPage, closureLabel } from '../services/pageData';
 import { useCachedLoad } from '../utils/pageCache';
 import { motion, AnimatePresence, LayoutGroup, MotionConfig } from 'framer-motion';
 
@@ -50,7 +50,7 @@ const getEventTypeAccent = (type) => {
 const CELL_HEIGHT = 'min-h-[60px] sm:min-h-[100px]';
 
 // One month: a term/week column, then the days. Pure render; the parent animates it in and out.
-const MonthGrid = ({ month, events, selectedDate, onSelect }) => {
+const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
   const groupFor = (date) => events.find(e => e.info?.date === format(date, 'yyyy-MM-dd'));
 
   const firstDayOfWeek = startOfMonth(month).getDay();
@@ -71,6 +71,7 @@ const MonthGrid = ({ month, events, selectedDate, onSelect }) => {
 
       const date = new Date(month.getFullYear(), month.getMonth(), day);
       const group = groupFor(date);
+      const closure = closureFor?.(date);
       const items = group?.items || [];
       if (!weekInfo && group?.info?.term && group?.info?.week) {
         weekInfo = { term: group.info.term, week: group.info.week, weekType: group.info.weekType || '' };
@@ -107,6 +108,12 @@ const MonthGrid = ({ month, events, selectedDate, onSelect }) => {
           }`}>
             {day}
           </span>
+          {closure && (
+            <span
+              title={closure}
+              className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-blue-500"
+            />
+          )}
           {items.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 3 }}
@@ -156,8 +163,8 @@ const MonthGrid = ({ month, events, selectedDate, onSelect }) => {
   return <div className="grid grid-cols-8 gap-px bg-zinc-200 dark:bg-zinc-800">{rows}</div>;
 };
 
-const DayEvents = ({ date, group }) => {
-  const items = group?.items || [];
+const DayEvents = ({ date, group, closure }) => {
+  const items = [...(closure ? [{ title: closure, type: 'holiday' }] : []), ...(group?.items || [])];
   if (items.length === 0) {
     return (
       <div className="px-5 py-12 text-center">
@@ -220,6 +227,12 @@ const CalendarView = ({ user }) => {
   const { data: monthEvents, loading } = useCachedLoad(page?.key ?? null, page?.load);
   const events = monthEvents || [];
 
+  // School closures for the visible month: named holidays, staff development days and
+  // term breaks, marked with a blue dot on the day.
+  const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
+  const { data: monthDays } = useCachedLoad(schoolDaysPage(currentDate).key, schoolDaysPage(currentDate).load);
+  const closureFor = (date) => closureLabel(date, terms, monthDays?.[format(date, 'yyyy-MM-dd')]);
+
   const goToMonth = (target) => {
     const dir = Math.sign(startOfMonth(target) - startOfMonth(currentDate));
     if (dir === 0) return;
@@ -244,6 +257,7 @@ const CalendarView = ({ user }) => {
 
   const selectedGroup = selectedDate && events.find(e => e.info?.date === format(selectedDate, 'yyyy-MM-dd'));
   const flyoutOpen = showFlyout && selectedDate && isSameMonth(selectedDate, currentDate);
+  const selectedClosure = flyoutOpen ? closureFor(selectedDate) : null;
 
   // Wide screens: the panel grows sideways and the grid narrows with it. Narrow: it unfolds above.
   const panelMotion = isWide
@@ -341,6 +355,7 @@ const CalendarView = ({ user }) => {
                         events={events}
                         selectedDate={flyoutOpen ? selectedDate : null}
                         onSelect={handleDateClick}
+                        closureFor={closureFor}
                       />
                     </motion.div>
                   </AnimatePresence>
@@ -400,7 +415,7 @@ const CalendarView = ({ user }) => {
 
                         {/* Events List */}
                         <div className="max-h-[400px] sm:max-h-[600px] overflow-y-auto">
-                          <DayEvents date={selectedDate} group={selectedGroup} />
+                          <DayEvents date={selectedDate} group={selectedGroup} closure={selectedClosure} />
                         </div>
                       </motion.div>
                     </AnimatePresence>
