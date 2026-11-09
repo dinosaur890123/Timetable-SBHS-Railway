@@ -187,8 +187,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                   <div className="flex items-center justify-between gap-4 mb-3">
                     <div className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white min-w-0">
                       {row.colour && <span aria-hidden className="w-2.5 h-2.5 shrink-0 rounded-full subject-fill" {...subjectInk(row.colour)} />}
-                      <span className="truncate">{row.name}</span>
-                      {row.name !== row.title && <span className="font-mono text-[11px] font-normal text-zinc-400">{row.title}</span>}
+                      <span className="truncate">{row.key}</span>
                     </div>
                     {!isEditing && (personal || shared) && (
                       <div className="flex items-center gap-4 shrink-0">
