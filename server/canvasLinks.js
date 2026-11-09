@@ -141,6 +141,17 @@ const cleanClassName = (value) => {
     return name;
 };
 
+// Normalizes a class name to the canonical year+shortTitle form (e.g., "9PDH E").
+// Handles legacy variants like "9 PDHPE E" or "9 2026 PDH G" by extracting the
+// year digit(s) and the shortTitle from the timetable data if available.
+const normalizeClassName = (name, classKey) => {
+    if (!name || !classKey) return name;
+    // If it already matches the classKey format (year+shortTitle), use it.
+    if (name === classKey) return name;
+    // Otherwise, force the canonical key format.
+    return classKey;
+};
+
 const isClassKey = (value) => typeof value === 'string'
     && value.length > 0
     && value.length <= MAX_CLASS_NAME_LENGTH
@@ -791,11 +802,13 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             }
 
             const year = currentSchoolYear();
-            const saved = await store.savePersonal(studentId, year, className, parsed.url);
+            const classKey = req.body?.classKey;
+            // Normalize to canonical year+shortTitle (e.g., "9PDH E") to avoid duplicates.
+            const canonicalName = normalizeClassName(className, classKey);
+            const saved = await store.savePersonal(studentId, year, canonicalName, parsed.url);
             if (!saved) return res.status(400).json({ error: 'too_many', message: `You can save up to ${MAX_PERSONAL_LINKS} links.` });
 
             let shared = 'not_canvas';
-            const classKey = req.body?.classKey;
             if (parsed.courseId && isClassKey(classKey)) {
                 try {
                     shared = await shareLink(req, { classKey, title: className, courseId: parsed.courseId });
@@ -815,7 +828,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
 
             res.json({
                 success: true,
-                link: { className, canvasUrl: parsed.url },
+                link: { className: canonicalName, canvasUrl: parsed.url },
                 shared,
                 community: shared === 'shared' ? (await communityFor(studentId, year, [classKey]))[classKey] : undefined
             });

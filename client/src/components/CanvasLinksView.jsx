@@ -170,15 +170,17 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         ) : (
           <ul className="space-y-4">
             {rows.map((row) => {
-              const personal = links[row.title];
-              const entry = community[row.key];
+              // Use the canonical key (year+shortTitle) for all lookups and display.
+              const canonicalKey = row.key;
+              const personal = links[canonicalKey];
+              const entry = community[canonicalKey];
               const classLink = entry?.link && entry.link.myVote !== -1 ? entry.link : null;
               const backed = !classLink ? entry?.suggestions?.find(s => s.myVote === 1) : null;
               const shared = classLink || backed;
               const others = (entry?.suggestions || []).filter(s => s !== backed && s.myVote !== -1);
-              const isEditing = editing === row.key;
-              const isBusy = busy === row.key;
-              const error = errors[row.key];
+              const isEditing = editing === canonicalKey;
+              const isBusy = busy === canonicalKey;
+              const error = errors[canonicalKey];
 
               return (
                 <li key={row.key} className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
@@ -190,7 +192,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                     </div>
                     {!isEditing && (personal || shared) && (
                       <div className="flex items-center gap-4 shrink-0">
-                        <button type="button" disabled={isBusy} aria-label={personal ? 'Edit' : 'Use my own'} title={personal ? 'Edit' : 'Use my own link'} onClick={() => { setEditing(row.key); setErrors(prev => ({ ...prev, [row.key]: '' })); }} className={buttonQuiet}>
+                        <button type="button" disabled={isBusy} aria-label={personal ? 'Edit' : 'Use my own'} title={personal ? 'Edit' : 'Use my own link'} onClick={() => { setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }} className={buttonQuiet}>
                           <Edit2 size={12} /> <span className="hidden sm:inline">{personal ? 'Edit' : 'Use my own'}</span>
                         </button>
                         {personal && (
@@ -212,7 +214,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                         error={error}
                         submitLabel={isEditing ? 'Save' : 'Add link'}
                         onSave={(value) => handleSave(row, value)}
-                        onCancel={isEditing ? () => { setEditing(null); setErrors(prev => ({ ...prev, [row.key]: '' })); } : null}
+                        onCancel={isEditing ? () => { setEditing(null); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); } : null}
                       />
                       {!personal && others.length > 0 && (
                         <div className="space-y-2">

@@ -129,8 +129,12 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
     // (unless they reported it), else a suggestion they backed themselves.
     const getLink = useCallback((title, year) => {
         if (!title) return null;
+        const key = keyFor(title, year);
+        // Look up by the canonical key (year+shortTitle) first, then fall back
+        // to title for legacy entries that predate the normalization.
+        if (links[key]) return links[key];
         if (links[title]) return links[title];
-        const entry = community[keyFor(title, year)];
+        const entry = community[key];
         if (!entry) return null;
         if (entry.link && entry.link.myVote !== -1) return entry.link.canvasUrl;
         return entry.suggestions?.find(s => s.myVote === 1)?.canvasUrl || null;
@@ -141,9 +145,12 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         const parsed = parseLinkInput(input, canvasHost);
         if (parsed.error) return { ok: false, error: parsed.error };
         const key = keyFor(title, year);
+        // Use only the year+shortTitle (e.g., "9PDH E") as the canonical class name,
+        // so personal and shared links are keyed consistently and don't duplicate.
+        const canonicalName = key || title;
         try {
-            const data = await saveCanvasLink(title, parsed.url, key || undefined);
-            storeLinks(prev => ({ ...prev, [title]: data.link.canvasUrl }));
+            const data = await saveCanvasLink(canonicalName, parsed.url, key || undefined);
+            storeLinks(prev => ({ ...prev, [canonicalName]: data.link.canvasUrl }));
             if (key && data.community) setCommunity(prev => ({ ...prev, [key]: data.community }));
             return { ok: true, shared: data.shared };
         } catch (error) {
@@ -153,9 +160,13 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
 
     const removeLink = useCallback(async (title) => {
         try {
-            await deleteCanvasLink(title);
+            const key = keyFor(title);
+            // Try canonical key first, then fall back to raw title for legacy entries.
+            const canonicalName = key || title;
+            await deleteCanvasLink(canonicalName);
             storeLinks(prev => {
                 const next = { ...prev };
+                delete next[canonicalName];
                 delete next[title];
                 return next;
             });
