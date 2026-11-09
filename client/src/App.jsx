@@ -126,7 +126,7 @@ import {
     peekNextSchoolDay,
     onCachedDataChange
 } from './services/api';
-import { prefetchPages, calendarPage, schoolDaysPage, termsPage, closureLabel } from './services/pageData';
+import { prefetchPages, calendarPage, termsPage, closureLabel } from './services/pageData';
 import { useCachedLoad } from './utils/pageCache';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -385,7 +385,6 @@ function App() {
 
     // School closures for the picker's month: a blue dot marks holidays, staff
     // development days and term breaks, and the tooltip names them.
-    const { data: pickerDays } = useCachedLoad(user ? schoolDaysPage(calendarMonth).key : null, schoolDaysPage(calendarMonth).load);
     const { data: pickerTerms } = useCachedLoad(user ? termsPage().key : null, termsPage().load);
 
     const handleDateSelect = (date) => {
@@ -1290,8 +1289,7 @@ function App() {
                                                             
                                                                 const isSelected = isSameDay(date, viewDate);
                                                                 const isToday = isSameDay(date, new Date());
-                                                                const dayInfo = pickerDays?.[format(date, 'yyyy-MM-dd')];
-                                                                const closure = closureLabel(date, pickerTerms, dayInfo);
+                                                                const closure = closureLabel(date, pickerTerms);
                                                             
                                                                 return (
                                                                     <button

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
-import { calendarPage, schoolDaysPage, termsPage, closureLabel } from '../services/pageData';
+import { calendarPage, termsPage, closureLabel } from '../services/pageData';
 import { useCachedLoad } from '../utils/pageCache';
 import { motion, AnimatePresence, LayoutGroup, MotionConfig } from 'framer-motion';
 
@@ -227,11 +227,10 @@ const CalendarView = ({ user }) => {
   const { data: monthEvents, loading } = useCachedLoad(page?.key ?? null, page?.load);
   const events = monthEvents || [];
 
-  // School closures for the visible month: named holidays, staff development days and
-  // term breaks, marked with a blue dot on the day.
+  // School closures: named holidays, staff development days and term breaks,
+  // marked with a blue dot on the day.
   const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
-  const { data: monthDays } = useCachedLoad(schoolDaysPage(currentDate).key, schoolDaysPage(currentDate).load);
-  const closureFor = (date) => closureLabel(date, terms, monthDays?.[format(date, 'yyyy-MM-dd')]);
+  const closureFor = (date) => closureLabel(date, terms);
 
   const goToMonth = (target) => {
     const dir = Math.sign(startOfMonth(target) - startOfMonth(currentDate));
