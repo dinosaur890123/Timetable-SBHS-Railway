@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, deleteAllCanvasLinks, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink, fetchLinkNotifications, markLinkNotificationsRead } from '../services/api';
+import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, deleteAllCanvasLinks, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink, deleteCanvasCommunityLink, fetchLinkNotifications, markLinkNotificationsRead } from '../services/api';
 import { DEFAULT_CANVAS_HOST, classKey, collectClasses, parseLinkInput } from '../utils/canvasLinks';
 
 const CanvasLinksContext = createContext(null);
@@ -127,9 +127,9 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         if (status === 'ready') loadNotices();
     }, [status, loadNotices]);
 
-    // Clears the unread server notifications; the panel calls this once it's open.
+    // Marks the server notifications read but keeps them in state until the
+    // next fetch, so an actionable notice can still be opened.
     const markLinkNoticesRead = useCallback(() => {
-        setLinkNotices([]);
         markLinkNotificationsRead().catch(() => {});
     }, []);
 
@@ -225,6 +225,19 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         }
     }, [loadNotices]);
 
+    // The setter removes their own duplicated shared link; they then share the
+    // right course through saveLink. Resolves with { ok } or { ok: false, error }.
+    const removeCommunityLink = useCallback(async (id) => {
+        try {
+            const data = await deleteCanvasCommunityLink(id);
+            if (data.classKey) setCommunity(prev => ({ ...prev, [data.classKey]: data.community }));
+            loadNotices();
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, error: errorMessage(error, 'Couldn’t remove that link. Check your connection and try again.') };
+        }
+    }, [loadNotices]);
+
     const snooze = useCallback((id) => {
         setSnoozed(prev => {
             const next = { ...prev, [id]: Date.now() + SNOOZE_MS };
@@ -284,9 +297,10 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         removeLink,
         removeAllLinks,
         vote,
+        removeCommunityLink,
         snooze,
         reload: loadLinks
-    }), [links, community, classes, canvasHost, status, prompts, pending, linkNotices, markLinkNoticesRead, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
+    }), [links, community, classes, canvasHost, status, prompts, pending, linkNotices, markLinkNoticesRead, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, removeCommunityLink, snooze, loadLinks]);
 
     return (
         <CanvasLinksContext.Provider value={value}>

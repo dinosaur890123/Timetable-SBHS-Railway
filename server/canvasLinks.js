@@ -230,13 +230,14 @@ const outranks = (a, b) => (a.pinned !== b.pinned
 
 // Rows (one per shared link, with vote counts) -> what a student sees per class:
 // the link the class uses, if any, and the other suggestions still being voted on.
-const summariseClasses = (rows, classKeys) => {
+const summariseClasses = (rows, classKeys, { studentId = null, duplicateCourseIds = new Set() } = {}) => {
     const classes = {};
     classKeys.forEach(key => { classes[key] = { link: null, suggestions: [] }; });
     rows.forEach(row => {
         const entry = classes[row.classKey] || (classes[row.classKey] = { link: null, suggestions: [] });
         const status = statusOf(row);
         if (status === 'rejected') return;
+        const duplicate = duplicateCourseIds.has(row.courseId);
         const item = {
             id: row.id,
             className: row.className,
@@ -245,7 +246,14 @@ const summariseClasses = (rows, classKeys) => {
             reports: row.down,
             status,
             pinned: row.lockedStatus === 'verified',
-            myVote: row.myVote || 0
+            myVote: row.myVote || 0,
+            duplicate,
+            canRemoveDuplicate: Boolean(
+                studentId
+                && duplicate
+                && row.submittedBy === studentId
+                && !row.lockedStatus
+            )
         };
         if (status === 'verified' && (!entry.link || outranks(item, entry.link))) {
             if (entry.link) entry.suggestions.push(entry.link);
@@ -280,6 +288,8 @@ const createPgStore = (db) => {
         schoolYear: row.school_year,
         submittedBy: row.submitted_by,
         lockedStatus: row.locked_status || null,
+        duplicateNotifiedCourses: row.duplicate_notified_courses || [],
+        submitterBlacklisted: Boolean(row.submitter_blacklisted),
         createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
         up: row.up || 0,
         down: row.down || 0,
@@ -378,7 +388,8 @@ const createPgStore = (db) => {
         },
         async getShared(id) {
             const result = await db.query(
-                `SELECT id, class_key, class_name, course_id, school_year, submitted_by, locked_status, created_at
+                `SELECT id, class_key, class_name, course_id, school_year, submitted_by, locked_status,
+                        duplicate_notified_courses, created_at
                  FROM canvas_class_links WHERE id = $1`,
                 [id]
             );
@@ -416,7 +427,8 @@ const createPgStore = (db) => {
         async listForClasses(year, classKeys, studentId) {
             if (classKeys.length === 0) return [];
             const result = await db.query(
-                `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status, l.created_at,
+                `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status,
+                        l.duplicate_notified_courses, l.created_at,
                         ${voteCounts},
                         MAX(CASE WHEN v.student_id = $3 THEN v.vote END) AS my_vote
                  ${fromLinks}
@@ -429,7 +441,9 @@ const createPgStore = (db) => {
         },
         async listAll(year) {
             const result = await db.query(
-                `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status, l.created_at,
+                `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status,
+                        l.duplicate_notified_courses, l.created_at,
+                        BOOL_OR(COALESCE(submitter.blacklisted, FALSE)) AS submitter_blacklisted,
                         ${voteCounts}
                  ${fromLinks}
                  WHERE l.school_year = $1
@@ -439,6 +453,19 @@ const createPgStore = (db) => {
                 [year]
             );
             return result.rows.map(toRow);
+        },
+        async markDuplicateNotified(entries) {
+            for (const { id, courseId } of entries) {
+                await db.query(
+                    `UPDATE canvas_class_links
+                     SET duplicate_notified_courses = CASE
+                         WHEN $2 = ANY(COALESCE(duplicate_notified_courses, '{}'::text[])) THEN duplicate_notified_courses
+                         ELSE array_append(COALESCE(duplicate_notified_courses, '{}'::text[]), $2)
+                     END
+                     WHERE id = $1`,
+                    [id, courseId]
+                );
+            }
         },
         async setLock(id, lockedStatus) {
             const result = await db.query(
@@ -488,9 +515,9 @@ const createPgStore = (db) => {
         async addNotifications(rows) {
             for (const n of rows) {
                 await db.query(
-                    `INSERT INTO notifications (id, user_id, type, title, message, created_at)
-                     VALUES ($1, $2, $3, $4, $5, NOW())`,
-                    [crypto.randomUUID(), n.userId, n.type, n.title, n.message]
+                    `INSERT INTO notifications (id, user_id, type, title, message, action_url, created_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+                    [crypto.randomUUID(), n.userId, n.type, n.title, n.message, n.actionUrl || null]
                 );
                 // Keep only the latest 100 per student.
                 await db.query(
@@ -504,7 +531,7 @@ const createPgStore = (db) => {
         },
         async listNotifications(studentId) {
             const result = await db.query(
-                `SELECT id, type, title, message, created_at FROM notifications
+                `SELECT id, type, title, message, action_url, created_at FROM notifications
                  WHERE user_id = $1 AND NOT read
                  ORDER BY created_at DESC LIMIT 50`,
                 [studentId]
@@ -514,6 +541,7 @@ const createPgStore = (db) => {
                 type: r.type,
                 title: r.title,
                 message: r.message,
+                actionUrl: r.action_url || null,
                 createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at
             }));
         },
@@ -548,7 +576,7 @@ const createMemoryStore = (getMemoryUsers) => {
             if (v.vote === 1) up += 1;
             else down += 1;
         }
-        return { ...link, up, down, myVote };
+        return { ...link, up, down, myVote, submitterBlacklisted: blacklisted(link.submittedBy) };
     };
 
     return {
@@ -605,6 +633,7 @@ const createMemoryStore = (getMemoryUsers) => {
                 schoolYear: year,
                 submittedBy: studentId,
                 lockedStatus,
+                duplicateNotifiedCourses: [],
                 createdAt: new Date().toISOString()
             };
             shared.push(link);
@@ -676,6 +705,14 @@ const createMemoryStore = (getMemoryUsers) => {
             }
             return cleared;
         },
+        async markDuplicateNotified(entries) {
+            for (const { id, courseId } of entries) {
+                const link = shared.find(l => l.id === id);
+                if (link && !(link.duplicateNotifiedCourses || []).includes(courseId)) {
+                    link.duplicateNotifiedCourses = [...(link.duplicateNotifiedCourses || []), courseId];
+                }
+            }
+        },
         async classParticipants(year, classKey) {
             const linkIds = new Set(shared
                 .filter(l => l.schoolYear === year && l.classKey === classKey)
@@ -695,6 +732,7 @@ const createMemoryStore = (getMemoryUsers) => {
                 type: n.type,
                 title: n.title,
                 message: n.message,
+                actionUrl: n.actionUrl || null,
                 read: false,
                 createdAt: new Date().toISOString()
             }));
@@ -829,10 +867,19 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         return true;
     };
 
-    const communityFor = async (studentId, year, classKeys) => summariseClasses(
-        await store.listForClasses(year, classKeys, studentId),
-        classKeys
-    );
+    // Duplicate membership is kept fresh by scanDuplicateLinks, which every
+    // mutation awaits; community fetches just read its cache.
+    let duplicateIdsCache = { year: null, at: 0, ids: [] };
+
+    const communityFor = async (studentId, year, classKeys) => {
+        if (classKeys.length === 0) return {};
+        if (duplicateIdsCache.year !== year || Date.now() - duplicateIdsCache.at > DUPLICATE_SCAN_MS) {
+            void scanDuplicateLinks();
+        }
+        const rows = await store.listForClasses(year, classKeys, studentId);
+        const ids = duplicateIdsCache.year === year ? duplicateIdsCache.ids : [];
+        return summariseClasses(rows, classKeys, { studentId, duplicateCourseIds: new Set(ids) });
+    };
 
     // A link's effective status ('pending' | 'verified' | 'rejected') from its
     // live vote counts, or null when the class has no row for it.
@@ -858,6 +905,90 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             log('CANVAS_LINK_APPROVED', 'SYSTEM', `Notified ${recipients.length} students that ${classKey} link ${courseId} was approved (${via})`);
         })().catch(e => console.error('[canvas-links] Failed to send approval notifications:', e?.message || e));
     };
+    // Duplicate groups use the admin panel's rule: the same course URL under
+    // two or more class keys, ignoring links the votes/admin have rejected.
+    const duplicateGroups = (rows) => {
+        const byUrl = new Map();
+        rows.forEach(row => {
+            if (row.lockedStatus === 'rejected' || statusOf(row) === 'rejected') return;
+            const url = courseUrl(row.courseId);
+            const group = byUrl.get(url) || [];
+            if (!group.some(link => link.classKey === row.classKey)) group.push(row);
+            byUrl.set(url, group);
+        });
+        return [...byUrl.entries()]
+            .map(([url, links]) => ({ url, links }))
+            .filter(group => new Set(group.links.map(link => link.classKey)).size > 1);
+    };
+
+    // Scans at most once a minute so notification fetches stay cheap. Each
+    // setter is told about a duplicated course once per link, tracked on the
+    // link itself rather than by scanning notification text.
+    const DUPLICATE_SCAN_MS = 60 * 1000;
+    let duplicateScanAt = 0;
+    let duplicateScanPromise = null;
+    const scanDuplicateLinks = async ({ force = false } = {}) => {
+        if (!force && Date.now() - duplicateScanAt < DUPLICATE_SCAN_MS) return;
+        if (duplicateScanPromise) return duplicateScanPromise;
+
+        duplicateScanPromise = (async () => {
+            try {
+                const year = currentSchoolYear();
+                const groups = duplicateGroups(await store.listAll(year));
+                duplicateIdsCache = {
+                    year,
+                    at: Date.now(),
+                    ids: [...new Set(groups.flatMap(group => group.links.map(link => link.courseId)))]
+                };
+                const byUser = new Map();
+
+                groups.forEach(({ url, links }) => {
+                    const bySetter = new Map();
+                    links.forEach(link => {
+                        if (link.submitterBlacklisted) return;
+                        if ((link.duplicateNotifiedCourses || []).includes(link.courseId)) return;
+                        const items = bySetter.get(link.submittedBy) || [];
+                        items.push(link);
+                        bySetter.set(link.submittedBy, items);
+                    });
+                    bySetter.forEach((items, userId) => {
+                        const entries = byUser.get(userId) || [];
+                        entries.push({ url, items });
+                        byUser.set(userId, entries);
+                    });
+                });
+
+                if (byUser.size > 0) {
+                    const notifications = [];
+                    const marks = [];
+                    byUser.forEach((duplicates, userId) => {
+                        const shown = duplicates.slice(0, 3)
+                            .map(d => `${d.url} (${d.items.map(l => l.className || l.classKey).join(', ')})`)
+                            .join('; ');
+                        const extra = duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '';
+                        notifications.push({
+                            userId,
+                            type: 'canvas_link_duplicate',
+                            title: 'Duplicate Canvas link',
+                            message: `The same Canvas link is shared under more than one class: ${shown}${extra}. If one is wrong, open Canvas Links to remove it and share the right course.`,
+                            actionUrl: 'canvas-links'
+                        });
+                        duplicates.forEach(d => d.items.forEach(link => marks.push({ id: link.id, courseId: link.courseId })));
+                    });
+                    await store.addNotifications(notifications);
+                    await store.markDuplicateNotified(marks);
+                    log('CANVAS_LINK_DUPLICATE', 'SYSTEM', `Notified ${notifications.length} setter(s) about ${groups.length} duplicate Canvas link group(s)`);
+                }
+                duplicateScanAt = Date.now();
+            } catch (e) {
+                console.error('[canvas-links] Duplicate scan failed:', e?.message || e);
+            } finally {
+                duplicateScanPromise = null;
+            }
+        })();
+        return duplicateScanPromise;
+    };
+    void scanDuplicateLinks({ force: true });
 
     // Shares a student's Canvas course link with their class, as their vote for
     // it. Returns 'shared', or why it wasn't shared.
@@ -897,6 +1028,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const className = cls?.name || (title.startsWith(String(year)) ? title : `${year} ${title}`);
 
             linkId = await store.createShared({ year, classKey, className, courseId, studentId, lockedStatus });
+
             if (adminUser) {
                 announceApproval({ year, classKey, className, courseId, via: 'admin' });
             }
@@ -915,6 +1047,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             }
         }
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });
+        await scanDuplicateLinks({ force: true });
         return 'shared';
     };
 
@@ -1092,6 +1225,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             // A +1 vote can be the one that verifies the link; tell the class once.
             const wasVerified = vote === 1 && (await linkVoteStatus(year, link.classKey, link.id)) === 'verified';
             await store.setVote({ linkId: link.id, studentId, vote, year, classKey: link.classKey });
+            await scanDuplicateLinks({ force: true });
             if (vote === 1 && !wasVerified && (await linkVoteStatus(year, link.classKey, link.id)) === 'verified') {
                 announceApproval({
                     year: link.schoolYear || year,
@@ -1113,6 +1247,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     // (e.g. a class link that was just approved).
     app.get('/api/canvas-links/notifications', requireStudentAuth, async (req, res) => {
         try {
+            await scanDuplicateLinks();
             const notifications = await store.listNotifications(String(req.user.studentId));
             res.json({ success: true, notifications });
         } catch (e) {
@@ -1131,6 +1266,36 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             res.status(500).json({ error: 'Failed to update notifications' });
         }
     });
+
+    // DELETE /api/canvas-links/community/:id - the setter removes their own
+    // shared link (e.g. one flagged as a duplicate) so they can share the
+    // right course through the normal save flow. Only while it's duplicated.
+    app.delete('/api/canvas-links/community/:id', requireStudentAuth, async (req, res) => {
+        try {
+            if (!(await allowWrite(req, res))) return;
+            const studentId = String(req.user.studentId);
+            const year = currentSchoolYear();
+            const link = await store.getShared(String(req.params.id));
+            if (!link || link.schoolYear !== year) return res.status(404).json({ error: 'not_found', message: 'That link no longer exists.' });
+            if (link.submittedBy !== studentId) return res.status(403).json({ error: 'not_allowed', message: 'Only the student who shared this link can remove it.' });
+            if (link.lockedStatus) return res.status(409).json({ error: 'locked', message: 'An admin has already moderated this link.' });
+            if (duplicateIdsCache.year !== year || Date.now() - duplicateIdsCache.at > DUPLICATE_SCAN_MS) {
+                await scanDuplicateLinks({ force: true });
+            }
+            const duplicated = duplicateIdsCache.year === year && duplicateIdsCache.ids.includes(link.courseId);
+            if (!duplicated) return res.status(409).json({ error: 'not_duplicate', message: 'This link is no longer duplicated across classes.' });
+
+            await store.removeShared(link.id);
+            await scanDuplicateLinks({ force: true });
+            log('CANVAS_LINK_REMOVE', studentId, `Removed shared Canvas link ${link.id} for ${link.classKey} (${year})`);
+            const community = await communityFor(studentId, year, [link.classKey]);
+            res.json({ success: true, classKey: link.classKey, community: community[link.classKey] });
+        } catch (e) {
+            console.error('Remove canvas link error:', e);
+            res.status(500).json({ error: 'Failed to remove Canvas link' });
+        }
+    });
+
 
     // Admin: every shared link this school year, with its votes.
     app.get('/api/admin/canvas-links/community', requireAdminAuth, async (req, res) => {
@@ -1174,6 +1339,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const wasVerified = lockedStatus === 'verified'
                 && (await linkVoteStatus(existing.schoolYear, existing.classKey, id)) === 'verified';
             if (!(await store.setLock(id, lockedStatus))) return res.status(404).json({ error: 'Not found' });
+            void scanDuplicateLinks({ force: true });
             if (lockedStatus === 'verified' && !wasVerified) {
                 announceApproval({
                     year: existing.schoolYear,
@@ -1197,6 +1363,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const id = String(req.params.id);
             if (!(await store.getShared(id))) return res.status(404).json({ error: 'Not found' });
             const cleared = await store.clearReports(id);
+            void scanDuplicateLinks({ force: true });
             log('CANVAS_LINK_RESET_REPORTS', String(req.user.studentId), `Cleared ${cleared} reports on shared Canvas link ${id}`);
             res.json({ success: true, cleared });
         } catch (e) {
@@ -1209,6 +1376,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         try {
             const id = String(req.params.id);
             if (!(await store.removeShared(id))) return res.status(404).json({ error: 'Not found' });
+            void scanDuplicateLinks({ force: true });
             log('CANVAS_LINK_DELETE', String(req.user.studentId), `Deleted shared Canvas link ${id}`);
             res.json({ success: true });
         } catch (e) {

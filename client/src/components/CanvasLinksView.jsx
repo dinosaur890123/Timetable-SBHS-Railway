@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ArrowLeft, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X, Users, Trash2, Flag, Check, WifiOff } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Link as LinkIcon, Info, ExternalLink, CheckCircle2, Edit2, Save, X, Users, Trash2, Flag, Check, WifiOff } from 'lucide-react';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { describeClass, indexSubjects, subjectInk } from '../utils/timetable';
 
@@ -10,6 +10,12 @@ const SAVED_MESSAGES = {
 
 const buttonPrimary = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90 transition-opacity disabled:opacity-50';
 const buttonQuiet = 'inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-50';
+
+const DuplicateBadge = () => (
+  <span title="Shared under more than one class" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[11px] font-semibold">
+    <AlertTriangle size={11} /> Duplicate
+  </span>
+);
 
 const LinkField = ({ url, children }) => (
   <a
@@ -71,7 +77,7 @@ const LinkForm = ({ initial, canvasHost, saving, error, onSave, onCancel, submit
 };
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
-  const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote } = useCanvasLinks();
+  const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote, removeCommunityLink } = useCanvasLinks();
   const [editing, setEditing] = useState(null); // class key being edited
   const [busy, setBusy] = useState(null); // class key with a request in flight
   const [errors, setErrors] = useState({}); // class key -> message
@@ -126,6 +132,11 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     setEditing(null);
     showToast(message);
   });
+
+  const handleRemoveShared = (row, item) => {
+    if (!window.confirm('Remove this shared link? You can then add the right course link for the class.')) return;
+    run(row.key, () => removeCommunityLink(item.id), () => showToast('Shared link removed — add the right course below'));
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -225,13 +236,19 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                               <LinkField url={s.canvasUrl}>
                                 <span className="ml-auto shrink-0 text-[11px] text-zinc-400">{s.confirmations} {s.confirmations === 1 ? 'vote' : 'votes'}</span>
                               </LinkField>
-                              <div className="flex gap-4 sm:pl-2">
+                              <div className="flex flex-wrap items-center gap-3 sm:pl-2">
+                                {s.duplicate && <DuplicateBadge />}
                                 <button type="button" disabled={isBusy} onClick={() => handleVote(row, s.id, 1, 'Thanks! Using that link')} className={buttonQuiet}>
                                   <Check size={12} /> Use this
                                 </button>
                                 <button type="button" disabled={isBusy} onClick={() => handleVote(row, s.id, -1, 'Thanks for letting us know')} className={buttonQuiet}>
                                   <Flag size={12} /> Wrong
                                 </button>
+                                {s.canRemoveDuplicate && (
+                                  <button type="button" disabled={isBusy} onClick={() => handleRemoveShared(row, s)} className={buttonQuiet}>
+                                    <Trash2 size={12} /> Remove
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -271,9 +288,10 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                       {/* Community link */}
                       {shared && (activeSource === 'community' || !personal) && (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-semibold">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-semibold">
                             <Users size={12} />
                             Community link
+                            {shared.duplicate && <DuplicateBadge />}
                           </div>
                           <LinkField url={shared.canvasUrl} />
                           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -282,16 +300,23 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                                 ? (shared.pinned ? 'Set for your class' : `Confirmed by ${shared.confirmations} classmates`)
                                 : 'You backed this link. It’s used for your class once a classmate confirms it'}
                             </span>
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => (classLink
-                                ? handleVote(row, shared.id, -1, 'Thanks for letting us know')
-                                : handleVote(row, shared.id, 0, 'Removed your vote'))}
-                              className={buttonQuiet}
-                            >
-                              {classLink ? <><Flag size={12} /> Wrong link?</> : <><X size={12} /> Not this one</>}
-                            </button>
+                            <span className="flex items-center gap-4">
+                              {shared.canRemoveDuplicate && (
+                                <button type="button" disabled={isBusy} onClick={() => handleRemoveShared(row, shared)} className={buttonQuiet}>
+                                  <Trash2 size={12} /> Remove
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => (classLink
+                                  ? handleVote(row, shared.id, -1, 'Thanks for letting us know')
+                                  : handleVote(row, shared.id, 0, 'Removed your vote'))}
+                                className={buttonQuiet}
+                              >
+                                {classLink ? <><Flag size={12} /> Wrong link?</> : <><X size={12} /> Not this one</>}
+                              </button>
+                            </span>
                           </div>
                         </div>
                       )}

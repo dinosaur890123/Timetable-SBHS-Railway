@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Check, CheckCircle2, ExternalLink, FileCode, Info, Sparkles, Users, X } from 'lucide-react';
+import { AlertTriangle, Bell, Check, CheckCircle2, ExternalLink, FileCode, Info, Sparkles, Users, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNotifications } from '../context/NotificationsContext';
@@ -55,7 +55,8 @@ const CanvasLinkNotifications = ({
     onEnableAi,
     onDismissAi,
     buildNotes = [],
-    onOpenBuildNotes
+    onOpenBuildNotes,
+    onOpenCanvasLinks
 }) => {
     const { pending, vote, linkNotices, markLinkNoticesRead } = useCanvasLinks();
     const { items: notices, remove: removeNotice, clear: clearNotices } = useNotifications();
@@ -88,7 +89,8 @@ const CanvasLinkNotifications = ({
 
     const unread = useMemo(() => shownPending.filter(p => !seen.has(p.id)), [shownPending, seen]);
     const unreadNotices = useMemo(() => notices.filter(n => !seenNotices.has(n.id)), [notices, seenNotices]);
-    const badgeCount = unread.length + unreadNotices.length + shownLinkNotices.length + unreadBuildNotes.length + (showAiNotice ? 1 : 0);
+    const unreadLinkNotices = useMemo(() => shownLinkNotices.filter(n => !seenNotices.has(n.id)), [shownLinkNotices, seenNotices]);
+    const badgeCount = unread.length + unreadNotices.length + unreadLinkNotices.length + unreadBuildNotes.length + (showAiNotice ? 1 : 0);
     const totalItems = notices.length + shownLinkNotices.length + shownPending.length + shownBuildNotes.length;
 
     const markSeen = (items = pending) => {
@@ -146,7 +148,7 @@ const CanvasLinkNotifications = ({
     useEffect(() => {
         if (open) {
             markSeen();
-            markNoticesSeen();
+            markNoticesSeen([...notices, ...linkNotices]);
             markBuildNotesSeen();
             if (linkNotices.length > 0) markLinkNoticesRead();
         }
@@ -273,9 +275,12 @@ const CanvasLinkNotifications = ({
                                             Class link updates
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
-                                            {shownLinkNotices.map(item => (
+                                            {shownLinkNotices.map(item => {
+                                                const isDuplicate = item.type === 'canvas_link_duplicate';
+                                                const Icon = isDuplicate ? AlertTriangle : CheckCircle2;
+                                                return (
                                                 <li key={item.id} className="px-4 py-3 flex items-start gap-2.5">
-                                                    <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
+                                                    <Icon size={15} className={`shrink-0 mt-0.5 ${isDuplicate ? 'text-amber-500 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`} />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="text-sm font-semibold text-zinc-900 dark:text-white">
                                                             {item.title}
@@ -288,9 +293,22 @@ const CanvasLinkNotifications = ({
                                                                 {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                                                             </div>
                                                         )}
+                                                        {item.actionUrl === 'canvas-links' && onOpenCanvasLinks && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setOpen(false);
+                                                                    onOpenCanvasLinks();
+                                                                }}
+                                                                className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-semibold transition-colors"
+                                                            >
+                                                                Review Canvas links
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </li>
-                                            ))}
+                                                );
+                                            })}
                                         </ul>
                                     </section>
                                 )}

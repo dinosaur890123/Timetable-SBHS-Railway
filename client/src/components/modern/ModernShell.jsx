@@ -172,7 +172,7 @@ export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
     isOffline, usingCachedData, timetableViewMode, setTimetableViewMode,
     aiDisabled, aiGloballyDisabled, aiBannerDismissed, onEnableAi, onDismissAi,
-    buildNotes = [], onOpenBuildNotes
+    buildNotes = [], onOpenBuildNotes, onOpenCanvasLinks
 }) => {
     const status = isOffline
         ? { label: 'Offline', dot: 'bg-amber-500', icon: WifiOff }
@@ -251,6 +251,7 @@ export const ModernTopbar = ({
                     onDismissAi={onDismissAi}
                     buildNotes={buildNotes}
                     onOpenBuildNotes={onOpenBuildNotes}
+                    onOpenCanvasLinks={onOpenCanvasLinks}
                 />
 
                 <IconButton onClick={toggleTheme} aria-label="Toggle colour mode" title="Toggle colour mode">

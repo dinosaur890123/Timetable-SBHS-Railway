@@ -44,6 +44,11 @@ once whether it's right ("Yes, use it" / "Wrong link" / "Not now", which hides i
 a week). A student's class uses the link with the most net backing that has reached
 `CANVAS_LINK_CONFIRMATIONS` backers. Their own link always takes priority.
 
+The same course link under two or more classes is treated as a probable
+mis-share, matching the admin panel's duplicate check. Each setter is notified
+once per duplicated course and can remove their shared link, then share the
+right course through the normal save flow.
+
 ## Abuse protections
 
 - **Class membership is checked server-side.** Before accepting a shared link or a
@@ -80,6 +85,7 @@ All routes need the student's SBHS bearer token.
 | `POST /api/canvas-links/import` | `{ links: { className: url } }`. Adds links for classes without one; never replaces. |
 | `GET /api/canvas-links/community` | Shared links for the student's classes: `{ classes: { [classKey]: { link, suggestions } } }`. |
 | `POST /api/canvas-links/community/:id/vote` | `{ vote: 1 \| -1 \| 0 }`: correct, wrong, or clear. |
+| `DELETE /api/canvas-links/community/:id` | The setter removes their own shared link while it's duplicated across classes. |
 | `GET /api/admin/canvas-links/community` | Admin: every shared link this year, with votes. |
 | `PUT /api/admin/canvas-links/community/:id` | Admin: `{ lockedStatus: 'verified' \| 'rejected' \| null }`. |
 | `POST /api/admin/canvas-links/community/:id/reset-reports` | Admin: clears every report on a link; backers are kept. |

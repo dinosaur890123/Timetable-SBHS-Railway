@@ -1128,6 +1128,7 @@ function App() {
                     onDismissAi={() => setAiBannerDismissed(true)}
                     buildNotes={hiddenPages.includes('build-notes') ? [] : buildNotes}
                     onOpenBuildNotes={() => setCurrentView('build-notes')}
+                    onOpenCanvasLinks={hiddenPages.includes('canvas-links') ? null : () => setCurrentView('canvas-links')}
                 />
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
