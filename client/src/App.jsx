@@ -126,12 +126,14 @@ import {
     peekNextSchoolDay,
     onCachedDataChange
 } from './services/api';
-import { prefetchPages } from './services/pageData';
+import { prefetchPages, calendarPage } from './services/pageData';
+import { useCachedLoad } from './utils/pageCache';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 import { NotificationsContext } from './context/NotificationsContext';
+import { NotificationsDrawerContext } from './context/NotificationsDrawerContext';
 import { Hl, useNoteFlowFonts } from './components/study/noteflow';
 import './components/sage.css';
 
@@ -182,6 +184,15 @@ function App() {
     const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
+    const [buildNotes, setBuildNotes] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_build_notes');
+            const parsed = cached ? JSON.parse(cached) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -277,6 +288,25 @@ function App() {
             return [];
         }
     });
+    // Term/week/week-type for the day on screen, from the same calendar data the Calendar page
+    // shows (its day groups carry info.term / info.week / info.weekType).
+    const calPage = user?.studentId && !hiddenPages.includes('calendar')
+        ? calendarPage(user.studentId, viewDate)
+        : null;
+    const { data: calMonth } = useCachedLoad(calPage?.key ?? null, calPage?.load);
+    const weekInfo = useMemo(() => {
+        if (!calMonth) return null;
+        const dow = viewDate.getDay();
+        const weekStart = format(addDays(viewDate, -dow), 'yyyy-MM-dd');
+        const weekEnd = format(addDays(viewDate, 6 - dow), 'yyyy-MM-dd');
+        const group = calMonth.find(g => {
+            const d = g.info?.date;
+            return d >= weekStart && d <= weekEnd && g.info?.term && g.info?.week;
+        });
+        if (!group?.info) return null;
+        return { term: group.info.term, week: group.info.week, weekType: group.info.weekType || '' };
+    }, [calMonth, viewDate]);
+
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
@@ -311,11 +341,17 @@ function App() {
     const [calendarPopupRef, setCalendarPopupRef] = useState(null);
     const [calendarMonth, setCalendarMonth] = useState(new Date());
 
+    // Every way out of the picker lands back on the current month next time it opens.
+    const closeDatePicker = useCallback(() => {
+        setShowDatePicker(false);
+        setCalendarMonth(new Date());
+    }, []);
+
     // Close calendar popup when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (calendarPopupRef && !calendarPopupRef.contains(event.target)) {
-                setShowDatePicker(false);
+                closeDatePicker();
             }
         };
 
@@ -326,7 +362,7 @@ function App() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showDatePicker, calendarPopupRef]);
+    }, [showDatePicker, calendarPopupRef, closeDatePicker]);
 
     // Generate calendar days for the popup
     const calendarDays = useMemo(() => {
@@ -354,7 +390,7 @@ function App() {
 
     const handleDateSelect = (date) => {
         setViewDate(date);
-        setShowDatePicker(false);
+        closeDatePicker();
     };
 
     const navigateMonth = (direction) => {
@@ -383,6 +419,18 @@ function App() {
         remove: removeNotice,
         clear: clearNotices
     }), [archivedNotices, archiveNotice, removeNotice, clearNotices]);
+
+    // Everything the top-bar bell needs beyond canvas links and toasts. Build
+    // notes are withheld entirely when the Build Notes page is hidden.
+    const drawerNoticesValue = useMemo(() => ({
+        aiDisabled,
+        aiGloballyDisabled,
+        aiBannerDismissed,
+        onEnableAi: () => setAiDisabled(false),
+        onDismissAi: () => setAiBannerDismissed(true),
+        buildNotes: hiddenPages.includes('build-notes') ? [] : buildNotes,
+        onOpenBuildNotes: () => setCurrentView('build-notes')
+    }), [aiDisabled, aiGloballyDisabled, aiBannerDismissed, buildNotes, hiddenPages]);
 
     // Debounced preference save
     const savePreferencesTimeout = useRef(null);
@@ -634,6 +682,7 @@ function App() {
             // Sync build notes on reload of the page (single fetch on load, no constant polling)
             fetchBuildNotes().then(notes => {
                 if (Array.isArray(notes)) {
+                    setBuildNotes(notes);
                     localStorage.setItem('cached_build_notes', JSON.stringify(notes));
                 }
             }).catch(() => {});
@@ -1074,6 +1123,7 @@ function App() {
         <MotionConfig reducedMotion="user">
         <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable}>
         <NotificationsContext.Provider value={notificationsValue}>
+        <NotificationsDrawerContext.Provider value={drawerNoticesValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
@@ -1089,11 +1139,6 @@ function App() {
                     usingCachedData={usingCachedData}
                     timetableViewMode={timetableViewMode}
                     setTimetableViewMode={setTimetableViewMode}
-                    aiDisabled={aiDisabled}
-                    aiGloballyDisabled={aiGloballyDisabled}
-                    aiBannerDismissed={aiBannerDismissed}
-                    onEnableAi={() => setAiDisabled(false)}
-                    onDismissAi={() => setAiBannerDismissed(true)}
                 />
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
@@ -1170,13 +1215,20 @@ function App() {
                                                     <ChevronLeft size={15} sm:size={17} />
                                                 </button>
                                                 <button
-                                                    onClick={() => setShowDatePicker(!showDatePicker)}
+                                                    onClick={() => showDatePicker ? closeDatePicker() : setShowDatePicker(true)}
                                                     aria-label="Choose date"
-                                                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 h-8 sm:h-10 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
+                                                    className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors w-[160px] sm:w-[190px]"
                                                 >
-                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline leading-none">{format(viewDate, 'EEEE')}</span>
-                                                    <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden leading-none">{format(viewDate, 'EEE')}</span>
-                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap leading-none">{format(viewDate, 'd MMMM')}</span>
+                                                    <span className="flex items-center gap-1 sm:gap-2 leading-none">
+                                                        <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline">{format(viewDate, 'EEEE')}</span>
+                                                        <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden">{format(viewDate, 'EEE')}</span>
+                                                        <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap">{format(viewDate, 'd MMMM')}</span>
+                                                    </span>
+                                                    {weekInfo && (
+                                                        <span className="text-[10px] sm:text-[11px] font-medium text-zinc-400 dark:text-zinc-500 whitespace-nowrap leading-none">
+                                                            T{weekInfo.term} · {weekInfo.week}{weekInfo.weekType}
+                                                        </span>
+                                                    )}
                                                 </button>
                                                 <button onClick={nextDay} aria-label="Next day" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                     <ChevronRight size={15} sm:size={17} />
@@ -1187,7 +1239,7 @@ function App() {
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
                                                         onClick={resetToday}
-                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-900/[0.05] dark:bg-white/[0.08] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.09] dark:hover:bg-white/[0.12] transition-colors"
                                                     >
                                                         Today
                                                     </button>
@@ -1478,6 +1530,7 @@ function App() {
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />
         </div>
         </NotificationsContext.Provider>
+        </NotificationsDrawerContext.Provider>
         </CanvasLinksProvider>
         </MotionConfig>
     );
