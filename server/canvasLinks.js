@@ -454,6 +454,27 @@ const createPgStore = (db) => {
             );
             return result.rows.map(toRow);
         },
+        // Classes (other than excludeClassKey) where this course is already
+        // shared, ignoring links the votes/admin have rejected.
+        async sharedCourseClasses(year, courseId, excludeClassKey) {
+            const result = await db.query(
+                `WITH counted AS (
+                    SELECT l.id, l.class_key, l.class_name, l.locked_status,
+                        COUNT(*) FILTER (WHERE v.vote = 1 AND NOT COALESCE(voter.blacklisted, FALSE))::int AS up,
+                        COUNT(*) FILTER (WHERE v.vote = -1 AND NOT COALESCE(voter.blacklisted, FALSE))::int AS down
+                    ${fromLinks}
+                    WHERE l.school_year = $1 AND l.course_id = $2 AND l.class_key <> $3
+                    GROUP BY l.id
+                )
+                SELECT DISTINCT class_key, class_name FROM counted
+                WHERE NOT (
+                    locked_status = 'rejected'
+                    OR (locked_status IS NULL AND down >= ${REJECTIONS} AND down >= up)
+                )`,
+                [year, courseId, excludeClassKey]
+            );
+            return result.rows.map(row => ({ classKey: row.class_key, className: row.class_name }));
+        },
         async markDuplicateNotified(entries) {
             for (const { id, courseId } of entries) {
                 await db.query(
@@ -704,6 +725,15 @@ const createMemoryStore = (getMemoryUsers) => {
                 }
             }
             return cleared;
+        },
+        async sharedCourseClasses(year, courseId, excludeClassKey) {
+            const seen = new Map();
+            shared
+                .filter(l => l.schoolYear === year && l.courseId === courseId && l.classKey !== excludeClassKey)
+                .map(l => withCounts(l, null))
+                .filter(row => statusOf(row) !== 'rejected')
+                .forEach(row => { if (!seen.has(row.classKey)) seen.set(row.classKey, row.className); });
+            return [...seen.entries()].map(([classKey, className]) => ({ classKey, className }));
         },
         async markDuplicateNotified(entries) {
             for (const { id, courseId } of entries) {
@@ -1097,6 +1127,21 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const classKey = req.body?.classKey;
             // Normalize to canonical year+shortTitle (e.g., "9PDH E") to avoid duplicates.
             const canonicalName = normalizeClassName(className, classKey);
+
+            // Warn before saving when this course is already shared under
+            // another class — the client confirms and retries with the flag.
+            if (parsed.courseId && isClassKey(classKey) && req.body?.confirmDuplicate !== true) {
+                const elsewhere = await store.sharedCourseClasses(year, parsed.courseId, classKey);
+                if (elsewhere.length > 0) {
+                    const names = elsewhere.map(c => c.className || c.classKey);
+                    return res.status(409).json({
+                        error: 'duplicate_course',
+                        message: `This course is already shared under ${names.join(', ')}.`,
+                        classes: names
+                    });
+                }
+            }
+
             const saved = await store.savePersonal(studentId, year, canonicalName, parsed.url);
             if (!saved) return res.status(400).json({ error: 'too_many', message: `You can save up to ${MAX_PERSONAL_LINKS} links.` });
 

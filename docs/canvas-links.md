@@ -49,7 +49,11 @@ mis-share, matching the admin panel's duplicate check. Each setter is notified
 once per duplicated course; the link they set shows a **Fix link** action that
 opens the editor seeded with the faulty URL. Saving the corrected course shares
 it normally and automatically removes their older duplicate-flagged links for
-the class, which clears the duplicate flag on the other class's copy.
+the class, which clears the duplicate flag on the other class's copy. Saving a
+course link that is already shared under another class first shows a
+confirmation warning (`duplicate_course` → retry with `confirmDuplicate`) — it
+warns rather than rejects, since the same course can be legitimate for two
+classes.
 
 ## Abuse protections
 

@@ -174,7 +174,19 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         // so personal and shared links are keyed consistently and don't duplicate.
         const canonicalName = key || title;
         try {
-            const data = await saveCanvasLink(canonicalName, parsed.url, key || undefined);
+            let data;
+            try {
+                data = await saveCanvasLink(canonicalName, parsed.url, key || undefined);
+            } catch (error) {
+                // The server warns when this course is already shared under
+                // another class; confirm once, then retry past the warning.
+                if (error?.status !== 409 || error?.data?.error !== 'duplicate_course') throw error;
+                const names = (error.data.classes || []).join(', ');
+                if (!window.confirm(`This course is already shared under ${names || 'another class'}. Save it anyway?`)) {
+                    return { ok: false, error: 'Cancelled — that course is shared under another class.' };
+                }
+                data = await saveCanvasLink(canonicalName, parsed.url, key || undefined, true);
+            }
             storeLinks(prev => ({ ...prev, [canonicalName]: data.link.canvasUrl }));
             if (key && data.community) setCommunity(prev => ({ ...prev, [key]: data.community }));
             loadNotices();

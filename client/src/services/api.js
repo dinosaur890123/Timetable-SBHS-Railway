@@ -679,6 +679,7 @@ const canvasRequest = async (path, { method = 'GET', body } = {}) => {
     if (!response.ok) {
         const error = new Error(data.message || data.error || `Canvas links request failed (${response.status})`);
         error.status = response.status;
+        error.data = data;
         throw error;
     }
     return data;
@@ -688,9 +689,10 @@ const canvasRequest = async (path, { method = 'GET', body } = {}) => {
 export const fetchCanvasLinks = () => canvasRequest('');
 
 // Saves one class's link. With classKey, a Canvas course link is also shared with
-// classmates. Resolves with { link, shared, community }.
-export const saveCanvasLink = (className, url, classKey) =>
-    canvasRequest(`/${encodeURIComponent(className)}`, { method: 'PUT', body: { url, classKey } });
+// classmates. confirmDuplicate retries past the server's duplicate-course warning.
+// Resolves with { link, shared, community }.
+export const saveCanvasLink = (className, url, classKey, confirmDuplicate = false) =>
+    canvasRequest(`/${encodeURIComponent(className)}`, { method: 'PUT', body: { url, classKey, confirmDuplicate } });
 
 export const deleteCanvasLink = (className) =>
     canvasRequest(`/${encodeURIComponent(className)}`, { method: 'DELETE' });
