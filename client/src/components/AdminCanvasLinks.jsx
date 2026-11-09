@@ -107,9 +107,8 @@ const AdminCanvasLinks = () => {
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-2">
                                             {year && <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[10px] font-bold">{year}</span>}
-                                            <span className="font-medium">{link.className}</span>
+                                            <span className="font-medium">{link.classKey}</span>
                                         </div>
-                                        <div className="font-mono text-[11px] text-zinc-400 mt-0.5">{link.classKey}</div>
                                     </td>
                                     <td className="px-4 py-3">
                                         <a href={link.canvasUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs hover:text-violet-600 dark:hover:text-violet-400">
