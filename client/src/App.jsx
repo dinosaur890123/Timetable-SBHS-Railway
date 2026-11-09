@@ -126,7 +126,8 @@ import {
     peekNextSchoolDay,
     onCachedDataChange
 } from './services/api';
-import { prefetchPages } from './services/pageData';
+import { prefetchPages, calendarPage } from './services/pageData';
+import { useCachedLoad } from './utils/pageCache';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
@@ -286,6 +287,25 @@ function App() {
             return [];
         }
     });
+    // Week and week-type ("5A") for the day on screen, from the same calendar data the
+    // Calendar page shows (its day groups carry info.week / info.weekType).
+    const calPage = user?.studentId && !hiddenPages.includes('calendar')
+        ? calendarPage(user.studentId, viewDate)
+        : null;
+    const { data: calMonth } = useCachedLoad(calPage?.key ?? null, calPage?.load);
+    const weekLabel = useMemo(() => {
+        if (!calMonth) return null;
+        const dow = viewDate.getDay();
+        const weekStart = format(addDays(viewDate, -dow), 'yyyy-MM-dd');
+        const weekEnd = format(addDays(viewDate, 6 - dow), 'yyyy-MM-dd');
+        const group = calMonth.find(g => {
+            const d = g.info?.date;
+            return d >= weekStart && d <= weekEnd && g.info?.week;
+        });
+        if (!group?.info) return null;
+        return `${group.info.week}${group.info.weekType || ''}`;
+    }, [calMonth, viewDate]);
+
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
@@ -1188,7 +1208,7 @@ function App() {
                                                 >
                                                     <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white hidden sm:inline leading-none">{format(viewDate, 'EEEE')}</span>
                                                     <span className="text-[15px] sm:text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white sm:hidden leading-none">{format(viewDate, 'EEE')}</span>
-                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap leading-none">{format(viewDate, 'd MMMM')}</span>
+                                                    <span className="text-[12px] sm:text-[13px] text-zinc-500 whitespace-nowrap leading-none">{format(viewDate, 'd MMMM')}{weekLabel ? ` · ${weekLabel}` : ''}</span>
                                                 </button>
                                                 <button onClick={nextDay} aria-label="Next day" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors">
                                                     <ChevronRight size={15} sm:size={17} />
@@ -1199,7 +1219,7 @@ function App() {
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
                                                         onClick={resetToday}
-                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-900/[0.05] dark:bg-white/[0.08] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.09] dark:hover:bg-white/[0.12] transition-colors"
+                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-900/[0.03] dark:bg-white/[0.05] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.07] dark:hover:bg-white/[0.09] transition-colors"
                                                     >
                                                         Today
                                                     </button>
