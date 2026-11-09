@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
     fetchCalendarEvents,
     fetchDateInfo,
+    fetchDaysInfo,
     fetchTerms,
     fetchAssignments,
     fetchStudentAwards,
@@ -33,6 +34,12 @@ export const termsPage = () => ({
     load: () => fetchTerms()
 });
 
+// Every day's school flags for a month — the days calendar's own term definition.
+export const schoolDaysPage = (monthDate) => ({
+    key: `schooldays:${format(monthDate, 'yyyy-MM')}`,
+    load: () => fetchDaysInfo(startOfMonth(monthDate), endOfMonth(monthDate))
+});
+
 // The spans between consecutive terms — the school holidays.
 const termBreaks = (termsData) => {
     const bounds = Object.values(termsData?.terms || {})
@@ -47,12 +54,18 @@ const termBreaks = (termsData) => {
 };
 
 // What a date is closed for, if anything: a named public holiday or staff development
-// day, or any day inside a term break — weekends included. In-term weekends are open.
-export const closureLabel = (date, termsData) => {
+// day, every day of a term break (weekends included), or a weekday the days calendar
+// doesn't count as a school day. In-term weekends stay open. `dayInfo` is the date's
+// entry from calendar/days.json; undefined means "not a school day" (or not loaded —
+// callers only ask once the month's data is in).
+export const closureLabel = (date, termsData, dayInfo) => {
     const key = format(date, 'yyyy-MM-dd');
-    return termsData?.publicHolidays?.[key]
-        || termsData?.developmentDays?.[key]
-        || (termBreaks(termsData).some(b => key > b.start && key < b.end) ? 'School holidays' : null);
+    const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
+    if (named) return named;
+    if (termBreaks(termsData).some(b => key > b.start && key < b.end)) return 'School holidays';
+    if (date.getDay() === 0 || date.getDay() === 6) return null;
+    const schoolDay = dayInfo && (Number(dayInfo.dayNumber) > 0 || Number(dayInfo.week) > 0);
+    return schoolDay ? null : 'School holidays';
 };
 
 // --- Calendar ---
@@ -187,7 +200,8 @@ export const prefetchPages = async ({ studentId, hiddenPages = [] }) => {
         !hiddenPages.includes('calendar') && calendarPage(studentId, new Date()),
         !hiddenPages.includes('awards') && awardsPage(studentId),
         !hiddenPages.includes('clipboard') && clipboardPage(studentId),
-        termsPage()
+        termsPage(),
+        schoolDaysPage(new Date())
     ].filter(Boolean);
 
     for (const page of pages) {
