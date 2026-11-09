@@ -33,6 +33,7 @@ const getEventTypeColor = (type) => {
   switch (type) {
     case 'assessment': return 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white';
     case 'assignment': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/30';
+    case 'holiday': return 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900/30';
     default: return 'bg-zinc-100 text-zinc-900 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800';
   }
 };
@@ -41,6 +42,7 @@ const getEventTypeAccent = (type) => {
   switch (type) {
     case 'assessment': return 'bg-black dark:bg-white';
     case 'assignment': return 'bg-purple-600 dark:bg-purple-400';
+    case 'holiday': return 'bg-sky-500 dark:bg-sky-400';
     default: return 'bg-zinc-400 dark:bg-zinc-600';
   }
 };

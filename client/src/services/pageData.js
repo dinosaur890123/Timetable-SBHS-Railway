@@ -5,6 +5,8 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
     fetchCalendarEvents,
     fetchDateInfo,
+    fetchDaysInfo,
+    fetchTerms,
     fetchAssignments,
     fetchStudentAwards,
     fetchStudentBadges,
@@ -21,7 +23,48 @@ import {
     fetchStudentClipboardTeams,
     fetchGlobalActivities
 } from './api';
-import { prefetchCached } from '../utils/pageCache';
+import { loadCached, prefetchCached } from '../utils/pageCache';
+
+// --- School calendar ---
+
+// The year's terms, holidays and development days: one public request, shared by the
+// calendar page and the timetable date picker through the page cache.
+export const termsPage = () => ({
+    key: 'terms:v1',
+    load: () => fetchTerms()
+});
+const loadTerms = () => loadCached(termsPage().key, termsPage().load);
+
+// Every day's school flags for a month, for the picker's timetable dots.
+export const schoolDaysPage = (monthDate) => ({
+    key: `schooldays:${format(monthDate, 'yyyy-MM')}`,
+    load: () => fetchDaysInfo(startOfMonth(monthDate), endOfMonth(monthDate))
+});
+
+// The spans between consecutive terms — the school holidays.
+const termBreaks = (termsData) => {
+    const bounds = Object.values(termsData?.terms || {})
+        .map(t => ({ start: t?.start?.date, end: t?.end?.date }))
+        .filter(t => /^\d{4}-\d{2}-\d{2}$/.test(t.start || '') && /^\d{4}-\d{2}-\d{2}$/.test(t.end || ''))
+        .sort((a, b) => a.start.localeCompare(b.start));
+    const breaks = [];
+    for (let i = 0; i < bounds.length - 1; i++) {
+        if (bounds[i].end < bounds[i + 1].start) breaks.push({ start: bounds[i].end, end: bounds[i + 1].start });
+    }
+    return breaks;
+};
+
+// What a date is closed for, if anything: a named public holiday or staff development
+// day, a weekday inside a term break, or a weekday the days calendar marks non-school.
+export const closureLabel = (date, termsData, dayInfo) => {
+    const key = format(date, 'yyyy-MM-dd');
+    const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
+    if (named) return named;
+    if (date.getDay() === 0 || date.getDay() === 6) return null;
+    if (termBreaks(termsData).some(b => key > b.start && key < b.end)) return 'School holidays';
+    if (dayInfo && !(Number(dayInfo.dayNumber) > 0 || Number(dayInfo.week) > 0)) return 'School holidays';
+    return null;
+};
 
 // --- Calendar ---
 
@@ -30,10 +73,12 @@ const loadMonth = async (monthDate) => {
   const start = startOfMonth(monthDate);
   const end = endOfMonth(monthDate);
 
-  const [eventsData, daysData, assignmentsData] = await Promise.all([
+  const [eventsData, daysData, assignmentsData, termsData, monthDays] = await Promise.all([
     fetchCalendarEvents(start, end),
     fetchDateInfo(monthDate).catch(() => null),
-    fetchAssignments().catch(() => ({ success: true, assignments: [] }))
+    fetchAssignments().catch(() => ({ success: true, assignments: [] })),
+    loadTerms().catch(() => null),
+    fetchDaysInfo(start, end).catch(() => null)
   ]);
 
   const mergedEvents = eventsData ? JSON.parse(JSON.stringify(eventsData)) : [];
@@ -84,6 +129,26 @@ const loadMonth = async (monthDate) => {
 
     mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
   }
+
+  // School closures as all-day items: named holidays first in the day panel, so they
+  // read before the day's classes and assessments.
+  const monthLength = end.getDate();
+  for (let day = 1; day <= monthLength; day++) {
+    const date = new Date(start.getFullYear(), start.getMonth(), day);
+    const label = closureLabel(date, termsData, monthDays?.[format(date, 'yyyy-MM-dd')]);
+    if (!label) continue;
+
+    const dateStr = format(date, 'yyyy-MM-dd');
+    let group = mergedEvents.find(g => g.info?.date === dateStr);
+    if (!group) {
+      group = { info: { date: dateStr }, items: [] };
+      mergedEvents.push(group);
+    }
+    if (!group.items.some(item => item.title === label)) {
+      group.items.unshift({ title: label, type: 'holiday' });
+    }
+  }
+  mergedEvents.sort((a, b) => new Date(a.info.date) - new Date(b.info.date));
 
   return mergedEvents;
 };
@@ -154,7 +219,9 @@ export const prefetchPages = async ({ studentId, hiddenPages = [] }) => {
     const pages = [
         !hiddenPages.includes('calendar') && calendarPage(studentId, new Date()),
         !hiddenPages.includes('awards') && awardsPage(studentId),
-        !hiddenPages.includes('clipboard') && clipboardPage(studentId)
+        !hiddenPages.includes('clipboard') && clipboardPage(studentId),
+        schoolDaysPage(new Date()),
+        termsPage()
     ].filter(Boolean);
 
     for (const page of pages) {

@@ -126,7 +126,7 @@ import {
     peekNextSchoolDay,
     onCachedDataChange
 } from './services/api';
-import { prefetchPages, calendarPage } from './services/pageData';
+import { prefetchPages, calendarPage, schoolDaysPage, termsPage, closureLabel } from './services/pageData';
 import { useCachedLoad } from './utils/pageCache';
 import { registerUser } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -382,6 +382,16 @@ function App() {
         
         return days;
     }, [calendarMonth]);
+
+    // School days and closures for the picker's month: a blue dot marks days with a
+    // timetable, and the tooltip names holidays and term breaks.
+    const { data: pickerDays } = useCachedLoad(user ? schoolDaysPage(calendarMonth).key : null, schoolDaysPage(calendarMonth).load);
+    const { data: pickerTerms } = useCachedLoad(user ? termsPage().key : null, termsPage().load);
+
+    const pickerHasTimetable = (date) => {
+        const info = pickerDays?.[format(date, 'yyyy-MM-dd')];
+        return !!info && (Number(info.dayNumber) > 0 || Number(info.week) > 0);
+    };
 
     const handleDateSelect = (date) => {
         setViewDate(date);
@@ -1285,12 +1295,15 @@ function App() {
                                                             
                                                                 const isSelected = isSameDay(date, viewDate);
                                                                 const isToday = isSameDay(date, new Date());
+                                                                const dayInfo = pickerDays?.[format(date, 'yyyy-MM-dd')];
+                                                                const closure = closureLabel(date, pickerTerms, dayInfo);
                                                             
                                                                 return (
                                                                     <button
                                                                         key={idx}
                                                                         onClick={() => handleDateSelect(date)}
-                                                                        className={`aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                                                                        title={closure || undefined}
+                                                                        className={`relative aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
                                                                             isSelected
                                                                                 ? 'bg-black text-white dark:bg-white dark:text-black'
                                                                                 : isToday
@@ -1299,6 +1312,9 @@ function App() {
                                                                         }`}
                                                                     >
                                                                         {format(date, 'd')}
+                                                                        {pickerHasTimetable(date) && (
+                                                                            <span aria-hidden="true" className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-blue-500" />
+                                                                        )}
                                                                     </button>
                                                                 );
                                                             })}
