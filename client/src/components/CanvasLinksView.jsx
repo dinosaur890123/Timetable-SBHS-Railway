@@ -181,9 +181,8 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
               const isEditing = editing === canonicalKey;
               const isBusy = busy === canonicalKey;
               const error = errors[canonicalKey];
-              // Community link is the default; personal is an override.
-              const showCommunity = shared && (!personal || !isEditing);
-              const showPersonal = personal && (isEditing || !shared);
+              // Track which link is active: 'community' or 'personal'
+              const [activeSource, setActiveSource] = useState(shared ? 'community' : personal ? 'personal' : null);
 
               return (
                 <li key={row.key} className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
@@ -239,46 +238,84 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                         </div>
                       )}
                     </div>
-                  ) : showCommunity ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-semibold">
-                        <Users size={12} />
-                        Community link
-                      </div>
-                      <LinkField url={shared.canvasUrl} />
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        <span className="inline-flex items-center gap-1.5">
-                          {classLink
-                            ? (shared.pinned ? 'Set for your class' : `Confirmed by ${shared.confirmations} classmates`)
-                            : 'You backed this link. It’s used for your class once a classmate confirms it'}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => (classLink
-                            ? handleVote(row, shared.id, -1, 'Thanks for letting us know')
-                            : handleVote(row, shared.id, 0, 'Removed your vote'))}
-                          className={buttonQuiet}
-                        >
-                          {classLink ? <><Flag size={12} /> Wrong link?</> : <><X size={12} /> Not this one</>}
-                        </button>
-                      </div>
-                      {personal && (
-                        <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Source toggle when both exist */}
+                      {personal && shared && (
+                        <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => { setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }}
-                            className={buttonQuiet}
+                            onClick={() => setActiveSource('community')}
+                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                              activeSource === 'community'
+                                ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            }`}
                           >
-                            <Edit2 size={12} /> Use my own instead
+                            <Users size={12} className="inline mr-1" /> Community
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSource('personal')}
+                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                              activeSource === 'personal'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            <Edit2 size={12} className="inline mr-1" /> Your link
                           </button>
                         </div>
                       )}
-                      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <LinkField url={personal} />
+
+                      {/* Community link */}
+                      {shared && (activeSource === 'community' || !personal) && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-semibold">
+                            <Users size={12} />
+                            Community link
+                          </div>
+                          <LinkField url={shared.canvasUrl} />
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                            <span className="inline-flex items-center gap-1.5">
+                              {classLink
+                                ? (shared.pinned ? 'Set for your class' : `Confirmed by ${shared.confirmations} classmates`)
+                                : 'You backed this link. It’s used for your class once a classmate confirms it'}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => (classLink
+                                ? handleVote(row, shared.id, -1, 'Thanks for letting us know')
+                                : handleVote(row, shared.id, 0, 'Removed your vote'))}
+                              className={buttonQuiet}
+                            >
+                              {classLink ? <><Flag size={12} /> Wrong link?</> : <><X size={12} /> Not this one</>}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Personal link */}
+                      {personal && (activeSource === 'personal' || !shared) && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                            <Edit2 size={12} />
+                            Your link
+                          </div>
+                          <LinkField url={personal} />
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => { setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }}
+                              className={buttonQuiet}
+                            >
+                              <Edit2 size={12} /> Edit
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                     </div>
                   )}
