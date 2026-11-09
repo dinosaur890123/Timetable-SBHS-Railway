@@ -1048,6 +1048,19 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });
         await scanDuplicateLinks({ force: true });
+
+        // A fresh, non-duplicate share replaces the student's earlier shared
+        // links for this class that are still flagged as duplicates — the
+        // mis-share is fixed, so the other class's copy stops being flagged too.
+        if (duplicateIdsCache.year === year && !duplicateIdsCache.ids.includes(courseId)) {
+            const stale = (await store.listForClasses(year, [classKey], studentId))
+                .filter(row => row.id !== linkId && row.submittedBy === studentId && duplicateIdsCache.ids.includes(row.courseId));
+            for (const row of stale) await store.removeShared(row.id);
+            if (stale.length > 0) {
+                log('CANVAS_LINK_DEDUP', studentId, `Removed ${stale.length} duplicate shared link(s) for ${classKey} after sharing ${courseId} (${year})`);
+                await scanDuplicateLinks({ force: true });
+            }
+        }
         return 'shared';
     };
 
