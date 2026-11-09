@@ -383,6 +383,14 @@ export const fetchDateInfo = async (date) => {
     return fetchWithAuth(`/calendar/days.json?from=${dateStr}&to=${dateStr}`);
 };
 
+// School-day flags (term, week, weekType, dayNumber) for every date in a range.
+export const fetchDaysInfo = async (from, to) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', format(from, 'yyyy-MM-dd'));
+    if (to) params.append('to', format(to, 'yyyy-MM-dd'));
+    return fetchWithAuth(`/calendar/days.json?${params.toString()}`);
+};
+
 // The school year's term boundaries, public holidays and staff development days.
 export const fetchTerms = async (year) => {
     return fetchWithAuth(`/calendar/terms.json${year ? `?year=${year}` : ''}`);

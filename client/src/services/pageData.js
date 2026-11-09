@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import {
     fetchCalendarEvents,
     fetchDateInfo,
+    fetchDaysInfo,
     fetchTerms,
     fetchAssignments,
     fetchStudentAwards,
@@ -33,6 +34,12 @@ export const termsPage = () => ({
     load: () => fetchTerms()
 });
 
+// Every day's term flags for a month — the days calendar's own per-day term definition.
+export const schoolDaysPage = (monthDate) => ({
+    key: `schooldays:${format(monthDate, 'yyyy-MM')}`,
+    load: () => fetchDaysInfo(startOfMonth(monthDate), endOfMonth(monthDate))
+});
+
 // The terms' start–end spans, straight from the API.
 const termSpans = (termsData) =>
     Object.values(termsData?.terms || {})
@@ -41,12 +48,19 @@ const termSpans = (termsData) =>
         .sort((a, b) => a.start.localeCompare(b.start));
 
 // What a date is closed for, if anything: a named public holiday or staff development
-// day, or "School holidays" for any day outside every term's bounds. No terms data
-// means nothing can be called closed.
-export const closureLabel = (date, termsData) => {
+// day, or "School holidays" for any day outside every term. The days calendar's own
+// `term` flag ("0" = out of term) is authoritative when the API lists the date —
+// an in-term weekend keeps its term number and stays open. Dates it doesn't list
+// fall back to the year's term bounds. No data at all means nothing is called closed.
+export const closureLabel = (date, termsData, dayInfo) => {
     const key = format(date, 'yyyy-MM-dd');
     const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
     if (named) return named;
+
+    if (dayInfo && dayInfo.term !== undefined && dayInfo.term !== null && dayInfo.term !== '') {
+        return String(dayInfo.term) === '0' ? 'School holidays' : null;
+    }
+
     const spans = termSpans(termsData);
     if (spans.length === 0) return null;
     return spans.some(t => key >= t.start && key <= t.end) ? null : 'School holidays';
@@ -184,7 +198,8 @@ export const prefetchPages = async ({ studentId, hiddenPages = [] }) => {
         !hiddenPages.includes('calendar') && calendarPage(studentId, new Date()),
         !hiddenPages.includes('awards') && awardsPage(studentId),
         !hiddenPages.includes('clipboard') && clipboardPage(studentId),
-        termsPage()
+        termsPage(),
+        schoolDaysPage(new Date())
     ].filter(Boolean);
 
     for (const page of pages) {
