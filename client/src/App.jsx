@@ -331,7 +331,7 @@ function App() {
     // Timetable AI Modal States
     const [showAiModal, setShowAiModal] = useState(false);
     // Sage's serif face loads only when the modal or the palette can show its name.
-    useNoteFlowFonts(showAiModal || paletteOpen);
+    useNoteFlowFonts(showAiModal || paletteOpen || !aiDisabled);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
     const [aiShown, setAiShown] = useState('');
@@ -1233,7 +1233,7 @@ function App() {
                                                         className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
                                                     >
                                                         <Sparkles size={13} sm:size={14} className="sage-accent" />
-                                                        <span className="hidden sm:inline sage-name">Ask Sage</span>
+                                                        <span className="hidden sm:inline">Ask <span className="sage-name">Sage</span></span>
                                                     </button>
                                                 )}
                                             </div>
