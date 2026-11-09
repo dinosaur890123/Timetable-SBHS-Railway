@@ -170,7 +170,8 @@ const IconButton = ({ children, className = '', ...props }) => (
 
 export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
-    isOffline, usingCachedData, timetableViewMode, setTimetableViewMode
+    isOffline, usingCachedData, timetableViewMode, setTimetableViewMode,
+    aiDisabled, aiGloballyDisabled, aiBannerDismissed, onEnableAi, onDismissAi
 }) => {
     const status = isOffline
         ? { label: 'Offline', dot: 'bg-amber-500', icon: WifiOff }
@@ -241,7 +242,13 @@ export const ModernTopbar = ({
                     <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
                 )}
 
-                <CanvasLinkNotifications />
+                <CanvasLinkNotifications
+                    aiDisabled={aiDisabled}
+                    aiGloballyDisabled={aiGloballyDisabled}
+                    aiBannerDismissed={aiBannerDismissed}
+                    onEnableAi={onEnableAi}
+                    onDismissAi={onDismissAi}
+                />
 
                 <IconButton onClick={toggleTheme} aria-label="Toggle colour mode" title="Toggle colour mode">
                     <AnimatePresence mode="wait" initial={false}>

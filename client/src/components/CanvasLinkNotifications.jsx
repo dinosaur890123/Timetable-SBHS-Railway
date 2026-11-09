@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Check, CheckCircle2, ExternalLink, Info, Users, X } from 'lucide-react';
+import { Bell, Check, CheckCircle2, ExternalLink, Info, Sparkles, Users, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNotifications } from '../context/NotificationsContext';
@@ -42,7 +42,13 @@ const pageHidden = () => {
 // archived here, and every unanswered class-link suggestion is listed too —
 // including ones the student dismissed with "Not now" — so ignored prompts
 // still get voted on instead of stalling a link's verification.
-const CanvasLinkNotifications = () => {
+const CanvasLinkNotifications = ({
+    aiDisabled = false,
+    aiGloballyDisabled = false,
+    aiBannerDismissed = false,
+    onEnableAi,
+    onDismissAi
+}) => {
     const { pending, vote, linkNotices, markLinkNoticesRead } = useCanvasLinks();
     const { items: notices, remove: removeNotice, clear: clearNotices } = useNotifications();
     const [open, setOpen] = useState(false);
@@ -58,9 +64,11 @@ const CanvasLinkNotifications = () => {
     const shownPending = linksVisible ? pending : [];
     const shownLinkNotices = linksVisible ? linkNotices : [];
 
+    const showAiNotice = aiDisabled && !aiGloballyDisabled && !aiBannerDismissed;
+
     const unread = useMemo(() => shownPending.filter(p => !seen.has(p.id)), [shownPending, seen]);
     const unreadNotices = useMemo(() => notices.filter(n => !seenNotices.has(n.id)), [notices, seenNotices]);
-    const badgeCount = unread.length + unreadNotices.length + shownLinkNotices.length;
+    const badgeCount = unread.length + unreadNotices.length + shownLinkNotices.length + (showAiNotice ? 1 : 0);
     const totalItems = notices.length + shownLinkNotices.length + shownPending.length;
 
     const markSeen = (items = pending) => {
@@ -108,7 +116,7 @@ const CanvasLinkNotifications = () => {
         };
     }, [open]);
 
-    if (hidden && notices.length === 0 && linkNotices.length === 0) return null;
+    if (hidden && notices.length === 0 && linkNotices.length === 0 && !showAiNotice) return null;
 
     const send = async (item, value) => {
         setBusyId(item.id);
@@ -164,7 +172,7 @@ const CanvasLinkNotifications = () => {
                             </div>
                         </div>
 
-                        {totalItems === 0 ? (
+                        {totalItems === 0 && !showAiNotice ? (
                             <p className="px-4 py-8 text-center text-sm text-zinc-500">Nothing to review - you’re all caught up.</p>
                         ) : (
                             <>
@@ -289,6 +297,38 @@ const CanvasLinkNotifications = () => {
                                                 </li>
                                             ))}
                                         </ul>
+                                    </section>
+                                )}
+
+                                {showAiNotice && (
+                                    <section>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${totalItems > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                            Sage
+                                        </div>
+                                        <div className="px-4 py-3 flex items-start gap-2.5">
+                                            <Sparkles size={15} className="shrink-0 mt-0.5 text-violet-500 dark:text-violet-400" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm text-zinc-900 dark:text-white leading-snug">
+                                                    Meet <span className="sage-name">Sage</span> — ask questions about your timetable. AI features are off by default; enable them here or in Settings.
+                                                </div>
+                                                <div className="mt-2 flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={onEnableAi}
+                                                        className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors"
+                                                    >
+                                                        Enable AI
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={onDismissAi}
+                                                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                                                    >
+                                                        Not now
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </section>
                                 )}
                             </>

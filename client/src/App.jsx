@@ -1089,6 +1089,11 @@ function App() {
                     usingCachedData={usingCachedData}
                     timetableViewMode={timetableViewMode}
                     setTimetableViewMode={setTimetableViewMode}
+                    aiDisabled={aiDisabled}
+                    aiGloballyDisabled={aiGloballyDisabled}
+                    aiBannerDismissed={aiBannerDismissed}
+                    onEnableAi={() => setAiDisabled(false)}
+                    onDismissAi={() => setAiBannerDismissed(true)}
                 />
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
@@ -1120,28 +1125,6 @@ function App() {
                             className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"
                         >
                             Sign in again
-                        </button>
-                    </div>
-                )}
-
-                {aiDisabled && !aiGloballyDisabled && !aiBannerDismissed && (
-                    <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/50 text-violet-800 dark:text-violet-300">
-                        <Sparkles size={18} className="shrink-0" />
-                        <span className="flex-1 min-w-[200px]">
-                            Meet <span className="sage-name">Sage</span> — ask questions about your timetable. AI features are off by default; enable them below or in Settings.
-                        </span>
-                        <button
-                            onClick={() => setAiDisabled(false)}
-                            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors"
-                        >
-                            Enable AI
-                        </button>
-                        <button
-                            onClick={() => setAiBannerDismissed(true)}
-                            aria-label="Dismiss"
-                            className="p-1.5 rounded-lg text-violet-400 hover:text-violet-700 dark:hover:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-                        >
-                            <X size={16} />
                         </button>
                     </div>
                 )}
