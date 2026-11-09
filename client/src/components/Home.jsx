@@ -355,7 +355,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboard
     const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
 
     const classCount = slots.filter(isClass).length;
-    const changes = slots.filter(s => !s.isBreak && (s.period.hasRoomChange || s.period.isSubstituted));
     const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : format(new Date(`${dayKey}T00:00`), 'EEEE');
 
     const firstClass = slots.find(isClass);
@@ -374,8 +373,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, clipboard
     const status = [
         inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
         classCount ? `${classCount} classes` : null,
-        !showRail && firstClass ? `starts ${firstClass.bell.time}` : null,
-        changes.length ? (changes.length === 1 ? '1 change' : `${changes.length} changes`) : null
+        !showRail && firstClass ? `starts ${firstClass.bell.time}` : null
     ].filter(Boolean).join(' · ');
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;

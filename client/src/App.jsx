@@ -298,12 +298,14 @@ function App() {
         const dow = viewDate.getDay();
         const weekStart = format(addDays(viewDate, -dow), 'yyyy-MM-dd');
         const weekEnd = format(addDays(viewDate, 6 - dow), 'yyyy-MM-dd');
-        const group = calMonth.find(g => {
+        const groups = calMonth.filter(g => {
             const d = g.info?.date;
             return d >= weekStart && d <= weekEnd && g.info?.week;
         });
-        if (!group?.info) return null;
-        return `${group.info.week}${group.info.weekType || ''}`;
+        const week = groups[0]?.info.week;
+        if (!week) return null;
+        const weekType = groups.map(g => g.info.weekType).find(Boolean) || '';
+        return `${week}${weekType}`;
     }, [calMonth, viewDate]);
 
     const hasSyncedTimetable = useRef(false);
