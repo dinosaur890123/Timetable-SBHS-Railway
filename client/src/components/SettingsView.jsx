@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
+import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
     { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
@@ -102,10 +103,17 @@ const SettingsView = ({
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
     const { isInstalled, dismiss, showIOSInstructions } = usePWAInstall();
-    const { links: canvasLinks, status: canvasLinksStatus } = useCanvasLinks();
-    // Red dot until the student has saved at least one link; links reset each
-    // calendar year, so it comes back then too.
-    const canvasLinksMissing = canvasLinksStatus !== 'loading' && Object.keys(canvasLinks).length === 0;
+    const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
+    // Red dot until every class in the timetable has a link (personal or community).
+    // Links reset each calendar year, so it comes back then too.
+    // Memoized to avoid recomputing on every render.
+    const canvasLinksMissing = useMemo(() => {
+        if (canvasLinksStatus === 'loading') return false;
+        return Array.from(canvasClasses.keys()).some(key => {
+            const period = canvasClasses.get(key);
+            return !getCanvasLink(period.title, period.year);
+        });
+    }, [canvasClasses, getCanvasLink, canvasLinksStatus]);
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">

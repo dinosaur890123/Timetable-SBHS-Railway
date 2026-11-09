@@ -181,6 +181,9 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
               const isEditing = editing === canonicalKey;
               const isBusy = busy === canonicalKey;
               const error = errors[canonicalKey];
+              // Community link is the default; personal is an override.
+              const showCommunity = shared && (!personal || !isEditing);
+              const showPersonal = personal && (isEditing || !shared);
 
               return (
                 <li key={row.key} className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-950/30">
@@ -236,17 +239,15 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                         </div>
                       )}
                     </div>
-                  ) : personal ? (
+                  ) : showCommunity ? (
                     <div className="space-y-2">
-                      <LinkField url={personal} />
-                      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-semibold">
+                        <Users size={12} />
+                        Community link
+                      </div>
                       <LinkField url={shared.canvasUrl} />
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                         <span className="inline-flex items-center gap-1.5">
-                          <Users size={12} />
                           {classLink
                             ? (shared.pinned ? 'Set for your class' : `Confirmed by ${shared.confirmations} classmates`)
                             : 'You backed this link. It’s used for your class once a classmate confirms it'}
@@ -262,6 +263,22 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                           {classLink ? <><Flag size={12} /> Wrong link?</> : <><X size={12} /> Not this one</>}
                         </button>
                       </div>
+                      {personal && (
+                        <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                          <button
+                            type="button"
+                            onClick={() => { setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }}
+                            className={buttonQuiet}
+                          >
+                            <Edit2 size={12} /> Use my own instead
+                          </button>
+                        </div>
+                      )}
+                      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <LinkField url={personal} />
                       {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                     </div>
                   )}

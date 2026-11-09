@@ -125,19 +125,23 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         return key;
     }, [titleToKey]);
 
-    // The link for a class: the student's own, else the one their class agreed on
-    // (unless they reported it), else a suggestion they backed themselves.
+    // The link for a class: community-verified link by default, else the one
+    // their class agreed on, else a suggestion they backed, else their own.
+    // Users can override by saving their own link, which takes precedence.
     const getLink = useCallback((title, year) => {
         if (!title) return null;
         const key = keyFor(title, year);
-        // Look up by the canonical key (year+shortTitle) first, then fall back
-        // to title for legacy entries that predate the normalization.
+        // Community link takes priority by default.
+        const entry = community[key];
+        if (entry) {
+            if (entry.link && entry.link.myVote !== -1) return entry.link.canvasUrl;
+            const backed = entry.suggestions?.find(s => s.myVote === 1)?.canvasUrl;
+            if (backed) return backed;
+        }
+        // User's own link overrides community if they explicitly saved one.
         if (links[key]) return links[key];
         if (links[title]) return links[title];
-        const entry = community[key];
-        if (!entry) return null;
-        if (entry.link && entry.link.myVote !== -1) return entry.link.canvasUrl;
-        return entry.suggestions?.find(s => s.myVote === 1)?.canvasUrl || null;
+        return null;
     }, [links, community, keyFor]);
 
     // Saves a class's link. Resolves with { ok, shared } or { ok: false, error }.

@@ -1,8 +1,92 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell, Pin, ExternalLink, Flag } from 'lucide-react';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
+
+const YEAR_GROUPS = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
+
+const computeYearRows = (dist = {}) => {
+    let maxCount = 1;
+    const rows = YEAR_GROUPS.map(yr => {
+        let count = 0;
+        Object.entries(dist).forEach(([k, v]) => {
+            const cleanKey = String(k).toLowerCase().replace(/^0+/, '');
+            const cleanYr = yr.toLowerCase();
+            if (cleanKey === cleanYr || (yr === 'Staff' && (cleanKey.includes('staff') || cleanKey.includes('admin') || cleanKey === 'st'))) {
+                count += v;
+            } else if (yr === 'Unknown' && (cleanKey === 'unknown' || cleanKey === 'null' || cleanKey === '')) {
+                count += v;
+            }
+        });
+        maxCount = Math.max(maxCount, count);
+        return { label: yr, count };
+    });
+    return rows.map(r => ({ ...r, pct: (r.count / maxCount) * 100 }));
+};
+
+const yearLabel = (yr) => yr === 'Staff' ? 'Staff' : yr === 'Unknown' ? 'Unknown' : `Year ${yr}`;
+
+const YearDistribution = ({ dist }) => (
+    <div className="space-y-3">
+        {computeYearRows(dist).map(({ label, count, pct }) => (
+            <div key={label} className="flex items-center gap-3 text-xs font-mono">
+                <span className="w-16 shrink-0 text-zinc-500 dark:text-zinc-400">{yearLabel(label)}</span>
+                <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-2.5 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${count > 0 ? Math.max(2, pct) : 0}%` }}
+                    />
+                </div>
+                <span className="w-8 text-right font-bold text-zinc-900 dark:text-white tabular-nums">{count}</span>
+            </div>
+        ))}
+    </div>
+);
+
+const PanelHeader = ({ icon: Icon, tone, title, subtitle, children }) => (
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4 mb-6">
+        <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${tone}`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <div>
+                <h4 className="text-base font-bold text-zinc-900 dark:text-white">{title}</h4>
+                {subtitle && <p className="text-xs text-zinc-500 mt-0.5">{subtitle}</p>}
+            </div>
+        </div>
+        {children}
+    </div>
+);
+
+const StatCard = ({ label, value, description, icon: Icon, iconClass, ratio }) => (
+    <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
+                <p className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1.5 tabular-nums leading-none">{value}</p>
+            </div>
+            <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${iconClass}`}>
+                <Icon size={18} />
+            </div>
+        </div>
+        {description && <p className="text-xs text-zinc-500 mt-3">{description}</p>}
+        {ratio && (
+            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500 mb-1.5">
+                    <span>{ratio.label}</span>
+                    <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">{ratio.value}</span>
+                </div>
+                <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.max(0, ratio.pct))}%` }}
+                    />
+                </div>
+            </div>
+        )}
+    </div>
+);
 
 const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, timetable, completeTimetable }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -680,6 +764,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         );
     });
 
+    const growthData = stats?.growthData || [];
+    const totalSignups = growthData.reduce((sum, d) => sum + (d.count || 0), 0);
+    const avgSignupsPerDay = growthData.length ? (totalSignups / growthData.length).toFixed(1) : '0';
+    const weekActive = stats?.activeThisWeek || 0;
+    const inactiveCount = stats?.totalUsers ? Math.max(0, stats.totalUsers - weekActive) : 0;
+
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
@@ -894,44 +984,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         <BarChart3 className="text-zinc-950 dark:text-zinc-100" size={16} />
                         Year Group Student Distribution
                     </h4>
-                    <div className="space-y-2">
-                        {(() => {
-                            const dist = stats?.yearDistribution || {};
-                            const years = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
-                            
-                            let maxCount = 1;
-                            const dataPoints = years.map(yr => {
-                                let count = 0;
-                                Object.entries(dist).forEach(([k, v]) => {
-                                    const cleanKey = String(k).toLowerCase().replace(/^0+/, '');
-                                    const cleanYr = yr.toLowerCase();
-                                    if (cleanKey === cleanYr || (yr === 'Staff' && (cleanKey.includes('staff') || cleanKey.includes('admin') || cleanKey === 'st'))) {
-                                        count += v;
-                                    } else if (yr === 'Unknown' && (cleanKey === 'unknown' || cleanKey === 'null' || cleanKey === '')) {
-                                        count += v;
-                                    }
-                                });
-                                if (count > maxCount) maxCount = count;
-                                return { label: yr, count };
-                            });
-
-                            return dataPoints.map(({ label, count }) => {
-                                const pct = (count / maxCount) * 100;
-                                return (
-                                    <div key={label} className="flex items-center gap-3 text-xs font-mono">
-                                        <span className="w-16 text-zinc-500 dark:text-zinc-400">Year {label}</span>
-                                        <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-3 rounded-full overflow-hidden relative">
-                                            <div 
-                                                className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out" 
-                                                style={{ width: `${Math.max(1, pct)}%` }}
-                                            ></div>
-                                        </div>
-                                        <span className="w-6 text-right font-bold text-zinc-900 dark:text-white">{count}</span>
-                                    </div>
-                                );
-                            });
-                        })()}
-                    </div>
+                    <YearDistribution dist={stats?.yearDistribution} />
                 </div>
             </div>
         </div>
@@ -994,149 +1047,110 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
         {activeTab === 'analytics' && (
             <div className="space-y-6">
-                {/* Analytics Headline Stats */}
-                <div className="grid gap-6 md:grid-cols-3">
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Active Today</span>
-                            <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
-                                {stats?.activeToday || 0}
-                            </h3>
-                            <p className="text-zinc-500 text-xs mt-1">Logged in within the past 24 hours</p>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
-                            <span>Daily Active Ratio:</span>
-                            <span className="font-bold text-zinc-900 dark:text-white">
-                                {stats?.totalUsers ? Math.round((stats.activeToday / stats.totalUsers) * 100) : 0}%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Active This Week</span>
-                            <h3 className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-1">
-                                {stats?.activeThisWeek || 0}
-                            </h3>
-                            <p className="text-zinc-500 text-xs mt-1">Logged in within the past 7 days</p>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
-                            <span>Weekly Active Ratio:</span>
-                            <span className="font-bold text-zinc-900 dark:text-white">
-                                {stats?.totalUsers ? Math.round((stats.activeThisWeek / stats.totalUsers) * 100) : 0}%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Inactive Users</span>
-                            <h3 className="text-3xl font-extrabold text-zinc-400 mt-1">
-                                {stats?.totalUsers ? Math.max(0, stats.totalUsers - stats.activeThisWeek) : 0}
-                            </h3>
-                            <p className="text-zinc-500 text-xs mt-1">Not active in the last 7 days</p>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-500">
-                            <span>Inactive Ratio:</span>
-                            <span className="font-bold text-zinc-400">
-                                {stats?.totalUsers ? Math.round(((stats.totalUsers - stats.activeThisWeek) / stats.totalUsers) * 100) : 0}%
-                            </span>
-                        </div>
-                    </div>
+                {/* Headline metrics */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <StatCard
+                        label="Active Today"
+                        value={stats?.activeToday || 0}
+                        description="Logged in within the past 24 hours"
+                        icon={Activity}
+                        iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        ratio={{
+                            label: 'Share of total users',
+                            value: `${stats?.totalUsers ? Math.round(((stats.activeToday || 0) / stats.totalUsers) * 100) : 0}%`,
+                            pct: stats?.totalUsers ? ((stats.activeToday || 0) / stats.totalUsers) * 100 : 0,
+                        }}
+                    />
+                    <StatCard
+                        label="Active This Week"
+                        value={weekActive}
+                        description="Logged in within the past 7 days"
+                        icon={CalendarDays}
+                        iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                        ratio={{
+                            label: 'Share of total users',
+                            value: `${stats?.totalUsers ? Math.round((weekActive / stats.totalUsers) * 100) : 0}%`,
+                            pct: stats?.totalUsers ? (weekActive / stats.totalUsers) * 100 : 0,
+                        }}
+                    />
+                    <StatCard
+                        label="Inactive Users"
+                        value={inactiveCount}
+                        description="Not active in the last 7 days"
+                        icon={UserX}
+                        iconClass="bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                        ratio={{
+                            label: 'Share of total users',
+                            value: `${stats?.totalUsers ? Math.round((inactiveCount / stats.totalUsers) * 100) : 0}%`,
+                            pct: stats?.totalUsers ? (inactiveCount / stats.totalUsers) * 100 : 0,
+                        }}
+                    />
                 </div>
 
                 {/* Growth and Year Breakdown Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* User Growth Timeline Histogram */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-                        <h4 className="text-sm font-bold uppercase tracking-wider mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                            <Activity className="text-zinc-950 dark:text-zinc-100" size={16} />
-                            User Registration Growth (Last 14 Days)
-                        </h4>
-                        <div className="h-48 flex items-end gap-2 pb-2">
-                            {stats?.growthData?.map((item, idx) => {
-                                const counts = stats.growthData.map(g => g.count);
-                                const maxVal = Math.max(1, ...counts);
-                                const pctHeight = (item.count / maxVal) * 85;
-                                return (
-                                    <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                                        <div className="absolute -top-6 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[11px] py-0.5 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-mono pointer-events-none shadow">
-                                            {item.count}
-                                        </div>
-                                        <div 
-                                            className="w-full bg-zinc-900 dark:bg-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all rounded-t-sm"
-                                            style={{ height: `${pctHeight}%` }}
-                                        ></div>
-                                        <span className="text-[10px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
-                                            {item.date}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        <PanelHeader
+                            icon={TrendingUp}
+                            tone="bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/30"
+                            title="Registration Growth"
+                            subtitle="New signups over the last 14 days"
+                        />
+                        {growthData.length === 0 ? (
+                            <div className="h-48 flex items-center justify-center text-xs text-zinc-400 font-mono">
+                                No registration data yet
+                            </div>
+                        ) : (
+                            <>
+                                <div className="h-48 flex items-end gap-1 sm:gap-2">
+                                    {growthData.map((item, idx) => {
+                                        const maxVal = Math.max(1, ...growthData.map(g => g.count || 0));
+                                        const pctHeight = ((item.count || 0) / maxVal) * 100;
+                                        return (
+                                            <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end min-w-0">
+                                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[11px] py-0.5 px-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity font-mono pointer-events-none whitespace-nowrap shadow z-10">
+                                                    {item.count || 0}
+                                                </div>
+                                                <div
+                                                    className="w-full max-w-[26px] bg-zinc-200 dark:bg-zinc-700 group-hover:bg-zinc-900 dark:group-hover:bg-zinc-200 transition-colors rounded-t-md"
+                                                    style={{ height: `${Math.max((item.count || 0) > 0 ? 4 : 0, pctHeight)}%` }}
+                                                ></div>
+                                                <span className="text-[10px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+                                                    {item.date}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+                                    <span><span className="font-semibold text-zinc-900 dark:text-white tabular-nums">{totalSignups}</span> registrations</span>
+                                    <span>Avg <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">{avgSignupsPerDay}</span> / day</span>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Year Group Distribution */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-                        <h4 className="text-sm font-bold uppercase tracking-wider mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2 flex items-center gap-2 text-zinc-900 dark:text-white">
-                            <BarChart3 className="text-zinc-950 dark:text-zinc-100" size={16} />
-                            Year Group Student Distribution
-                        </h4>
-                        <div className="space-y-3">
-                            {(() => {
-                                const dist = stats?.yearDistribution || {};
-                                const years = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
-                                
-                                let maxCount = 1;
-                                const dataPoints = years.map(yr => {
-                                    let count = 0;
-                                    Object.entries(dist).forEach(([k, v]) => {
-                                        const cleanKey = String(k).toLowerCase().replace(/^0+/, '');
-                                        const cleanYr = yr.toLowerCase();
-                                        if (cleanKey === cleanYr || (yr === 'Staff' && (cleanKey.includes('staff') || cleanKey.includes('admin') || cleanKey === 'st'))) {
-                                            count += v;
-                                        } else if (yr === 'Unknown' && (cleanKey === 'unknown' || cleanKey === 'null' || cleanKey === '')) {
-                                            count += v;
-                                        }
-                                    });
-                                    if (count > maxCount) maxCount = count;
-                                    return { label: yr, count };
-                                });
-
-                                return dataPoints.map(({ label, count }) => {
-                                    const pct = (count / maxCount) * 100;
-                                    return (
-                                        <div key={label} className="flex items-center gap-3 text-xs font-mono">
-                                            <span className="w-16 text-zinc-500 dark:text-zinc-400">Year {label}</span>
-                                            <div className="flex-1 bg-zinc-100 dark:bg-zinc-800/50 h-3 rounded-full overflow-hidden relative">
-                                                <div 
-                                                    className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all duration-500 ease-out" 
-                                                    style={{ width: `${Math.max(1, pct)}%` }}
-                                                ></div>
-                                            </div>
-                                            <span className="w-6 text-right font-bold text-zinc-900 dark:text-white">{count}</span>
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
+                        <PanelHeader
+                            icon={Users}
+                            tone="bg-blue-50 text-blue-600 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30"
+                            title="Year Group Distribution"
+                            subtitle="Students by year level"
+                        />
+                        <YearDistribution dist={stats?.yearDistribution} />
                     </div>
                 </div>
 
                 {/* Timetable Text AI Usage Logs */}
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-200/20">
-                                <Brain className="w-5 h-5 animate-pulse" />
-                            </div>
-                            <div>
-                                <h4 className="text-base font-bold text-zinc-900 dark:text-white">
-                                    Timetable Text AI Activity
-                                </h4>
-                                <p className="text-xs text-zinc-500 mt-1">Audit log of student AI questions</p>
-                            </div>
-                        </div>
+                    <PanelHeader
+                        icon={Brain}
+                        tone="bg-purple-50 text-purple-600 border-purple-200/50 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/30"
+                        title="Timetable Text AI Activity"
+                        subtitle="Audit log of student AI questions"
+                    >
                         <div className="relative w-full md:w-72">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                             <input
@@ -1147,7 +1161,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                 className="w-full pl-9 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
                         </div>
-                    </div>
+                    </PanelHeader>
 
                     {/* AI Quick Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
