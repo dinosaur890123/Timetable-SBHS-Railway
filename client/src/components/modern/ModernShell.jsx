@@ -233,10 +233,6 @@ export const ModernTopbar = ({
                     <span className="flex-1 text-left">Search</span>
                     <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
                 </button>
-                <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
-                    <Search size={16} />
-                </IconButton>
-
                 <span className="hidden lg:flex items-center gap-1.5 px-2 text-xs text-zinc-400" title={status.label}>
                     <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
                     {status.label}

@@ -709,6 +709,13 @@ export const fetchCommunityCanvasLinks = (classKeys = []) =>
 export const voteCanvasLink = (id, vote) =>
     canvasRequest(`/community/${encodeURIComponent(id)}/vote`, { method: 'POST', body: { vote } });
 
+// Unread server notifications, e.g. a class link that was just approved:
+// { notifications: [{ id, type, title, message, createdAt }] }
+export const fetchLinkNotifications = () => canvasRequest('/notifications');
+
+// Marks every server notification read.
+export const markLinkNotificationsRead = () => canvasRequest('/notifications/read', { method: 'POST' });
+
 // Build Notes API
 export const fetchBuildNotes = async () => {
     try {

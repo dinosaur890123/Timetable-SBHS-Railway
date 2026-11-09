@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, deleteAllCanvasLinks, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink } from '../services/api';
+import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, deleteAllCanvasLinks, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink, fetchLinkNotifications, markLinkNotificationsRead } from '../services/api';
 import { DEFAULT_CANVAS_HOST, classKey, collectClasses, parseLinkInput } from '../utils/canvasLinks';
 
 const CanvasLinksContext = createContext(null);
@@ -50,6 +50,8 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
     const [canvasHost, setCanvasHost] = useState(DEFAULT_CANVAS_HOST);
     const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'offline'
     const [snoozed, setSnoozed] = useState(readSnoozed);
+    // Server notifications for this student, e.g. "your class link was approved".
+    const [linkNotices, setLinkNotices] = useState([]);
 
     const classes = useMemo(() => collectClasses(completeTimetable, timetableData), [completeTimetable, timetableData]);
     const classKeys = useMemo(() => [...classes.keys()].sort(), [classes]);
@@ -106,11 +108,30 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         }
     }, [classKeysParam]);
 
+    const loadNotices = useCallback(async () => {
+        try {
+            const data = await fetchLinkNotifications();
+            setLinkNotices(data.notifications || []);
+        } catch (error) {
+            console.warn('Failed to load link notifications:', error);
+        }
+    }, []);
+
     useEffect(() => { loadLinks(); }, [loadLinks]);
 
     useEffect(() => {
         if (status === 'ready' && classKeysParam) loadCommunity();
     }, [status, classKeysParam, loadCommunity]);
+
+    useEffect(() => {
+        if (status === 'ready') loadNotices();
+    }, [status, loadNotices]);
+
+    // Clears the unread server notifications; the panel calls this once it's open.
+    const markLinkNoticesRead = useCallback(() => {
+        setLinkNotices([]);
+        markLinkNotificationsRead().catch(() => {});
+    }, []);
 
     const keyFor = useCallback((title, year) => {
         // Always use year if provided - this ensures exact matching across years
@@ -156,11 +177,12 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
             const data = await saveCanvasLink(canonicalName, parsed.url, key || undefined);
             storeLinks(prev => ({ ...prev, [canonicalName]: data.link.canvasUrl }));
             if (key && data.community) setCommunity(prev => ({ ...prev, [key]: data.community }));
+            loadNotices();
             return { ok: true, shared: data.shared };
         } catch (error) {
             return { ok: false, error: errorMessage(error, 'Couldn’t save. Check your connection and try again.') };
         }
-    }, [canvasHost, keyFor, storeLinks]);
+    }, [canvasHost, keyFor, storeLinks, loadNotices]);
 
     const removeLink = useCallback(async (title) => {
         try {
@@ -196,11 +218,12 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         try {
             const data = await voteCanvasLink(id, value);
             if (data.classKey) setCommunity(prev => ({ ...prev, [data.classKey]: data.community }));
+            loadNotices();
             return { ok: true };
         } catch (error) {
             return { ok: false, error: errorMessage(error, 'Couldn’t send that. Check your connection and try again.') };
         }
-    }, []);
+    }, [loadNotices]);
 
     const snooze = useCallback((id) => {
         setSnoozed(prev => {
@@ -253,6 +276,8 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         status,
         prompts,
         pending,
+        linkNotices,
+        markLinkNoticesRead,
         getLink,
         keyFor,
         saveLink,
@@ -261,7 +286,7 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         vote,
         snooze,
         reload: loadLinks
-    }), [links, community, classes, canvasHost, status, prompts, pending, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
+    }), [links, community, classes, canvasHost, status, prompts, pending, linkNotices, markLinkNoticesRead, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
 
     return (
         <CanvasLinksContext.Provider value={value}>

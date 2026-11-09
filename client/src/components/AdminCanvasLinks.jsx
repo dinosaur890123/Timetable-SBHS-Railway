@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, ExternalLink, Pin, EyeOff, RotateCcw, Trash2, Search, Link as LinkIcon, Flag } from 'lucide-react';
+import { RefreshCw, ExternalLink, Pin, EyeOff, RotateCcw, Trash2, Search, Link as LinkIcon, Flag, AlertTriangle } from 'lucide-react';
 import { fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports } from '../services/adminApi';
 
 const STATUS_STYLES = {
@@ -52,6 +52,28 @@ const AdminCanvasLinks = () => {
         return all.filter(l => [l.classKey, l.className, l.canvasUrl, l.submittedBy].some(v => String(v || '').toLowerCase().includes(term)));
     }, [data, query]);
 
+    // The same course link logged under two or more classes usually means it was
+    // shared against the wrong class. Hidden/rejected rows don't count — they've
+    // already been dealt with.
+    const duplicates = useMemo(() => {
+        const byUrl = new Map();
+        (data?.links || []).forEach(link => {
+            if (link.lockedStatus === 'rejected' || link.status === 'rejected') return;
+            const group = byUrl.get(link.canvasUrl) || [];
+            if (!group.some(l => l.classKey === link.classKey)) group.push(link);
+            byUrl.set(link.canvasUrl, group);
+        });
+        return [...byUrl.entries()]
+            .map(([url, group]) => ({ url, classes: group.map(l => l.classKey).sort(), ids: new Set(group.map(l => l.id)) }))
+            .filter(g => g.classes.length > 1);
+    }, [data]);
+
+    const duplicateIds = useMemo(() => {
+        const ids = new Set();
+        duplicates.forEach(d => d.ids.forEach(id => ids.add(id)));
+        return ids;
+    }, [duplicates]);
+
     return (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
@@ -83,6 +105,26 @@ const AdminCanvasLinks = () => {
 
             {error && <div className="px-4 py-3 text-sm text-red-600 dark:text-red-400 border-b border-zinc-200 dark:border-zinc-800">{error}</div>}
 
+            {duplicates.length > 0 && (
+                <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 text-sm text-amber-800 dark:text-amber-300 space-y-1.5">
+                    <p className="font-semibold flex items-center gap-1.5">
+                        <AlertTriangle size={15} className="shrink-0" />
+                        {duplicates.length === 1 ? 'Duplicate link detected' : `${duplicates.length} duplicate links detected`}
+                    </p>
+                    <p className="text-xs">The same course link is shared under more than one class — it may have been logged against the wrong class:</p>
+                    <ul className="text-xs space-y-1">
+                        {duplicates.map(d => (
+                            <li key={d.url} className="flex flex-wrap items-center gap-x-1.5">
+                                <a href={d.url} target="_blank" rel="noopener noreferrer" className="font-mono hover:underline break-all">
+                                    {d.url.replace(/^https:\/\//, '')}
+                                </a>
+                                <span>— {d.classes.join(', ')}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead className="text-left text-xs uppercase tracking-wider text-zinc-500">
@@ -103,7 +145,7 @@ const AdminCanvasLinks = () => {
                             const yearMatch = link.classKey.match(/^(\d+)/);
                             const year = yearMatch ? yearMatch[1] : '';
                             return (
-                                <tr key={link.id} className="border-b border-zinc-100 dark:border-zinc-800/60 dark:text-zinc-200">
+                                <tr key={link.id} className={`border-b border-zinc-100 dark:border-zinc-800/60 dark:text-zinc-200 ${duplicateIds.has(link.id) ? 'bg-amber-50/60 dark:bg-amber-950/10' : ''}`}>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-2">
                                             {year && <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[10px] font-bold">{year}</span>}

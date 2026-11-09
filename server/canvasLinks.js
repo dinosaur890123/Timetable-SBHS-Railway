@@ -464,6 +464,69 @@ const createPgStore = (db) => {
                 [id]
             );
             return result.rowCount || 0;
+        },
+        // Everyone worth telling that a class's link was approved: the student
+        // who shared it plus every student who voted on the class's links.
+        // Blacklisted students are excluded.
+        async classParticipants(year, classKey) {
+            const result = await db.query(
+                `SELECT DISTINCT p.uid
+                 FROM (
+                     SELECT submitted_by AS uid FROM canvas_class_links
+                     WHERE school_year = $1 AND class_key = $2
+                     UNION
+                     SELECT v.student_id FROM canvas_class_link_votes v
+                     JOIN canvas_class_links l ON l.id = v.link_id
+                     WHERE l.school_year = $1 AND l.class_key = $2
+                 ) p
+                 JOIN app_users u ON u.id = p.uid
+                 WHERE NOT COALESCE(u.blacklisted, FALSE)`,
+                [year, classKey]
+            );
+            return result.rows.map(r => r.uid);
+        },
+        async addNotifications(rows) {
+            for (const n of rows) {
+                await db.query(
+                    `INSERT INTO notifications (id, user_id, type, title, message, created_at)
+                     VALUES ($1, $2, $3, $4, $5, NOW())`,
+                    [crypto.randomUUID(), n.userId, n.type, n.title, n.message]
+                );
+                // Keep only the latest 100 per student.
+                await db.query(
+                    `DELETE FROM notifications WHERE user_id = $1 AND id NOT IN (
+                        SELECT id FROM notifications WHERE user_id = $1
+                        ORDER BY created_at DESC LIMIT 100
+                    )`,
+                    [n.userId]
+                );
+            }
+        },
+        async listNotifications(studentId) {
+            const result = await db.query(
+                `SELECT id, type, title, message, created_at FROM notifications
+                 WHERE user_id = $1 AND NOT read
+                 ORDER BY created_at DESC LIMIT 50`,
+                [studentId]
+            );
+            return result.rows.map(r => ({
+                id: r.id,
+                type: r.type,
+                title: r.title,
+                message: r.message,
+                createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at
+            }));
+        },
+        async markNotificationsRead(studentId) {
+            await db.query(
+                `UPDATE notifications SET read = TRUE WHERE user_id = $1 AND NOT read`,
+                [studentId]
+            );
+            // Read notices are only kept for a month.
+            await db.query(
+                `DELETE FROM notifications WHERE user_id = $1 AND read AND created_at < NOW() - INTERVAL '30 days'`,
+                [studentId]
+            );
         }
     };
 };
@@ -472,6 +535,7 @@ const createMemoryStore = (getMemoryUsers) => {
     const personal = []; // { studentId, year, className, canvasUrl, updatedAt }
     const shared = [];   // { id, classKey, className, courseId, schoolYear, submittedBy, lockedStatus, createdAt }
     const votes = new Map(); // `${linkId}:${studentId}` -> { linkId, studentId, vote }
+    const notices = [];  // { id, userId, type, title, message, read, createdAt }
     const blacklisted = (id) => (getMemoryUsers?.() || []).some(u => String(u.id) === String(id) && u.blacklisted);
     const withCounts = (link, studentId) => {
         let up = 0;
@@ -611,6 +675,56 @@ const createMemoryStore = (getMemoryUsers) => {
                 }
             }
             return cleared;
+        },
+        async classParticipants(year, classKey) {
+            const linkIds = new Set(shared
+                .filter(l => l.schoolYear === year && l.classKey === classKey)
+                .map(l => l.id));
+            const ids = new Set(shared
+                .filter(l => linkIds.has(l.id))
+                .map(l => l.submittedBy));
+            for (const v of votes.values()) {
+                if (linkIds.has(v.linkId)) ids.add(v.studentId);
+            }
+            return [...ids].filter(id => !blacklisted(id));
+        },
+        async addNotifications(rows) {
+            rows.forEach(n => notices.push({
+                id: crypto.randomUUID(),
+                userId: n.userId,
+                type: n.type,
+                title: n.title,
+                message: n.message,
+                read: false,
+                createdAt: new Date().toISOString()
+            }));
+            for (const userId of new Set(rows.map(r => r.userId))) {
+                const mine = notices
+                    .filter(n => n.userId === userId)
+                    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+                const drop = new Set(mine.slice(100).map(n => n.id));
+                for (let i = notices.length - 1; i >= 0; i -= 1) {
+                    if (drop.has(notices[i].id)) notices.splice(i, 1);
+                }
+            }
+        },
+        async listNotifications(studentId) {
+            return notices
+                .filter(n => n.userId === studentId && !n.read)
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .slice(0, 50)
+                .map(({ read, ...n }) => n);
+        },
+        async markNotificationsRead(studentId) {
+            const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+            notices.forEach(n => {
+                if (n.userId === studentId) n.read = true;
+            });
+            for (let i = notices.length - 1; i >= 0; i -= 1) {
+                if (notices[i].userId === studentId && new Date(notices[i].createdAt).getTime() < cutoff) {
+                    notices.splice(i, 1);
+                }
+            }
         }
     };
 };
@@ -720,6 +834,31 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         classKeys
     );
 
+    // A link's effective status ('pending' | 'verified' | 'rejected') from its
+    // live vote counts, or null when the class has no row for it.
+    const linkVoteStatus = async (year, classKey, linkId) => {
+        const row = (await store.listForClasses(year, [classKey], '')).find(r => r.id === linkId);
+        return row ? statusOf(row) : null;
+    };
+
+    // Tells the class a link was approved — the student who shared it plus
+    // everyone who voted on the class's links. Fire-and-forget: a failure here
+    // must never break the vote or admin action that triggered it.
+    const announceApproval = ({ year, classKey, className, courseId, via }) => {
+        (async () => {
+            const recipients = await store.classParticipants(year, classKey);
+            if (recipients.length === 0) return;
+            const how = via === 'admin' ? 'approved by an admin' : 'confirmed by classmates';
+            await store.addNotifications(recipients.map(userId => ({
+                userId,
+                type: 'canvas_link_approved',
+                title: 'Canvas link approved',
+                message: `${className || classKey}: ${courseUrl(courseId)} is now your class's link (${how}).`
+            })));
+            log('CANVAS_LINK_APPROVED', 'SYSTEM', `Notified ${recipients.length} students that ${classKey} link ${courseId} was approved (${via})`);
+        })().catch(e => console.error('[canvas-links] Failed to send approval notifications:', e?.message || e));
+    };
+
     // Shares a student's Canvas course link with their class, as their vote for
     // it. Returns 'shared', or why it wasn't shared.
     const shareLink = async (req, { classKey, title, courseId }) => {
@@ -758,13 +897,20 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const className = cls?.name || (title.startsWith(String(year)) ? title : `${year} ${title}`);
 
             linkId = await store.createShared({ year, classKey, className, courseId, studentId, lockedStatus });
+            if (adminUser) {
+                announceApproval({ year, classKey, className, courseId, via: 'admin' });
+            }
             log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})${adminUser ? ' [Auto-approved as Admin]' : ''}`);
         } else if (adminUser) {
             // An admin backing a link that's still waiting on votes pins it,
             // unless another admin already hid it.
             const existing = await store.getShared(linkId);
             if (existing && !existing.lockedStatus) {
+                const wasVerified = (await linkVoteStatus(year, classKey, linkId)) === 'verified';
                 await store.setLock(linkId, 'verified');
+                if (!wasVerified) {
+                    announceApproval({ year, classKey, className: existing.className, courseId, via: 'admin' });
+                }
                 log('CANVAS_LINK_MODERATE', studentId, `Auto-verified shared link ${linkId} for ${classKey} (${year})`);
             }
         }
@@ -943,12 +1089,46 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                 return res.status(429).json({ error: 'rate_limited', message: 'You’ve voted a lot recently. Try again later.' });
             }
 
+            // A +1 vote can be the one that verifies the link; tell the class once.
+            const wasVerified = vote === 1 && (await linkVoteStatus(year, link.classKey, link.id)) === 'verified';
             await store.setVote({ linkId: link.id, studentId, vote, year, classKey: link.classKey });
+            if (vote === 1 && !wasVerified && (await linkVoteStatus(year, link.classKey, link.id)) === 'verified') {
+                announceApproval({
+                    year: link.schoolYear || year,
+                    classKey: link.classKey,
+                    className: link.className,
+                    courseId: link.courseId,
+                    via: 'votes'
+                });
+            }
             const community = await communityFor(studentId, year, [link.classKey]);
             res.json({ success: true, classKey: link.classKey, community: community[link.classKey] });
         } catch (e) {
             console.error('Vote canvas link error:', e);
             res.status(500).json({ error: 'Failed to save your vote' });
+        }
+    });
+
+    // GET /api/canvas-links/notifications - the student's unread notifications
+    // (e.g. a class link that was just approved).
+    app.get('/api/canvas-links/notifications', requireStudentAuth, async (req, res) => {
+        try {
+            const notifications = await store.listNotifications(String(req.user.studentId));
+            res.json({ success: true, notifications });
+        } catch (e) {
+            console.error('Get canvas notifications error:', e);
+            res.status(500).json({ error: 'Failed to load notifications' });
+        }
+    });
+
+    // POST /api/canvas-links/notifications/read - marks them all read.
+    app.post('/api/canvas-links/notifications/read', requireStudentAuth, async (req, res) => {
+        try {
+            await store.markNotificationsRead(String(req.user.studentId));
+            res.json({ success: true });
+        } catch (e) {
+            console.error('Mark canvas notifications read error:', e);
+            res.status(500).json({ error: 'Failed to update notifications' });
         }
     });
 
@@ -987,7 +1167,22 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const lockedStatus = req.body?.lockedStatus ?? null;
             if (![null, 'verified', 'rejected'].includes(lockedStatus)) return res.status(400).json({ error: 'Invalid status' });
             const id = String(req.params.id);
+            const existing = await store.getShared(id);
+            if (!existing) return res.status(404).json({ error: 'Not found' });
+            // Only announce when the pin is what approves the link — a link the
+            // class already verified by votes was announced back then.
+            const wasVerified = lockedStatus === 'verified'
+                && (await linkVoteStatus(existing.schoolYear, existing.classKey, id)) === 'verified';
             if (!(await store.setLock(id, lockedStatus))) return res.status(404).json({ error: 'Not found' });
+            if (lockedStatus === 'verified' && !wasVerified) {
+                announceApproval({
+                    year: existing.schoolYear,
+                    classKey: existing.classKey,
+                    className: existing.className,
+                    courseId: existing.courseId,
+                    via: 'admin'
+                });
+            }
             log('CANVAS_LINK_MODERATE', String(req.user.studentId), `Set shared Canvas link ${id} to ${lockedStatus || 'votes'}`);
             res.json({ success: true });
         } catch (e) {

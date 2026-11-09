@@ -43,7 +43,7 @@ const pageHidden = () => {
 // including ones the student dismissed with "Not now" — so ignored prompts
 // still get voted on instead of stalling a link's verification.
 const CanvasLinkNotifications = () => {
-    const { pending, vote } = useCanvasLinks();
+    const { pending, vote, linkNotices, markLinkNoticesRead } = useCanvasLinks();
     const { items: notices, remove: removeNotice, clear: clearNotices } = useNotifications();
     const [open, setOpen] = useState(false);
     const [seen, setSeen] = useState(() => readSeen(SEEN_KEY));
@@ -56,11 +56,12 @@ const CanvasLinkNotifications = () => {
     // still worth listing, so only the suggestions section hides with it.
     const linksVisible = !hidden;
     const shownPending = linksVisible ? pending : [];
+    const shownLinkNotices = linksVisible ? linkNotices : [];
 
     const unread = useMemo(() => shownPending.filter(p => !seen.has(p.id)), [shownPending, seen]);
     const unreadNotices = useMemo(() => notices.filter(n => !seenNotices.has(n.id)), [notices, seenNotices]);
-    const badgeCount = unread.length + unreadNotices.length;
-    const totalItems = notices.length + shownPending.length;
+    const badgeCount = unread.length + unreadNotices.length + shownLinkNotices.length;
+    const totalItems = notices.length + shownLinkNotices.length + shownPending.length;
 
     const markSeen = (items = pending) => {
         if (items.length === 0) return;
@@ -82,14 +83,16 @@ const CanvasLinkNotifications = () => {
         });
     };
 
-    // While the panel is open everything in it counts as seen.
+    // While the panel is open everything in it counts as seen — including the
+    // server-side link notifications, which the server marks read in one go.
     useEffect(() => {
         if (open) {
             markSeen();
             markNoticesSeen();
+            if (linkNotices.length > 0) markLinkNoticesRead();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pending, notices]);
+    }, [open, pending, notices, linkNotices]);
 
     useEffect(() => {
         if (!open) return undefined;
@@ -105,7 +108,7 @@ const CanvasLinkNotifications = () => {
         };
     }, [open]);
 
-    if (hidden && notices.length === 0) return null;
+    if (hidden && notices.length === 0 && linkNotices.length === 0) return null;
 
     const send = async (item, value) => {
         setBusyId(item.id);
@@ -115,7 +118,9 @@ const CanvasLinkNotifications = () => {
     };
 
     return (
-        <div className="relative" ref={rootRef}>
+        // static on mobile so the panel anchors to the full-width header
+        // instead of the bell — otherwise a wide panel slides off-screen left.
+        <div className="relative max-md:static" ref={rootRef}>
             <button
                 onClick={() => setOpen(o => !o)}
                 aria-label={badgeCount ? `${badgeCount} notifications` : 'Notifications'}
@@ -139,7 +144,7 @@ const CanvasLinkNotifications = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-10 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-2xl border border-m-line bg-m-card m-shadow-lg"
+                        className="absolute right-0 top-10 z-50 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-2xl border border-m-line bg-m-card m-shadow-lg max-md:left-3 max-md:right-3 max-md:top-full max-md:mt-2 max-md:w-auto"
                     >
                         <div className="flex items-center justify-between px-4 py-3 border-b border-m-line">
                             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</h3>
@@ -203,9 +208,37 @@ const CanvasLinkNotifications = () => {
                                     </section>
                                 )}
 
-                                {shownPending.length > 0 && (
+                                {shownLinkNotices.length > 0 && (
                                     <section>
                                         <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                            Class link updates
+                                        </div>
+                                        <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
+                                            {shownLinkNotices.map(item => (
+                                                <li key={item.id} className="px-4 py-3 flex items-start gap-2.5">
+                                                    <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                                            {item.title}
+                                                        </div>
+                                                        <div className="text-xs text-zinc-600 dark:text-zinc-300 leading-snug">
+                                                            {item.message}
+                                                        </div>
+                                                        {item.createdAt && (
+                                                            <div className="mt-0.5 text-[11px] text-zinc-400">
+                                                                {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </section>
+                                )}
+
+                                {shownPending.length > 0 && (
+                                    <section>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || shownLinkNotices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
                                             Class link suggestions
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
