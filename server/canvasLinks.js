@@ -248,7 +248,7 @@ const summariseClasses = (rows, classKeys, { studentId = null, duplicateCourseId
             pinned: row.lockedStatus === 'verified',
             myVote: row.myVote || 0,
             duplicate,
-            canRemoveDuplicate: Boolean(
+            canFixDuplicate: Boolean(
                 studentId
                 && duplicate
                 && row.submittedBy === studentId
@@ -970,7 +970,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                             userId,
                             type: 'canvas_link_duplicate',
                             title: 'Duplicate Canvas link',
-                            message: `The same Canvas link is shared under more than one class: ${shown}${extra}. If one is wrong, open Canvas Links to remove it and share the right course.`,
+                            message: `The same Canvas link is shared under more than one class: ${shown}${extra}. If one is wrong, open Canvas Links and tap Fix link to correct it.`,
                             actionUrl: 'canvas-links'
                         });
                         duplicates.forEach(d => d.items.forEach(link => marks.push({ id: link.id, courseId: link.courseId })));
@@ -1279,36 +1279,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             res.status(500).json({ error: 'Failed to update notifications' });
         }
     });
-
-    // DELETE /api/canvas-links/community/:id - the setter removes their own
-    // shared link (e.g. one flagged as a duplicate) so they can share the
-    // right course through the normal save flow. Only while it's duplicated.
-    app.delete('/api/canvas-links/community/:id', requireStudentAuth, async (req, res) => {
-        try {
-            if (!(await allowWrite(req, res))) return;
-            const studentId = String(req.user.studentId);
-            const year = currentSchoolYear();
-            const link = await store.getShared(String(req.params.id));
-            if (!link || link.schoolYear !== year) return res.status(404).json({ error: 'not_found', message: 'That link no longer exists.' });
-            if (link.submittedBy !== studentId) return res.status(403).json({ error: 'not_allowed', message: 'Only the student who shared this link can remove it.' });
-            if (link.lockedStatus) return res.status(409).json({ error: 'locked', message: 'An admin has already moderated this link.' });
-            if (duplicateIdsCache.year !== year || Date.now() - duplicateIdsCache.at > DUPLICATE_SCAN_MS) {
-                await scanDuplicateLinks({ force: true });
-            }
-            const duplicated = duplicateIdsCache.year === year && duplicateIdsCache.ids.includes(link.courseId);
-            if (!duplicated) return res.status(409).json({ error: 'not_duplicate', message: 'This link is no longer duplicated across classes.' });
-
-            await store.removeShared(link.id);
-            await scanDuplicateLinks({ force: true });
-            log('CANVAS_LINK_REMOVE', studentId, `Removed shared Canvas link ${link.id} for ${link.classKey} (${year})`);
-            const community = await communityFor(studentId, year, [link.classKey]);
-            res.json({ success: true, classKey: link.classKey, community: community[link.classKey] });
-        } catch (e) {
-            console.error('Remove canvas link error:', e);
-            res.status(500).json({ error: 'Failed to remove Canvas link' });
-        }
-    });
-
 
     // Admin: every shared link this school year, with its votes.
     app.get('/api/admin/canvas-links/community', requireAdminAuth, async (req, res) => {

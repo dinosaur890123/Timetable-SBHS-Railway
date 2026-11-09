@@ -709,11 +709,6 @@ export const fetchCommunityCanvasLinks = (classKeys = []) =>
 export const voteCanvasLink = (id, vote) =>
     canvasRequest(`/community/${encodeURIComponent(id)}/vote`, { method: 'POST', body: { vote } });
 
-// The setter removes their own duplicated shared link so they can share the
-// right course. Resolves with { classKey, community }.
-export const deleteCanvasCommunityLink = (id) =>
-    canvasRequest(`/community/${encodeURIComponent(id)}`, { method: 'DELETE' });
-
 // Unread server notifications, e.g. a class link that was just approved:
 // { notifications: [{ id, type, title, message, actionUrl, createdAt }] }
 export const fetchLinkNotifications = () => canvasRequest('/notifications');

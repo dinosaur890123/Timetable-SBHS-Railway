@@ -46,9 +46,9 @@ a week). A student's class uses the link with the most net backing that has reac
 
 The same course link under two or more classes is treated as a probable
 mis-share, matching the admin panel's duplicate check. Each setter is notified
-once per duplicated course and can remove their shared link, then share the
-right course through the normal save flow. Sharing a new non-duplicate link for
-a class automatically removes that student's older duplicate-flagged links for
+once per duplicated course; the link they set shows a **Fix link** action that
+opens the editor seeded with the faulty URL. Saving the corrected course shares
+it normally and automatically removes their older duplicate-flagged links for
 the class, which clears the duplicate flag on the other class's copy.
 
 ## Abuse protections
@@ -87,7 +87,6 @@ All routes need the student's SBHS bearer token.
 | `POST /api/canvas-links/import` | `{ links: { className: url } }`. Adds links for classes without one; never replaces. |
 | `GET /api/canvas-links/community` | Shared links for the student's classes: `{ classes: { [classKey]: { link, suggestions } } }`. |
 | `POST /api/canvas-links/community/:id/vote` | `{ vote: 1 \| -1 \| 0 }`: correct, wrong, or clear. |
-| `DELETE /api/canvas-links/community/:id` | The setter removes their own shared link while it's duplicated across classes. |
 | `GET /api/admin/canvas-links/community` | Admin: every shared link this year, with votes. |
 | `PUT /api/admin/canvas-links/community/:id` | Admin: `{ lockedStatus: 'verified' \| 'rejected' \| null }`. |
 | `POST /api/admin/canvas-links/community/:id/reset-reports` | Admin: clears every report on a link; backers are kept. |

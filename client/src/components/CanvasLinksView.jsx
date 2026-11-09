@@ -10,6 +10,7 @@ const SAVED_MESSAGES = {
 
 const buttonPrimary = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-semibold hover:opacity-90 transition-opacity disabled:opacity-50';
 const buttonQuiet = 'inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-50';
+const buttonFix = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors disabled:opacity-50';
 
 const DuplicateBadge = () => (
   <span title="Shared under more than one class" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[11px] font-semibold">
@@ -77,8 +78,9 @@ const LinkForm = ({ initial, canvasHost, saving, error, onSave, onCancel, submit
 };
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
-  const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote, removeCommunityLink } = useCanvasLinks();
+  const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote } = useCanvasLinks();
   const [editing, setEditing] = useState(null); // class key being edited
+  const [fix, setFix] = useState(null); // { key, url } — duplicated link being corrected
   const [busy, setBusy] = useState(null); // class key with a request in flight
   const [errors, setErrors] = useState({}); // class key -> message
   const [toast, setToast] = useState('');
@@ -117,6 +119,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
 
   const handleSave = (row, value) => run(row.key, () => saveLink(row.title, value, row.year), (result) => {
     setEditing(null);
+    setFix(null);
     showToast(SAVED_MESSAGES[result.shared] || 'Saved');
   });
 
@@ -133,9 +136,12 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     showToast(message);
   });
 
-  const handleRemoveShared = (row, item) => {
-    if (!window.confirm('Remove this shared link? You can then add the right course link for the class.')) return;
-    run(row.key, () => removeCommunityLink(item.id), () => showToast('Shared link removed — add the right course below'));
+  // Opens the link form seeded with the duplicated link's URL; saving it
+  // shares the corrected course and the server drops the faulty duplicate.
+  const handleFix = (row, item) => {
+    setFix({ key: row.key, url: item.canvasUrl });
+    setEditing(null);
+    setErrors(prev => ({ ...prev, [row.key]: '' }));
   };
 
   return (
@@ -190,6 +196,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
               const shared = classLink || backed;
               const others = (entry?.suggestions || []).filter(s => s !== backed && s.myVote !== -1);
               const isEditing = editing === canonicalKey;
+              const isFixing = fix?.key === canonicalKey;
               const isBusy = busy === canonicalKey;
               const error = errors[canonicalKey];
               // Track which link is active: 'community' or 'personal'
@@ -202,9 +209,9 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                       {row.colour && <span aria-hidden className="w-2.5 h-2.5 shrink-0 rounded-full subject-fill" {...subjectInk(row.colour)} />}
                       <span className="truncate">{row.key}</span>
                     </div>
-                    {!isEditing && (personal || shared) && (
+                    {!(isEditing || isFixing) && (personal || shared) && (
                       <div className="flex items-center gap-4 shrink-0">
-                        <button type="button" disabled={isBusy} aria-label={personal ? 'Edit' : 'Use my own'} title={personal ? 'Edit' : 'Use my own link'} onClick={() => { setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }} className={buttonQuiet}>
+                        <button type="button" disabled={isBusy} aria-label={personal ? 'Edit' : 'Use my own'} title={personal ? 'Edit' : 'Use my own link'} onClick={() => { setFix(null); setEditing(canonicalKey); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); }} className={buttonQuiet}>
                           <Edit2 size={12} /> <span className="hidden sm:inline">{personal ? 'Edit' : 'Use my own'}</span>
                         </button>
                         {personal && (
@@ -216,17 +223,22 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                     )}
                   </div>
 
-                  {isEditing || (!personal && !shared) ? (
+                  {isEditing || isFixing || (!personal && !shared) ? (
                     <div className="space-y-3">
+                      {isFixing && (
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          <AlertTriangle size={13} /> This link is shared under another class — paste the right course link to fix it.
+                        </p>
+                      )}
                       <LinkForm
-                        key={isEditing ? 'edit' : 'add'}
-                        initial={isEditing ? (personal || '') : undefined}
+                        key={isFixing ? 'fix' : isEditing ? 'edit' : 'add'}
+                        initial={isFixing ? fix.url : isEditing ? (personal || '') : undefined}
                         canvasHost={canvasHost}
                         saving={isBusy}
                         error={error}
-                        submitLabel={isEditing ? 'Save' : 'Add link'}
+                        submitLabel={isFixing ? 'Fix link' : isEditing ? 'Save' : 'Add link'}
                         onSave={(value) => handleSave(row, value)}
-                        onCancel={isEditing ? () => { setEditing(null); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); } : null}
+                        onCancel={isEditing || isFixing ? () => { setEditing(null); setFix(null); setErrors(prev => ({ ...prev, [canonicalKey]: '' })); } : null}
                       />
                       {!personal && others.length > 0 && (
                         <div className="space-y-2">
@@ -244,9 +256,9 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                                 <button type="button" disabled={isBusy} onClick={() => handleVote(row, s.id, -1, 'Thanks for letting us know')} className={buttonQuiet}>
                                   <Flag size={12} /> Wrong
                                 </button>
-                                {s.canRemoveDuplicate && (
-                                  <button type="button" disabled={isBusy} onClick={() => handleRemoveShared(row, s)} className={buttonQuiet}>
-                                    <Trash2 size={12} /> Remove
+                                {s.canFixDuplicate && (
+                                  <button type="button" disabled={isBusy} onClick={() => handleFix(row, s)} className={buttonFix} title="This link is shared under another class — fix it">
+                                    <Edit2 size={12} /> Fix link
                                   </button>
                                 )}
                               </div>
@@ -294,6 +306,11 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                             {shared.duplicate && <DuplicateBadge />}
                           </div>
                           <LinkField url={shared.canvasUrl} />
+                          {shared.canFixDuplicate && (
+                            <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                              <AlertTriangle size={13} /> This link is shared under another class — it may be in the wrong class. Tap Fix link to correct it.
+                            </p>
+                          )}
                           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                             <span className="inline-flex items-center gap-1.5">
                               {classLink
@@ -301,9 +318,9 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                                 : 'You backed this link. It’s used for your class once a classmate confirms it'}
                             </span>
                             <span className="flex items-center gap-4">
-                              {shared.canRemoveDuplicate && (
-                                <button type="button" disabled={isBusy} onClick={() => handleRemoveShared(row, shared)} className={buttonQuiet}>
-                                  <Trash2 size={12} /> Remove
+                              {shared.canFixDuplicate && (
+                                <button type="button" disabled={isBusy} onClick={() => handleFix(row, shared)} className={buttonFix}>
+                                  <Edit2 size={12} /> Fix link
                                 </button>
                               )}
                               <button
