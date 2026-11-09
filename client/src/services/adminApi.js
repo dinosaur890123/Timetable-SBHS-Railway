@@ -466,6 +466,16 @@ export const setAdminCanvasLinkStatus = async (id, lockedStatus) => {
     return response.json();
 };
 
+// Clears every report on a link; backers are kept.
+export const resetAdminCanvasLinkReports = async (id) => {
+    const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}/reset-reports`, {
+        method: 'POST',
+        headers: await getHeaders()
+    });
+    if (!response.ok) throw new Error(`Failed to reset reports (HTTP ${response.status})`);
+    return response.json();
+};
+
 export const deleteAdminCanvasLink = async (id) => {
     const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}`, {
         method: 'DELETE',

@@ -76,9 +76,11 @@ All routes need the student's SBHS bearer token.
 | `GET /api/canvas-links` | The student's links this school year, plus `canvasHost`. |
 | `PUT /api/canvas-links/:className` | `{ url, classKey? }`. Saves one link; with `classKey`, shares a Canvas course link. |
 | `DELETE /api/canvas-links/:className` | Removes one link. |
+| `DELETE /api/canvas-links` | Removes all of the student's links for this school year. |
 | `POST /api/canvas-links/import` | `{ links: { className: url } }`. Adds links for classes without one; never replaces. |
 | `GET /api/canvas-links/community` | Shared links for the student's classes: `{ classes: { [classKey]: { link, suggestions } } }`. |
 | `POST /api/canvas-links/community/:id/vote` | `{ vote: 1 \| -1 \| 0 }`: correct, wrong, or clear. |
 | `GET /api/admin/canvas-links/community` | Admin: every shared link this year, with votes. |
 | `PUT /api/admin/canvas-links/community/:id` | Admin: `{ lockedStatus: 'verified' \| 'rejected' \| null }`. |
+| `POST /api/admin/canvas-links/community/:id/reset-reports` | Admin: clears every report on a link; backers are kept. |
 | `DELETE /api/admin/canvas-links/community/:id` | Admin: deletes a shared link and its votes. |

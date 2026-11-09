@@ -71,7 +71,7 @@ const LinkForm = ({ initial, canvasHost, saving, error, onSave, onCancel, submit
 };
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
-  const { links, community, classes, canvasHost, status, saveLink, removeLink, vote } = useCanvasLinks();
+  const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote } = useCanvasLinks();
   const [editing, setEditing] = useState(null); // class key being edited
   const [busy, setBusy] = useState(null); // class key with a request in flight
   const [errors, setErrors] = useState({}); // class key -> message
@@ -115,6 +115,12 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   });
 
   const handleRemove = (row) => run(row.key, () => removeLink(row.title), () => showToast('Link removed'));
+
+  const savedCount = Object.keys(links).length;
+  const handleClearAll = () => {
+    if (!window.confirm(`Remove all ${savedCount} saved link${savedCount === 1 ? '' : 's'}? Links classmates shared are not affected.`)) return;
+    run('clear-all', () => removeAllLinks(), () => showToast('All links removed'));
+  };
 
   const handleVote = (row, id, value, message) => run(row.key, () => vote(id, value), () => {
     setEditing(null);
@@ -263,6 +269,21 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
             })}
           </ul>
         )}
+
+        {savedCount > 0 && (
+          <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{savedCount} link{savedCount === 1 ? '' : 's'} saved to your account.</p>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              disabled={busy === 'clear-all'}
+              className="self-start sm:self-auto text-xs font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+            >
+              {busy === 'clear-all' ? 'Removing…' : 'Remove all links'}
+            </button>
+          </div>
+        )}
+        {errors['clear-all'] && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errors['clear-all']}</p>}
       </div>
 
       {toast && (

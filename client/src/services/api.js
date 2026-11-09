@@ -695,6 +695,9 @@ export const saveCanvasLink = (className, url, classKey) =>
 export const deleteCanvasLink = (className) =>
     canvasRequest(`/${encodeURIComponent(className)}`, { method: 'DELETE' });
 
+// Removes all of the student's saved links for this school year.
+export const deleteAllCanvasLinks = () => canvasRequest('', { method: 'DELETE' });
+
 // Adds links saved on this device by older versions, without replacing any.
 export const importCanvasLinks = (links) => canvasRequest('/import', { method: 'POST', body: { links } });
 

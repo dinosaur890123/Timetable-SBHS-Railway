@@ -308,6 +308,13 @@ const createPgStore = (db) => {
                 [studentId, year, className]
             );
         },
+        async removeAllPersonal(studentId, year) {
+            const result = await db.query(
+                `DELETE FROM canvas_links WHERE student_id = $1 AND school_year = $2`,
+                [studentId, year]
+            );
+            return result.rowCount || 0;
+        },
         // Adds links for classes that don't have one yet; never replaces.
         async importPersonal(studentId, year, entries) {
             return db.withTransaction(async (client) => {
@@ -438,6 +445,14 @@ const createPgStore = (db) => {
             const shared = await db.query('DELETE FROM canvas_class_links WHERE school_year < $1', [year]);
             const personal = await db.query('DELETE FROM canvas_links WHERE school_year < $1', [year]);
             return { shared: shared.rowCount || 0, personal: personal.rowCount || 0 };
+        },
+        // Clears every report (-1 vote) on a link; backers are kept.
+        async clearReports(id) {
+            const result = await db.query(
+                `DELETE FROM canvas_class_link_votes WHERE link_id = $1 AND vote = -1`,
+                [id]
+            );
+            return result.rowCount || 0;
         }
     };
 };
@@ -481,6 +496,13 @@ const createMemoryStore = (getMemoryUsers) => {
         async removePersonal(studentId, year, className) {
             const index = personal.findIndex(l => l.studentId === studentId && l.year === year && l.className === className);
             if (index >= 0) personal.splice(index, 1);
+        },
+        async removeAllPersonal(studentId, year) {
+            const before = personal.length;
+            for (let i = personal.length - 1; i >= 0; i -= 1) {
+                if (personal[i].studentId === studentId && personal[i].year === year) personal.splice(i, 1);
+            }
+            return before - personal.length;
         },
         async importPersonal(studentId, year, entries) {
             let added = 0;
@@ -568,6 +590,16 @@ const createMemoryStore = (getMemoryUsers) => {
                 if (personal[i].year < year) personal.splice(i, 1);
             }
             return { shared: sharedBefore - shared.length, personal: personalBefore - personal.length };
+        },
+        async clearReports(id) {
+            let cleared = 0;
+            for (const [key, v] of votes) {
+                if (v.linkId === id && v.vote === -1) {
+                    votes.delete(key);
+                    cleared += 1;
+                }
+            }
+            return cleared;
         }
     };
 };
@@ -793,6 +825,21 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
+    // DELETE /api/canvas-links - remove all of the student's links for this
+    // school year.
+    app.delete('/api/canvas-links', requireStudentAuth, async (req, res) => {
+        try {
+            if (!(await allowWrite(req, res))) return;
+            const studentId = String(req.user.studentId);
+            const removed = await store.removeAllPersonal(studentId, currentSchoolYear());
+            if (removed > 0) log('CANVAS_LINKS_CLEAR', studentId, `Removed all ${removed} Canvas links`);
+            res.json({ success: true, removed });
+        } catch (e) {
+            console.error('Clear canvas links error:', e);
+            res.status(500).json({ error: 'Failed to remove Canvas links' });
+        }
+    });
+
     // DELETE /api/canvas-links/:className - remove one of the student's links.
     app.delete('/api/canvas-links/:className', requireStudentAuth, async (req, res) => {
         try {
@@ -933,6 +980,20 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         } catch (e) {
             console.error('Admin update canvas link error:', e);
             res.status(500).json({ error: 'Failed to update link' });
+        }
+    });
+
+    // Admin: clears every report on a link, keeping its backers.
+    app.post('/api/admin/canvas-links/community/:id/reset-reports', requireAdminAuth, async (req, res) => {
+        try {
+            const id = String(req.params.id);
+            if (!(await store.getShared(id))) return res.status(404).json({ error: 'Not found' });
+            const cleared = await store.clearReports(id);
+            log('CANVAS_LINK_RESET_REPORTS', String(req.user.studentId), `Cleared ${cleared} reports on shared Canvas link ${id}`);
+            res.json({ success: true, cleared });
+        } catch (e) {
+            console.error('Admin reset canvas link reports error:', e);
+            res.status(500).json({ error: 'Failed to reset reports' });
         }
     });
 

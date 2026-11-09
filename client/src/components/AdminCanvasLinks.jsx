@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw, ExternalLink, Pin, EyeOff, RotateCcw, Trash2, Search, Link as LinkIcon } from 'lucide-react';
-import { fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink } from '../services/adminApi';
+import { RefreshCw, ExternalLink, Pin, EyeOff, RotateCcw, Trash2, Search, Link as LinkIcon, Flag } from 'lucide-react';
+import { fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports } from '../services/adminApi';
 
 const STATUS_STYLES = {
     verified: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -139,6 +139,16 @@ const AdminCanvasLinks = () => {
                                             {link.lockedStatus && (
                                                 <button disabled={busy} onClick={() => act(link.id, () => setAdminCanvasLinkStatus(link.id, null))} className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50" title="Go back to students' votes">
                                                     <RotateCcw size={14} />
+                                                </button>
+                                            )}
+                                            {link.reports > 0 && (
+                                                <button
+                                                    disabled={busy}
+                                                    onClick={() => window.confirm(`Clear all ${link.reports} report${link.reports === 1 ? '' : 's'} on this link? Backers are kept.`) && act(link.id, () => resetAdminCanvasLinkReports(link.id))}
+                                                    className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50"
+                                                    title="Reset report count"
+                                                >
+                                                    <Flag size={14} />
                                                 </button>
                                             )}
                                             <button

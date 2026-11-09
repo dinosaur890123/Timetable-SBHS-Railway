@@ -5,6 +5,7 @@ import {
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
+import CanvasLinkNotifications from '../CanvasLinkNotifications';
 
 export const VIEW_LABELS = {
     home: 'My Synchron',
@@ -243,6 +244,8 @@ export const ModernTopbar = ({
                 {status.icon && (
                     <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
                 )}
+
+                <CanvasLinkNotifications />
 
                 <IconButton onClick={toggleTheme} aria-label="Toggle colour mode" title="Toggle colour mode">
                     <AnimatePresence mode="wait" initial={false}>

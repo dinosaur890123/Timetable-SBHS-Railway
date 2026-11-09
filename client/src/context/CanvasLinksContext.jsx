@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink } from '../services/api';
+import { fetchCanvasLinks, saveCanvasLink, deleteCanvasLink, deleteAllCanvasLinks, importCanvasLinks, fetchCommunityCanvasLinks, voteCanvasLink } from '../services/api';
 import { DEFAULT_CANVAS_HOST, classKey, collectClasses, parseLinkInput } from '../utils/canvasLinks';
 
 const CanvasLinksContext = createContext(null);
@@ -165,6 +165,17 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         }
     }, [storeLinks]);
 
+    // Wipes every saved link for this school year.
+    const removeAllLinks = useCallback(async () => {
+        try {
+            await deleteAllCanvasLinks();
+            storeLinks(() => ({}));
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, error: errorMessage(error, 'Couldn’t remove your links. Check your connection and try again.') };
+        }
+    }, [storeLinks]);
+
     // vote: 1 = correct, -1 = wrong, 0 = take back.
     const vote = useCallback(async (id, value) => {
         try {
@@ -202,6 +213,23 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         return list.sort((a, b) => b.confirmations - a.confirmations);
     }, [classes, links, community, snoozed]);
 
+    // Every unanswered suggestion, including ones the student put off — the
+    // top-bar panel lists these so ignored prompts don't stall verification.
+    const pending = useMemo(() => {
+        const list = [];
+        classes.forEach((period, key) => {
+            if (links[period.title]) return;
+            const entry = community[key];
+            if (!entry || entry.link) return;
+            entry.suggestions.forEach(suggestion => {
+                if (suggestion.myVote === 0) {
+                    list.push({ ...suggestion, classKey: key, title: period.title });
+                }
+            });
+        });
+        return list.sort((a, b) => b.confirmations - a.confirmations);
+    }, [classes, links, community]);
+
     const value = useMemo(() => ({
         links,
         community,
@@ -209,14 +237,16 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         canvasHost,
         status,
         prompts,
+        pending,
         getLink,
         keyFor,
         saveLink,
         removeLink,
+        removeAllLinks,
         vote,
         snooze,
         reload: loadLinks
-    }), [links, community, classes, canvasHost, status, prompts, getLink, keyFor, saveLink, removeLink, vote, snooze, loadLinks]);
+    }), [links, community, classes, canvasHost, status, prompts, pending, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
 
     return (
         <CanvasLinksContext.Provider value={value}>
