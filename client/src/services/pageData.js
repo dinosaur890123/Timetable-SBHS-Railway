@@ -40,11 +40,19 @@ export const schoolDaysPage = (monthDate) => ({
     load: () => fetchDaysInfo(startOfMonth(monthDate), endOfMonth(monthDate))
 });
 
+// Pulls a YYYY-MM-DD out of whatever shape the API uses for a date: a plain string,
+// a { date } object, or a top-level startDate/endDate field.
+const ymd = (v) => {
+    const s = typeof v === 'string' ? v : v?.date;
+    const m = typeof s === 'string' && s.match(/\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : null;
+};
+
 // The terms' start–end spans, straight from the API.
 const termSpans = (termsData) =>
     Object.values(termsData?.terms || {})
-        .map(t => ({ start: t?.start?.date, end: t?.end?.date }))
-        .filter(t => /^\d{4}-\d{2}-\d{2}$/.test(t.start || '') && /^\d{4}-\d{2}-\d{2}$/.test(t.end || ''))
+        .map(t => ({ start: ymd(t?.start) ?? ymd(t?.startDate), end: ymd(t?.end) ?? ymd(t?.endDate) }))
+        .filter(t => t.start && t.end)
         .sort((a, b) => a.start.localeCompare(b.start));
 
 // What a date is closed for, if anything: a named public holiday or staff development
