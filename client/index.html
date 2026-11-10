@@ -50,7 +50,7 @@
     <script>
       // Apply the cached colour mode before first paint to avoid a flash.
       try {
-        if ((localStorage.getItem('theme') || 'dark') === 'dark') document.documentElement.classList.add('dark');
+        if ((localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>
   </head>
