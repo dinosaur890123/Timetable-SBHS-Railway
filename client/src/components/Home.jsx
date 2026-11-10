@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
-import { applyPeriodVariations, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, dayBellIds, describeClass, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { TeacherTreat } from './TeacherTreat';
 
@@ -40,7 +40,7 @@ const buildSlots = (timetableData) => {
     const inner = timetableData.timetable?.timetable || timetableData.timetable;
     if (!inner?.periods) return [];
 
-    const routine = inner.routine ? inner.routine.split(',') : [];
+    const routine = dayBellIds(inner.routine, timetableData.bells);
     const classVariations = timetableData.classVariations || {};
     const roomVariations = timetableData.roomVariations || {};
 

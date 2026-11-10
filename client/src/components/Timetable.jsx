@@ -3,7 +3,7 @@ import { CalendarDays } from 'lucide-react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, dayBellIds, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
@@ -115,7 +115,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     }
 
     const { periods } = innerTimetable;
-    const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
+    const routine = dayBellIds(innerTimetable.routine, bells);
     const classVariations = timetableData.classVariations || {};
     const roomVariations = timetableData.roomVariations || {};
     const daySubjects = timetable?.subjects;

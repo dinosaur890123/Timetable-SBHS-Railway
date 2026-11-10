@@ -35,6 +35,18 @@ export const isBreakBell = (bellId, periodInfo = null) => {
     return false;
 };
 
+// The day's bell IDs in time order: the routine's, plus any recess or lunch bell the routine
+// doesn't name. The routine comes from the regular timetable, but on days with altered bells
+// the school renames breaks ("L1" for "WFL1"), so the routine's break IDs match no bell.
+export const dayBellIds = (routineStr, bells = []) => {
+    const timeOf = (id) => bells.find(b => b.bell === id)?.time || '';
+    const ids = (routineStr ? routineStr.split(',') : []).filter(timeOf);
+    const unnamedBreaks = bells
+        .filter(b => b.time && !ids.includes(b.bell) && /lunch|recess/i.test(b.bellDisplay || ''))
+        .map(b => b.bell);
+    return [...ids, ...unnamedBreaks].sort((a, b) => timeOf(a).localeCompare(timeOf(b)));
+};
+
 // Returns a new period object enriched with substitution / room-change fields.
 // Never mutates the source period.
 export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, roomVariations = {}) => {
