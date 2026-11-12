@@ -1502,13 +1502,13 @@ function App() {
                             <h3 className="nf-pop__title">
                                 <Hl still={reduceMotion} delay={0.15}><span className="sage-name">Sage</span></Hl>
                                 {aiProviderName === 'Google Gemini' && (
-                                    <sup className="ml-1 inline-flex items-center gap-1 text-[10px] text-zinc-400 leading-none">
+                                    <sup className="ml-2 inline-flex items-center gap-1.5 text-[11px] text-zinc-400 leading-none font-sans self-end mt-0.5">
+                                        powered by
                                         <img
                                             src={theme === 'dark' ? '/gemini%20white%20logo.png' : '/geminii%20coloured%20logo.png'}
                                             alt="Google Gemini"
-                                            className="h-3 w-auto"
+                                            className="h-4 w-auto"
                                         />
-                                        powered by
                                     </sup>
                                 )}
                             </h3>
@@ -1521,7 +1521,6 @@ function App() {
                                 ) : (
                                 <>
                                 <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, times, or Clipboard sessions.</p>
-                                <p className="nf-meta sage-hint">Sage sends your question and relevant information to {aiProviderName} to answer. Answers aren't stored on our servers.</p>
                                 <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                     <input
                                         type="text"
