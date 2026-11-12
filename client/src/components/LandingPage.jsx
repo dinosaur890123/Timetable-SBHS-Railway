@@ -297,7 +297,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
                     {[0, 1, 2, 3].map(i => <span key={i} className="w-1.5 h-1.5 rounded-[2px] bg-zinc-900" />)}
                   </span>
                 ) : (
-                  <BrandMark />
+                  <BrandMark theme="dark" />
                 )}
                 <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
               </button>
