@@ -5,6 +5,7 @@ import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands,
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
 import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
+import { sageMarkdown } from './utils/sageMarkdown';
 
 // Each page's code loads on its first visit, and is also fetched quietly once a signed-in app is idle
 // (see warmPages below) so switching pages never stops on "Loading view".
@@ -54,26 +55,6 @@ const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
 const BuildNotesView = lazyPage(pageLoaders.buildNotes);
 const PrivacyView = lazyPage(pageLoaders.privacy);
 const SettingsView = lazyPage(pageLoaders.settings);
-
-// Tiny markdown for Sage's replies: **bold**, *italic*, `code`, lists, paragraphs.
-// Everything is HTML-escaped first, so the model's text can't inject markup.
-const sageInline = (s) => s
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-
-const sageMarkdown = (md) => {
-    if (!md.trim()) return '';
-    return md.split(/\n{2,}/).map((block) => {
-        const lines = block.split('\n').filter(l => l.trim());
-        if (lines.length && lines.every(l => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l))) {
-            const tag = /^\s*\d/.test(lines[0]) ? 'ol' : 'ul';
-            return `<${tag}>${lines.map(l => `<li>${sageInline(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))}</li>`).join('')}</${tag}>`;
-        }
-        return `<p>${lines.map(sageInline).join('<br>')}</p>`;
-    }).join('');
-};
 
 const ARCHIVED_NOTICE_LIMIT = 100;
 
@@ -437,13 +418,14 @@ function App() {
             setAdminNotices(prev => {
                 const canvasNotices = linksResult.status === 'fulfilled'
                     ? (linksResult.value?.links || [])
-                        .filter(link => link.reports > 0)
-                        .sort((a, b) => b.reports - a.reports)
+                        .map(link => ({ ...link, pendingReports: link.reports - (link.reportsAcknowledged || 0) }))
+                        .filter(link => link.pendingReports > 0)
+                        .sort((a, b) => b.pendingReports - a.pendingReports)
                         .map(link => ({
-                            id: `admin-canvas-report-${link.id}-${link.reports}`,
+                            id: `admin-canvas-report-${link.id}-${link.pendingReports}`,
                             source: 'admin-canvas',
                             type: 'admin_canvas_report',
-                            title: `Reported Canvas link · ${link.reports} report${link.reports === 1 ? '' : 's'}`,
+                            title: `Reported Canvas link · ${link.pendingReports} report${link.pendingReports === 1 ? '' : 's'}`,
                             message: `${link.className} — ${link.canvasUrl}`,
                             actionTab: 'notifications'
                         }))
@@ -539,6 +521,26 @@ function App() {
     };
 
 
+    // One Sage call, shared by the popout and the command palette. The server
+    // prompt (scope rules, timetable + Clipboard session context) is identical
+    // for both, so the guidelines stay the same wherever you ask.
+    const querySage = async (question) => {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const data = await fetchTimetableQa(question, timetable, currentMinutes, completeTimetable);
+        return data.answer || "I couldn't generate an answer. Please try again.";
+    };
+
+    const askSageInline = async (question) => {
+        if (aiGloballyDisabled) return 'Sage is under maintenance. Please check back later.';
+        try {
+            return await querySage(question);
+        } catch (err) {
+            console.error("AI Q&A failed:", err);
+            return "Couldn't reach Sage. Please check your network and try again.";
+        }
+    };
+
     const handleAskAiQuestion = async (e) => {
         e.preventDefault();
         if (aiBlocked) {
@@ -550,10 +552,7 @@ function App() {
         setAiQaLoading(true);
         setAiAnswer('');
         try {
-            const now = new Date();
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const data = await fetchTimetableQa(aiQuestion, timetable, currentMinutes, completeTimetable);
-            setAiAnswer(data.answer || "I couldn't generate an answer. Please try again.");
+            setAiAnswer(await querySage(aiQuestion));
         } catch (err) {
             console.error("AI Q&A failed:", err);
             setAiAnswer("Couldn't reach Sage. Please check your network and try again.");
@@ -1511,7 +1510,7 @@ function App() {
                                     </div>
                                 ) : (
                                 <>
-                                <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, or times.</p>
+                                <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, times, or Clipboard sessions.</p>
                                 <p className="nf-meta sage-hint">Sage sends your question and relevant information to {aiProviderName} to answer. Answers aren't stored on our servers.</p>
                                 <form onSubmit={handleAskAiQuestion} className="flex gap-2">
                                     <input
@@ -1563,6 +1562,7 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
+                onAskSage={aiDisabled ? null : askSageInline}
                 {...buildCommands({
                     user,
                     setView: setCurrentView,

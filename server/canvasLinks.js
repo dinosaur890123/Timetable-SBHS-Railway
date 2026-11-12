@@ -288,6 +288,7 @@ const createPgStore = (db) => {
         schoolYear: row.school_year,
         submittedBy: row.submitted_by,
         lockedStatus: row.locked_status || null,
+        reportsAcknowledged: row.reports_acknowledged || 0,
         duplicateNotifiedCourses: row.duplicate_notified_courses || [],
         submitterBlacklisted: Boolean(row.submitter_blacklisted),
         createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
@@ -389,7 +390,7 @@ const createPgStore = (db) => {
         async getShared(id) {
             const result = await db.query(
                 `SELECT id, class_key, class_name, course_id, school_year, submitted_by, locked_status,
-                        duplicate_notified_courses, created_at
+                        reports_acknowledged, duplicate_notified_courses, created_at
                  FROM canvas_class_links WHERE id = $1`,
                 [id]
             );
@@ -428,7 +429,7 @@ const createPgStore = (db) => {
             if (classKeys.length === 0) return [];
             const result = await db.query(
                 `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status,
-                        l.duplicate_notified_courses, l.created_at,
+                        l.reports_acknowledged, l.duplicate_notified_courses, l.created_at,
                         ${voteCounts},
                         MAX(CASE WHEN v.student_id = $3 THEN v.vote END) AS my_vote
                  ${fromLinks}
@@ -442,7 +443,7 @@ const createPgStore = (db) => {
         async listAll(year) {
             const result = await db.query(
                 `SELECT l.id, l.class_key, l.class_name, l.course_id, l.school_year, l.submitted_by, l.locked_status,
-                        l.duplicate_notified_courses, l.created_at,
+                        l.reports_acknowledged, l.duplicate_notified_courses, l.created_at,
                         BOOL_OR(COALESCE(submitter.blacklisted, FALSE)) AS submitter_blacklisted,
                         ${voteCounts}
                  ${fromLinks}
@@ -490,7 +491,17 @@ const createPgStore = (db) => {
         },
         async setLock(id, lockedStatus) {
             const result = await db.query(
-                `UPDATE canvas_class_links SET locked_status = $2, updated_at = NOW() WHERE id = $1`,
+                `UPDATE canvas_class_links
+                 SET locked_status = $2,
+                     reports_acknowledged = (
+                         SELECT COUNT(*)::int
+                         FROM canvas_class_link_votes v
+                         LEFT JOIN app_users voter ON voter.id = v.student_id
+                         WHERE v.link_id = canvas_class_links.id AND v.vote = -1
+                           AND NOT COALESCE(voter.blacklisted, FALSE)
+                     ),
+                     updated_at = NOW()
+                 WHERE id = $1`,
                 [id, lockedStatus]
             );
             return result.rowCount > 0;
@@ -509,6 +520,10 @@ const createPgStore = (db) => {
         async clearReports(id) {
             const result = await db.query(
                 `DELETE FROM canvas_class_link_votes WHERE link_id = $1 AND vote = -1`,
+                [id]
+            );
+            await db.query(
+                `UPDATE canvas_class_links SET reports_acknowledged = 0, updated_at = NOW() WHERE id = $1`,
                 [id]
             );
             return result.rowCount || 0;
@@ -654,6 +669,7 @@ const createMemoryStore = (getMemoryUsers) => {
                 schoolYear: year,
                 submittedBy: studentId,
                 lockedStatus,
+                reportsAcknowledged: 0,
                 duplicateNotifiedCourses: [],
                 createdAt: new Date().toISOString()
             };
@@ -690,6 +706,7 @@ const createMemoryStore = (getMemoryUsers) => {
             const link = shared.find(l => l.id === id);
             if (!link) return false;
             link.lockedStatus = lockedStatus;
+            link.reportsAcknowledged = withCounts(link, null).down;
             return true;
         },
         async removeShared(id) {
@@ -724,6 +741,8 @@ const createMemoryStore = (getMemoryUsers) => {
                     cleared += 1;
                 }
             }
+            const link = shared.find(l => l.id === id);
+            if (link) link.reportsAcknowledged = 0;
             return cleared;
         },
         async sharedCourseClasses(year, courseId, excludeClassKey) {
@@ -1342,6 +1361,7 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                     submittedBy: row.submittedBy,
                     confirmations: row.up,
                     reports: row.down,
+                    reportsAcknowledged: row.reportsAcknowledged,
                     lockedStatus: row.lockedStatus,
                     status: statusOf(row),
                     createdAt: row.createdAt

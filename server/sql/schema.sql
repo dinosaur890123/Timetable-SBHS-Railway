@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS canvas_class_links (
   course_id TEXT NOT NULL,
   submitted_by TEXT NOT NULL,
   locked_status TEXT NULL CHECK (locked_status IN ('verified', 'rejected')), -- set by an admin; overrides votes
+  reports_acknowledged INTEGER NOT NULL DEFAULT 0, -- reports an admin has already reviewed
   duplicate_notified_courses TEXT[] NOT NULL DEFAULT '{}', -- duplicate course ids the setter was told about
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -168,6 +169,7 @@ CREATE TABLE IF NOT EXISTS canvas_class_links (
 
 -- Existing databases get the duplicate-notification column without a table rebuild.
 ALTER TABLE canvas_class_links ADD COLUMN IF NOT EXISTS duplicate_notified_courses TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE canvas_class_links ADD COLUMN IF NOT EXISTS reports_acknowledged INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS canvas_class_links_submitted_by_idx ON canvas_class_links (submitted_by, created_at);
 

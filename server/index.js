@@ -2420,6 +2420,71 @@ app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res)
     }
 });
 
+// Clipboard sessions change rarely, so the compact summary Sage sees is cached
+// per student — Ask Sage doesn't hit the portal API on every question.
+const sageSessionsCache = new Map(); // studentId -> { at, text }
+const SAGE_SESSIONS_TTL_MS = 15 * 60 * 1000;
+
+const formatSageSessions = (items) => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const sessions = (Array.isArray(items) ? items : [])
+        .map((s) => {
+            const start = s.startDateTime ? new Date(s.startDateTime) : null;
+            if (!start || Number.isNaN(start.getTime())) return null;
+            const end = s.endDateTime ? new Date(s.endDateTime) : null;
+            const time = end && !Number.isNaN(end.getTime())
+                ? `${start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}–${end.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}`
+                : start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+            return {
+                start,
+                line: `${start.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}, ${time} — ${s.title || s.activity?.name || 'Session'}`
+                    + `${s.activity?.name && s.title && s.title !== s.activity.name ? ` (${s.activity.name})` : ''}`
+                    + `${s.location?.name ? `, ${s.location.name}` : ''}`
+                    + `${s.opponent?.name || typeof s.opponent === 'string' ? ` vs ${s.opponent?.name || s.opponent}` : ''}`
+                    + `${s.cancelled ? ' [cancelled]' : ''}`
+                    + `${s.scored && (s.organisationScore != null || s.opponentScore != null) ? `, score ${s.organisationScore ?? '?'}–${s.opponentScore ?? '?'}` : ''}`
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.start - b.start);
+
+    const upcoming = sessions.filter((s) => s.start.getTime() >= now - DAY_MS).slice(0, 8);
+    const recent = sessions.filter((s) => s.start.getTime() < now - DAY_MS).slice(-5).reverse();
+    const parts = [];
+    if (upcoming.length) parts.push(`Upcoming:\n${upcoming.map((s) => `- ${s.line}`).join('\n')}`);
+    if (recent.length) parts.push(`Recent:\n${recent.map((s) => `- ${s.line}`).join('\n')}`);
+    return parts.join('\n') || null;
+};
+
+const fetchSageClipboardSessions = async (req) => {
+    const authHeader = req.headers['authorization'];
+    if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
+    const studentId = String(req.user.studentId);
+    const cached = sageSessionsCache.get(studentId);
+    if (cached && Date.now() - cached.at < SAGE_SESSIONS_TTL_MS) return cached.text;
+
+    try {
+        const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/clipboard/sessions`);
+        const response = await fetch(url.toString(), {
+            headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) {
+            console.warn(`[ai] SBHS clipboard/sessions returned ${response.status}`);
+            return cached?.text ?? null;
+        }
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.member) ? data.member : []);
+        const text = formatSageSessions(items);
+        sageSessionsCache.set(studentId, { at: Date.now(), text });
+        return text;
+    } catch (e) {
+        console.warn('[ai] clipboard/sessions fetch failed:', e?.message || e);
+        return cached?.text ?? null;
+    }
+};
+
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
     if (await aiUnderMaintenance(req, res, { allowAdmin: true })) return;
@@ -2444,14 +2509,16 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
         // Construct a prompt with timetable context, complete cycle, date details, and current time
         const todayDateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const todayDayname = timetable?.timetable?.dayname || timetable?.dayname || 'Unknown';
+        const sessionsText = await fetchSageClipboardSessions(req);
 
-        const systemPrompt = `You are Sage, a school assistant. Answer timetable questions using the data below.
+        const systemPrompt = `You are Sage, a school assistant. Answer timetable and Clipboard session questions using the data below.
 
 - Today: ${todayDateStr} — cycle day ${todayDayname}; current time ${currentMinutes} min since midnight.
 - Today's timetable: ${JSON.stringify(timetable)}
 - Full cycle timetable (all days): ${JSON.stringify(completeTimetable)}
+- Clipboard sessions (sport/activities): ${sessionsText || 'unavailable'}
 
-Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline non-timetable questions politely. If asked about storage or who processes data: your typed question and timetable are sent to ${providerName} to generate the answer; only your typed question text (not timetable data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
+Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline questions unrelated to the timetable or Clipboard sessions politely. If asked about storage or who processes data: your typed question, timetable, and Clipboard session details are sent to ${providerName} to generate the answer; only your typed question text (not timetable or session data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
 
         let answer = '';
 

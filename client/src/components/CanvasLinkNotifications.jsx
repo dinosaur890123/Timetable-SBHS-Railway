@@ -10,6 +10,8 @@ import { useNotifications } from '../context/NotificationsContext';
 const SEEN_KEY = 'canvas_link_seen';
 const NOTICE_SEEN_KEY = 'archived_notice_seen';
 const ADMIN_NOTICE_SEEN_KEY = 'admin_notice_seen';
+const ADMIN_NOTICE_DISMISSED_KEY = 'admin_notice_dismissed';
+const LINK_NOTICE_DISMISSED_KEY = 'link_notice_dismissed';
 const BUILD_SEEN_KEY = 'build_notes_seen';
 const BUILD_DISMISSED_KEY = 'build_notes_dismissed';
 const SEEN_MAX = 300;
@@ -67,6 +69,8 @@ const CanvasLinkNotifications = ({
     const [seen, setSeen] = useState(() => readSeen(SEEN_KEY));
     const [seenNotices, setSeenNotices] = useState(() => readSeen(NOTICE_SEEN_KEY));
     const [seenAdminNotices, setSeenAdminNotices] = useState(() => readSeen(ADMIN_NOTICE_SEEN_KEY));
+    const [dismissedAdminNotices, setDismissedAdminNotices] = useState(() => readSeen(ADMIN_NOTICE_DISMISSED_KEY));
+    const [dismissedLinkNotices, setDismissedLinkNotices] = useState(() => readSeen(LINK_NOTICE_DISMISSED_KEY));
     const [seenBuildNotes, setSeenBuildNotes] = useState(() => readSeen(BUILD_SEEN_KEY));
     const [dismissedBuildNotes, setDismissedBuildNotes] = useState(() => readSeen(BUILD_DISMISSED_KEY));
     // First run marks every existing note as dismissed so the drawer only ever
@@ -79,8 +83,9 @@ const CanvasLinkNotifications = ({
     // The canvas-links page can be switched off app-wide; archived notices are
     // still worth listing, so only the suggestions section hides with it.
     const linksVisible = !hidden;
+    const shownAdminNotices = adminNotices.filter(n => !dismissedAdminNotices.has(n.id));
+    const shownLinkNotices = linksVisible ? linkNotices.filter(n => !dismissedLinkNotices.has(n.id)) : [];
     const shownPending = linksVisible ? pending : [];
-    const shownLinkNotices = linksVisible ? linkNotices : [];
 
     const showAiNotice = aiDisabled && !aiGloballyDisabled && !aiBannerDismissed;
 
@@ -93,10 +98,10 @@ const CanvasLinkNotifications = ({
 
     const unread = useMemo(() => shownPending.filter(p => !seen.has(p.id)), [shownPending, seen]);
     const unreadNotices = useMemo(() => notices.filter(n => !seenNotices.has(n.id)), [notices, seenNotices]);
-    const unreadAdminNotices = useMemo(() => adminNotices.filter(n => !seenAdminNotices.has(n.id)), [adminNotices, seenAdminNotices]);
+    const unreadAdminNotices = useMemo(() => shownAdminNotices.filter(n => !seenAdminNotices.has(n.id)), [shownAdminNotices, seenAdminNotices]);
     const unreadLinkNotices = useMemo(() => shownLinkNotices.filter(n => !seenNotices.has(n.id)), [shownLinkNotices, seenNotices]);
     const badgeCount = unread.length + unreadNotices.length + unreadAdminNotices.length + unreadLinkNotices.length + unreadBuildNotes.length + (showAiNotice ? 1 : 0);
-    const totalItems = notices.length + adminNotices.length + shownLinkNotices.length + shownPending.length + shownBuildNotes.length;
+    const totalItems = notices.length + shownAdminNotices.length + shownLinkNotices.length + shownPending.length + shownBuildNotes.length;
 
     const markSeen = (items = pending) => {
         if (items.length === 0) return;
@@ -118,12 +123,30 @@ const CanvasLinkNotifications = ({
         });
     };
 
-    const markAdminNoticesSeen = (items = adminNotices) => {
+    const markAdminNoticesSeen = (items = shownAdminNotices) => {
         if (items.length === 0) return;
         setSeenAdminNotices(prev => {
             const next = new Set(prev);
             items.forEach(n => next.add(n.id));
             writeSeen(ADMIN_NOTICE_SEEN_KEY, next);
+            return next;
+        });
+    };
+
+    const dismissAdminNotice = (id) => {
+        setDismissedAdminNotices(prev => {
+            const next = new Set(prev);
+            next.add(id);
+            writeSeen(ADMIN_NOTICE_DISMISSED_KEY, next);
+            return next;
+        });
+    };
+
+    const dismissLinkNotice = (id) => {
+        setDismissedLinkNotices(prev => {
+            const next = new Set(prev);
+            next.add(id);
+            writeSeen(LINK_NOTICE_DISMISSED_KEY, next);
             return next;
         });
     };
@@ -185,7 +208,7 @@ const CanvasLinkNotifications = ({
         };
     }, [open]);
 
-    if (hidden && notices.length === 0 && adminNotices.length === 0 && linkNotices.length === 0 && shownBuildNotes.length === 0 && !showAiNotice) return null;
+    if (hidden && notices.length === 0 && shownAdminNotices.length === 0 && shownLinkNotices.length === 0 && shownBuildNotes.length === 0 && !showAiNotice) return null;
 
     const send = async (item, value) => {
         setBusyId(item.id);
@@ -285,13 +308,13 @@ const CanvasLinkNotifications = ({
                                     </section>
                                 )}
 
-                                {adminNotices.length > 0 && (
+                                {shownAdminNotices.length > 0 && (
                                     <section>
                                         <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
                                             Admin alerts
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
-                                            {adminNotices.map(item => {
+                                            {shownAdminNotices.map(item => {
                                                 const isReport = item.type === 'admin_canvas_report';
                                                 const isFeedback = item.type === 'admin_feedback';
                                                 const Icon = isReport ? Flag : isFeedback ? MessageCircle : ShieldCheck;
@@ -319,6 +342,7 @@ const CanvasLinkNotifications = ({
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
+                                                                        dismissAdminNotice(item.id);
                                                                         setOpen(false);
                                                                         onOpenAdmin(item.actionTab);
                                                                     }}
@@ -328,6 +352,14 @@ const CanvasLinkNotifications = ({
                                                                 </button>
                                                             )}
                                                         </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => dismissAdminNotice(item.id)}
+                                                            aria-label="Dismiss"
+                                                            className="shrink-0 mt-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
                                                     </li>
                                                 );
                                             })}
@@ -337,7 +369,7 @@ const CanvasLinkNotifications = ({
 
                                 {shownLinkNotices.length > 0 && (
                                     <section>
-                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || adminNotices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || shownAdminNotices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
                                             Class link updates
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
@@ -363,6 +395,7 @@ const CanvasLinkNotifications = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
+                                                                    dismissLinkNotice(item.id);
                                                                     setOpen(false);
                                                                     onOpenCanvasLinks();
                                                                 }}
@@ -372,6 +405,14 @@ const CanvasLinkNotifications = ({
                                                             </button>
                                                         )}
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => dismissLinkNotice(item.id)}
+                                                        aria-label="Dismiss"
+                                                        className="shrink-0 mt-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
                                                 </li>
                                                 );
                                             })}
@@ -381,7 +422,7 @@ const CanvasLinkNotifications = ({
 
                                 {shownPending.length > 0 && (
                                     <section>
-                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || adminNotices.length > 0 || shownLinkNotices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || shownAdminNotices.length > 0 || shownLinkNotices.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
                                             Class link suggestions
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
@@ -437,7 +478,7 @@ const CanvasLinkNotifications = ({
 
                                 {shownBuildNotes.length > 0 && (
                                     <section>
-                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || adminNotices.length > 0 || shownLinkNotices.length > 0 || shownPending.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
+                                        <div className={`px-4 pt-3 pb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 ${notices.length > 0 || shownAdminNotices.length > 0 || shownLinkNotices.length > 0 || shownPending.length > 0 ? 'border-t border-zinc-900/[0.06] dark:border-white/[0.06]' : ''}`}>
                                             Build notes
                                         </div>
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
@@ -6,6 +6,7 @@ import {
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 import CanvasLinkNotifications from '../CanvasLinkNotifications';
+import { sageMarkdown } from '../../utils/sageMarkdown';
 
 export const VIEW_LABELS = {
     home: 'My Synchron',
@@ -323,9 +324,10 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
     );
 };
 
-export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) => {
+export const CommandPalette = ({ open, onClose, commands, quickActions = [], onAskSage = null }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
+    const [sage, setSage] = useState({ status: 'idle', question: '', answer: '' });
     const inputRef = useRef(null);
     const listRef = useRef(null);
 
@@ -335,6 +337,37 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
         return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
     }, [commands, query]);
 
+    // Asking goes through the same endpoint and prompt as the Sage popout, so
+    // the scope rules and privacy wording are identical wherever you ask.
+    const askSage = useCallback(async (question) => {
+        const q = question.trim();
+        if (!q || !onAskSage) return;
+        setSage({ status: 'asking', question: q, answer: '' });
+        try {
+            const answer = await onAskSage(q);
+            setSage({ status: 'done', question: q, answer });
+        } catch {
+            setSage({ status: 'done', question: q, answer: "Couldn't reach Sage. Please try again." });
+        }
+    }, [onAskSage]);
+
+    const sageQuery = query.trim();
+    const sageActive = sage.status !== 'idle';
+    const items = useMemo(() => {
+        if (!onAskSage || !sageQuery || sageActive) return filtered;
+        return [...filtered, {
+            id: 'ask-sage',
+            group: 'Sage',
+            label: 'Ask Sage',
+            labelClassName: 'sage-name',
+            iconClassName: 'sage-accent',
+            icon: Sparkles,
+            hint: sageQuery.length > 48 ? `${sageQuery.slice(0, 48)}…` : sageQuery,
+            keepOpen: true,
+            run: () => askSage(sageQuery)
+        }];
+    }, [filtered, onAskSage, sageQuery, sageActive, askSage]);
+
     useEffect(() => {
         if (open) {
             setQuery('');
@@ -342,7 +375,10 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
         }
     }, [open]);
 
-    useEffect(() => setActiveIndex(0), [query]);
+    useEffect(() => {
+        setActiveIndex(0);
+        setSage({ status: 'idle', question: '', answer: '' });
+    }, [query]);
 
     useEffect(() => {
         listRef.current?.querySelector(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: 'nearest' });
@@ -350,15 +386,21 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
 
     const executeCommand = (command) => {
         if (!command) return;
-        onClose();
+        if (!command.keepOpen) {
+            onClose();
+        } else {
+            inputRef.current?.focus();
+        }
         command.run();
     };
 
     const handleKeyDown = (e) => {
+        // While an answer is showing the list is hidden — only Esc applies.
+        if (sageActive && e.key !== 'Escape') return;
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                setActiveIndex(i => Math.min(i + 1, filtered.length - 1));
+                setActiveIndex(i => Math.min(i + 1, items.length - 1));
                 break;
             case 'ArrowUp':
                 e.preventDefault();
@@ -366,7 +408,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                 break;
             case 'Enter':
                 e.preventDefault();
-                executeCommand(filtered[activeIndex]);
+                executeCommand(items[activeIndex]);
                 break;
             case 'Escape':
                 onClose();
@@ -403,7 +445,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Jump to a page or run a command…"
+                                placeholder={onAskSage ? "Jump to a page, run a command, or ask Sage…" : "Jump to a page or run a command…"}
                                 className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
                             />
                             <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
@@ -428,10 +470,31 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                             </div>
                         )}
                         <div ref={listRef} className="max-h-[50vh] overflow-y-auto p-1.5">
-                            {filtered.length === 0 && (
+                            {sageActive ? (
+                                <div className="px-3 py-4">
+                                    <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                                        <Sparkles size={14} className="sage-accent shrink-0" />
+                                        <span className="sage-name text-sm text-zinc-900 dark:text-white shrink-0">Sage</span>
+                                        <span className="text-xs text-zinc-400 truncate">{sage.question}</span>
+                                    </div>
+                                    {sage.status === 'asking' ? (
+                                        <span className="inline-flex items-center gap-2 text-[13px] text-zinc-400">
+                                            <i className="sage-accent w-2 h-2 rounded-full bg-current animate-pulse" aria-hidden="true" />
+                                            Sage is typing…
+                                        </span>
+                                    ) : (
+                                        <div
+                                            className="palette-sage__md"
+                                            dangerouslySetInnerHTML={{ __html: sageMarkdown(sage.answer) }}
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                            {items.length === 0 && (
                                 <div className="py-10 text-center text-sm text-zinc-400">No results for “{query}”</div>
                             )}
-                            {filtered.map((command, index) => {
+                            {items.map((command, index) => {
                                 const showGroup = command.group !== lastGroup;
                                 lastGroup = command.group;
                                 const Icon = command.icon || ArrowRight;
@@ -457,6 +520,8 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                                     </React.Fragment>
                                 );
                             })}
+                                </>
+                            )}
                         </div>
                     </motion.div>
                 </motion.div>
