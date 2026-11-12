@@ -2425,6 +2425,23 @@ app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res)
 const sageSessionsCache = new Map(); // studentId -> { at, text }
 const SAGE_SESSIONS_TTL_MS = 15 * 60 * 1000;
 
+const pad2 = (n) => String(n).padStart(2, '0');
+const ymdOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const fmtSageDate = (d) => d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+// "(today)", "(tomorrow)", "(in 3 days)"… anchored to the server's current date so
+// the model never has to work out which day a session falls on.
+const sageRelLabel = (date) => {
+    const d = new Date(`${date}T00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d - today) / 86400000);
+    if (diff === 0) return ' (today)';
+    if (diff === 1) return ' (tomorrow)';
+    if (diff === -1) return ' (yesterday)';
+    return diff > 0 ? ` (in ${diff} days)` : ` (${-diff} days ago)`;
+};
+
 const formatSageSessions = (items) => {
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2436,9 +2453,10 @@ const formatSageSessions = (items) => {
             const time = end && !Number.isNaN(end.getTime())
                 ? `${start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}–${end.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}`
                 : start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+            const relDay = ymdOf(start);
             return {
                 start,
-                line: `${start.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}, ${time} — ${s.title || s.activity?.name || 'Session'}`
+                line: `${fmtSageDate(start)}${sageRelLabel(relDay)}, ${time} — ${s.title || s.activity?.name || 'Session'}`
                     + `${s.activity?.name && s.title && s.title !== s.activity.name ? ` (${s.activity.name})` : ''}`
                     + `${s.location?.name ? `, ${s.location.name}` : ''}`
                     + `${s.opponent?.name || typeof s.opponent === 'string' ? ` vs ${s.opponent?.name || s.opponent}` : ''}`
@@ -2485,6 +2503,138 @@ const fetchSageClipboardSessions = async (req) => {
     }
 };
 
+// --- Dated class schedule -------------------------------------------------
+// The cycle JSON alone forces the model to compute which cycle day a date
+// falls on — it gets that wrong. Instead we fetch the next few school days'
+// day timetables (same endpoint the app uses) and hand Sage the answer:
+// explicit dates, 24-hour times, cycle day names, substitutions applied.
+
+const sageScheduleCache = new Map(); // studentId -> { at, text }
+const SAGE_SCHEDULE_TTL_MS = 30 * 60 * 1000;
+const SAGE_SCHEDULE_DAYS = 5;
+const SBHS_TIMETABLE_API = 'https://student.sbhs.net.au/api/timetable/daytimetable.json';
+
+// Next N Mon–Fri dates from `from`, as YYYY-MM-DD strings.
+const nextSchoolDates = (from, count) => {
+    const dates = [];
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    while (dates.length < count) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) dates.push(ymdOf(d));
+        d.setDate(d.getDate() + 1);
+    }
+    return dates;
+};
+
+const sageIsBreak = (bellId, title) => {
+    const id = String(bellId ?? '').toUpperCase();
+    if (id === 'R' || id === 'L' || id === 'RC') return true;
+    return /lunch|recess|roll\s*call|free\s*period/i.test(String(title || ''));
+};
+
+// Same matching rule as the client's variationMatchesPeriod.
+const sageVarMatches = (variation, periodInfo) => {
+    if (!variation || !periodInfo) return false;
+    if (variation.title && periodInfo.title && variation.title !== periodInfo.title) return false;
+    if (variation.year != null && periodInfo.year != null && String(variation.year) !== String(periodInfo.year)) return false;
+    return true;
+};
+
+// One day timetable -> a compact dated block, or null when there's nothing on.
+const summariseSageDay = (data, dateKey) => {
+    const inner = data?.timetable?.timetable || data?.timetable;
+    const periods = inner?.periods || {};
+    const bells = Array.isArray(data?.bells) ? data.bells : [];
+    // SBHS rolls non-school days forward to the next school day — don't list
+    // the same day twice under two dates.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data?.date || '') && data.date !== dateKey) return null;
+    const routine = typeof inner?.routine === 'string'
+        ? inner.routine.split(',').map(s => s.trim()).filter(Boolean)
+        : Object.keys(periods);
+    if (!routine.length) return null;
+
+    // Period titles are short codes ("Ma1"); the subjects map has full names.
+    const subjectIndex = {};
+    Object.values(inner?.subjects || {}).forEach(s => {
+        if (s?.shortTitle) subjectIndex[`${s.year ?? ''}${s.shortTitle}`] = s;
+    });
+    const fullName = (p) => {
+        const subject = subjectIndex[`${p?.year ?? ''}${p?.title ?? ''}`];
+        if (!subject?.title) return p?.title || '';
+        const prefix = subject.year != null ? `${subject.year} ` : null;
+        return prefix && subject.title.startsWith(prefix) ? subject.title.slice(prefix.length) : subject.title;
+    };
+
+    const rows = [];
+    for (const bellId of routine) {
+        const bell = bells.find(b => String(b.bell) === String(bellId));
+        const p = periods[bellId];
+        if (!p) continue; // free period
+        if (sageIsBreak(bellId, p.title || bell?.bellDisplay)) continue;
+
+        let teacher = p.fullTeacher || p.teacher || '';
+        let room = p.room || '';
+        const flags = [];
+        const classVar = data?.classVariations?.[bellId];
+        if (sageVarMatches(classVar, p)) {
+            const type = String(classVar.type || '').toLowerCase();
+            if (type === 'replacement') {
+                teacher = classVar.casualSurname || classVar.casual || teacher;
+                flags.push('sub');
+            } else if (type === 'nocover') {
+                teacher = 'No teacher';
+                flags.push('no cover');
+            }
+        }
+        const roomVar = data?.roomVariations?.[bellId];
+        if (sageVarMatches(roomVar, p) && roomVar.roomTo) {
+            if (roomVar.roomFrom && roomVar.roomFrom !== room) flags.push(`was ${roomVar.roomFrom}`);
+            room = roomVar.roomTo;
+        }
+
+        const time = bell?.time && bell?.endTime ? `${bell.time}–${bell.endTime}` : (bell?.time || '');
+        const label = bell?.bellDisplay || `Period ${bellId}`;
+        const name = fullName(p) || p.title || label;
+        const detail = [teacher, room ? `Rm ${room}` : ''].filter(Boolean).join(', ');
+        rows.push(`- ${label} ${time} — ${name}${detail ? `, ${detail}` : ''}${flags.length ? ` [${flags.join(', ')}]` : ''}`);
+    }
+    if (!rows.length) return null;
+
+    const dayname = inner?.dayname ? `, cycle day "${inner.dayname}"` : '';
+    const rel = sageRelLabel(dateKey);
+    return `${fmtSageDate(new Date(`${dateKey}T00:00`))}${rel}${dayname}:\n${rows.join('\n')}`;
+};
+
+const fetchSageDaySchedule = async (req) => {
+    const authHeader = req.headers['authorization'];
+    if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
+    const studentId = String(req.user.studentId);
+    const cached = sageScheduleCache.get(studentId);
+    if (cached && Date.now() - cached.at < SAGE_SCHEDULE_TTL_MS) return cached;
+
+    try {
+        const dates = nextSchoolDates(new Date(), SAGE_SCHEDULE_DAYS);
+        const fetchDay = async (dateKey) => {
+            const response = await fetch(`${SBHS_TIMETABLE_API}?date=${dateKey}`, {
+                headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(8000)
+            });
+            if (!response.ok) return null;
+            return summariseSageDay(await response.json(), dateKey);
+        };
+        const days = await Promise.all(dates.map(d => fetchDay(d).catch(() => null)));
+        const blocks = days.filter(Boolean);
+        if (!blocks.length) return cached ?? null;
+        const result = { at: Date.now(), text: blocks.join('\n\n') };
+        sageScheduleCache.set(studentId, result);
+        return result;
+    } catch (e) {
+        console.warn('[ai] day schedule fetch failed:', e?.message || e);
+        return cached ?? null;
+    }
+};
+
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
     if (await aiUnderMaintenance(req, res, { allowAdmin: true })) return;
@@ -2506,19 +2656,29 @@ app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) =
         const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
         const providerName = activeProvider === 'gemini' ? 'Google Gemini' : activeProvider === 'hackclub' ? 'Hack Club AI' : activeProvider;
 
-        // Construct a prompt with timetable context, complete cycle, date details, and current time
-        const todayDateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // Construct a prompt with explicit dates: a dated class schedule for the
+        // next school days, the full cycle for anything further out, and the
+        // student's Clipboard sessions — all with concrete dates and times so
+        // the model never has to work out which day something falls on.
+        const now = new Date();
+        const todayDateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const nowTimeStr = now.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
         const todayDayname = timetable?.timetable?.dayname || timetable?.dayname || 'Unknown';
-        const sessionsText = await fetchSageClipboardSessions(req);
+        const [sessionsText, schedule] = await Promise.all([
+            fetchSageClipboardSessions(req),
+            fetchSageDaySchedule(req)
+        ]);
+        const scheduleText = schedule?.text || null;
 
         const systemPrompt = `You are Sage, a school assistant. Answer timetable and Clipboard session questions using the data below.
 
-- Today: ${todayDateStr} — cycle day ${todayDayname}; current time ${currentMinutes} min since midnight.
-- Today's timetable: ${JSON.stringify(timetable)}
-- Full cycle timetable (all days): ${JSON.stringify(completeTimetable)}
+- Today: ${todayDateStr}; current time ${nowTimeStr} (${currentMinutes} min since midnight). Today's cycle day: ${todayDayname}.
+- Dated class schedule (times are 24-hour; authoritative for the dates shown, substitutions and room changes already applied):
+${scheduleText || 'unavailable'}
+- Full cycle timetable (all cycle days — use only for dates NOT covered by the dated schedule): ${JSON.stringify(completeTimetable)}
 - Clipboard sessions (sport/activities): ${sessionsText || 'unavailable'}
 
-Rules: be brief (1-2 sentences, markdown bullets for lists). You can answer for any cycle day — compute the date→day mapping from today's anchor; school runs Mon-Fri. Decline questions unrelated to the timetable or Clipboard sessions politely. If asked about storage or who processes data: your typed question, timetable, and Clipboard session details are sent to ${providerName} to generate the answer; only your typed question text (not timetable or session data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
+Rules: be brief (1-2 sentences, markdown bullets for lists). Every date and time above is exact — never move a class or session onto a different day, and never assume something scheduled for another date is today. If the dated schedule is unavailable or the date asked about is beyond it, work it out from the cycle carefully or say you only have the next few school days rather than guessing. School runs Mon-Fri. Decline questions unrelated to the timetable or Clipboard sessions politely. If asked about storage or who processes data: your typed question, timetable, and Clipboard session details are sent to ${providerName} to generate the answer; only your typed question text (not timetable or session data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
 
         let answer = '';
 

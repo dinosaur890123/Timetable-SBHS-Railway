@@ -244,6 +244,10 @@ export const ModernTopbar = ({
                     <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
                 )}
 
+                <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
+                    <Search size={16} />
+                </IconButton>
+
                 <CanvasLinkNotifications
                     aiDisabled={aiDisabled}
                     aiGloballyDisabled={aiGloballyDisabled}
@@ -257,7 +261,7 @@ export const ModernTopbar = ({
                     onOpenAdmin={onOpenAdmin}
                 />
 
-                <IconButton onClick={toggleTheme} aria-label="Toggle colour mode" title="Toggle colour mode">
+                <IconButton onClick={toggleTheme} className="hidden md:grid" aria-label="Toggle colour mode" title="Toggle colour mode">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.span
                             key={theme}
