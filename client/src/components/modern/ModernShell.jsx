@@ -450,7 +450,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={onAskSage ? "Jump to a page, run a command, or ask Sage…" : "Jump to a page or run a command…"}
-                                className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
+                                className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:outline-none"
                             />
                             <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
                         </div>
@@ -491,6 +491,9 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                             className="palette-sage__md"
                                             dangerouslySetInnerHTML={{ __html: sageMarkdown(sage.answer) }}
                                         />
+                                    )}
+                                    {sage.status === 'done' && (
+                                        <p className="mt-2 text-[11px] text-zinc-400">Sage can make mistakes. Check important details against your timetable.</p>
                                     )}
                                 </div>
                             ) : (

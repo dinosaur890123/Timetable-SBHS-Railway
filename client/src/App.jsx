@@ -1541,6 +1541,9 @@ function App() {
                                         ) : (
                                             <span className="sage-typing" role="status"><i aria-hidden="true" />Sage is typing</span>
                                         )}
+                                        {aiAnswer && (
+                                            <p className="nf-meta sage-hint mt-2 text-[11px]">Sage can make mistakes. Check important details against your timetable.</p>
+                                        )}
                                     </div>
                                 )}
                                 </>
