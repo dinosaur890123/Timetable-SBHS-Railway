@@ -61,21 +61,14 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
 
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
-export const BrandMark = ({ className = '', theme }) => {
-    const isDark = theme === 'dark' || document.documentElement.classList.contains('dark');
-    return (
-        <div className={`relative w-7 h-7 ${className}`}>
-            <img
-                src={isDark ? '/synchron-loop-arrow-negative.svg' : '/synchron-loop-arrow-plain.svg'}
-                alt="Synchron logo"
-                className="w-full h-full rounded-lg shadow-sm"
-            />
-            <span className="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page" />
-        </div>
-    );
-};
+export const BrandMark = ({ className = '' }) => (
+    <div className={`relative grid place-items-center w-7 h-7 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm ${className}`}>
+        <span className="text-[13px] font-semibold leading-none">S</span>
+        <span className="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page" />
+    </div>
+);
 
-export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [], theme }) => {
+export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) => {
     const groups = buildNavGroups(user?.role === 'Admin', hiddenPages);
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
@@ -91,7 +84,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [], th
     return (
         <aside className="hidden md:flex w-60 shrink-0 flex-col h-[100dvh] sticky top-0 px-3 pt-4 pb-3 select-none">
             <button onClick={() => setView('home')} className="flex items-center gap-2.5 px-2.5 py-1.5 mb-5 text-left">
-                <BrandMark theme={theme} />
+                <BrandMark />
                 <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
             </button>
 
@@ -192,7 +185,7 @@ export const ModernTopbar = ({
         <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 bg-m-panel/80 backdrop-blur-xl border-b border-m-line">
             <div className="flex items-center gap-3 min-w-0">
                 <button onClick={() => setView('home')} className="md:hidden" aria-label="Home">
-                    <BrandMark theme={theme} />
+                    <BrandMark />
                 </button>
                 <h1 className="text-[15px] font-medium tracking-tight text-zinc-900 dark:text-white truncate">
                     <AnimatePresence mode="wait" initial={false}>

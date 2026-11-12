@@ -1189,7 +1189,7 @@ function App() {
         <NotificationsContext.Provider value={notificationsValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
-            <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} theme={theme} />
+            <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
             <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-hidden bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
                 <ModernTopbar
