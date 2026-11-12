@@ -66,7 +66,7 @@ export const BrandMark = ({ className = '', theme }) => {
     return (
         <div className={`relative w-7 h-7 ${className}`}>
             <img
-                src={isDark ? '/synchron-loop-arrow-plain.svg' : '/synchron-loop-arrow-negative.svg'}
+                src={isDark ? '/synchron-loop-arrow-negative.svg' : '/synchron-loop-arrow-plain.svg'}
                 alt="Synchron logo"
                 className="w-full h-full rounded-lg shadow-sm"
             />

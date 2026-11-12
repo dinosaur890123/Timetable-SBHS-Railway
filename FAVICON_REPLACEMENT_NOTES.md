@@ -3,8 +3,8 @@
 The following favicon files contain the atom logo and need to be replaced with new branding using the loop arrow SVG logos.
 
 ## New Logo Assets
-- **Light mode logo**: `client/public/synchron-loop-arrow-negative.svg` (white background, dark arrow)
-- **Dark mode logo**: `client/public/synchron-loop-arrow-plain.svg` (dark background, white arrow)
+- **Light mode logo**: `client/public/synchron-loop-arrow-plain.svg` (dark background, white arrow)
+- **Dark mode logo**: `client/public/synchron-loop-arrow-negative.svg` (white background, dark arrow)
 
 ## BrandMark Component Implementation
 The BrandMark component in `client/src/components/modern/ModernShell.jsx` has been updated to:
