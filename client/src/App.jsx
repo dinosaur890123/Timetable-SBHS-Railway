@@ -75,8 +75,6 @@ const sageMarkdown = (md) => {
     }).join('');
 };
 
-const TOAST_TIMEOUT_MS = 8000;
-const PERSISTENT_TOAST_TIMEOUT_MS = 30000;
 const ARCHIVED_NOTICE_LIMIT = 100;
 
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
@@ -128,7 +126,7 @@ import {
 } from './services/api';
 import { prefetchPages, calendarPage, termsPage, closureLabel } from './services/pageData';
 import { useCachedLoad } from './utils/pageCache';
-import { registerUser } from './services/adminApi';
+import { registerUser, fetchDeletionRequests, fetchAdminCanvasLinks, fetchAdminFeedback } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
@@ -396,11 +394,11 @@ function App() {
         setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
     };
 
-    // Toast Notification States
-    const [toasts, setToasts] = useState([]);
-    // Timed-out toasts move here so the top-bar bell stays the one-stop shop
-    // for everything the app has tried to tell you.
+    // Archived app notices for the top-bar bell's one-stop shop.
     const [archivedNotices, setArchivedNotices] = useState([]);
+    // Admin-panel alerts mirrored into the top-bar notification popout.
+    const [adminNotices, setAdminNotices] = useState([]);
+    const [adminTabRequest, setAdminTabRequest] = useState(null);
 
     const archiveNotice = useCallback((notice) => {
         setArchivedNotices(prev => [notice, ...prev.slice(0, ARCHIVED_NOTICE_LIMIT - 1)]);
@@ -418,6 +416,96 @@ function App() {
         remove: removeNotice,
         clear: clearNotices
     }), [archivedNotices, archiveNotice, removeNotice, clearNotices]);
+
+    // Keep the same actionable items admins can review in the admin panel
+    // available in the top-bar popout, even while they are elsewhere.
+    useEffect(() => {
+        if (user?.role !== 'Admin') {
+            setAdminNotices([]);
+            return undefined;
+        }
+
+        let cancelled = false;
+        const loadAdminNotices = async () => {
+            const [requestsResult, linksResult, feedbackResult] = await Promise.allSettled([
+                fetchDeletionRequests(),
+                fetchAdminCanvasLinks(),
+                fetchAdminFeedback()
+            ]);
+            if (cancelled) return;
+
+            setAdminNotices(prev => {
+                const canvasNotices = linksResult.status === 'fulfilled'
+                    ? (linksResult.value?.links || [])
+                        .filter(link => link.reports > 0)
+                        .sort((a, b) => b.reports - a.reports)
+                        .map(link => ({
+                            id: `admin-canvas-report-${link.id}-${link.reports}`,
+                            source: 'admin-canvas',
+                            type: 'admin_canvas_report',
+                            title: `Reported Canvas link · ${link.reports} report${link.reports === 1 ? '' : 's'}`,
+                            message: `${link.className} — ${link.canvasUrl}`,
+                            actionTab: 'notifications'
+                        }))
+                    : prev.filter(item => item.source !== 'admin-canvas');
+
+                const feedbackNotices = feedbackResult.status === 'fulfilled'
+                    ? (feedbackResult.value || [])
+                        .filter(entry => entry.status === 'open')
+                        .map(entry => {
+                            const details = String(entry.details || '').replace(/\s+/g, ' ').trim();
+                            const preview = details.length > 140 ? `${details.slice(0, 137)}…` : details;
+                            const category = entry.category === 'error' ? 'Error' : 'Suggestion';
+                            return {
+                                id: `admin-feedback-${entry.id}`,
+                                source: 'admin-feedback',
+                                type: 'admin_feedback',
+                                title: `Feedback ${entry.ticketNumber || 'submission'}`,
+                                message: `${category} from ${entry.name || entry.studentId} · Severity ${entry.severity}${preview ? ` — ${preview}` : ''}`,
+                                at: entry.createdAt,
+                                actionTab: 'feedback'
+                            };
+                        })
+                    : prev.filter(item => item.source !== 'admin-feedback');
+
+                const deletionNotices = requestsResult.status === 'fulfilled'
+                    ? (requestsResult.value || [])
+                        .filter(request => request.status === 'pending')
+                        .map(request => ({
+                            id: `admin-deletion-${request.id}`,
+                            source: 'admin-deletion',
+                            type: 'admin_deletion_request',
+                            title: 'Data deletion request',
+                            message: `${request.name || request.studentId} (${request.studentId}) asked for their server-side data to be deleted.`,
+                            at: request.createdAt,
+                            actionTab: 'notifications'
+                        }))
+                    : prev.filter(item => item.source !== 'admin-deletion');
+
+                return [...feedbackNotices, ...canvasNotices, ...deletionNotices];
+            });
+        };
+
+        loadAdminNotices();
+        const interval = setInterval(() => {
+            if (!document.hidden) loadAdminNotices();
+        }, 60 * 1000);
+        const handleVisibilityChange = () => {
+            if (!document.hidden) loadAdminNotices();
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [user?.role]);
+
+    // A tab request only applies to the visit it was made for.
+    useEffect(() => {
+        if (currentView !== 'admin') setAdminTabRequest(null);
+    }, [currentView]);
 
     // Debounced preference save
     const savePreferencesTimeout = useRef(null);
@@ -450,17 +538,6 @@ function App() {
         }, 1000); // Debounce for 1 second
     };
 
-
-    const addToast = (title, message, type = 'success', persistent = false) => {
-        const id = Date.now() + Math.random().toString(36).substr(2, 9);
-        setToasts(prev => [...prev, { id, title, message, type }]);
-
-        // Ignored toasts don't vanish — they move into the notifications panel.
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-            archiveNotice({ id: `notice-${id}`, title, message, type, at: Date.now() });
-        }, persistent ? PERSISTENT_TOAST_TIMEOUT_MS : TOAST_TIMEOUT_MS);
-    };
 
     const handleAskAiQuestion = async (e) => {
         e.preventDefault();
@@ -737,12 +814,13 @@ function App() {
                             }
                             if (dbSync.resolvedFeedbacks && dbSync.resolvedFeedbacks.length > 0) {
                                 dbSync.resolvedFeedbacks.forEach(fb => {
-                                    addToast(
-                                        "Feedback Resolved",
-                                        `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
-                                        'resolved',
-                                        true
-                                    );
+                                    archiveNotice({
+                                        id: `feedback-resolved-${fb.id}`,
+                                        title: "Feedback Resolved",
+                                        message: `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
+                                        type: 'resolved',
+                                        at: Date.now()
+                                    });
                                 });
                             }
                         }
@@ -815,7 +893,7 @@ function App() {
             }
         };
         init();
-    }, []);
+    }, [archiveNotice]);
 
     // Fetch complete timetable in the background once authenticated
     useEffect(() => {
@@ -1131,8 +1209,13 @@ function App() {
                     onEnableAi={() => setAiDisabled(false)}
                     onDismissAi={() => setAiBannerDismissed(true)}
                     buildNotes={hiddenPages.includes('build-notes') ? [] : buildNotes}
+                    adminNotices={adminNotices}
                     onOpenBuildNotes={() => setCurrentView('build-notes')}
                     onOpenCanvasLinks={hiddenPages.includes('canvas-links') ? null : () => setCurrentView('canvas-links')}
+                    onOpenAdmin={(tab = 'notifications') => {
+                        setAdminTabRequest({ tab });
+                        setCurrentView('admin');
+                    }}
                 />
                 {ambientLight && <AmbientLight variant="panel" />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
@@ -1368,7 +1451,7 @@ function App() {
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} timetable={timetable} completeTimetable={completeTimetable} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} timetable={timetable} completeTimetable={completeTimetable} initialTab={adminTabRequest} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
@@ -1490,33 +1573,6 @@ function App() {
                     hiddenPages
                 })}
             />
-
-            {/* Toast Notifications */}
-            {toasts.length > 0 && (
-                <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none">
-                    {toasts.map(toast => {
-                        const isResolved = toast.type === 'resolved';
-                        const styles = isResolved
-                            ? { wrap: 'bg-green-50 border-green-300 dark:bg-green-950 dark:border-green-700', icon: 'text-green-600 dark:text-green-400', text: 'text-green-800 dark:text-green-200', btn: 'text-green-500 hover:text-green-900 dark:hover:text-green-100' }
-                            : { wrap: 'bg-white border-zinc-200 dark:bg-zinc-900 dark:border-zinc-700', icon: 'text-zinc-500 dark:text-zinc-400', text: 'text-zinc-800 dark:text-zinc-200', btn: 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white' };
-                        return (
-                            <div key={toast.id} className={`pointer-events-auto flex items-start gap-3 px-4 py-3 w-72 shadow-lg text-sm border ${styles.wrap}`}>
-                                <Info size={15} className={`shrink-0 mt-0.5 ${styles.icon}`} />
-                                <span className={`flex-1 leading-snug ${styles.text}`}>
-                                    <span className="font-bold">{toast.title}:</span>{' '}
-                                    <span className="font-medium">{toast.message}</span>
-                                </span>
-                                <button
-                                    onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                                    className={`shrink-0 transition-colors mt-0.5 ${styles.btn}`}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
 
             {/* Canvas Link Suggestions Toast */}
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />

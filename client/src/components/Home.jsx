@@ -137,7 +137,7 @@ const RailCard = ({ children, colour, phase }) => {
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
-            className={`relative overflow-hidden rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] p-3 sm:p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
+            className={`relative overflow-hidden rounded-2xl border border-m-line bg-m-card m-shadow p-3 sm:p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
         >
             {changedAt > 0 && (
                 <>

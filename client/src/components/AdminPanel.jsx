@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Bell, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays } from 'lucide-react';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays } from 'lucide-react';
 import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
@@ -88,7 +88,7 @@ const StatCard = ({ label, value, description, icon: Icon, iconClass, ratio }) =
     </div>
 );
 
-const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, timetable, completeTimetable }) => {
+const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, timetable, completeTimetable, initialTab = null }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
@@ -186,6 +186,10 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     }, [user]);
 
+    useEffect(() => {
+        if (isAuthenticated && initialTab?.tab) setActiveTab(initialTab.tab);
+    }, [isAuthenticated, initialTab]);
+
     const loadData = async () => {
         setLoading(true);
         setApiError(null);
@@ -261,7 +265,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     }, [isAuthenticated, activeTab]);
 
-    // Shared class links students have reported, shown on the Notifications tab.
+    // Shared class links students have reported, shown on the Deletion Requests tab.
     const loadCanvasReports = async () => {
         try {
             const data = await fetchAdminCanvasLinks();
@@ -849,7 +853,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <TabButton id="analytics" label="Analytics" icon={BarChart3} />
                 <TabButton id="broadcast" label="Broadcast" icon={MessageSquare} />
                 <TabButton id="feedback" label="Feedback" icon={MessageCircle} />
-                <TabButton id="notifications" label="Notifications" icon={Bell} />
+                <TabButton id="notifications" label="Deletion Requests" icon={Trash2} />
                 <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
                 <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
                 <TabButton id="settings" label="Settings" icon={Settings} />
@@ -2072,8 +2076,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-3">
                     <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-                        <Bell size={16} />
-                        Notifications
+                        <Trash2 size={16} />
+                        Deletion Requests
                     </h3>
                     {deletionRequests.some(r => r.status === 'pending') && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40">
