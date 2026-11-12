@@ -1502,29 +1502,12 @@ function App() {
                             <h3 className="nf-pop__title">
                                 <Hl still={reduceMotion} delay={0.15}><span className="sage-name">Sage</span></Hl>
                                 {aiProviderName === 'Google Gemini' && (
-                                    <sup className="ml-1 inline-flex items-center gap-1 text-[9px] text-zinc-400 leading-none">
-                                        {theme === 'dark' ? (
-                                            <svg width="32" height="10" viewBox="0 0 46 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M14.4848 8.54545H12.3636L10.5 3.27273L8.63636 8.54545H6.51515L4.2 2.18182H6.30303L7.57576 6.31818L8.66667 2.18182H12.3333L13.4242 6.31818L14.6364 2.18182H16.8L14.4848 8.54545Z" fill="white"/>
-                                                <path d="M17.2 2.18182H22.4V3.5H18.8V4.7H22V6H18.8V7.2H22.4V8.54545H17.2V2.18182Z" fill="white"/>
-                                                <path d="M23.2 2.18182H25.3L27.5 5.8V2.18182H29.5V8.54545H27.5L25.3 4.9V8.54545H23.2V2.18182Z" fill="white"/>
-                                                <path d="M30.5 2.18182H35.7V3.5H32.1V4.7H35.3V6H32.1V7.2H35.7V8.54545H30.5V2.18182Z" fill="white"/>
-                                                <path d="M36.5 2.18182H38.6L40.8 5.8V2.18182H42.8V8.54545H40.8L38.6 4.9V8.54545H36.5V2.18182Z" fill="white"/>
-                                                <path d="M6 8C6 8.8 6.8 9.5 7.5 10C8.2 10.5 9 10.5 9.8 10.2C10.6 9.9 11.2 9.3 11.5 8.5C11.7 7.8 11.7 7 11.5 6.3C11.2 5.5 10.6 4.9 9.8 4.6C9 4.3 8.2 4.3 7.5 4.8C6.8 5.3 6 6 6 6.8V8Z" fill="white"/>
-                                                <path d="M2 6C2 4.5 2.8 3.2 4 2.5C5.2 1.8 6.5 1.8 7.7 2.5C8.9 3.2 9.7 4.5 9.7 6C9.7 7.5 8.9 8.8 7.7 9.5C6.5 10.2 5.2 10.2 4 9.5C2.8 8.8 2 7.5 2 6Z" fill="white"/>
-                                                <path d="M0 6C0 4.3 0.9 2.8 2.2 2C3.5 1.2 5 1.2 6.3 2C7.6 2.8 8.5 4.3 8.5 6C8.5 7.7 7.6 9.2 6.3 10C5 10.8 3.5 10.8 2.2 10C0.9 9.2 0 7.7 0 6Z" fill="white"/>
-                                            </svg>
-                                        ) : (
-                                            <svg width="10" height="10" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="54" cy="54" r="54" fill="#F8F9FA"/>
-                                                <path d="M54 16C33.0132 16 16 33.0132 16 54C16 74.9868 33.0132 92 54 92C74.9868 92 92 74.9868 92 54C92 33.0132 74.9868 16 54 16Z" fill="#FDE047"/>
-                                                <path d="M54 16C67.236 16 79.044 22.308 87.1 32.5C82.7 38.3 76.5 42.5 69.2 44.5C66.3 36.8 60.5 30.5 53.5 26.5C53.7 23 53.9 19.5 54 16Z" fill="#22C55E"/>
-                                                <path d="M54 16C40.764 16 28.956 22.308 20.9 32.5C25.3 38.3 31.5 42.5 38.8 44.5C41.7 36.8 47.5 30.5 54.5 26.5C54.3 23 54.1 19.5 54 16Z" fill="#3B82F6"/>
-                                                <path d="M20.9 32.5C15.2 40.1 12 49.6 12 59.5C16.4 59.8 20.8 59.5 25.1 58.7C25.6 50.1 30.8 42.7 38.8 38.1C31.5 36.1 25.3 31.9 20.9 26.1V32.5Z" fill="#8B5CF6"/>
-                                                <path d="M87.1 32.5C92.8 40.1 96 49.6 96 59.5C91.6 59.8 87.2 59.5 82.9 58.7C82.4 50.1 77.2 42.7 69.2 38.1C76.5 36.1 82.7 31.9 87.1 26.1V32.5Z" fill="#EF4444"/>
-                                                <path d="M38.8 44.5C44.7 46.3 51.1 47.3 57.5 47.3C63.9 47.3 70.3 46.3 76.2 44.5C73.6 52.6 68.2 59.6 61.1 64.5C56.7 67.5 51.4 67.5 47 64.5C39.9 59.6 34.5 52.6 31.9 44.5H38.8Z" fill="#F97316"/>
-                                            </svg>
-                                        )}
+                                    <sup className="ml-1 inline-flex items-center gap-1 text-[10px] text-zinc-400 leading-none">
+                                        <img
+                                            src={theme === 'dark' ? '/gemini%20white%20logo.png' : '/geminii%20coloured%20logo.png'}
+                                            alt="Google Gemini"
+                                            className="h-3 w-auto"
+                                        />
                                         powered by
                                     </sup>
                                 )}
