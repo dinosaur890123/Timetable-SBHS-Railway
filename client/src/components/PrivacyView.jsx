@@ -156,10 +156,6 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                 Class-to-Canvas URL mappings you create are stored server-side so they sync across your devices and (optionally)
                 contribute to community suggestions for your class. Only you can read or modify your own links.
             </Item>
-            <Item label="Study notes &amp; assignments">
-                Notes and assignments you create in the Study section are stored server-side under your student ID.
-                Only you can access them.
-            </Item>
             <Item label="Feedback tickets">
                 Feedback you submit (category, severity, description) is stored so the dev team can review and respond.
                 Archived tickets are automatically deleted after 90 days.
@@ -183,7 +179,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                 The AI provider's own privacy policy applies to data it receives.
             </Item>
             <Item label="What is NOT sent to the AI provider">
-                Award scheme data, attendance records, clipboard sessions, notes, assignments, and feedback are never sent to any AI provider.
+                Award scheme data, attendance records, notes, assignments, and feedback are never sent to any AI provider.
             </Item>
             <Item label="What Synchron stores from AI interactions">
                 <ul className="mt-1 space-y-1.5">
@@ -260,12 +256,6 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                 canDelete={<Tag colour="green">From Canvas Links page</Tag>}
             />
             <GlanceRow
-                what="Study notes &amp; assignments"
-                where={<Tag colour="amber">Synchron server</Tag>}
-                when={<Tag colour="zinc">Until deleted</Tag>}
-                canDelete={<Tag colour="green">From Study page</Tag>}
-            />
-            <GlanceRow
                 what="Feedback submissions"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">90 days after archival</Tag>}
@@ -298,12 +288,12 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
         <Section icon={Trash2} title="Deleting your data">
             <Item label="Signing out">
                 Signs you out and immediately wipes your tokens, timetable cache, and all offline data from this device.
-                Your account record, notes, and Canvas links remain on the server so they're ready when you sign back in.
+                Your account record and Canvas links remain on the server so they're ready when you sign back in.
             </Item>
             <Item label="Requesting full deletion">
                 Use the button below to ask for your account and all associated server-side data to be removed.
                 The request appears in the admin panel, where an admin reviews and processes it.
-                Admin-level deletion removes your account row, notes, assignments, Canvas links, feedback, and AI log entries.
+                Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.
             </Item>
         </Section>
 
