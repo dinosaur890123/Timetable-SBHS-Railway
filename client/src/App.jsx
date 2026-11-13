@@ -58,6 +58,11 @@ const SettingsView = lazyPage(pageLoaders.settings);
 
 const ARCHIVED_NOTICE_LIMIT = 100;
 
+// Settings sub-pages that get their own history entry, so Android's universal
+// back button (and browser Back) returns to the previous view instead of
+// closing the app.
+const SUBPAGE_VIEWS = ['feedback', 'canvas-links', 'build-notes', 'privacy'];
+
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
@@ -1270,6 +1275,48 @@ function App() {
         }
         lastViewRef.current = currentView;
     }, [currentView, defaultDate]);
+
+    // Hardware/browser back support for settings sub-pages. Entering one pushes
+    // a history marker; popping it (Android back) returns to the view the user
+    // came from — settings when opened there. Leaving via the on-screen back
+    // button drops the marker so it isn't left behind as a dead history step.
+    const currentViewRef = useRef(currentView);
+    currentViewRef.current = currentView;
+    const prevViewRef = useRef(currentView);
+    const subpageReturnRef = useRef(null);
+    const subpageMarkerRef = useRef(false);
+
+    useEffect(() => {
+        const prev = prevViewRef.current;
+        prevViewRef.current = currentView;
+
+        if (SUBPAGE_VIEWS.includes(currentView)) {
+            if (!SUBPAGE_VIEWS.includes(prev)) {
+                subpageReturnRef.current = prev;
+                subpageMarkerRef.current = true;
+                window.history.pushState({ synchronSubpage: true }, '');
+            }
+            return;
+        }
+
+        if (subpageMarkerRef.current) {
+            subpageMarkerRef.current = false;
+            subpageReturnRef.current = null;
+            window.history.back();
+        }
+    }, [currentView]);
+
+    useEffect(() => {
+        const onPopState = () => {
+            if (!subpageMarkerRef.current || !SUBPAGE_VIEWS.includes(currentViewRef.current)) return;
+            subpageMarkerRef.current = false;
+            const target = subpageReturnRef.current || 'profile';
+            subpageReturnRef.current = null;
+            setCurrentView(target);
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, []);
 
     if ((maintenance || user?.blacklisted) && currentView !== 'admin' && user?.role !== 'Admin') {
         return (
