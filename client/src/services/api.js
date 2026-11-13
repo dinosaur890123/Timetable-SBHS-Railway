@@ -723,6 +723,34 @@ export const fetchLinkNotifications = () => canvasRequest('/notifications');
 // Marks every server notification read.
 export const markLinkNotificationsRead = () => canvasRequest('/notifications/read', { method: 'POST' });
 
+// Admin "notification" broadcasts pushed to the bell panel — only ones this
+// student hasn't dismissed. { notifications: [{ id, message, createdAt }] }
+export const fetchBroadcastNotifications = async () => {
+    try {
+        const token = await getValidAccessToken();
+        const response = await timedFetch(`${SYSTEM_API_URL}/broadcast/notifications`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data?.notifications || [];
+    } catch {
+        return [];
+    }
+};
+
+// Permanently dismisses an admin broadcast notification for this student.
+export const dismissBroadcastNotification = async (id) => {
+    const token = await getValidAccessToken();
+    const response = await timedFetch(`${SYSTEM_API_URL}/broadcast/notifications/${encodeURIComponent(id)}/dismiss`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to dismiss notification: ${response.status}`);
+    }
+};
+
 // Build Notes API
 export const fetchBuildNotes = async () => {
     try {

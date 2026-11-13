@@ -276,10 +276,16 @@ const CanvasLinkNotifications = ({
                                         <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
                                             {notices.map(item => {
                                                 const isResolved = item.type === 'resolved';
-                                                const Icon = isResolved ? CheckCircle2 : Info;
+                                                const isBroadcast = item.type === 'broadcast';
+                                                const Icon = isResolved ? CheckCircle2 : isBroadcast ? Bell : Info;
+                                                const iconClass = isResolved
+                                                    ? 'text-green-600 dark:text-green-400'
+                                                    : isBroadcast
+                                                        ? 'text-violet-500 dark:text-violet-400'
+                                                        : 'text-zinc-500 dark:text-zinc-400';
                                                 return (
                                                     <li key={item.id} className="px-4 py-3 flex items-start gap-2.5">
-                                                        <Icon size={15} className={`shrink-0 mt-0.5 ${isResolved ? 'text-green-600 dark:text-green-400' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                                                        <Icon size={15} className={`shrink-0 mt-0.5 ${iconClass}`} />
                                                         <div className="flex-1 min-w-0">
                                                             <div className="text-sm text-zinc-900 dark:text-white leading-snug">
                                                                 <span className="font-semibold">{item.title}</span>

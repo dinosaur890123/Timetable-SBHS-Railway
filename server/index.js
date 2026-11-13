@@ -43,6 +43,8 @@ let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
 let deletionRequests = []; // Data deletion requests memory fallback
+let broadcastNotificationsMemory = []; // { id, message, createdBy, createdAt } memory fallback
+const broadcastNotificationDismissalsMemory = new Set(); // `${broadcastId}:${studentId}` memory fallback
 let buildNotesMemory = [
     {
         id: 'initial-build-note',
@@ -327,6 +329,103 @@ async function setBroadcast(message, type) {
 
     const ts = res.rows[0]?.updated_at;
     return message ? { message, type: type || 'info', id: ts } : null;
+}
+
+// "notification"-type broadcasts are pushed to each student's bell panel
+// instead of the banner. They live for 30 days and each student can dismiss
+// them permanently.
+const BROADCAST_NOTIFICATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+const pruneBroadcastNotificationsMemory = () => {
+    const cutoff = Date.now() - BROADCAST_NOTIFICATION_TTL_MS;
+    for (let i = broadcastNotificationsMemory.length - 1; i >= 0; i--) {
+        if (new Date(broadcastNotificationsMemory[i].createdAt).getTime() < cutoff) {
+            const [removed] = broadcastNotificationsMemory.splice(i, 1);
+            for (const key of [...broadcastNotificationDismissalsMemory]) {
+                if (key.startsWith(`${removed.id}:`)) broadcastNotificationDismissalsMemory.delete(key);
+            }
+        }
+    }
+};
+
+const toBroadcastNotification = (n, extra = {}) => ({
+    id: n.id,
+    message: n.message,
+    createdBy: n.created_by ?? n.createdBy ?? null,
+    createdByName: n.created_by_name ?? null,
+    createdAt: n.created_at instanceof Date ? n.created_at.toISOString() : (n.created_at || n.createdAt),
+    dismissals: n.dismissals ?? null,
+    ...extra
+});
+
+async function createBroadcastNotification(message, createdBy) {
+    const record = { id: crypto.randomUUID(), message, createdBy: createdBy || null, createdAt: new Date().toISOString() };
+    if (!isDbEnabled) {
+        broadcastNotificationsMemory.unshift(record);
+        pruneBroadcastNotificationsMemory();
+        return record;
+    }
+    await db.query(
+        'INSERT INTO broadcast_notifications (id, message, created_by) VALUES ($1, $2, $3)',
+        [record.id, message, record.createdBy]
+    );
+    await db.query(`DELETE FROM broadcast_notifications WHERE created_at < NOW() - INTERVAL '30 days'`);
+    return record;
+}
+
+async function listBroadcastNotifications(studentId) {
+    if (!isDbEnabled) {
+        pruneBroadcastNotificationsMemory();
+        const cutoff = Date.now() - BROADCAST_NOTIFICATION_TTL_MS;
+        return broadcastNotificationsMemory
+            .filter(n => new Date(n.createdAt).getTime() >= cutoff && !broadcastNotificationDismissalsMemory.has(`${n.id}:${studentId}`))
+            .map(n => toBroadcastNotification(n));
+    }
+    await db.query(`DELETE FROM broadcast_notifications WHERE created_at < NOW() - INTERVAL '30 days'`);
+    const result = await db.query(
+        `SELECT n.id, n.message, n.created_at
+         FROM broadcast_notifications n
+         WHERE n.created_at > NOW() - INTERVAL '30 days'
+           AND NOT EXISTS (
+               SELECT 1 FROM broadcast_notification_dismissals d
+               WHERE d.broadcast_id = n.id AND d.student_id = $1
+           )
+         ORDER BY n.created_at DESC LIMIT 50`,
+        [String(studentId)]
+    );
+    return result.rows.map(r => toBroadcastNotification(r));
+}
+
+async function dismissBroadcastNotification(id, studentId) {
+    if (!isDbEnabled) {
+        if (broadcastNotificationsMemory.some(n => n.id === id)) {
+            broadcastNotificationDismissalsMemory.add(`${id}:${studentId}`);
+        }
+        return;
+    }
+    await db.query(
+        `INSERT INTO broadcast_notification_dismissals (broadcast_id, student_id)
+         SELECT id, $2 FROM broadcast_notifications WHERE id = $1
+         ON CONFLICT DO NOTHING`,
+        [id, String(studentId)]
+    );
+}
+
+async function listBroadcastNotificationHistory() {
+    if (!isDbEnabled) {
+        pruneBroadcastNotificationsMemory();
+        return broadcastNotificationsMemory.map(n => toBroadcastNotification(n, {
+            dismissals: [...broadcastNotificationDismissalsMemory].filter(k => k.startsWith(`${n.id}:`)).length
+        }));
+    }
+    const result = await db.query(
+        `SELECT n.id, n.message, n.created_by, u.name AS created_by_name, n.created_at,
+                (SELECT COUNT(*)::int FROM broadcast_notification_dismissals d WHERE d.broadcast_id = n.id) AS dismissals
+         FROM broadcast_notifications n
+         LEFT JOIN app_users u ON u.id = n.created_by
+         ORDER BY n.created_at DESC LIMIT 100`
+    );
+    return result.rows.map(r => toBroadcastNotification(r));
 }
 
 async function setMaintenance(maintenance) {
@@ -1596,6 +1695,15 @@ app.get('/api/logs', requireAuth, async (req, res) => {
 app.post('/api/broadcast', requireAuth, async (req, res) => {
     try {
         const { message, type } = req.body || {};
+
+        // "notification" broadcasts go straight to each student's bell panel;
+        // they don't occupy the banner slot and live for 30 days.
+        if (message && type === 'notification') {
+            const notification = await createBroadcastNotification(message, req.user?.studentId);
+            await addLog('BROADCAST', 'ADMIN', `Notification broadcast: "${message}"`);
+            return res.json({ success: true, broadcast: null, notification });
+        }
+
         const broadcast = await setBroadcast(message, type);
 
         if (message) await addLog('BROADCAST', 'ADMIN', `Global alert: "${message}"`);
@@ -1617,6 +1725,42 @@ app.get('/api/broadcast', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Get broadcast error:', e);
         res.status(500).json({ error: 'Failed to fetch broadcast' });
+    }
+});
+
+// GET /api/broadcast/notifications — the student's undismissed admin
+// notification broadcasts from the last 30 days.
+app.get('/api/broadcast/notifications', requireStudentAuth, async (req, res) => {
+    try {
+        const notifications = await listBroadcastNotifications(String(req.user.studentId));
+        res.json({ notifications });
+    } catch (e) {
+        console.error('Broadcast notifications error:', e);
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+// POST /api/broadcast/notifications/:id/dismiss — permanently dismisses one
+// notification broadcast for this student.
+app.post('/api/broadcast/notifications/:id/dismiss', requireStudentAuth, async (req, res) => {
+    try {
+        await dismissBroadcastNotification(req.params.id, String(req.user.studentId));
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Dismiss broadcast notification error:', e);
+        res.status(500).json({ error: 'Failed to dismiss notification' });
+    }
+});
+
+// GET /api/broadcast/history — admin: notification broadcasts sent in the
+// last 30 days with per-broadcast dismissal counts.
+app.get('/api/broadcast/history', requireAuth, async (req, res) => {
+    try {
+        const notifications = await listBroadcastNotificationHistory();
+        res.json({ notifications });
+    } catch (e) {
+        console.error('Broadcast history error:', e);
+        res.status(500).json({ error: 'Failed to fetch broadcast history' });
     }
 });
 

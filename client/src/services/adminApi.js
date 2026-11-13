@@ -135,6 +135,20 @@ export const setBroadcast = async (message, type = 'info') => {
     }
 };
 
+// Admin: notification broadcasts sent in the last 30 days, with dismissal counts.
+export const fetchBroadcastHistory = async () => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/broadcast/history`, {
+            headers: await getHeaders()
+        });
+        if (!response.ok) throw new Error(`Failed to fetch broadcast history (HTTP ${response.status})`);
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const setMaintenanceMode = async (enabled) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/maintenance`, {

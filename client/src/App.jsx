@@ -99,6 +99,8 @@ import {
     fetchUserPreferences,
     saveUserPreferences,
     fetchBuildNotes,
+    fetchBroadcastNotifications,
+    dismissBroadcastNotification,
     isScopeOutdated,
     fetchStudentClipboardSessions,
     fetchNextSchoolDay,
@@ -389,9 +391,21 @@ function App() {
 
     const removeNotice = useCallback((id) => {
         setArchivedNotices(prev => prev.filter(n => n.id !== id));
-    }, []);
+        // Admin broadcast notices are dismissed server-side too, so the
+        // dismissal sticks on every device. If the call fails, put it back.
+        const notice = archivedNotices.find(n => n.id === id);
+        if (notice?.broadcastId) {
+            dismissBroadcastNotification(notice.broadcastId)
+                .catch(() => archiveNotice(notice));
+        }
+    }, [archivedNotices, archiveNotice]);
 
-    const clearNotices = useCallback(() => setArchivedNotices([]), []);
+    const clearNotices = useCallback(() => {
+        archivedNotices.forEach(n => {
+            if (n.broadcastId) dismissBroadcastNotification(n.broadcastId).catch(() => {});
+        });
+        setArchivedNotices([]);
+    }, [archivedNotices]);
 
     const notificationsValue = useMemo(() => ({
         items: archivedNotices,
@@ -399,6 +413,59 @@ function App() {
         remove: removeNotice,
         clear: clearNotices
     }), [archivedNotices, archiveNotice, removeNotice, clearNotices]);
+
+    // Admin "notification" broadcasts live server-side so a dismissal is
+    // permanent per student. Undismissed ones are polled here and mirrored
+    // into the bell panel's archive below.
+    const [broadcastNotices, setBroadcastNotices] = useState([]);
+
+    useEffect(() => {
+        if (!user?.studentId) {
+            setBroadcastNotices([]);
+            return undefined;
+        }
+        let cancelled = false;
+        const load = async () => {
+            const list = await fetchBroadcastNotifications();
+            if (!cancelled) setBroadcastNotices(list);
+        };
+        load();
+        const interval = setInterval(() => {
+            if (!document.hidden) load();
+        }, 60 * 1000);
+        const handleVisibilityChange = () => {
+            if (!document.hidden) load();
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [user?.studentId]);
+
+    useEffect(() => {
+        // An empty list means the fetch failed or nothing is out — never prune on it.
+        if (broadcastNotices.length === 0) return;
+        setArchivedNotices(prev => {
+            const serverIds = new Set(broadcastNotices.map(n => n.id));
+            // Drop broadcast notices the server no longer returns (dismissed
+            // elsewhere, or past the 30-day retention).
+            const kept = prev.filter(n => !n.broadcastId || serverIds.has(n.id));
+            const existing = new Set(kept.map(n => n.id));
+            const fresh = broadcastNotices
+                .filter(n => !existing.has(n.id))
+                .map(n => ({
+                    id: n.id,
+                    broadcastId: n.id,
+                    type: 'broadcast',
+                    title: 'Announcement',
+                    message: n.message,
+                    at: n.createdAt
+                }));
+            return [...fresh, ...kept].slice(0, ARCHIVED_NOTICE_LIMIT);
+        });
+    }, [broadcastNotices]);
 
     // Keep the same actionable items admins can review in the admin panel
     // available in the top-bar popout, even while they are elsewhere.
@@ -1288,7 +1355,7 @@ function App() {
                     </div>
                 )}
 
-                {broadcast && (
+                {broadcast && broadcast.type !== 'notification' && (
                     <div className={`mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex items-center gap-3 text-sm font-medium border
                 ${broadcast.type === 'error' ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400' :
                             broadcast.type === 'warning' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400' :

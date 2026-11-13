@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, FileCode, RefreshCw, Calendar, User, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, FileCode, RefreshCw, Calendar, User, Sparkles } from 'lucide-react';
 import { fetchBuildNotes } from '../services/api';
+
+const Section = ({ icon: Icon, title, children, action }) => (
+    <section className="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+                <Icon size={15} strokeWidth={1.8} className="shrink-0 text-accent" />
+                <h2 className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate">{title}</h2>
+            </div>
+            {action}
+        </div>
+        <div className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06]">
+            {children}
+        </div>
+    </section>
+);
+
+const NoteBody = ({ children }) => (
+    <div className="px-5 py-4">
+        {children}
+    </div>
+);
 
 const BuildNotesView = ({ onBack }) => {
     // Initial state from localStorage cache for instant display
@@ -66,14 +87,14 @@ const BuildNotesView = ({ onBack }) => {
 
         const lines = content.split('\n');
         return (
-            <div className="space-y-2 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <div className="space-y-2 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                 {lines.map((line, idx) => {
                     const trimmed = line.trim();
                     if (!trimmed) return <div key={idx} className="h-1" />;
 
                     if (trimmed.startsWith('### ')) {
                         return (
-                            <h4 key={idx} className="font-bold text-sm text-zinc-900 dark:text-white pt-2 first:pt-0">
+                            <h4 key={idx} className="font-semibold text-[13px] text-zinc-900 dark:text-white pt-2 first:pt-0">
                                 {trimmed.replace(/^###\s+/, '')}
                             </h4>
                         );
@@ -83,14 +104,14 @@ const BuildNotesView = ({ onBack }) => {
                         const itemText = trimmed.replace(/^[-*]\s+/, '');
                         return (
                             <div key={idx} className="flex items-start gap-2.5 pl-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0 mt-2" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
                                 <div>{parseInlineFormatting(itemText)}</div>
                             </div>
                         );
                     }
 
                     return (
-                        <p key={idx} className="text-zinc-600 dark:text-zinc-400">
+                        <p key={idx}>
                             {parseInlineFormatting(trimmed)}
                         </p>
                     );
@@ -105,7 +126,7 @@ const BuildNotesView = ({ onBack }) => {
         return parts.map((part, i) => {
             if (part.startsWith('**') && part.endsWith('**')) {
                 return (
-                    <strong key={i} className="font-semibold text-zinc-900 dark:text-white">
+                    <strong key={i} className="font-semibold text-zinc-800 dark:text-zinc-200">
                         {part.slice(2, -2)}
                     </strong>
                 );
@@ -115,7 +136,8 @@ const BuildNotesView = ({ onBack }) => {
     };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
             <button
                 onClick={onBack}
                 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
@@ -123,104 +145,100 @@ const BuildNotesView = ({ onBack }) => {
                 <ArrowLeft size={14} /> Back to Settings
             </button>
 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800/80 pb-6">
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-200 dark:border-violet-900/40 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 text-xs font-bold uppercase tracking-widest">
-                            <FileCode size={14} /> Build Notes
-                        </div>
-                        <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Build notes & changelog</h1>
-                        <p className="max-w-2xl text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
-                            Stay up to date with the latest features, improvements, and fixes shipped directly by the dev team.
-                        </p>
-                    </div>
+            {/* Hero */}
+            <div className="space-y-1">
+                <div className="flex items-center gap-2 text-accent mb-2">
+                    <FileCode size={20} strokeWidth={1.6} />
+                </div>
+                <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Build notes</h1>
+                <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    The latest features, improvements, and fixes shipped by the dev team.
+                </p>
+            </div>
 
-                    <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
-                        {lastSynced && (
-                            <span className="text-[11px] font-mono text-zinc-400 hidden md:inline">
-                                Synced {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {/* Sync status */}
+            <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
+                    {lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Never synced'}
+                </span>
+                <button
+                    onClick={() => loadNotes(true)}
+                    disabled={refreshing || loading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.03] text-[12px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/[0.06] transition-colors disabled:opacity-50"
+                    title="Check for the latest build notes"
+                >
+                    <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                    {refreshing ? 'Checking…' : 'Check for updates'}
+                </button>
+            </div>
+
+            {/* Notes */}
+            {loading ? (
+                <Section icon={FileCode} title="Build notes">
+                    <NoteBody>
+                        <div className="py-8 text-center space-y-3">
+                            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                            <p className="text-xs text-zinc-400">Fetching latest build notes…</p>
+                        </div>
+                    </NoteBody>
+                </Section>
+            ) : error ? (
+                <Section icon={FileCode} title="Build notes">
+                    <NoteBody>
+                        <p className="py-6 text-center text-[13px] text-red-500">{error}</p>
+                    </NoteBody>
+                </Section>
+            ) : notes.length === 0 ? (
+                <Section icon={Sparkles} title="Build notes">
+                    <NoteBody>
+                        <div className="py-10 text-center space-y-1">
+                            <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200">No build notes published yet</p>
+                            <p className="text-[12px] text-zinc-400">Check back soon for release notes and updates.</p>
+                        </div>
+                    </NoteBody>
+                </Section>
+            ) : (
+                notes.map((note, index) => (
+                    <Section
+                        key={note.id || index}
+                        icon={FileCode}
+                        title={note.title || (note.version ? `Version ${note.version}` : 'Release')}
+                        action={(
+                            <span className="flex items-center gap-3 text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0">
+                                {note.version && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 text-[11px] font-semibold tracking-wide font-mono">
+                                        {note.version}
+                                    </span>
+                                )}
+                                {note.author && (
+                                    <span className="hidden sm:flex items-center gap-1">
+                                        <User size={11} /> {note.author}
+                                    </span>
+                                )}
+                                {note.createdAt && (
+                                    <span className="flex items-center gap-1">
+                                        <Calendar size={11} />
+                                        {new Date(note.createdAt).toLocaleDateString('en-AU', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric'
+                                        })}
+                                    </span>
+                                )}
                             </span>
                         )}
-                        <button
-                            onClick={() => loadNotes(true)}
-                            disabled={refreshing || loading}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors shrink-0 disabled:opacity-50"
-                            title="Poll backend for latest build notes"
-                        >
-                            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-                            {refreshing ? 'Polling...' : 'Poll updates'}
-                        </button>
-                    </div>
-                </div>
+                    >
+                        <NoteBody>
+                            {renderContent(note.content)}
+                        </NoteBody>
+                    </Section>
+                ))
+            )}
 
-                {/* Content */}
-                {loading ? (
-                    <div className="py-16 text-center space-y-3">
-                        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-xs text-zinc-400 font-mono">Fetching latest build notes...</p>
-                    </div>
-                ) : error ? (
-                    <div className="py-12 text-center text-red-500 text-sm">
-                        {error}
-                    </div>
-                ) : notes.length === 0 ? (
-                    <div className="py-16 text-center space-y-2 text-zinc-500">
-                        <Sparkles size={28} className="mx-auto text-zinc-400" />
-                        <p className="text-base font-semibold text-zinc-800 dark:text-zinc-200">No build notes published yet</p>
-                        <p className="text-xs text-zinc-400">Check back soon for release notes and updates.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        {notes.map((note, index) => (
-                            <div
-                                key={note.id || index}
-                                className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-6 bg-zinc-50/60 dark:bg-zinc-950/40 space-y-4 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-                            >
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200/60 dark:border-zinc-800/60 pb-3">
-                                    <div className="flex flex-wrap items-center gap-2.5">
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border border-violet-200 dark:border-violet-900/40">
-                                            {note.version}
-                                        </span>
-                                        <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
-                                            {note.title}
-                                        </h2>
-                                    </div>
-
-                                    <div className="flex items-center gap-3 text-xs text-zinc-400 font-medium">
-                                        {note.author && (
-                                            <span className="flex items-center gap-1">
-                                                <User size={13} /> {note.author}
-                                            </span>
-                                        )}
-                                        {note.createdAt && (
-                                            <span className="flex items-center gap-1">
-                                                <Calendar size={13} />
-                                                {new Date(note.createdAt).toLocaleDateString('en-AU', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric'
-                                                })}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="pt-1">
-                                    {renderContent(note.content)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Footer build sha */}
-                <div className="pt-4 border-t border-zinc-150 dark:border-zinc-800/60 text-center">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-600">
-                        Synchron ALPHA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
-                    </p>
-                </div>
-            </div>
+            {/* Footer build sha */}
+            <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
+                Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
+            </p>
         </div>
     );
 };

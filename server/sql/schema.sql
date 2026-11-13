@@ -241,6 +241,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS data_deletion_requests_pending_key
   ON data_deletion_requests (student_id) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS data_deletion_requests_created_at_idx ON data_deletion_requests (created_at DESC);
 
+-- Admin notification broadcasts: "notification"-type broadcasts are pushed to
+-- each student's bell panel. Rows auto-purge 30 days after they are sent;
+-- dismissals are per student and permanent.
+CREATE TABLE IF NOT EXISTS broadcast_notifications (
+  id TEXT PRIMARY KEY,
+  message TEXT NOT NULL,
+  created_by TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS broadcast_notifications_created_at_idx ON broadcast_notifications (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS broadcast_notification_dismissals (
+  broadcast_id TEXT NOT NULL REFERENCES broadcast_notifications(id) ON DELETE CASCADE,
+  student_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (broadcast_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS broadcast_notification_dismissals_student_idx ON broadcast_notification_dismissals (student_id);
+
 -- Build Notes migration
 CREATE TABLE IF NOT EXISTS app_build_notes (
   id TEXT PRIMARY KEY,

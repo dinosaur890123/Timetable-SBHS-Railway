@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports } from '../services/adminApi';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
@@ -108,6 +108,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
+    const [broadcastHistory, setBroadcastHistory] = useState([]);
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -731,6 +732,21 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         document.body.removeChild(link);
     };
 
+    const loadBroadcastHistory = async () => {
+        try {
+            const data = await fetchBroadcastHistory();
+            setBroadcastHistory(data?.notifications || []);
+        } catch (err) {
+            console.error('Admin: failed to load broadcast history:', err);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab === 'broadcast') {
+            loadBroadcastHistory();
+        }
+    }, [isAuthenticated, activeTab]);
+
     const handleBroadcast = async (e) => {
         e.preventDefault();
         try {
@@ -738,6 +754,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
             loadData(); // Refresh logs
+            loadBroadcastHistory();
         } catch (err) {
             alert("Failed to set broadcast");
         }
@@ -1257,6 +1274,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <div className={`mb-6 p-4 border rounded-xl ${
                     currentBroadcast.type === 'error' ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' :
                     currentBroadcast.type === 'warning' ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400' :
+                    currentBroadcast.type === 'notification' ? 'bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-900/20 dark:border-violet-800 dark:text-violet-400' :
                     'bg-zinc-100 border-zinc-300 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-white'
                 }`}>
                     <div className="flex items-center gap-2 mb-1">
@@ -1281,8 +1299,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
                 <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Alert Type</label>
-                    <div className="grid grid-cols-3 gap-4">
-                        {['info', 'warning', 'error'].map((type) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {['info', 'warning', 'error', 'notification'].map((type) => (
                             <button
                                 key={type}
                                 type="button"
@@ -1290,7 +1308,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                 className={`py-3 border rounded-xl capitalize font-medium transition-all ${broadcastType === type
                                     ? type === 'error' ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                                         : type === 'warning' ? 'bg-orange-50 border-orange-500 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
-                                            : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
+                                            : type === 'notification' ? 'bg-violet-50 border-violet-500 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400'
+                                                : 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black'
                                     : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                                     }`}
                             >
@@ -1328,6 +1347,32 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </button>
                 </div>
             </form>
+
+            <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Notification history</h4>
+                <p className="text-xs text-zinc-500 mt-1 mb-4">
+                    Broadcasts sent to the notification panel. Entries are kept for 30 days, and dismissals are permanent per student.
+                </p>
+                {broadcastHistory.length === 0 ? (
+                    <p className="text-sm text-zinc-500">No notification broadcasts yet.</p>
+                ) : (
+                    <ul className="divide-y divide-zinc-200/70 dark:divide-zinc-800">
+                        {broadcastHistory.map(n => (
+                            <li key={n.id} className="py-3 flex items-start gap-3">
+                                <Bell size={15} className="shrink-0 mt-0.5 text-violet-500 dark:text-violet-400" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-zinc-900 dark:text-white leading-snug">{n.message}</p>
+                                    <p className="text-xs text-zinc-500 mt-0.5">
+                                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                                        {` · ${n.dismissals ?? 0} dismissal${(n.dismissals ?? 0) === 1 ? '' : 's'}`}
+                                        {n.createdByName ? ` · by ${n.createdByName}` : n.createdBy ? ` · by ${n.createdBy}` : ''}
+                                    </p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     )
 }
