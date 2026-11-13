@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory } from '../services/adminApi';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory, deleteBroadcastNotification } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
@@ -109,6 +109,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
     const [broadcastHistory, setBroadcastHistory] = useState([]);
+    const [broadcastHistoryBusy, setBroadcastHistoryBusy] = useState(null);
 
     const handleToggleMaintenance = async () => {
         if (!stats) return;
@@ -760,6 +761,19 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     };
 
+    const handleDeleteBroadcastNotice = async (notice) => {
+        if (!window.confirm(`Delete this notification broadcast for all students?\n\n"${notice.message}"`)) return;
+        setBroadcastHistoryBusy(notice.id);
+        try {
+            await deleteBroadcastNotification(notice.id);
+            await loadBroadcastHistory();
+        } catch (err) {
+            alert(err.message || 'Failed to delete broadcast notification');
+        } finally {
+            setBroadcastHistoryBusy(null);
+        }
+    };
+
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               user.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1368,6 +1382,16 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                         {n.createdByName ? ` · by ${n.createdByName}` : n.createdBy ? ` · by ${n.createdBy}` : ''}
                                     </p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteBroadcastNotice(n)}
+                                    disabled={broadcastHistoryBusy === n.id}
+                                    aria-label="Delete broadcast notification"
+                                    title="Delete for all students"
+                                    className="shrink-0 mt-0.5 p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
                             </li>
                         ))}
                     </ul>

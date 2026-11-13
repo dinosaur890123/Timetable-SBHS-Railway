@@ -149,6 +149,21 @@ export const fetchBroadcastHistory = async () => {
     }
 };
 
+// Admin: deletes a notification broadcast before its 30-day retention ends.
+export const deleteBroadcastNotification = async (id) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/broadcast/history/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: await getHeaders()
+        });
+        if (!response.ok) throw new Error(`Failed to delete broadcast notification (HTTP ${response.status})`);
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const setMaintenanceMode = async (enabled) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/maintenance`, {

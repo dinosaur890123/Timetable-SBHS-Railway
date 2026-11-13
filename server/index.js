@@ -411,6 +411,20 @@ async function dismissBroadcastNotification(id, studentId) {
     );
 }
 
+async function deleteBroadcastNotification(id) {
+    if (!isDbEnabled) {
+        const index = broadcastNotificationsMemory.findIndex(n => n.id === id);
+        if (index === -1) return false;
+        broadcastNotificationsMemory.splice(index, 1);
+        for (const key of [...broadcastNotificationDismissalsMemory]) {
+            if (key.startsWith(`${id}:`)) broadcastNotificationDismissalsMemory.delete(key);
+        }
+        return true;
+    }
+    const result = await db.query('DELETE FROM broadcast_notifications WHERE id = $1', [id]);
+    return (result.rowCount || 0) > 0;
+}
+
 async function listBroadcastNotificationHistory() {
     if (!isDbEnabled) {
         pruneBroadcastNotificationsMemory();
@@ -1761,6 +1775,20 @@ app.get('/api/broadcast/history', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Broadcast history error:', e);
         res.status(500).json({ error: 'Failed to fetch broadcast history' });
+    }
+});
+
+// DELETE /api/broadcast/history/:id — admin: removes a notification broadcast
+// before its 30-day retention ends, for every student.
+app.delete('/api/broadcast/history/:id', requireAuth, async (req, res) => {
+    try {
+        const deleted = await deleteBroadcastNotification(req.params.id);
+        if (!deleted) return res.status(404).json({ error: 'Broadcast notification not found' });
+        await addLog('BROADCAST', 'ADMIN', `Deleted notification broadcast ${req.params.id}`);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Delete broadcast notification error:', e);
+        res.status(500).json({ error: 'Failed to delete broadcast notification' });
     }
 });
 
