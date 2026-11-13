@@ -140,7 +140,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
             className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent
-                ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045]'
+                ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045] hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.07]'
                 : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'}`}
         >
             {hasCanvasLink ? (
