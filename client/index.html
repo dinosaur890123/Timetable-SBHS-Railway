@@ -26,9 +26,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16-light.png" media="(prefers-color-scheme: light)">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16-dark.png" media="(prefers-color-scheme: dark)">
-    <!-- New logo (SVG); App.jsx swaps the light/dark variant with the app theme.
-         media="not all" disables it so the PNG icon set below takes over (atom mode). -->
-    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/synchron-now-rows-xl.svg">
+    <!-- New logo; App.jsx disables it in atom mode so the PNG icon set takes over.
+         Fixed dark variant — favicons don't follow the site theme. -->
+    <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-rows-dark-512.png">
     <script>
       // Apply the saved favicon choice before first paint.
       try {

@@ -679,20 +679,18 @@ function App() {
         savePreferences();
     }, [faviconType]);
 
-    // Favicon choice: 'default' is the new logo (SVG, swapped for dark mode);
-    // 'atom' disables the SVG link so the PNG icon set in index.html takes over.
-    // Browsers cache favicons aggressively, so a reload is needed after switching.
+    // Favicon choice: 'default' is the new logo PNG; 'atom' disables that link so
+    // the PNG icon set in index.html takes over. Browsers cache favicons
+    // aggressively, so a reload is needed after switching.
     useEffect(() => {
         const link = document.getElementById('app-favicon');
         if (!link) return;
         if (faviconType === 'atom') {
             link.setAttribute('media', 'not all');
-            return;
+        } else {
+            link.removeAttribute('media');
         }
-        link.removeAttribute('media');
-        const isDark = !isSignedIn || theme === 'dark';
-        link.href = isDark ? '/synchron-now-rows-xl-white.svg' : '/synchron-now-rows-xl.svg';
-    }, [faviconType, theme, isSignedIn]);
+    }, [faviconType]);
 
     // Browsers cache favicons hard, so a change only fully applies after a reload.
     const handleFaviconTypeChange = (value) => {
