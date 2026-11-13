@@ -3,8 +3,8 @@
   "short_name": "Synchron Dev",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#F1F1EE",
+  "theme_color": "#F1F1EE",
   "icons": [
     {
       "src": "/android-icon-192x192.png",
