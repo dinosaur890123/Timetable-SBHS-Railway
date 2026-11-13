@@ -54,7 +54,8 @@ export default defineConfig({
           'android-icon-*.png',
           'maskable-icon-*.png',
           'apple-touch-icon.png',
-          'manifest.json'
+          'manifest.json',
+          'atom-*.{png,json}'
         ],
         globIgnores: ['**/dev-*', '**/staging-*'],
         cleanupOutdatedCaches: true,

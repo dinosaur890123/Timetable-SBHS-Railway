@@ -30,13 +30,23 @@
          Fixed dark variant — favicons don't follow the site theme. -->
     <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-rows-dark-512.png">
     <script>
-      // Apply the saved favicon choice before first paint. 'default' keeps only the
-      // app icon link active; 'atom' disables it so the PNG set takes over.
-      // Original media attributes are preserved in dataset.favMedia for restore.
+      // Apply the saved favicon/icon choice before first paint. 'default' keeps only
+      // the app icon link active and points every icon asset at the new-logo set;
+      // 'atom' mutes it and points them at the atom-* set instead. Original media
+      // attributes are preserved in dataset.favMedia for restore.
       try {
         var atom = localStorage.getItem('favicon_type') === 'atom';
+        var ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'icon-', 'manifest.json'];
+        function mapIconHref(href) {
+          if (!href || href.charAt(0) !== '/') return href;
+          var path = href.slice(1), isAtom = path.indexOf('atom-') === 0;
+          if (isAtom) path = path.slice(5);
+          var known = ICON_PREFIXES.some(function (p) { return path === p || path.indexOf(p) === 0; });
+          if (!known || isAtom === atom) return href;
+          return (atom ? '/atom-' : '/') + path;
+        }
         var appIcon = document.getElementById('app-favicon');
-        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"]').forEach(function (l) {
+        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"], link[rel="apple-touch-icon"][href^="http"]').forEach(function (l) {
           if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
           if (atom) {
             if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
@@ -49,6 +59,12 @@
           if (atom) appIcon.setAttribute('media', 'not all');
           else appIcon.removeAttribute('media');
         }
+        document.querySelectorAll('link[href^="/"], meta[name="msapplication-TileImage"]').forEach(function (el) {
+          var attr = el.tagName === 'META' ? 'content' : 'href';
+          var v = el.getAttribute(attr);
+          var nv = mapIconHref(v);
+          if (nv !== v) el.setAttribute(attr, nv);
+        });
       } catch (e) {}
     </script>
     <link rel="manifest" href="/manifest.json">

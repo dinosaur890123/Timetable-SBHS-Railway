@@ -679,15 +679,36 @@ function App() {
         savePreferences();
     }, [faviconType]);
 
-    // Favicon choice: 'default' keeps only the new-logo link active; 'atom'
-    // disables it so the PNG icon set in index.html takes over. Every other icon
-    // link is muted in default mode so no browser can pick a different favicon.
-    // Browsers cache favicons aggressively, so a reload is needed after switching.
+    // Icon choice: 'default' keeps only the new-logo favicon link active and points
+    // every PWA icon asset (apple/android/maskable/ms/manifest) at the new-logo
+    // set; 'atom' mutes it and points them at the atom-* copies. Installed app
+    // icons are baked at install time, so this affects the tab icon immediately
+    // and the home-screen icon on the next install/add-to-home-screen.
+    // Browsers cache icons aggressively, so a reload is needed after switching.
     useEffect(() => {
         const appIcon = document.getElementById('app-favicon');
         if (!appIcon) return;
         const atom = faviconType === 'atom';
-        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"]').forEach(l => {
+
+        const ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'icon-', 'manifest.json'];
+        const mapIconHref = (href) => {
+            if (!href || href.charAt(0) !== '/') return href;
+            let path = href.slice(1);
+            const isAtom = path.startsWith('atom-');
+            if (isAtom) path = path.slice(5);
+            const known = ICON_PREFIXES.some(p => path === p || path.startsWith(p));
+            if (!known || isAtom === atom) return href;
+            return (atom ? '/atom-' : '/') + path;
+        };
+
+        document.querySelectorAll('link[href^="/"], meta[name="msapplication-TileImage"]').forEach(el => {
+            const attr = el.tagName === 'META' ? 'content' : 'href';
+            const v = el.getAttribute(attr);
+            const nv = mapIconHref(v);
+            if (nv !== v) el.setAttribute(attr, nv);
+        });
+
+        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"], link[rel="apple-touch-icon"][href^="http"]').forEach(l => {
             if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
             if (atom) {
                 if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
