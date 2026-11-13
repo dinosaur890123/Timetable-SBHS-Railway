@@ -108,7 +108,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     ) : null}
                     {(isCurrent || isNext) && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
                     {fullTeacher && (
-                        <span className={`truncate hidden sm:inline ${isSubstituted ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                        <span className={`truncate hidden sm:inline ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
                         </span>
                     )}
@@ -120,12 +120,12 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <div className="shrink-0 text-right leading-tight">
                     <div className="flex items-center gap-1.5 justify-end">
                         {fullTeacher && (
-                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden ${isSubstituted ? 'px-1 py-0.5 rounded-md bg-accent/20' : ''}`}>
+                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}
                         <TeacherTreat name={fullTeacher} />
-                        <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md bg-accent/20' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                        <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
                 </div>
             )}

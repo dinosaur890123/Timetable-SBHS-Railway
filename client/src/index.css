@@ -128,6 +128,21 @@ html.dark [data-tone="deep"] { --subject-ink: color-mix(in oklab, var(--subject)
 }
 html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb, var(--subject-ink) 12%, transparent); }
 
+/* Change highlights for room changes and teacher substitutions - vivid and noticeable */
+.change-highlight {
+  background-color: hsl(var(--color-accent) / 0.45);
+  color: hsl(var(--color-accent-contrast));
+}
+/* Plain (black/white) theme gets a warm amber highlight instead of grey */
+html:not([class*="theme-"]) .change-highlight {
+  background-color: hsl(35 95% 55% / 0.5);
+  color: hsl(0 0% 100%);
+}
+html:not([class*="theme-"]).dark .change-highlight {
+  background-color: hsl(35 95% 55% / 0.6);
+  color: hsl(0 0% 100%);
+}
+
 /* Entrance animations are decorative: skip them for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .animate-in {
