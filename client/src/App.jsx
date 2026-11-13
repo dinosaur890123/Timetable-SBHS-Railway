@@ -162,6 +162,7 @@ function App() {
     const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
+    const [faviconType, setFaviconType] = useState(() => localStorage.getItem('favicon_type') || 'default');
     const [buildNotes, setBuildNotes] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_build_notes');
@@ -174,6 +175,7 @@ function App() {
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
+    const [faviconPrompt, setFaviconPrompt] = useState(false);
     useModernShellEffects(setPaletteOpen);
 
     // Drop settings left behind by the retired Classic interface
@@ -507,6 +509,7 @@ function App() {
                 aiOptIn: !aiDisabled,
                 ambientLight,
                 showClipboardEvents,
+                faviconType,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -670,6 +673,33 @@ function App() {
         localStorage.setItem('show_clipboard_events', showClipboardEvents ? 'true' : 'false');
         savePreferences();
     }, [showClipboardEvents]);
+
+    useEffect(() => {
+        localStorage.setItem('favicon_type', faviconType);
+        savePreferences();
+    }, [faviconType]);
+
+    // Favicon choice: 'default' is the new logo (SVG, swapped for dark mode);
+    // 'atom' disables the SVG link so the PNG icon set in index.html takes over.
+    // Browsers cache favicons aggressively, so a reload is needed after switching.
+    useEffect(() => {
+        const link = document.getElementById('app-favicon');
+        if (!link) return;
+        if (faviconType === 'atom') {
+            link.setAttribute('media', 'not all');
+            return;
+        }
+        link.removeAttribute('media');
+        const isDark = !isSignedIn || theme === 'dark';
+        link.href = isDark ? '/synchron-now-rows-xl-white.svg' : '/synchron-now-rows-xl.svg';
+    }, [faviconType, theme, isSignedIn]);
+
+    // Browsers cache favicons hard, so a change only fully applies after a reload.
+    const handleFaviconTypeChange = (value) => {
+        if (value === faviconType) return;
+        setFaviconType(value);
+        setFaviconPrompt(true);
+    };
 
     // Color Theme Config
     useEffect(() => {
@@ -854,6 +884,10 @@ function App() {
                             if (prefs.showClipboardEvents !== undefined) {
                                 setShowClipboardEvents(prefs.showClipboardEvents);
                                 localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                            }
+                            if (prefs.faviconType !== undefined) {
+                                setFaviconType(prefs.faviconType);
+                                localStorage.setItem('favicon_type', prefs.faviconType);
                             }
 
                             // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
@@ -1467,6 +1501,8 @@ function App() {
                                     setAmbientLight={setAmbientLight}
                                     showClipboardEvents={showClipboardEvents}
                                     setShowClipboardEvents={setShowClipboardEvents}
+                                    faviconType={faviconType}
+                                    setFaviconType={handleFaviconTypeChange}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />
@@ -1585,6 +1621,36 @@ function App() {
                     hiddenPages
                 })}
             />
+
+            {/* Favicon changed — prompt a reload so the browser picks it up */}
+            <AnimatePresence>
+                {faviconPrompt && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 12 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 pl-4 pr-2 py-2 rounded-xl border border-m-line bg-m-panel/95 backdrop-blur-xl shadow-lg"
+                    >
+                        <span className="text-[13px] text-zinc-700 dark:text-zinc-200 whitespace-nowrap">
+                            Favicon updated — reload to apply it.
+                        </span>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-[13px] font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                        >
+                            Reload
+                        </button>
+                        <button
+                            onClick={() => setFaviconPrompt(false)}
+                            aria-label="Dismiss"
+                            className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                        >
+                            <X size={15} />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Canvas Link Suggestions Toast */}
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />

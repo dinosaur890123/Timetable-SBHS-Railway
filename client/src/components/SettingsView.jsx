@@ -96,7 +96,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled, aiProviderName = 'an AI provider',
-    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, onSignOut, setView
+    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, faviconType, setFaviconType, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -188,6 +188,14 @@ const SettingsView = ({
                             </button>
                         ))}
                     </div>
+                </Row>
+                <Row title="Favicon" description="Choose the icon shown in browser tabs.">
+                    <Segmented
+                        id="favicon"
+                        value={faviconType}
+                        onChange={setFaviconType}
+                        options={[{ value: 'default', label: 'Default' }, { value: 'atom', label: 'Atom' }]}
+                    />
                 </Row>
                 <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`}>
                     <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />

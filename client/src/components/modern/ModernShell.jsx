@@ -62,8 +62,17 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
 export const BrandMark = ({ className = '' }) => (
-    <div className={`relative grid place-items-center w-7 h-7 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm ${className}`}>
-        <span className="text-[13px] font-semibold leading-none">S</span>
+    <div className={`relative w-7 h-7 ${className}`}>
+        <img
+            src="/synchron-now-rows-xl.svg"
+            alt="Synchron logo"
+            className="block dark:hidden w-full h-full rounded-lg"
+        />
+        <img
+            src="/synchron-now-rows-xl-white.svg"
+            alt="Synchron logo"
+            className="hidden dark:block w-full h-full rounded-lg"
+        />
         <span className="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page" />
     </div>
 );
@@ -230,10 +239,10 @@ export const ModernTopbar = ({
             <div className="flex items-center gap-1.5">
                 <button
                     onClick={onOpenPalette}
-                    className="hidden sm:flex items-center gap-2 h-8 w-56 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
+                    className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
                 >
                     <Search size={14} />
-                    <span className="flex-1 text-left">Search</span>
+                    <span className="flex-1 text-left">Search or ask Sage</span>
                     <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
                 </button>
                 <span className="hidden lg:flex items-center gap-1.5 px-2 text-xs text-zinc-400" title={status.label}>
