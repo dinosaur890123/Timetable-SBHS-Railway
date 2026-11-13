@@ -7,7 +7,7 @@ const Section = ({ icon: Icon, title, children, action }) => (
         <div className="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
                 <Icon size={15} strokeWidth={1.8} className="shrink-0 text-accent" />
-                <h2 className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate">{title}</h2>
+                <h2 className="text-[13px] font-semibold text-zinc-900 dark:text-white">{title}</h2>
             </div>
             {action}
         </div>

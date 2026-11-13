@@ -200,7 +200,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         </Section>
       ) : (
         <Section icon={LinkIcon} title="Your classes">
-          <ul className="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] -mx-5 -my-4">
+          <ul className="divide-y divide-zinc-900/[0.16] dark:divide-white/[0.16] -mx-5 -my-4">
             {rows.map((row) => {
               // Use the canonical key (year+shortTitle) for all lookups and display.
               const canonicalKey = row.key;
@@ -292,7 +292,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                             onClick={() => setActiveSource('community')}
                             className={`flex-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                               activeSource === 'community'
-                                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                                ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300'
                                 : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                             }`}
                           >
@@ -303,7 +303,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                             onClick={() => setActiveSource('personal')}
                             className={`flex-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                               activeSource === 'personal'
-                                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
                                 : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                             }`}
                           >
@@ -315,7 +315,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                       {/* Community link */}
                       {shared && (activeSource === 'community' || !personal) && (
                         <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2 text-[12px] text-accent font-semibold">
+                          <div className="flex flex-wrap items-center gap-2 text-[12px] text-violet-600 dark:text-violet-400 font-semibold">
                             <Users size={12} />
                             Community link
                             {shared.duplicate && <DuplicateBadge />}
@@ -356,7 +356,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                       {/* Personal link */}
                       {personal && (activeSource === 'personal' || !shared) && (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-[12px] text-accent font-semibold">
+                          <div className="flex items-center gap-2 text-[12px] text-blue-600 dark:text-blue-400 font-semibold">
                             <Edit2 size={12} />
                             Your link
                           </div>
