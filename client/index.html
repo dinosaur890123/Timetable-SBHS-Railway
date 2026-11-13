@@ -30,10 +30,24 @@
          Fixed dark variant — favicons don't follow the site theme. -->
     <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-rows-dark-512.png">
     <script>
-      // Apply the saved favicon choice before first paint.
+      // Apply the saved favicon choice before first paint. 'default' keeps only the
+      // app icon link active; 'atom' disables it so the PNG set takes over.
+      // Original media attributes are preserved in dataset.favMedia for restore.
       try {
-        if (localStorage.getItem('favicon_type') === 'atom') {
-          document.getElementById('app-favicon')?.setAttribute('media', 'not all');
+        var atom = localStorage.getItem('favicon_type') === 'atom';
+        var appIcon = document.getElementById('app-favicon');
+        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"]').forEach(function (l) {
+          if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
+          if (atom) {
+            if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
+            else l.removeAttribute('media');
+          } else {
+            l.setAttribute('media', 'not all');
+          }
+        });
+        if (appIcon) {
+          if (atom) appIcon.setAttribute('media', 'not all');
+          else appIcon.removeAttribute('media');
         }
       } catch (e) {}
     </script>

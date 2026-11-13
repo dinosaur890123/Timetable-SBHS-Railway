@@ -679,17 +679,25 @@ function App() {
         savePreferences();
     }, [faviconType]);
 
-    // Favicon choice: 'default' is the new logo PNG; 'atom' disables that link so
-    // the PNG icon set in index.html takes over. Browsers cache favicons
-    // aggressively, so a reload is needed after switching.
+    // Favicon choice: 'default' keeps only the new-logo link active; 'atom'
+    // disables it so the PNG icon set in index.html takes over. Every other icon
+    // link is muted in default mode so no browser can pick a different favicon.
+    // Browsers cache favicons aggressively, so a reload is needed after switching.
     useEffect(() => {
-        const link = document.getElementById('app-favicon');
-        if (!link) return;
-        if (faviconType === 'atom') {
-            link.setAttribute('media', 'not all');
-        } else {
-            link.removeAttribute('media');
-        }
+        const appIcon = document.getElementById('app-favicon');
+        if (!appIcon) return;
+        const atom = faviconType === 'atom';
+        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"]').forEach(l => {
+            if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
+            if (atom) {
+                if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
+                else l.removeAttribute('media');
+            } else {
+                l.setAttribute('media', 'not all');
+            }
+        });
+        if (atom) appIcon.setAttribute('media', 'not all');
+        else appIcon.removeAttribute('media');
     }, [faviconType]);
 
     // Browsers cache favicons hard, so a change only fully applies after a reload.
