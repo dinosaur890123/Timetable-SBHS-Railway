@@ -89,21 +89,25 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
 
     // Check if the current day is a staff development day
-    const devDayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
-        item.title && /school development day/i.test(item.title)
-    );
+    const devDayEvent = calendarEvents && Array.isArray(calendarEvents)
+        ? calendarEvents.find(e => e?.info?.date === viewedKey)?.items?.find(item =>
+            item?.title && typeof item.title === 'string' && /school development day/i.test(item.title)
+        )
+        : null;
 
     // Check if the current day is a public holiday
-    const publicHolidayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
-        item.title && /public holiday/i.test(item.title)
-    );
+    const publicHolidayEvent = calendarEvents && Array.isArray(calendarEvents)
+        ? calendarEvents.find(e => e?.info?.date === viewedKey)?.items?.find(item =>
+            item?.title && typeof item.title === 'string' && /public holiday/i.test(item.title)
+        )
+        : null;
 
     // Check if it's a weekend
     const dow = getDay(viewedDate);
     const isWeekend = dow === 0 || dow === 6;
 
     // Check if it's a school holiday
-    const closure = closureLabel(viewedDate, terms, calendarEvents);
+    const closure = closureLabel(viewedDate, terms, calendarEvents || []);
     const isSchoolHoliday = closure === 'School holidays';
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 

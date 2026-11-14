@@ -1573,7 +1573,7 @@ function App() {
 
                                                                 const isSelected = isSameDay(date, viewDate);
                                                                 const isToday = isSameDay(date, new Date());
-                                                                const closure = closureLabel(date, pickerTerms, pickerCalendarEvents);
+                                                                const closure = closureLabel(date, pickerTerms, pickerCalendarEvents || []);
 
                                                                 return (
                                                                     <button

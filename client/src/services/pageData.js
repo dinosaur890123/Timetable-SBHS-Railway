@@ -66,17 +66,22 @@ export const closureLabel = (date, termsData, eventsData = null) => {
         const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
         if (named) return named;
         // Check calendar events for development day or public holiday mentions
-        if (eventsData) {
-            const dayGroup = eventsData.find(e => e.info?.date === key);
-            if (dayGroup?.items) {
-                const devDayEvent = dayGroup.items.find(item =>
-                    item.title && /school development day/i.test(item.title)
-                );
-                if (devDayEvent) return devDayEvent.title;
-                const publicHolidayEvent = dayGroup.items.find(item =>
-                    item.title && /public holiday/i.test(item.title)
-                );
-                if (publicHolidayEvent) return publicHolidayEvent.title;
+        if (eventsData && Array.isArray(eventsData)) {
+            try {
+                const dayGroup = eventsData.find(e => e?.info?.date === key);
+                if (dayGroup?.items && Array.isArray(dayGroup.items)) {
+                    const devDayEvent = dayGroup.items.find(item =>
+                        item?.title && typeof item.title === 'string' && /school development day/i.test(item.title)
+                    );
+                    if (devDayEvent) return devDayEvent.title;
+                    const publicHolidayEvent = dayGroup.items.find(item =>
+                        item?.title && typeof item.title === 'string' && /public holiday/i.test(item.title)
+                    );
+                    if (publicHolidayEvent) return publicHolidayEvent.title;
+                }
+            } catch (e) {
+                // Silently ignore errors in event parsing
+                console.warn('Error parsing calendar events:', e);
             }
         }
     }
