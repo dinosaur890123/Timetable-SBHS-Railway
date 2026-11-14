@@ -78,6 +78,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         return () => clearInterval(timer);
     }, []);
 
+    // Fetch terms data to check for school holidays - moved to top to avoid conditional hook calls
+    const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
+
     if (!timetableData) return <DaySkeleton />;
 
     // The day being looked at: the date asked for, else the one the timetable says it's for.
@@ -85,29 +88,22 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
     const viewedDate = date || new Date(`${viewedKey}T00:00`);
 
-    // Fetch terms data to check for school holidays
-    const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
-
     // Check if the current day is a staff development day
-    const devDayEvent = calendarEvents && Array.isArray(calendarEvents)
-        ? calendarEvents.find(e => e?.info?.date === viewedKey)?.items?.find(item =>
-            item?.title && typeof item.title === 'string' && /school development day/i.test(item.title)
-        )
-        : null;
+    const devDayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
+        item.title && /school development day/i.test(item.title)
+    );
 
     // Check if the current day is a public holiday
-    const publicHolidayEvent = calendarEvents && Array.isArray(calendarEvents)
-        ? calendarEvents.find(e => e?.info?.date === viewedKey)?.items?.find(item =>
-            item?.title && typeof item.title === 'string' && /public holiday/i.test(item.title)
-        )
-        : null;
+    const publicHolidayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
+        item.title && /public holiday/i.test(item.title)
+    );
 
     // Check if it's a weekend
     const dow = getDay(viewedDate);
     const isWeekend = dow === 0 || dow === 6;
 
     // Check if it's a school holiday
-    const closure = closureLabel(viewedDate, terms, calendarEvents || []);
+    const closure = closureLabel(viewedDate, terms, calendarEvents);
     const isSchoolHoliday = closure === 'School holidays';
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 

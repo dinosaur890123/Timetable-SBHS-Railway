@@ -230,7 +230,7 @@ const CalendarView = ({ user }) => {
   // School closures: named holidays, staff development days and days outside every
   // term, marked with a blue dot on the day.
   const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
-  const closureFor = (date) => closureLabel(date, terms, events || []);
+  const closureFor = (date) => closureLabel(date, terms, events);
 
   const goToMonth = (target) => {
     const dir = Math.sign(startOfMonth(target) - startOfMonth(currentDate));
