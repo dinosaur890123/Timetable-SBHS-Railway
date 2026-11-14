@@ -113,7 +113,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     // counts as none too, so Monday's classes never show up under Saturday.
     const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData.date || '') ? timetableData.date : viewedKey;
 
-    if (!bells || !innerTimetable?.periods || servedKey > viewedKey) {
+    // For daily view only: check if there are no classes
+    if (viewMode === 'daily' && (!bells || !innerTimetable?.periods || servedKey > viewedKey)) {
         // No classes, but Clipboard still runs: Saturday sport, Sunday rowing and so on.
         const nowKeyed = viewedKey < todayKey ? Infinity : viewedKey > todayKey ? -1 : minutesOf(currentTime);
         const daySessions = clipboardSessions
