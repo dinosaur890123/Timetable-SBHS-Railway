@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, LayoutGroup } from 'framer-motion';
 import { Check, Search, Trophy, Award, Medal, Sparkles, Shield, ChevronDown, X, Plus } from 'lucide-react';
 import { useCachedLoad } from '../utils/pageCache';
 import { summariseAwards, RECORD_KINDS } from '../utils/awardScheme';
@@ -50,6 +50,7 @@ const Bar = ({ value, max, tone = 'neutral', colour }) => {
         <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
             <div className={`h-full rounded-full ${colour ? '' : fill}`} style={{ width: `${pct}%`, ...(colour ? { backgroundColor: colour, opacity: 0.75 } : {}) }} />
         </div>
+        </LayoutGroup>
     );
 };
 
@@ -627,6 +628,7 @@ const PlanView = ({ summary }) => {
                 </p>
             </Card>
         </div>
+        </LayoutGroup>
     );
 };
 
@@ -670,6 +672,7 @@ const AwardSchemeView = ({ user }) => {
     }
 
     return (
+        <LayoutGroup id="awards">
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -704,6 +707,7 @@ const AwardSchemeView = ({ user }) => {
                 <PlanView summary={summary} />
             )}
         </div>
+        </LayoutGroup>
     );
 };
 
