@@ -1,7 +1,7 @@
 // What each page loads, as { key, load } pairs. The pages use them through useCachedLoad, and
 // prefetchPages loads them in the background after start-up, so a page usually opens on data that
 // is already there. Keys include the student, since the cache is saved on the device.
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, getDay, startOfMonth, endOfMonth } from 'date-fns';
 import {
     fetchCalendarEvents,
     fetchDateInfo,
@@ -49,16 +49,25 @@ const termSpans = (termsData) =>
         .sort((a, b) => a.start.localeCompare(b.start));
 
 // What a date is closed for, if anything: a named public holiday or staff development
-// day, or "School holidays" for any day outside every term's bounds. Days inside a
-// term — including non-teaching days and weekends — are open. No terms data means
-// nothing can be called closed.
+// day on a weekday, "School holidays" for any weekday outside every term's bounds, or
+// "School holidays" for any weekend outside every term's bounds (holiday weekends earn
+// a dot too). Weekends that fall inside a term are open - only school days can be
+// non-teaching inside term. No terms data means nothing can be called closed.
 export const closureLabel = (date, termsData) => {
+    const dow = getDay(date); // 0 = Sunday, 6 = Saturday
+    const isWeekend = dow === 0 || dow === 6;
     const key = format(date, 'yyyy-MM-dd');
-    const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
-    if (named) return named;
     const spans = termSpans(termsData);
+    const insideTerm = spans.length > 0 && spans.some(t => key >= t.start && key <= t.end);
+    // Weekends inside a term are never dotted - they're always non-teaching but expected.
+    if (isWeekend && insideTerm) return null;
+    // Named holidays and dev days earn a dot on weekdays.
+    if (!isWeekend) {
+        const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
+        if (named) return named;
+    }
     if (spans.length === 0) return null;
-    return spans.some(t => key >= t.start && key <= t.end) ? null : 'School holidays';
+    return insideTerm ? null : 'School holidays';
 };
 
 // --- Calendar ---
