@@ -50,7 +50,6 @@ const Bar = ({ value, max, tone = 'neutral', colour }) => {
         <div className="h-1.5 w-full rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
             <div className={`h-full rounded-full ${colour ? '' : fill}`} style={{ width: `${pct}%`, ...(colour ? { backgroundColor: colour, opacity: 0.75 } : {}) }} />
         </div>
-        </LayoutGroup>
     );
 };
 
@@ -628,7 +627,6 @@ const PlanView = ({ summary }) => {
                 </p>
             </Card>
         </div>
-        </LayoutGroup>
     );
 };
 
