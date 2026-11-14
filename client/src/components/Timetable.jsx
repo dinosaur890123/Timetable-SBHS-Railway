@@ -110,11 +110,13 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const { bells, timetable } = timetableData;
     const innerTimetable = timetable?.timetable || timetable;
     // Weekends and holidays have no bells or periods. A reply that has rolled on to a later school day
-    // counts as none too, so Monday's classes never show up under Saturday.
+    // counts as none too, so Monday's classes never show up under Saturday. So does one for an earlier
+    // day: SBHS answers a date too far ahead with the latest day it has, which isn't the day asked for.
     const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData.date || '') ? timetableData.date : viewedKey;
+    const notReleased = servedKey < viewedKey;
 
     // For daily view only: check if there are no classes
-    if (viewMode === 'daily' && (!bells || !innerTimetable?.periods || servedKey > viewedKey)) {
+    if (viewMode === 'daily' && (!bells || !innerTimetable?.periods || servedKey !== viewedKey)) {
         // No classes, but Clipboard still runs: Saturday sport, Sunday rowing and so on.
         const nowKeyed = viewedKey < todayKey ? Infinity : viewedKey > todayKey ? -1 : minutesOf(currentTime);
         const daySessions = clipboardSessions
@@ -180,6 +182,20 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     </div>
                 </motion.div>
             );
+        } else if (notReleased) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-zinc-50 dark:bg-zinc-900/40 border border-m-line rounded-2xl"
+                >
+                    <CalendarDays size={28} className="text-zinc-500 dark:text-zinc-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-zinc-900 dark:text-white">Timetable not out yet</p>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">The school hasn't published classes for {format(viewedDate, 'd MMMM')} yet</p>
+                    </div>
+                </motion.div>
+            );
         }
 
         return (
@@ -201,8 +217,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         );
     }
 
-    const { periods } = innerTimetable;
-    const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
+    // Cycle view gets here even when the day itself has nothing (or an error reply), so don't assume it.
+    const periods = innerTimetable?.periods || {};
+    const routine = innerTimetable?.routine ? innerTimetable.routine.split(',') : [];
     const classVariations = timetableData.classVariations || {};
     const roomVariations = timetableData.roomVariations || {};
     const daySubjects = timetable?.subjects;
@@ -326,7 +343,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const label = dayNums.map(n => weekLetter(cycleDays[n]?.dayname)).find(Boolean) || String.fromCharCode(65 + w);
             return { label, dayNums };
         });
-        const currentWeekLabel = weekLetter(innerTimetable?.dayname);
+        // The viewed day's week. On a weekend or holiday SBHS serves the next school day, so that week is
+        // the one coming up; a reply for an earlier day (date too far ahead) says nothing about it.
+        const currentWeekLabel = notReleased ? null : weekLetter(innerTimetable?.dayname);
+        const currentWeekBadge = servedKey > viewedKey ? 'Next up' : 'This week';
         const allDayNums = weeks.flatMap(w => w.dayNums);
 
         // Get all unique period slots across every day of the cycle, so rows line up between weeks
@@ -404,7 +424,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                 <div className="flex items-center gap-2 mb-2 px-1">
                                     <h3 className="text-[13px] font-semibold text-zinc-900 dark:text-white">Week {week.label}</h3>
                                     {isCurrentWeek && (
-                                        <span className="text-[10px] font-medium uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md bg-accent/10 text-accent">This week</span>
+                                        <span className="text-[10px] font-medium uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md bg-accent/10 text-accent">{currentWeekBadge}</span>
                                     )}
                                 </div>
                             )}
