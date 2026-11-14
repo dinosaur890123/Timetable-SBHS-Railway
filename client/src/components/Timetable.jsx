@@ -314,12 +314,25 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         // Handle different possible data structures
         const bells = completeTimetable.bells || timetableData?.bells || [];
         const timetableStructure = completeTimetable.timetable || completeTimetable;
+        const cycleDays = timetableStructure?.days || {};
 
-        // Get all unique period slots across all days
+        // The SBHS cycle runs over several weeks (usually A, B and C): days are keyed 1..15,
+        // 1 = Monday A, 6 = Monday B, 11 = Monday C. Count the weeks from the highest day present.
+        const dayNumbers = Object.keys(cycleDays).map(Number).filter(n => Number.isInteger(n) && n > 0);
+        const weekCount = Math.max(1, Math.ceil(Math.max(0, ...dayNumbers) / days.length));
+        const weekLetter = (name) => (name || '').trim().match(/([A-Z])$/)?.[1] || null;
+        const weeks = Array.from({ length: weekCount }, (_, w) => {
+            const dayNums = days.map((_, d) => w * days.length + d + 1);
+            const label = dayNums.map(n => weekLetter(cycleDays[n]?.dayname)).find(Boolean) || String.fromCharCode(65 + w);
+            return { label, dayNums };
+        });
+        const currentWeekLabel = weekLetter(innerTimetable?.dayname);
+        const allDayNums = weeks.flatMap(w => w.dayNums);
+
+        // Get all unique period slots across every day of the cycle, so rows line up between weeks
         const allPeriodSlots = new Set();
-        days.forEach((_, dayIndex) => {
-            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
-            const dayData = timetableStructure?.days?.[dayIndex + 1];
+        allDayNums.forEach(dayNum => {
+            const dayData = cycleDays[dayNum];
             if (dayData?.routine) {
                 dayData.routine.split(',').forEach(bellId => {
                     const bell = bells.find(b => b.bell === bellId);
@@ -327,6 +340,16 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 });
             }
         });
+
+        // A period's class on a cycle day, or null for breaks, roll call and free periods
+        const classPeriod = (dayNum, bellId) => {
+            const periodInfo = cycleDays[dayNum]?.periods?.[bellId];
+            if (!periodInfo) return null;
+            if (isBreakBell(bellId, periodInfo)) return null;
+            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return null;
+            if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return null;
+            return periodInfo;
+        };
         
         const periodSlots = Array.from(allPeriodSlots).sort((a, b) => {
             const bellA = bells.find(bell => bell.bell === a);
@@ -337,43 +360,14 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             // The cycle grid shows teaching periods only; breaks don't earn a row.
             const bell = bells.find(b => b.bell === bellId);
             if (isBreakBell(bellId, { title: bell?.bellDisplay })) return false;
-
-            // Check if this period has at least one class across all days
-            const hasAnyClass = days.some((_, dayIndex) => {
-                const dayData = timetableStructure?.days?.[dayIndex + 1];
-                if (!dayData) return false;
-                
-                const periods = dayData.periods || {};
-                const periodInfo = periods[bellId];
-                
-                // No period info at all
-                if (!periodInfo) return false;
-                
-                // Filter out breaks, roll call, and free periods
-                if (isBreakBell(bellId, periodInfo)) return false;
-                if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return false;
-                if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return false;
-                
-                return true;
-            });
-            
-            return hasAnyClass;
+            // Keep the period if it has at least one class anywhere in the cycle
+            return allDayNums.some(dayNum => classPeriod(dayNum, bellId));
         });
 
-        // Get class info for a specific day and period
-        const getClassInfo = (dayIndex, bellId) => {
-            // SBHS API uses 1-based indexing for days (1=Monday, 2=Tuesday, etc.)
-            const dayData = timetableStructure?.days?.[dayIndex + 1];
-            if (!dayData) return null;
-            
-            const periods = dayData.periods || {};
-            let periodInfo = periods[bellId] || null;
-            
-            // Filter out breaks, roll call, and free periods
+        // Get class info for a specific cycle day and period
+        const getClassInfo = (dayNum, bellId) => {
+            const periodInfo = classPeriod(dayNum, bellId);
             if (!periodInfo) return null;
-            if (isBreakBell(bellId, periodInfo)) return null;
-            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return null;
-            if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return null;
             
             const bell = bells.find(b => b.bell === bellId);
             const isSelected = selectedClass && periodInfo.title === selectedClass;
@@ -401,54 +395,69 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         }
 
         return (
-            <div className="rounded-2xl border border-m-line bg-m-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-m-panel border-b border-m-line">
-                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-14 sm:w-24">Period</th>
-                                {days.map(day => (
-                                    <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
-                                        {day.slice(0, 3)}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {periodSlots.map(bellId => {
-                                const bell = bells.find(b => b.bell === bellId);
-                                if (!bell) return null;
+            <div className="flex flex-col gap-6">
+                {weeks.map(week => {
+                    const isCurrentWeek = weeks.length > 1 && currentWeekLabel === week.label;
+                    return (
+                        <section key={week.label} aria-label={`Week ${week.label}`}>
+                            {weeks.length > 1 && (
+                                <div className="flex items-center gap-2 mb-2 px-1">
+                                    <h3 className="text-[13px] font-semibold text-zinc-900 dark:text-white">Week {week.label}</h3>
+                                    {isCurrentWeek && (
+                                        <span className="text-[10px] font-medium uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md bg-accent/10 text-accent">This week</span>
+                                    )}
+                                </div>
+                            )}
+                            <div className={`rounded-2xl border bg-m-card overflow-hidden ${isCurrentWeek ? 'border-accent/40' : 'border-m-line'}`}>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="bg-m-panel border-b border-m-line">
+                                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-14 sm:w-24">Period</th>
+                                                {days.map(day => (
+                                                    <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
+                                                        {day.slice(0, 3)}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {periodSlots.map(bellId => {
+                                                const bell = bells.find(b => b.bell === bellId);
+                                                if (!bell) return null;
 
-                                return (
-                                    <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                        <td className="px-2 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                                            {bell.bellDisplay}
-                                        </td>
-                                        {days.map((_, dayIndex) => {
-                                            const classInfo = getClassInfo(dayIndex, bellId);
-                                            
-                                            if (!classInfo) {
                                                 return (
-                                                    <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                        <div className="min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
-                                                    </td>
-                                                );
-                                            }
-                                            
-                                            const cell = <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />;
+                                                    <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
+                                                        <td className="px-2 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                                            {bell.bellDisplay}
+                                                        </td>
+                                                        {week.dayNums.map(dayNum => {
+                                                            const classInfo = getClassInfo(dayNum, bellId);
+                                                            
+                                                            if (!classInfo) {
+                                                                return (
+                                                                    <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                                        <div className="min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
+                                                                    </td>
+                                                                );
+                                                            }
 
-                                            return (
-                                                <td key={dayIndex} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                    {cell}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                                            return (
+                                                                <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                                    <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </section>
+                    );
+                })}
             </div>
         );
     };
