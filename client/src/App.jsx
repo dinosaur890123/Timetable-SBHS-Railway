@@ -1086,6 +1086,14 @@ function App() {
         const dateKey = format(viewDate, 'yyyy-MM-dd');
         viewedDayKey.current = dateKey;
 
+        // Show cached data immediately if available
+        const cachedData = peekDayTimetable(viewDate);
+        if (cachedData) {
+            setTimetable(cachedData);
+            setTimetableKey(dateKey);
+        }
+
+        // Then fetch fresh data (will use cache if fresh enough, otherwise fetch from API)
         fetchDayTimetable(viewDate)
             .then(data => {
                 if (viewedDayKey.current !== dateKey) return;
@@ -1099,14 +1107,14 @@ function App() {
     }, [viewDate, user]);
 
     // Warm the week around the day on screen, so the arrows rarely have to wait. Days already
-    // fetched (or on their way) aren't asked for again.
+    // fetched (or on their way) aren't asked for again. Reduced from 9 to 5 days to avoid API overload.
     useEffect(() => {
         if (!isAuthenticated()) return;
         const timer = setTimeout(() => {
-            [1, -1, 2, -2, 3, 4, 5, 6, 7].forEach(offset => {
+            [1, -1, 2, -2, 3].forEach(offset => {
                 fetchDayTimetable(addDays(viewDate, offset)).catch(() => {});
             });
-        }, 120);
+        }, 200); // Increased delay to avoid competing with current day fetch
         return () => clearTimeout(timer);
     }, [viewDate, user]);
 
@@ -1123,16 +1131,22 @@ function App() {
     }, [user]);
 
     // Fetch calendar events for the current view date to check for development days
+    const viewMonthKey = format(viewDate, 'yyyy-MM');
+    const [loadedMonthKey, setLoadedMonthKey] = useState(null);
+
     useEffect(() => {
         if (!isAuthenticated()) return;
+        // Only fetch when the month changes, not on every day change
+        if (loadedMonthKey === viewMonthKey) return;
 
         const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
         const monthEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
 
+        setLoadedMonthKey(viewMonthKey);
         fetchCalendarEvents(monthStart, monthEnd)
             .then(data => setCalendarEvents(data || []))
             .catch(err => console.error("Failed to fetch calendar events", err));
-    }, [viewDate, user]);
+    }, [viewMonthKey, viewDate, user, loadedMonthKey]);
 
     // Fetch AI Briefing in background once notices are loaded
     useEffect(() => {
