@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { subjectInk } from '../utils/timetable';
+import { isLinklessTitle } from '../utils/canvasLinks';
 import { TeacherTreat } from './TeacherTreat';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
@@ -47,7 +48,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const hasCanvasLink = canvasLink && title && title !== 'Free Period';
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
-    const shouldShowCanvasTooltip = !hasCanvasLink && title && title !== 'Free Period' && !title.toLowerCase().includes('sport') && !title.startsWith('SP');
+    const shouldShowCanvasTooltip = !hasCanvasLink && title && title !== 'Free Period' && !isLinklessTitle(title);
 
     React.useEffect(() => {
         return () => {

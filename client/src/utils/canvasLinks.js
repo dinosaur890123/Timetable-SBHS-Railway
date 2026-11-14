@@ -45,17 +45,17 @@ export const parseLinkInput = (raw, canvasHost = DEFAULT_CANVAS_HOST) => {
     return { url: url.toString(), isCourseLink: isCanvasCourse || isWellio };
 };
 
-// Sport blocks ("SP9", "Sport 9", "Sports 6") have no course page, so they
-// never get a link field.
-const isSportTitle = (title) => {
+// Sport blocks ("SP9", "Sport 9", "Sports 6") and Scripture have no course
+// page, so they never get a link field.
+export const isLinklessTitle = (title) => {
     const t = title.toLowerCase();
-    return t.includes('sport') || /^sp[\s-]?\d/.test(t);
+    return t.includes('sport') || /^sp[\s-]?\d/.test(t) || t.includes('scripture');
 };
 
 const isClassPeriod = (period) => period?.title
     && period.title !== 'Free Period'
     && !period.title.toLowerCase().includes('roll call')
-    && !isSportTitle(period.title);
+    && !isLinklessTitle(period.title);
 
 // Every class in the student's timetable, as a Map of class key -> a period of it.
 // Prefers the full cycle; falls back to the day's timetable.

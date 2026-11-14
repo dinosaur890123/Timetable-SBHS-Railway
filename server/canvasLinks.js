@@ -163,10 +163,10 @@ const withoutYear = (title, year) => {
     return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
 };
 
-// Sport blocks ("SP9", "Sport 9") have no course page.
-const isSportTitle = (title) => {
+// Sport blocks ("SP9", "Sport 9") and Scripture have no course page.
+const isLinklessTitle = (title) => {
     const t = String(title || '').toLowerCase();
-    return t.includes('sport') || /^sp[\s-]?\d/.test(t);
+    return t.includes('sport') || /^sp[\s-]?\d/.test(t) || t.includes('scripture');
 };
 
 // The student's classes from SBHS's timetable.json, keyed by year + short title.
@@ -175,7 +175,7 @@ const extractClasses = (data) => {
     const classes = new Map();
     const add = (year, title, name) => {
         const shortTitle = String(title ?? '').trim();
-        if (!shortTitle || isSportTitle(shortTitle)) return;
+        if (!shortTitle || isLinklessTitle(shortTitle)) return;
         const key = `${year ?? ''}${shortTitle}`;
         if (!isClassKey(key)) return;
         if (classes.has(key)) return;
