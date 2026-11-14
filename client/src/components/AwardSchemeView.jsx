@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from 'react';
-import { motion, LayoutGroup } from 'framer-motion';
+import React, { useMemo, useState, useRef, useLayoutEffect } from 'react';
 import { Check, Search, Trophy, Award, Medal, Sparkles, Shield, ChevronDown, X, Plus } from 'lucide-react';
 import { useCachedLoad } from '../utils/pageCache';
 import { summariseAwards, RECORD_KINDS } from '../utils/awardScheme';
@@ -53,32 +52,57 @@ const Bar = ({ value, max, tone = 'neutral', colour }) => {
     );
 };
 
-const Segmented = ({ value, onChange }) => (
-    <div role="tablist" aria-label="Awards" className="inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
-        {VIEWS.map(view => {
-            const active = view.id === value;
-            return (
-                <button
-                    key={view.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => onChange(view.id)}
-                    className={`relative px-3 h-8 rounded-md text-[13px] font-medium transition-colors ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
-                >
-                    {active && (
-                        <motion.span
-                            layoutId="awards-mode"
-                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                            className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
-                        />
-                    )}
-                    <span className="relative">{view.label}</span>
-                </button>
-            );
-        })}
-    </div>
-);
+const Segmented = ({ value, onChange }) => {
+    const tabsRef = useRef({});
+    const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
+
+    useLayoutEffect(() => {
+        const updatePill = () => {
+            const el = tabsRef.current[value];
+            if (el) {
+                setPill({
+                    left: el.offsetLeft,
+                    width: el.offsetWidth,
+                    ready: true
+                });
+            }
+        };
+        updatePill();
+        window.addEventListener('resize', updatePill);
+        return () => window.removeEventListener('resize', updatePill);
+    }, [value]);
+
+    return (
+        <div role="tablist" aria-label="Awards" className="relative inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
+            {pill.ready && (
+                <span
+                    aria-hidden="true"
+                    className="absolute top-0.5 bottom-0.5 rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    style={{
+                        left: `${pill.left}px`,
+                        width: `${pill.width}px`
+                    }}
+                />
+            )}
+            {VIEWS.map(view => {
+                const active = view.id === value;
+                return (
+                    <button
+                        key={view.id}
+                        ref={el => { if (el) tabsRef.current[view.id] = el; }}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => onChange(view.id)}
+                        className={`relative z-10 px-3 h-8 rounded-md text-[13px] font-medium transition-colors ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+                    >
+                        {view.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
 
 // --- My progress -----------------------------------------------------------
 
@@ -243,6 +267,61 @@ const NominationsCard = ({ summary }) => {
 const KIND_ICONS = { award: Award, nomination: Sparkles, badge: Shield, decoration: Medal, prize: Trophy };
 const KIND_LABELS = { nomination: 'Nomination', badge: 'Badge', decoration: 'Presentation night', prize: 'Prize' };
 
+const YearTabs = ({ yearFilters, activeYear, onSelectYear }) => {
+    const tabsRef = useRef({});
+    const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
+
+    useLayoutEffect(() => {
+        const updatePill = () => {
+            const el = tabsRef.current[activeYear];
+            if (el) {
+                setPill({
+                    left: el.offsetLeft,
+                    width: el.offsetWidth,
+                    ready: true
+                });
+            }
+        };
+        updatePill();
+        window.addEventListener('resize', updatePill);
+        return () => window.removeEventListener('resize', updatePill);
+    }, [activeYear]);
+
+    return (
+        <div className="relative -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {pill.ready && (
+                <span
+                    aria-hidden="true"
+                    className="absolute top-0 bottom-1 rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    style={{
+                        left: `${pill.left}px`,
+                        width: `${pill.width}px`
+                    }}
+                />
+            )}
+            {yearFilters.map(f => {
+                const active = activeYear === Number(f.id);
+                return (
+                    <button
+                        key={f.id}
+                        ref={el => { if (el) tabsRef.current[Number(f.id)] = el; }}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => onSelectYear(Number(f.id))}
+                        className={`relative z-10 px-2.5 h-7 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors ${
+                            active
+                                ? 'text-zinc-900 dark:text-white'
+                                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                        }`}
+                    >
+                        <span>{f.label} <span className="ml-0.5 tabular-nums text-zinc-400">{f.count}</span></span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+};
+
 const RecordCard = ({ summary }) => {
     const { timeline } = summary;
     const [selectedYear, setSelectedYear] = useState(null);
@@ -283,30 +362,12 @@ const RecordCard = ({ summary }) => {
             <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>My record</CardTitle>
 
             {yearFilters.length > 1 && (
-                <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                    {yearFilters.map(f => (
-                        <button
-                            key={f.id}
-                            type="button"
-                            aria-pressed={activeYear === Number(f.id)}
-                            onClick={() => { setSelectedYear(Number(f.id)); setExpanded(false); }}
-                            className={`relative px-2.5 h-7 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors ${activeYear === Number(f.id)
-                                ? 'text-zinc-900 dark:text-white'
-                                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
-                        >
-                            {activeYear === Number(f.id) && (
-                                <motion.span
-                                    layoutId="awards-year"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                    className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
-                                />
-                            )}
-                            <span className="relative">{f.label} <span className="ml-0.5 tabular-nums text-zinc-400">{f.count}</span></span>
-                        </button>
-                    ))}
-                </div>
+                <YearTabs
+                    yearFilters={yearFilters}
+                    activeYear={activeYear}
+                    onSelectYear={(year) => { setSelectedYear(year); setExpanded(false); }}
+                />
             )}
-
             {shown.length === 0 ? (
                 <Empty>No point awards this year yet.</Empty>
             ) : (
@@ -670,7 +731,6 @@ const AwardSchemeView = ({ user }) => {
     }
 
     return (
-        <LayoutGroup id="awards">
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -705,7 +765,6 @@ const AwardSchemeView = ({ user }) => {
                 <PlanView summary={summary} />
             )}
         </div>
-        </LayoutGroup>
     );
 };
 
