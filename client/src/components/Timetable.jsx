@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CalendarDays, AlertCircle } from 'lucide-react';
+import { CalendarDays, AlertCircle, Coffee, Umbrella, Calendar } from 'lucide-react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
+import { termsPage, closureLabel } from '../services/pageData';
+import { useCachedLoad } from '../utils/pageCache';
 
 // A Clipboard session in the day: one line at its start time, dimmed once it's over like a break.
 const SessionRow = ({ session, isPast, index, onOpen }) => (
@@ -81,11 +83,28 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     // The day being looked at: the date asked for, else the one the timetable says it's for.
     const todayKey = format(currentTime, 'yyyy-MM-dd');
     const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
+    const viewedDate = date || new Date(`${viewedKey}T00:00`);
+
+    // Fetch terms data to check for school holidays
+    const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
 
     // Check if the current day is a staff development day
     const devDayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
         item.title && /school development day/i.test(item.title)
     );
+
+    // Check if the current day is a public holiday
+    const publicHolidayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
+        item.title && /public holiday/i.test(item.title)
+    );
+
+    // Check if it's a weekend
+    const dow = getDay(viewedDate);
+    const isWeekend = dow === 0 || dow === 6;
+
+    // Check if it's a school holiday
+    const closure = closureLabel(viewedDate, terms, calendarEvents);
+    const isSchoolHoliday = closure === 'School holidays';
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 
     const { bells, timetable } = timetableData;
@@ -101,12 +120,74 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             .filter(s => dayKeyOf(s) === viewedKey)
             .sort((a, b) => startOf(a) - startOf(b))
             .map(s => ({ session: s, isPast: nowKeyed >= minutesOf(endOf(s) || startOf(s)) }));
-        const dayLabel = viewedKey === todayKey ? 'today' : `on ${format(date || new Date(`${viewedKey}T00:00`), 'EEEE')}`;
+
+        // Determine the appropriate notice message
+        let notice = null;
+        if (devDayEvent) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl"
+                >
+                    <AlertCircle size={28} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">No classes on {format(viewedDate, 'd MMMM')}</p>
+                    </div>
+                </motion.div>
+            );
+        } else if (publicHolidayEvent) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-2xl"
+                >
+                    <Calendar size={28} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-purple-900 dark:text-purple-100">{publicHolidayEvent.title}</p>
+                        <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">No classes on {format(viewedDate, 'd MMMM')}</p>
+                    </div>
+                </motion.div>
+            );
+        } else if (isWeekend) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl"
+                >
+                    <Coffee size={28} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">Weekend</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">Enjoy your weekend!</p>
+                    </div>
+                </motion.div>
+            );
+        } else if (isSchoolHoliday) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-2xl"
+                >
+                    <Umbrella size={28} className="text-green-600 dark:text-green-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-green-900 dark:text-green-100">School holidays</p>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">Enjoy your holidays!</p>
+                    </div>
+                </motion.div>
+            );
+        }
+
         return (
             <MotionConfig reducedMotion="user">
-                <p className={`text-center text-sm text-zinc-400 dark:text-zinc-500 ${daySessions.length ? 'pt-2 pb-4' : 'py-10'}`}>
-                    No classes {dayLabel}
-                </p>
+                {daySessions.length === 0 && notice && (
+                    <div className="pb-10">
+                        {notice}
+                    </div>
+                )}
                 {daySessions.length > 0 && (
                     <ol className="-mx-3 space-y-0.5">
                         {daySessions.map(({ session, isPast }, i) => (
@@ -399,7 +480,46 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">No classes today</p>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
+                    </div>
+                </motion.div>
+            )}
+            {publicHolidayEvent && !devDayEvent && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 px-4 py-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl"
+                >
+                    <Calendar size={18} className="text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-purple-900 dark:text-purple-100">{publicHolidayEvent.title}</p>
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
+                    </div>
+                </motion.div>
+            )}
+            {isWeekend && !devDayEvent && !publicHolidayEvent && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl"
+                >
+                    <Coffee size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Weekend</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Enjoy your weekend!</p>
+                    </div>
+                </motion.div>
+            )}
+            {isSchoolHoliday && !devDayEvent && !publicHolidayEvent && !isWeekend && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 px-4 py-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-xl"
+                >
+                    <Umbrella size={18} className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">School holidays</p>
+                        <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">Enjoy your holidays!</p>
                     </div>
                 </motion.div>
             )}

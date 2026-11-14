@@ -65,7 +65,7 @@ export const closureLabel = (date, termsData, eventsData = null) => {
     if (!isWeekend) {
         const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
         if (named) return named;
-        // Check calendar events for development day mentions
+        // Check calendar events for development day or public holiday mentions
         if (eventsData) {
             const dayGroup = eventsData.find(e => e.info?.date === key);
             if (dayGroup?.items) {
@@ -73,6 +73,10 @@ export const closureLabel = (date, termsData, eventsData = null) => {
                     item.title && /school development day/i.test(item.title)
                 );
                 if (devDayEvent) return devDayEvent.title;
+                const publicHolidayEvent = dayGroup.items.find(item =>
+                    item.title && /public holiday/i.test(item.title)
+                );
+                if (publicHolidayEvent) return publicHolidayEvent.title;
             }
         }
     }
