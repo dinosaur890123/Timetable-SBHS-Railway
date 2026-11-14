@@ -376,6 +376,19 @@ function App() {
     // School closures: a blue dot marks holidays, staff development days and days
     // outside every term, with the name as a tooltip.
     const { data: pickerTerms } = useCachedLoad(user ? termsPage().key : null, termsPage().load);
+    const [pickerCalendarEvents, setPickerCalendarEvents] = useState([]);
+
+    // Fetch calendar events for the date picker's month
+    useEffect(() => {
+        if (!user || !showDatePicker) return;
+
+        const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+        const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+
+        fetchCalendarEvents(monthStart, monthEnd)
+            .then(data => setPickerCalendarEvents(data || []))
+            .catch(err => console.error("Failed to fetch calendar events for picker", err));
+    }, [calendarMonth, showDatePicker, user]);
 
     const handleDateSelect = (date) => {
         setViewDate(date);
@@ -1557,11 +1570,11 @@ function App() {
                                                                 if (!date) {
                                                                     return <div key={idx} className="aspect-square" />;
                                                                 }
-                                                            
+
                                                                 const isSelected = isSameDay(date, viewDate);
                                                                 const isToday = isSameDay(date, new Date());
-                                                                const closure = closureLabel(date, pickerTerms);
-                                                            
+                                                                const closure = closureLabel(date, pickerTerms, pickerCalendarEvents);
+
                                                                 return (
                                                                     <button
                                                                         key={idx}
