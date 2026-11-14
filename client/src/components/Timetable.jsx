@@ -121,23 +121,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             .sort((a, b) => startOf(a) - startOf(b))
             .map(s => ({ session: s, isPast: nowKeyed >= minutesOf(endOf(s) || startOf(s)) }));
 
-        // Determine the appropriate notice message
+        // Determine the appropriate notice message - priority: public holiday > dev day > school holidays > weekend
         let notice = null;
-        if (devDayEvent) {
-            notice = (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-center gap-4 px-6 py-6 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl"
-                >
-                    <AlertCircle size={28} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                    <div className="flex-1 min-w-0 text-center">
-                        <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">No classes on {format(viewedDate, 'd MMMM')}</p>
-                    </div>
-                </motion.div>
-            );
-        } else if (publicHolidayEvent) {
+        if (publicHolidayEvent) {
             notice = (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -151,17 +137,17 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     </div>
                 </motion.div>
             );
-        } else if (isWeekend) {
+        } else if (devDayEvent) {
             notice = (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-center gap-4 px-6 py-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl"
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-2xl"
                 >
-                    <Coffee size={28} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <AlertCircle size={28} className="text-blue-600 dark:text-blue-400 shrink-0" />
                     <div className="flex-1 min-w-0 text-center">
-                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">Weekend</p>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">Enjoy your weekend!</p>
+                        <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">No classes on {format(viewedDate, 'd MMMM')}</p>
                     </div>
                 </motion.div>
             );
@@ -179,11 +165,25 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                     </div>
                 </motion.div>
             );
+        } else if (isWeekend) {
+            notice = (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-4 px-6 py-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl"
+                >
+                    <Coffee size={28} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div className="flex-1 min-w-0 text-center">
+                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">Weekend</p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">Enjoy your weekend!</p>
+                    </div>
+                </motion.div>
+            );
         }
 
         return (
             <MotionConfig reducedMotion="user">
-                {daySessions.length === 0 && notice && (
+                {viewMode === 'daily' && daySessions.length === 0 && notice && (
                     <div className="pb-10">
                         {notice}
                     </div>
@@ -471,57 +471,61 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     return (
         <MotionConfig reducedMotion="user">
         <div className="flex flex-col gap-3 w-full">
-            {devDayEvent && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl"
-                >
-                    <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
-                    </div>
-                </motion.div>
-            )}
-            {publicHolidayEvent && !devDayEvent && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-4 py-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl"
-                >
-                    <Calendar size={18} className="text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-purple-900 dark:text-purple-100">{publicHolidayEvent.title}</p>
-                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
-                    </div>
-                </motion.div>
-            )}
-            {isWeekend && !devDayEvent && !publicHolidayEvent && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl"
-                >
-                    <Coffee size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Weekend</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Enjoy your weekend!</p>
-                    </div>
-                </motion.div>
-            )}
-            {isSchoolHoliday && !devDayEvent && !publicHolidayEvent && !isWeekend && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-4 py-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-xl"
-                >
-                    <Umbrella size={18} className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-green-900 dark:text-green-100">School holidays</p>
-                        <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">Enjoy your holidays!</p>
-                    </div>
-                </motion.div>
+            {viewMode === 'daily' && (
+                <>
+                    {publicHolidayEvent && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-start gap-3 px-4 py-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl"
+                        >
+                            <Calendar size={18} className="text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">{publicHolidayEvent.title}</p>
+                                <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
+                            </div>
+                        </motion.div>
+                    )}
+                    {devDayEvent && !publicHolidayEvent && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-start gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl"
+                        >
+                            <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
+                                <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
+                            </div>
+                        </motion.div>
+                    )}
+                    {isSchoolHoliday && !publicHolidayEvent && !devDayEvent && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-start gap-3 px-4 py-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-xl"
+                        >
+                            <Umbrella size={18} className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-green-900 dark:text-green-100">School holidays</p>
+                                <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">Enjoy your holidays!</p>
+                            </div>
+                        </motion.div>
+                    )}
+                    {isWeekend && !publicHolidayEvent && !devDayEvent && !isSchoolHoliday && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-start gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl"
+                        >
+                            <Coffee size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Weekend</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Enjoy your weekend!</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </>
             )}
             {viewMode === 'daily' ? (
                 <>
