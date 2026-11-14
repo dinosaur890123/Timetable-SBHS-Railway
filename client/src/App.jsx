@@ -110,7 +110,8 @@ import {
     fetchStudentClipboardSessions,
     fetchNextSchoolDay,
     peekNextSchoolDay,
-    onCachedDataChange
+    onCachedDataChange,
+    fetchCalendarEvents
 } from './services/api';
 import { prefetchPages, calendarPage, termsPage, closureLabel } from './services/pageData';
 import { useCachedLoad } from './utils/pageCache';
@@ -179,6 +180,7 @@ function App() {
             return [];
         }
     });
+    const [calendarEvents, setCalendarEvents] = useState([]);
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1107,6 +1109,18 @@ function App() {
             .catch(err => console.error("Failed to fetch rail timetable", err));
     }, [user]);
 
+    // Fetch calendar events for the current view date to check for development days
+    useEffect(() => {
+        if (!isAuthenticated()) return;
+
+        const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+        const monthEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
+
+        fetchCalendarEvents(monthStart, monthEnd)
+            .then(data => setCalendarEvents(data || []))
+            .catch(err => console.error("Failed to fetch calendar events", err));
+    }, [viewDate, user]);
+
     // Fetch AI Briefing in background once notices are loaded
     useEffect(() => {
         if (aiDisabled || aiBlocked || !user || !notices || !notices.notices || notices.notices.length === 0) return;
@@ -1583,6 +1597,7 @@ function App() {
                                         viewMode={timetableViewMode}
                                         clipboardSessions={showClipboardEvents ? clipboardSessions : []}
                                         date={viewDate}
+                                        calendarEvents={calendarEvents}
                                     />
                                 </Home>
                             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, AlertCircle } from 'lucide-react';
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -61,7 +61,7 @@ const DaySkeleton = () => (
     </ol>
 );
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date }) => {
+const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [] }) => {
     const { getLink } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
@@ -81,6 +81,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     // The day being looked at: the date asked for, else the one the timetable says it's for.
     const todayKey = format(currentTime, 'yyyy-MM-dd');
     const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
+
+    // Check if the current day is a staff development day
+    const devDayEvent = calendarEvents.find(e => e.info?.date === viewedKey)?.items?.find(item =>
+        item.title && /school development day/i.test(item.title)
+    );
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 
     const { bells, timetable } = timetableData;
@@ -385,6 +390,19 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     return (
         <MotionConfig reducedMotion="user">
         <div className="flex flex-col gap-3 w-full">
+            {devDayEvent && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl"
+                >
+                    <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{devDayEvent.title}</p>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">No classes today</p>
+                    </div>
+                </motion.div>
+            )}
             {viewMode === 'daily' ? (
                 <>
                 <ol className="-mx-3 space-y-0.5">

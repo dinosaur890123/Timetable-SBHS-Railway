@@ -53,7 +53,7 @@ const termSpans = (termsData) =>
 // "School holidays" for any weekend outside every term's bounds (holiday weekends earn
 // a dot too). Weekends that fall inside a term are open - only school days can be
 // non-teaching inside term. No terms data means nothing can be called closed.
-export const closureLabel = (date, termsData) => {
+export const closureLabel = (date, termsData, eventsData = null) => {
     const dow = getDay(date); // 0 = Sunday, 6 = Saturday
     const isWeekend = dow === 0 || dow === 6;
     const key = format(date, 'yyyy-MM-dd');
@@ -65,6 +65,16 @@ export const closureLabel = (date, termsData) => {
     if (!isWeekend) {
         const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
         if (named) return named;
+        // Check calendar events for development day mentions
+        if (eventsData) {
+            const dayGroup = eventsData.find(e => e.info?.date === key);
+            if (dayGroup?.items) {
+                const devDayEvent = dayGroup.items.find(item =>
+                    item.title && /school development day/i.test(item.title)
+                );
+                if (devDayEvent) return devDayEvent.title;
+            }
+        }
     }
     if (spans.length === 0) return null;
     return insideTerm ? null : 'School holidays';
