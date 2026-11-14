@@ -413,7 +413,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                     <table className="w-full">
                                         <thead>
                                             <tr className="bg-m-panel border-b border-m-line">
-                                                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em] w-14 sm:w-24">Period</th>
                                                 {days.map(day => (
                                                     <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
                                                         {day.slice(0, 3)}
@@ -428,9 +427,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
                                                 return (
                                                     <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                                        <td className="px-2 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                                                            {bell.bellDisplay}
-                                                        </td>
                                                         {week.dayNums.map(dayNum => {
                                                             const classInfo = getClassInfo(dayNum, bellId);
                                                             
