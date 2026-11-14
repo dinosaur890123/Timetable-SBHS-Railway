@@ -192,10 +192,30 @@ export const summariseAwards = ({
     issued.forEach(item => {
         if (item.nomination) earnedNominations.set(item.nomination.id, item);
     });
+
+    // Improved matching: try by id first, then by name+group+points, then by name alone
     const nominationLadder = nominations
         .map(n => {
             const points = n.fromGroup == null ? totalPoints : (groupPoints.get(n.fromGroup) || 0);
-            const earnedItem = earnedNominations.get(n.id);
+            let earnedItem = earnedNominations.get(n.id);
+
+            // Fallback: match by name + fromGroup + pointsRequired if id doesn't match
+            if (!earnedItem) {
+                earnedItem = issued.find(item =>
+                    item.nomination &&
+                    item.nomination.name === n.name &&
+                    item.nomination.fromGroup === n.fromGroup &&
+                    item.nomination.pointsRequired === n.pointsRequired
+                );
+            }
+
+            // Final fallback: match by name alone
+            if (!earnedItem) {
+                earnedItem = issued.find(item =>
+                    item.nomination && item.nomination.name === n.name
+                );
+            }
+
             const state = earnedItem ? 'earned' : points >= n.pointsRequired ? 'reached' : 'progress';
             return {
                 ...n,
