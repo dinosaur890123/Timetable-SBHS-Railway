@@ -557,7 +557,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                         <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={i} onOpen={setOpenSession} />
                     ) : (
                         <PeriodCard
-                            key={`${data.bellId}-${data.index}`}
+                            key={`${viewedKey}-${data.bellId}-${data.index}`}
                             period={data.periodInfo}
                             bell={data.bell}
                             label={data.label}

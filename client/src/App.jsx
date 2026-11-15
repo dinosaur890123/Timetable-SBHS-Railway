@@ -1496,7 +1496,7 @@ function App() {
                     onTouchStart={onDayTouchStart}
                     onTouchEnd={onDayTouchEnd}
                 >
-                        <ErrorBoundary resetKey={currentView}>
+                        <ErrorBoundary resetKey={`${currentView}-${viewKey}`}>
                         {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
                             transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap.
                             Suspense sits inside the keyed div: a lazy page suspends on its own, so AnimatePresence

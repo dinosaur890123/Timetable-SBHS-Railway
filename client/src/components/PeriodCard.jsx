@@ -26,6 +26,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     const [showTooltip, setShowTooltip] = React.useState(false);
     const tooltipTimeoutRef = React.useRef(null);
 
+    React.useEffect(() => {
+        return () => {
+            if (tooltipTimeoutRef.current) {
+                clearTimeout(tooltipTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const isActuallyRealBreak = isRealBreak ?? isBreakBell(bell?.bell, period);
 
     if (isBreak) {
@@ -60,14 +68,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     const hasCanvasLink = linksEnabled && canvasLink && title && title !== 'Free Period';
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
     const shouldShowCanvasTooltip = linksEnabled && !hasCanvasLink && title && title !== 'Free Period' && !isLinklessTitle(title);
-
-    React.useEffect(() => {
-        return () => {
-            if (tooltipTimeoutRef.current) {
-                clearTimeout(tooltipTimeoutRef.current);
-            }
-        };
-    }, []);
 
     const handleClick = () => {
         if (shouldShowCanvasTooltip) {
