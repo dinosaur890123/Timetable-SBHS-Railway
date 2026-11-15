@@ -51,6 +51,7 @@ const buildSlots = (timetableData) => {
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const originalTitle = period.title;
         const isBreak = isBreakStylePeriod(bellId, period);
+        const isActualBreak = isBreakBell(bellId, period);
         if (isBreak) {
             period = { ...period, title: bell.bellDisplay };
         } else {
@@ -65,12 +66,13 @@ const buildSlots = (timetableData) => {
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
-        return { bellId, bell, period, isBreak, startMin, endMin };
+        return { bellId, bell, period, isBreak, isActualBreak, startMin, endMin };
     }).filter(Boolean).reduce((rows, slot) => {
-        // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one.
+        // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one.
+        // Sport/scripture periods are styled as breaks but not merged.
         const prev = rows[rows.length - 1];
         const label = slot.period.title?.replace(/\s*\d+$/, '');
-        if (prev?.isBreak && slot.isBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
+        if (prev?.isActualBreak && slot.isActualBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
             prev.endMin = slot.endMin;
             return rows;
         }

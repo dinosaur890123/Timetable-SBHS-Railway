@@ -259,17 +259,19 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
             const isBreak = isBreakStylePeriod(bellId, periodInfo);
+            const isActualBreak = isBreakBell(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
             if (isBreak && String(bellId) === '0') return null;
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isActualBreak,
                 label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
-            // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            // Sport/scripture periods are styled as breaks but not merged.
             const prev = rows[rows.length - 1];
-            if (prev?.isBreak && row.isBreak && prev.label === row.label) {
+            if (prev?.isActualBreak && row.isActualBreak && prev.label === row.label) {
                 prev.endMin = row.endMin;
                 prev.isCurrent = currentMinutes >= prev.startMin && currentMinutes < prev.endMin;
                 return rows;
@@ -549,6 +551,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             bell={data.bell}
                             label={data.label}
                             isBreak={data.isBreak}
+                            isActualBreak={data.isActualBreak}
                             isCurrent={data.isCurrent}
                             justStarted={data.bellId === startedBell}
                             isNext={data.isNext}
