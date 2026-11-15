@@ -27,7 +27,7 @@
       "@type": "Organization",
       "name": "Synchron",
       "url": "https://synchron.work/",
-      "logo": "https://synchron.work/synchron-rows-light-offwhite-512.png",
+      "logo": "https://synchron.work/synchron-ring-warm-icon.png",
       "email": "synchron.work@gmail.com",
       "contactPoint": {
         "@type": "ContactPoint",
@@ -62,7 +62,7 @@
     <!-- New logo; App.jsx disables it in atom mode so the PNG icon set takes over.
          Single off-white variant — the mark carries its own background, so it
          reads on light and dark browser chrome alike. -->
-    <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-rows-light-offwhite-512.png">
+    <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-ring-warm-icon.png">
     <script>
       // Apply the saved favicon/icon choice before first paint. 'default' keeps only
       // the app icon link active and points every icon asset at the new-logo set;
@@ -70,7 +70,7 @@
       // attributes are preserved in dataset.favMedia for restore.
       try {
         var atom = localStorage.getItem('favicon_type') === 'atom';
-        var ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'icon-', 'manifest.json'];
+        var ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'favicon', 'icon-', 'manifest.json'];
         function mapIconHref(href) {
           if (!href || href.charAt(0) !== '/') return href;
           var path = href.slice(1), isAtom = path.indexOf('atom-') === 0;
@@ -147,7 +147,7 @@
           <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
             <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="Synchron home">
               <span class="relative w-7 h-7 shrink-0">
-                <img src="/synchron-rows-light-offwhite.svg" alt="" class="block w-full h-full rounded-lg" />
+                <img src="/synchron-ring-warm-vector.svg" alt="" class="block w-full h-full rounded-lg" />
                 <span class="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page"></span>
               </span>
               <span class="whitespace-nowrap text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>

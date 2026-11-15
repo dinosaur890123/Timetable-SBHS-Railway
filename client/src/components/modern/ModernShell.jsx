@@ -84,7 +84,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 export const BrandMark = ({ className = '' }) => (
     <div className={`relative w-7 h-7 ${className}`}>
         <img
-            src="/synchron-rows-light-offwhite.svg"
+            src="/synchron-ring-warm-vector.svg"
             alt="Synchron logo"
             className="block w-full h-full rounded-lg"
         />

@@ -10,7 +10,7 @@ const PublicPrivacyPage = () => (
                 <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5 sm:px-8">
                     <a href="/" className="flex items-center gap-2.5" aria-label="Synchron home">
                         <span className="relative w-7 h-7">
-                            <img src="/synchron-rows-light-offwhite.svg" alt="" className="block w-full h-full rounded-lg" />
+                            <img src="/synchron-ring-warm-vector.svg" alt="" className="block w-full h-full rounded-lg" />
                             <span className="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page"></span>
                         </span>
                         <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>

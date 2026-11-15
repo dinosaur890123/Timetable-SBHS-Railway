@@ -55,7 +55,7 @@ export default defineConfig({
           'maskable-icon-*.png',
           'apple-touch-icon.png',
           'manifest.json',
-          'atom-*.{png,json}'
+          'atom-*.{png,ico,json}'
         ],
         globIgnores: ['**/dev-*', '**/staging-*'],
         cleanupOutdatedCaches: true,

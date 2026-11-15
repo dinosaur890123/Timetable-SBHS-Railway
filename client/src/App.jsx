@@ -195,7 +195,6 @@ function App() {
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
-    const [faviconPrompt, setFaviconPrompt] = useState(false);
     useModernShellEffects(setPaletteOpen);
 
     // Drop settings left behind by the retired Classic interface
@@ -789,13 +788,12 @@ function App() {
     // set; 'atom' mutes it and points them at the atom-* copies. Installed app
     // icons are baked at install time, so this affects the tab icon immediately
     // and the home-screen icon on the next install/add-to-home-screen.
-    // Browsers cache icons aggressively, so a reload is needed after switching.
     useEffect(() => {
         const appIcon = document.getElementById('app-favicon');
         if (!appIcon) return;
         const atom = faviconType === 'atom';
 
-        const ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'icon-', 'manifest.json'];
+        const ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'favicon', 'icon-', 'manifest.json'];
         const mapIconHref = (href) => {
             if (!href || href.charAt(0) !== '/') return href;
             let path = href.slice(1);
@@ -826,11 +824,9 @@ function App() {
         else appIcon.removeAttribute('media');
     }, [faviconType]);
 
-    // Browsers cache favicons hard, so a change only fully applies after a reload.
     const handleFaviconTypeChange = (value) => {
         if (value === faviconType) return;
         setFaviconType(value);
-        setFaviconPrompt(true);
     };
 
     // Color Theme Config
@@ -1837,36 +1833,6 @@ function App() {
                     hiddenPages
                 })}
             />
-
-            {/* Favicon changed — prompt a reload so the browser picks it up */}
-            <AnimatePresence>
-                {faviconPrompt && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 12 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 pl-4 pr-2 py-2 rounded-xl border border-m-line bg-m-panel/95 backdrop-blur-xl shadow-lg"
-                    >
-                        <span className="text-[13px] text-zinc-700 dark:text-zinc-200 whitespace-nowrap">
-                            Favicon updated — reload to apply it.
-                        </span>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-[13px] font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-                        >
-                            Reload
-                        </button>
-                        <button
-                            onClick={() => setFaviconPrompt(false)}
-                            aria-label="Dismiss"
-                            className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                        >
-                            <X size={15} />
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* Canvas Link Suggestions Toast */}
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />
