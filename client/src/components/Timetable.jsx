@@ -235,8 +235,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
+            const isActualBreak = isBreakBell(bellId, periodInfo);
+            const isSportOrScripture = isBreakStylePeriod(bellId, periodInfo) && !isActualBreak;
 
-            if (isBreakStylePeriod(bellId, periodInfo)) {
+            if (isActualBreak) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
@@ -263,8 +265,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (isBreak && String(bellId) === '0') return null;
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
-                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isSportOrScripture,
+                label: isActualBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
@@ -549,6 +551,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             bell={data.bell}
                             label={data.label}
                             isBreak={data.isBreak}
+                            isSportOrScripture={data.isSportOrScripture}
                             isCurrent={data.isCurrent}
                             justStarted={data.bellId === startedBell}
                             isNext={data.isNext}
