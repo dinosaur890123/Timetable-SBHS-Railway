@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import {
   ArrowRight, AlertOctagon, X, MapPin, UserRound, Home, CalendarDays, Newspaper,
@@ -82,95 +82,265 @@ const PreviewNowCard = () => {
   );
 };
 
-// A faithful miniature of the signed-in home page — same topbar, greeting, day rows
-// and countdown rail — always in dark mode since signed-out visitors only see dark.
-const ProductPreview = () => (
-  <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
-    <div className="flex items-center justify-between gap-3 h-11 px-4 border-b border-m-line">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-[15px] font-medium tracking-tight text-zinc-100 truncate">My Synchron</span>
-        <span className="hidden sm:flex items-center p-0.5 rounded-lg bg-white/[0.06]">
-          <span className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-800 text-zinc-100">Daily</span>
-          <span className="px-2 py-0.5 text-[11px] font-medium rounded-md text-zinc-500">Cycle</span>
-        </span>
-      </div>
-      <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 shrink-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        Synced
-      </span>
-    </div>
+const MockHeader = ({ title, aside }) => (
+  <div className="relative flex items-center justify-between gap-2 mb-3">
+    <span className="text-[15px] font-semibold tracking-tight text-zinc-50 truncate">{title}</span>
+    {aside}
+  </div>
+);
 
-    <div className="relative isolate p-4 sm:p-5">
-      <AmbientLight variant="panel" />
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots" />
+// The "My Synchron" page as it really looks: greeting, live rail and day rows.
+const HomeMock = () => (
+  <>
+    <header className="relative mb-6">
+      <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight leading-tight text-zinc-50">
+        Good Morning, <span className="text-accent">Sam</span>
+      </h1>
+      <p className="mt-1.5 text-[15px] text-zinc-500">Today is TueA · 6 classes</p>
+    </header>
 
-      <header className="relative mb-6">
-        <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight leading-tight text-zinc-50">
-          Good Morning, <span className="text-accent">Sam</span>
-        </h1>
-        <p className="mt-1.5 text-[15px] text-zinc-500">Today is TueA · 6 classes</p>
-      </header>
-
-      {/* Rail first in the DOM so it sits above the list on narrow screens, like the app */}
-      <div className="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_210px]">
-        <div className="sm:order-2"><PreviewNowCard /></div>
-        <ol className="sm:order-1 -mx-3 space-y-0.5" aria-label="Example timetable">
-          {PREVIEW_DAY.map(row => row.break ? (
-            <li key={row.break} className="px-3 py-1.5">
-              <div className="flex items-center gap-4">
-                <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">{row.time}</span>
-                <span className="text-[12px] text-zinc-500">{row.break}</span>
-                <span className="flex-1 h-px bg-white/[0.06]" />
-                <span className="text-[12px] tabular-nums text-zinc-500">{row.mins}</span>
-              </div>
-            </li>
-          ) : (
-            <li key={row.bell} className="rounded-xl border border-white/[0.06]">
-              <div className={`relative flex items-center gap-4 px-3 py-3 ${row.past ? 'opacity-50' : ''}`}>
-                {row.current && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
-                <div className="w-11 shrink-0 text-right leading-tight">
-                  <div className={`text-[13px] tabular-nums ${row.current ? 'font-medium text-zinc-100' : 'text-zinc-500'}`}>{row.time}</div>
-                  <div className="mt-0.5 font-mono text-[11px] text-zinc-500">P{row.bell}</div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[15px] font-medium text-zinc-50">{row.title}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500">
-                    {row.current && <span className="shrink-0 font-medium text-accent">Now</span>}
-                    <span className={`truncate ${row.sub ? 'rounded-md px-1.5 py-0.5 change-highlight' : ''}`}>{row.teacher}</span>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className={`text-[15px] font-medium tabular-nums ${row.roomChange ? 'rounded-md px-1.5 py-0.5 change-highlight' : 'text-zinc-50'}`}>{row.room}</div>
-                </div>
-              </div>
-            </li>
-          ))}
-          <li className="flex items-center gap-4 px-3 pt-3">
-            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">15:10</span>
-            <span className="text-[12px] text-zinc-500">End of day</span>
+    {/* Rail first in the DOM so it sits above the list on narrow screens, like the app */}
+    <div className="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_210px]">
+      <div className="sm:order-2"><PreviewNowCard /></div>
+      <ol className="sm:order-1 -mx-3 space-y-0.5" aria-label="Example timetable">
+        {PREVIEW_DAY.map(row => row.break ? (
+          <li key={row.break} className="px-3 py-1.5">
+            <div className="flex items-center gap-4">
+              <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">{row.time}</span>
+              <span className="text-[12px] text-zinc-500">{row.break}</span>
+              <span className="flex-1 h-px bg-white/[0.06]" />
+              <span className="text-[12px] tabular-nums text-zinc-500">{row.mins}</span>
+            </div>
           </li>
-        </ol>
+        ) : (
+          <li key={row.bell} className="rounded-xl border border-white/[0.06]">
+            <div className={`relative flex items-center gap-4 px-3 py-3 ${row.past ? 'opacity-50' : ''}`}>
+              {row.current && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
+              <div className="w-11 shrink-0 text-right leading-tight">
+                <div className={`text-[13px] tabular-nums ${row.current ? 'font-medium text-zinc-100' : 'text-zinc-500'}`}>{row.time}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-zinc-500">P{row.bell}</div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-medium text-zinc-50">{row.title}</div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500">
+                  {row.current && <span className="shrink-0 font-medium text-accent">Now</span>}
+                  <span className={`truncate ${row.sub ? 'rounded-md px-1.5 py-0.5 change-highlight' : ''}`}>{row.teacher}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className={`text-[15px] font-medium tabular-nums ${row.roomChange ? 'rounded-md px-1.5 py-0.5 change-highlight' : 'text-zinc-50'}`}>{row.room}</div>
+              </div>
+            </div>
+          </li>
+        ))}
+        <li className="flex items-center gap-4 px-3 pt-3">
+          <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">15:10</span>
+          <span className="text-[12px] text-zinc-500">End of day</span>
+        </li>
+      </ol>
+    </div>
+  </>
+);
+
+const CalendarMock = () => {
+  const cells = Array.from({ length: 35 }, (_, i) => i + 1);
+  const eventDays = new Set([4, 11, 18, 25]);
+  return (
+    <div className="relative">
+      <MockHeader title="March 2026" aside={<span className="text-[11px] font-mono uppercase tracking-[0.12em] text-zinc-500">Week B</span>} />
+      <div className="grid grid-cols-5 gap-1">
+        {['M', 'T', 'W', 'T', 'F'].map((d, i) => (
+          <div key={i} className="pb-1 text-center text-[10px] font-mono uppercase text-zinc-600">{d}</div>
+        ))}
+        {cells.map(n => (
+          <div
+            key={n}
+            className={`grid aspect-square place-items-center rounded-lg text-[11px] tabular-nums ${
+              n === 18 ? 'bg-accent font-semibold text-accent-contrast'
+                : n > 31 ? 'text-zinc-700'
+                : eventDays.has(n) ? 'text-zinc-200 ring-1 ring-accent/40'
+                : 'text-zinc-400'
+            }`}
+          >
+            {n <= 31 ? n : ''}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {[['Mon 16', 'Athletics trial', '8:30'], ['Thu 19', 'Cultural Day', 'All day'], ['Fri 20', 'Boarding sport', '15:30']].map(([d, t, tm]) => (
+          <div key={d} className="flex items-baseline gap-3 text-[12px]">
+            <span className="w-12 shrink-0 font-mono text-zinc-600">{d}</span>
+            <span className="flex-1 truncate text-zinc-300">{t}</span>
+            <span className="text-zinc-600 tabular-nums">{tm}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const NoticesMock = () => (
+  <div className="relative space-y-2.5">
+    <MockHeader title="Notices" aside={<span className="text-[11px] text-zinc-500">Today</span>} />
+    {[
+      ['Today', 'Roll for Week B is up', 'Period allocations and room changes for the week are now on the portal.'],
+      ['Yesterday', 'Boarding house sport this Friday', 'All boarders report to the gym at 2:45pm.'],
+      ['Monday', 'Library closes early', 'The library will close at 2pm for stocktake on Wednesday.']
+    ].map(([when, title, body]) => (
+      <div key={title} className="rounded-xl border border-white/[0.06] p-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-[13px] font-medium text-zinc-100">{title}</span>
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">{when}</span>
+        </div>
+        <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 line-clamp-2">{body}</p>
+      </div>
+    ))}
+  </div>
+);
+
+const AwardsMock = () => (
+  <div className="relative">
+    <MockHeader title="Awards" />
+    <div className="rounded-xl border border-white/[0.06] p-4">
+      <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">This term</div>
+      <div className="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-zinc-50">
+        1,240 <span className="text-base font-medium text-zinc-500">pts</span>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className="h-full w-2/3 rounded-full bg-accent" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {['Leadership', 'Sport', 'Academic', 'Service'].map(b => (
+          <span key={b} className="rounded-md border border-white/[0.08] px-2 py-0.5 text-[11px] text-zinc-400">{b}</span>
+        ))}
+      </div>
+    </div>
+    <div className="mt-2.5 space-y-1.5">
+      {[['House swimming', '+40', 'Today'], ['Cultural festival', '+25', 'Yesterday'], ['Peer mentoring', '+15', 'Monday']].map(([t, p, d]) => (
+        <div key={t} className="flex items-baseline gap-3 text-[12px]">
+          <span className="flex-1 truncate text-zinc-300">{t}</span>
+          <span className="font-mono text-[11px] text-emerald-400">{p}</span>
+          <span className="w-14 text-right text-zinc-600">{d}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const ClipboardMock = () => (
+  <div className="relative">
+    <MockHeader title="Clipboard" aside={<span className="text-[11px] text-zinc-500">This week</span>} />
+    <div className="space-y-0.5">
+      {[
+        ['Mon', 'Rowing — Small Craft Water', 'Cadets', '15:30'],
+        ['Tue', 'Athletics Training', 'Track', '16:00'],
+        ['Thu', 'Debating', 'Library', '17:15'],
+        ['Fri', 'Sport House Finals', 'Arena', '14:00']
+      ].map(([d, a, l, t]) => (
+        <div key={d} className="flex items-center gap-3 rounded-lg px-2 py-2.5">
+          <span className="w-9 shrink-0 font-mono text-[11px] text-zinc-600">{d}</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-medium text-zinc-100">{a}</div>
+            <div className="truncate text-[12px] text-zinc-500">{l}</div>
+          </div>
+          <span className="shrink-0 text-[12px] tabular-nums text-zinc-500">{t}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const NotesMock = () => (
+  <div className="relative space-y-2.5">
+    <MockHeader title="NoteFlow" aside={<span className="text-[11px] text-zinc-500">Biology</span>} />
+    <div className="rounded-xl border border-white/[0.06] p-3.5">
+      <div className="text-[14px] font-semibold text-zinc-50">Cellular respiration</div>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
+        Every living cell runs on ATP. Cellular respiration turns the energy in glucose into ATP, mostly in the mitochondria.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <span className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-medium text-accent-contrast">Make flashcards</span>
+        <span className="rounded-lg border border-white/[0.08] px-3 py-1.5 text-[12px] font-medium text-zinc-300">Practice exam</span>
+      </div>
+    </div>
+    <div className="rounded-xl border border-white/[0.06] p-3.5">
+      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">Flashcard · 3 of 14</div>
+      <div className="mt-2 text-[13px] font-medium text-zinc-100">What powers ATP synthase?</div>
+      <div className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">Chemiosmosis: H⁺ ions flowing back across the inner membrane.</div>
+      <div className="mt-3 flex gap-1.5">
+        {['Again', 'Hard', 'Good', 'Easy'].map((r, i) => (
+          <span key={r} className={`flex-1 rounded-md border py-1 text-center text-[11px] ${i === 2 ? 'border-accent/50 text-accent' : 'border-white/[0.08] text-zinc-500'}`}>{r}</span>
+        ))}
       </div>
     </div>
   </div>
 );
+
+const VIEW_TITLES = {
+  home: 'My Synchron', calendar: 'Calendar', notices: 'Notices',
+  awards: 'Awards', clipboard: 'Clipboard', notes: 'NoteFlow'
+};
+
+const MOCKS = {
+  home: HomeMock, calendar: CalendarMock, notices: NoticesMock,
+  awards: AwardsMock, clipboard: ClipboardMock, notes: NotesMock
+};
+
+// One app frame that swaps pages as the tour list scrolls past.
+const TourPreview = ({ view }) => {
+  const Mock = MOCKS[view] || HomeMock;
+  return (
+    <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron app">
+      <div className="flex items-center justify-between gap-3 h-11 px-4 border-b border-m-line">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-[15px] font-medium tracking-tight text-zinc-100 truncate">{VIEW_TITLES[view]}</span>
+          {view === 'home' && (
+            <span className="hidden sm:flex items-center p-0.5 rounded-lg bg-white/[0.06]">
+              <span className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-800 text-zinc-100">Daily</span>
+              <span className="px-2 py-0.5 text-[11px] font-medium rounded-md text-zinc-500">Cycle</span>
+            </span>
+          )}
+        </div>
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Synced
+        </span>
+      </div>
+      <div className="relative isolate p-4 sm:p-5">
+        <AmbientLight variant="panel" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots" />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={view}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease }}
+          >
+            <Mock />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
 
 // Mirrors the signed-in sidebar, so the page doubles as a map of the app.
 const SECTIONS = [
   {
     label: 'Workspace',
     items: [
-      { icon: Home, title: 'My Synchron', body: 'Today’s timetable with substitutes and room moves already applied, and a countdown to the bell.' },
-      { icon: CalendarDays, title: 'Calendar', body: 'Term dates, events and which week of the cycle you’re in.' },
-      { icon: Newspaper, title: 'Notices', body: 'The daily notices, readable on a phone.' }
+      { id: 'home', icon: Home, title: 'My Synchron', body: 'Today’s timetable with substitutes and room moves already applied, and a countdown to the bell.' },
+      { id: 'calendar', icon: CalendarDays, title: 'Calendar', body: 'Term dates, events and which week of the cycle you’re in.' },
+      { id: 'notices', icon: Newspaper, title: 'Notices', body: 'The daily notices, readable on a phone.' }
     ]
   },
   {
     label: 'School',
     items: [
-      { icon: Award, title: 'Awards', body: 'Your award scheme points and badges.' },
-      { icon: Clipboard, title: 'Clipboard', body: 'Sport and training sessions from Clipboard.' },
-      { icon: GraduationCap, title: 'Study', body: 'NoteFlow, the all-in-one study app with an AI tutor.' }
+      { id: 'awards', icon: Award, title: 'Awards', body: 'Your award scheme points and badges.' },
+      { id: 'clipboard', icon: Clipboard, title: 'Clipboard', body: 'Sport and training sessions from Clipboard.' },
+      { id: 'notes', icon: GraduationCap, title: 'Study', body: 'NoteFlow, the all-in-one study app with an AI tutor.' }
     ]
   }
 ];
@@ -270,6 +440,19 @@ const LandingPage = ({ authError, clearAuthError }) => {
   // Easter egg: three clicks on the logo bring back the original four-square mark.
   const [logoClicks, setLogoClicks] = useState(0);
   const [useOriginalMark, setUseOriginalMark] = useState(false);
+  // Which page the sticky tour preview is showing, driven by scroll position.
+  const [tourView, setTourView] = useState('home');
+  const tourRefs = useRef({});
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) setTourView(entry.target.dataset.view);
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    Object.values(tourRefs.current).forEach(el => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   const handleLogoClick = () => {
     setLogoClicks(prev => {
@@ -318,7 +501,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
           <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots" />
 
           <main className="flex-1">
-            <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:pb-24">
+            <section className="mx-auto w-full max-w-3xl px-5 pt-14 pb-16 sm:px-8 md:pt-24 md:pb-28">
               <motion.div
                 initial={{ opacity: 1, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -345,40 +528,44 @@ const LandingPage = ({ authError, clearAuthError }) => {
                   Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.
                 </p>
               </motion.div>
-
-              <motion.div
-                initial={{ opacity: 1, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.12, ease }}
-              >
-                <ProductPreview />
-              </motion.div>
             </section>
 
             <section id="whats-inside" className="border-t border-m-line scroll-mt-16">
               <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 md:py-20">
-                <div className="grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] md:gap-16">
-                  <div>
-                    <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
-                    <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                      The same pages you’ll see in the sidebar once you sign in.
-                    </p>
+                <div className="mb-12 max-w-xl">
+                  <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                    The same pages you’ll see in the sidebar once you sign in. Scroll to walk through them.
+                  </p>
+                </div>
+                <div className="grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16">
+                  {/* Preview first in the DOM so it leads on narrow screens; it docks right on desktop */}
+                  <div className="lg:order-2 lg:sticky lg:top-24 lg:self-start">
+                    <TourPreview view={tourView} />
                   </div>
-                  <div className="grid gap-10 sm:grid-cols-2">
+                  <div className="lg:order-1">
                     {SECTIONS.map(section => (
-                      <div key={section.label}>
-                        <Label className="mb-3">{section.label}</Label>
-                        <ul className="divide-y divide-white/[0.06] border-y border-m-line">
-                          {section.items.map(({ icon: Icon, title, body }) => (
-                            <li key={title} className="flex gap-3 py-3.5">
-                              <Icon size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-zinc-500 dark:text-zinc-400" />
-                              <div>
-                                <div className="text-sm font-medium text-zinc-900 dark:text-white">{title}</div>
-                                <p className="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
+                      <div key={section.label} className="mb-10 last:mb-0">
+                        <Label className="mb-2">{section.label}</Label>
+                        {section.items.map(({ id, icon: Icon, title, body }) => {
+                          const active = tourView === id;
+                          return (
+                            <div
+                              key={id}
+                              data-view={id}
+                              ref={el => { tourRefs.current[id] = el; }}
+                              className="flex min-h-[55vh] items-center border-t border-white/[0.05] py-8 first:border-t-0 lg:min-h-[65vh]"
+                            >
+                              <div className={`flex max-w-md gap-4 transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-50'}`}>
+                                <Icon size={20} strokeWidth={1.8} className={`mt-1 shrink-0 transition-colors ${active ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                                <div>
+                                  <div className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</div>
+                                  <p className="mt-1.5 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
+                                </div>
                               </div>
-                            </li>
-                          ))}
-                        </ul>
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
