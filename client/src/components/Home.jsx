@@ -345,9 +345,11 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
                 <RailLabel>Before school</RailLabel>
                 <Countdown
                     mins={first.startMin - nowMin}
-                    caption={first.isBreak
+                    caption={first.isActualBreak
                         ? `until ${first.period.title.replace(/\s*\d+$/, '')}`
-                        : first.isExtracurricular ? 'until first session' : 'until first class'}
+                        : first.isBreak
+                            ? `until ${first.period.title}`
+                            : first.isExtracurricular ? 'until first session' : 'until first class'}
                 />
                 <ThenLine slot={first} prefix="First" />
             </RailCard>
@@ -363,7 +365,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         const start = current ? current.startMin : nowMin;
         return (
             <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
-                <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
+                <RailLabel aside={schoolLeft}>{current ? (current.isActualBreak ? current.period.title.replace(/\s*\d+$/, '') : current.period.title) : 'Between classes'}</RailLabel>
                 <Countdown mins={end - nowMin} caption="left" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />

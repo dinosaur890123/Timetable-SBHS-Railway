@@ -268,7 +268,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             return {
                 bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak: isBreakStyle, isActualBreak,
-                label: isBreakStyle ? periodInfo.title.replace(/\s*\d+$/, '') : null
+                label: isBreakStyle ? periodInfo.title : null
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one row.
