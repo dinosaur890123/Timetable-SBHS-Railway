@@ -372,7 +372,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     const status = [
         inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
-        classCount ? `${classCount} classes` : null,
         !showRail && firstClass ? `starts ${firstClass.bell.time}` : null
     ].filter(Boolean).join(' · ');
 
