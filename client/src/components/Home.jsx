@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
@@ -110,6 +110,53 @@ const buildClipboardSlots = (sessions, dayKey) => {
             };
         })
         .sort((a, b) => a.startMin - b.startMin);
+};
+
+// Daily/cycle switch. The active pill is positioned manually rather than with a
+// framer-motion layoutId: a layout animation still in flight when the page swaps
+// inside AnimatePresence can leave the next view blank (same issue as awards).
+const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
+    const tabsRef = useRef({});
+    const [pill, setPill] = useState(null);
+
+    useLayoutEffect(() => {
+        const updatePill = () => {
+            const el = tabsRef.current[viewMode];
+            if (el) {
+                setPill({
+                    left: el.offsetLeft,
+                    width: el.offsetWidth,
+                    top: el.offsetTop,
+                    height: el.offsetHeight,
+                });
+            }
+        };
+        updatePill();
+        window.addEventListener('resize', updatePill);
+        return () => window.removeEventListener('resize', updatePill);
+    }, [viewMode]);
+
+    return (
+        <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-1 md:shrink-0 w-fit md:w-auto">
+            {pill && (
+                <span
+                    aria-hidden="true"
+                    className="absolute rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    style={{ left: pill.left, width: pill.width, top: pill.top, height: pill.height }}
+                />
+            )}
+            {['daily', 'cycle'].map(mode => (
+                <button
+                    key={mode}
+                    ref={el => { if (el) tabsRef.current[mode] = el; }}
+                    onClick={() => onViewModeChange?.(mode)}
+                    className={`relative z-10 px-2.5 py-1 text-xs font-medium capitalize rounded-md transition-colors ${viewMode === mode ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+                >
+                    {mode}
+                </button>
+            ))}
+        </div>
+    );
 };
 
 const RailLabel = ({ children, aside }) => (
@@ -387,24 +434,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
                     </div>
-                    <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-1 md:shrink-0 w-fit md:w-auto">
-                        {['daily', 'cycle'].map(mode => (
-                            <button
-                                key={mode}
-                                onClick={() => onViewModeChange?.(mode)}
-                                className={`relative px-2.5 py-1 text-xs font-medium capitalize rounded-md transition-colors ${viewMode === mode ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
-                            >
-                                {viewMode === mode && (
-                                    <motion.span
-                                        layoutId="m-tt-mode"
-                                        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                        className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
-                                    />
-                                )}
-                                <span className="relative">{mode}</span>
-                            </button>
-                        ))}
-                    </div>
+                    <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
             </header>
 
