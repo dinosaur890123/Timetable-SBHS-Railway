@@ -48,7 +48,8 @@ export const parseLinkInput = (raw, canvasHost = DEFAULT_CANVAS_HOST) => {
 // Sport blocks ("SP9", "Sport 9", "Sports 6") and Scripture have no course
 // page, so they never get a link field.
 export const isLinklessTitle = (title) => {
-    const t = title.toLowerCase();
+    if (!title) return false;
+    const t = String(title).toLowerCase();
     return t.includes('sport') || /^sp[\s-]?\d/.test(t) || t.includes('scripture');
 };
 

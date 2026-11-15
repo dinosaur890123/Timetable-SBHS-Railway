@@ -1,3 +1,5 @@
+import { isLinklessTitle } from './canvasLinks';
+
 // Helpers for merging the school's daily variation feeds (substitute teachers /
 // room changes) into the raw period data returned by timetable/daytimetable.json.
 //
@@ -28,22 +30,25 @@ export const isBreakBell = (bellId, periodInfo = null) => {
     const id = String(bellId).toUpperCase().trim();
     if (id === "R" || id === "L" || id === "RC") return true;
     if (periodInfo && periodInfo.title) {
-        const title = periodInfo.title.toLowerCase();
+        const title = String(periodInfo.title).toLowerCase();
         if (title.includes('lunch') || title.includes('recess')) return true;
         if (id === "0" && title === "period 0") return true;
     }
     return false;
 };
 
+// Check if a period represents sport or scripture using the same exception logic as canvas links
+export const isSportOrScripturePeriod = (periodInfo) => {
+    if (!periodInfo) return false;
+    const title = typeof periodInfo === 'string' ? periodInfo : periodInfo.title;
+    const fullTitle = typeof periodInfo === 'object' ? periodInfo.fullTitle : null;
+    return isLinklessTitle(title) || isLinklessTitle(fullTitle);
+};
+
 // Check if a period should be styled as a break in daily view (includes sport/scripture for visual purposes)
 export const isBreakStylePeriod = (bellId, periodInfo = null) => {
     if (isBreakBell(bellId, periodInfo)) return true;
-    if (periodInfo && periodInfo.title) {
-        // Use same logic as canvaslink exceptions for sport/scripture detection
-        const title = periodInfo.title.toLowerCase();
-        if (title.includes('sport') || /^sp[\s-]?\d/.test(title) || title.includes('scripture')) return true;
-    }
-    return false;
+    return isSportOrScripturePeriod(periodInfo);
 };
 
 // Returns a new period object enriched with substitution / room-change fields.

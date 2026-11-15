@@ -3,7 +3,7 @@ import { CalendarDays, AlertCircle, Coffee, Umbrella, Calendar } from 'lucide-re
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
-import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
@@ -235,9 +235,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
+            const isRealBreak = isBreakBell(bellId, periodInfo);
 
-            if (isBreakStylePeriod(bellId, periodInfo)) {
-                periodInfo = { ...periodInfo, title: bell.bellDisplay };
+            if (isRealBreak) {
+                periodInfo = { ...periodInfo, title: periodInfo.title || bell.bellDisplay };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
                 const { name, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
@@ -245,7 +246,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             }
 
             // Filter out roll call from timetable view
-            if (bellId === "RC" || (originalTitle && originalTitle.toLowerCase().includes("roll call"))) {
+            if (bellId === "RC" || (originalTitle && String(originalTitle).toLowerCase().includes("roll call"))) {
                 return null;
             }
 
@@ -260,16 +261,28 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             const isBreak = isBreakStylePeriod(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
-            if (isBreak && String(bellId) === '0') return null;
+            if (isRealBreak && String(bellId) === '0') return null;
+
+            const isSportOrScripture = !isRealBreak && isBreak;
+            let label = null;
+            if (isBreak) {
+                if (isRealBreak) {
+                    label = (periodInfo.title || bell.bellDisplay || '').replace(/\s*\d+$/, '');
+                } else {
+                    const rawLabel = periodInfo.fullTitle || periodInfo.title || '';
+                    label = /^sp[\s-]?\d*$/i.test(rawLabel.trim()) ? 'Sport' : rawLabel;
+                }
+            }
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
-                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isRealBreak, isSportOrScripture,
+                label
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            // Do not merge sport/scripture periods.
             const prev = rows[rows.length - 1];
-            if (prev?.isBreak && row.isBreak && prev.label === row.label) {
+            if (prev?.isRealBreak && row.isRealBreak && prev.label === row.label) {
                 prev.endMin = row.endMin;
                 prev.isCurrent = currentMinutes >= prev.startMin && currentMinutes < prev.endMin;
                 return rows;
@@ -549,6 +562,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             bell={data.bell}
                             label={data.label}
                             isBreak={data.isBreak}
+                            isRealBreak={data.isRealBreak}
                             isCurrent={data.isCurrent}
                             justStarted={data.bellId === startedBell}
                             isNext={data.isNext}
