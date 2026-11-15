@@ -23,10 +23,18 @@ export const VIEW_LABELS = {
     admin: 'Admin'
 };
 
+// Canvas mark swaps between the mono and LMS variants on row hover.
+const CanvasIcon = ({ size = 16, className = '' }) => (
+    <span className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size }}>
+        <img src="/canvas-mono.svg" alt="" className="block w-full h-full group-hover:hidden" />
+        <img src="/canvas-lms.svg" alt="" className="hidden w-full h-full group-hover:block" />
+    </span>
+);
+
 // External school sites shown alongside the School pages.
 const QUICK_LINKS = [
     { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
-    { id: 'link-canvas', label: 'Canvas', icon: BookOpen, href: 'https://canvas.sbhs.net.au' }
+    { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' }
 ];
 
 const buildNavGroups = (isAdmin, hiddenPages = []) => {
@@ -443,7 +451,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                             onClose();
                                             action.run();
                                         }}
-                                        className="flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                                        className="group flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
                                     >
                                         <action.icon size={20} className="text-zinc-600 dark:text-zinc-300" />
                                         <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 text-center leading-tight">
@@ -524,7 +532,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
         { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
         { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
-        { id: 'quick-canvas', label: 'Canvas', icon: BookOpen, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
+        { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
     ].filter(action => {
         // Filter out if the corresponding page is hidden
         if (action.id === 'quick-awards') return !hiddenPages.includes('awards');
