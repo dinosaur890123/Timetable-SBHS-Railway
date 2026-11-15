@@ -70,6 +70,93 @@ const CELL_HEIGHT = 'min-h-[56px] sm:min-h-[92px]';
 // Week/term column, then seven day columns.
 const GRID_COLS = 'grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[4rem_repeat(7,minmax(0,1fr))]';
 
+const weekIndexForDate = (month, date) => {
+  const firstDay = startOfMonth(month).getDay();
+  return Math.floor((firstDay + date.getDate() - 1) / 7);
+};
+
+const isSameMonthDate = (a, b) => a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+
+// One day cell, shared by the month grid and the mobile week view.
+const DayButton = ({ date, day, outOfMonth = false, group, closure, isSelected, onSelect, minHeight = CELL_HEIGHT }) => {
+  const items = group?.items || [];
+  const isTodayDate = isToday(date);
+
+  return (
+    <motion.button
+      onClick={() => onSelect(date)}
+      transition={SPRING}
+      aria-pressed={isSelected}
+      className={`relative ${minHeight} px-1 pt-1.5 pb-1 sm:px-1.5 sm:pt-2 flex flex-col text-left transition-colors ${
+        outOfMonth ? 'opacity-45 ' : ''
+      }${
+        isSelected
+          ? 'bg-accent/10 dark:bg-accent/15'
+          : isTodayDate
+            ? 'bg-accent/5 dark:bg-accent/10'
+            : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
+      }`}
+    >
+      {/* The selection ring glides from day to day rather than jumping. */}
+      <AnimatePresence>
+        {isSelected && (
+          <motion.span
+            layoutId="calendar-selected-day"
+            aria-hidden
+            className="absolute inset-0.5 rounded-md ring-2 ring-accent pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={SPRING}
+          />
+        )}
+      </AnimatePresence>
+      <div className="relative flex items-center gap-1.5">
+        <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[13px] sm:text-sm font-medium ${
+          isTodayDate
+            ? 'bg-accent text-accent-contrast'
+            : isSelected
+              ? 'text-accent'
+              : 'text-zinc-800 dark:text-zinc-200'
+        }`}>
+          {day}
+        </span>
+        {closure && (
+          <span title={closure} className="h-1 w-1 rounded-full bg-sky-500 shrink-0" />
+        )}
+      </div>
+      {items.length > 0 && (
+        <div className="relative mt-auto pt-1">
+          {/* Narrow screens get colour dots; wider ones get named chips. */}
+          <div className="flex items-center gap-1 sm:hidden">
+            {items.slice(0, 3).map((event, i) => (
+              <span key={i} className={`h-1.5 w-1.5 rounded-full ${getEventDotColor(event.type)}`} />
+            ))}
+            {items.length > 3 && (
+              <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">+{items.length - 3}</span>
+            )}
+          </div>
+          <div className="hidden sm:block space-y-1">
+            {items.slice(0, 2).map((event, i) => (
+              <div
+                key={i}
+                className={`px-1.5 py-0.5 text-[10px] font-medium truncate rounded-md border ${getEventChipColor(event.type)}`}
+              >
+                {event.title}
+              </div>
+            ))}
+            {items.length > 2 && (
+              <div className="px-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+                +{items.length - 2} more
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </motion.button>
+  );
+};
+
 // One month: a term/week column, then the days. Pure render; the parent animates it in and out.
 const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
   const groupFor = (date) => events.find(e => e.info?.date === format(date, 'yyyy-MM-dd'));
@@ -93,95 +180,21 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
       const date = new Date(month.getFullYear(), month.getMonth(), day);
       const group = groupFor(date);
       const closure = closureFor?.(date);
-      const items = group?.items || [];
       if (!weekInfo && group?.info?.term && group?.info?.week) {
         weekInfo = { term: group.info.term, week: group.info.week, weekType: group.info.weekType || '' };
       }
-      const isTodayDate = isToday(date);
       const isSelected = !!selectedDate && isSameDay(date, selectedDate);
 
       cells.push(
-        <motion.button
+        <DayButton
           key={day}
-          onClick={() => onSelect(date)}
-          transition={SPRING}
-          aria-pressed={isSelected}
-          className={`relative ${CELL_HEIGHT} px-1 pt-1.5 pb-1 sm:px-1.5 sm:pt-2 flex flex-col text-left transition-colors ${
-            isSelected
-              ? 'bg-accent/10 dark:bg-accent/15'
-              : isTodayDate
-                ? 'bg-accent/5 dark:bg-accent/10'
-                : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
-          }`}
-        >
-          {/* The selection ring glides from day to day rather than jumping. */}
-          <AnimatePresence>
-            {isSelected && (
-              <motion.span
-                layoutId="calendar-selected-day"
-                aria-hidden
-                className="absolute inset-0.5 rounded-md ring-2 ring-accent pointer-events-none"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={SPRING}
-              />
-            )}
-          </AnimatePresence>
-          <div className="relative flex items-center gap-1.5">
-            <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[13px] sm:text-sm font-medium ${
-              isTodayDate
-                ? 'bg-accent text-accent-contrast'
-                : isSelected
-                  ? 'text-accent'
-                  : 'text-zinc-800 dark:text-zinc-200'
-            }`}>
-              {day}
-            </span>
-            {closure && (
-              <span
-                title={closure}
-                className="h-1 w-1 rounded-full bg-sky-500 shrink-0"
-              />
-            )}
-          </div>
-          {(items.length > 0 || (closure && items.length === 0)) && (
-            <div className="relative mt-auto pt-1">
-              {/* Narrow screens get colour dots; wider ones get named chips. */}
-              <div className="flex items-center gap-1 sm:hidden">
-                {items.slice(0, 3).map((event, i) => (
-                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${getEventDotColor(event.type)}`} />
-                ))}
-                {items.length > 3 && (
-                  <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">+{items.length - 3}</span>
-                )}
-                {closure && items.length === 0 && (
-                  <span className="min-w-0 flex-1 truncate text-[9px] font-medium text-sky-600 dark:text-sky-400">{closure}</span>
-                )}
-              </div>
-              <div className="hidden sm:block space-y-1">
-                {items.slice(0, 2).map((event, i) => (
-                  <div
-                    key={i}
-                    className={`px-1.5 py-0.5 text-[10px] font-medium truncate rounded-md border ${getEventChipColor(event.type)}`}
-                  >
-                    {event.title}
-                  </div>
-                ))}
-                {items.length > 2 && (
-                  <div className="px-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
-                    +{items.length - 2} more
-                  </div>
-                )}
-                {closure && items.length === 0 && (
-                  <div className="px-1.5 text-[10px] font-medium text-sky-600 dark:text-sky-400 truncate">
-                    {closure}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </motion.button>
+          date={date}
+          day={day}
+          group={group}
+          closure={closure}
+          isSelected={isSelected}
+          onSelect={onSelect}
+        />
       );
     }
 
@@ -206,6 +219,76 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
   }
 
   return <div className={`grid ${GRID_COLS} gap-px bg-m-line`}>{rows}</div>;
+};
+
+// Mobile: one week at a time. Days from neighbouring months stay visible but dimmed;
+// tapping one jumps to its month.
+const WeekGrid = ({ month, weekIndex, numWeeks, events, selectedDate, onSelect, closureFor, onWeekChange }) => {
+  const firstDayOfWeek = startOfMonth(month).getDay();
+  const startDay = weekIndex * 7 - firstDayOfWeek + 1;
+  const dates = Array.from({ length: 7 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), startDay + i));
+
+  const groupFor = (date) => events.find(e => e.info?.date === format(date, 'yyyy-MM-dd'));
+
+  let weekInfo = null;
+  for (const d of dates) {
+    const group = groupFor(d);
+    if (group?.info?.term && group?.info?.week) {
+      weekInfo = { term: group.info.term, week: group.info.week, weekType: group.info.weekType || '' };
+      break;
+    }
+  }
+
+  const rangeLabel = isSameMonthDate(dates[0], dates[6])
+    ? `${format(dates[0], 'd')} – ${format(dates[6], 'd MMM')}`
+    : `${format(dates[0], 'd MMM')} – ${format(dates[6], 'd MMM')}`;
+
+  const navBtn = 'w-8 h-8 shrink-0 grid place-items-center rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-900/[0.05] dark:hover:text-white dark:hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:pointer-events-none';
+
+  return (
+    <div className="bg-m-card rounded-xl border border-m-line overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-2 py-2 border-b border-m-line bg-m-panel">
+        <button onClick={() => onWeekChange(w => Math.max(0, w - 1))} disabled={weekIndex === 0} className={navBtn} aria-label="Previous week">
+          <ChevronLeft size={16} />
+        </button>
+        <div className="text-center min-w-0">
+          <div className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate">{rangeLabel}</div>
+          {weekInfo && (
+            <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              T{weekInfo.term} · W{weekInfo.week}{weekInfo.weekType ? ` · ${weekInfo.weekType}` : ''}
+            </div>
+          )}
+        </div>
+        <button onClick={() => onWeekChange(w => Math.min(numWeeks - 1, w + 1))} disabled={weekIndex >= numWeeks - 1} className={navBtn} aria-label="Next week">
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-px bg-m-line border-b border-m-line">
+        {dates.map(d => (
+          <div key={format(d, 'yyyy-MM-dd')} className="bg-m-panel py-1.5 text-center font-mono text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+            {format(d, 'E')[0]}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-px bg-m-line">
+        {dates.map(d => (
+          <DayButton
+            key={format(d, 'yyyy-MM-dd')}
+            date={d}
+            day={d.getDate()}
+            outOfMonth={!isSameMonthDate(d, month)}
+            group={groupFor(d)}
+            closure={closureFor?.(d)}
+            isSelected={!!selectedDate && isSameDay(d, selectedDate)}
+            onSelect={onSelect}
+            minHeight="min-h-[72px]"
+          />
+        ))}
+      </div>
+    </div>
+  );
 };
 
 const DayEvents = ({ date, group, closure }) => {
@@ -264,7 +347,9 @@ const CalendarView = ({ user }) => {
   const [showFlyout, setShowFlyout] = useState(false);
   const [dayDirection, setDayDirection] = useState(1);
   const isWide = useMediaQuery('(min-width: 1024px)');
+  const isNarrow = useMediaQuery('(max-width: 639px)');
   const panelRef = useRef(null);
+  const [weekIndex, setWeekIndex] = useState(() => weekIndexForDate(new Date(), new Date()));
 
   // Months already loaded (this session, saved on the device, or fetched in the background at
   // start-up) show at once and refresh underneath.
@@ -278,19 +363,34 @@ const CalendarView = ({ user }) => {
   const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
   const closureFor = (date) => closureLabel(date, terms, events);
 
+  const numWeeks = Math.ceil((startOfMonth(currentDate).getDay() + endOfMonth(currentDate).getDate()) / 7);
+
   const goToMonth = (target) => {
     const dir = Math.sign(startOfMonth(target) - startOfMonth(currentDate));
     if (dir === 0) return;
     setDirection(dir);
     setCurrentDate(target);
+    // Land on today's week when going back to the current month, otherwise the first week.
+    const now = new Date();
+    setWeekIndex(isSameMonthDate(startOfMonth(target), startOfMonth(now)) ? weekIndexForDate(startOfMonth(target), now) : 0);
   };
 
   const handleReset = () => {
     goToMonth(new Date());
+    setWeekIndex(weekIndexForDate(new Date(), new Date()));
     setShowFlyout(false);
   };
 
   const handleDateClick = (date) => {
+    // Tapping a dimmed day from a neighbouring month jumps to its month and selects it.
+    if (!isSameMonthDate(date, currentDate)) {
+      setDirection(Math.sign(startOfMonth(date) - startOfMonth(currentDate)));
+      setCurrentDate(startOfMonth(date));
+      setWeekIndex(weekIndexForDate(startOfMonth(date), date));
+      setSelectedDate(date);
+      setShowFlyout(true);
+      return;
+    }
     if (showFlyout && selectedDate && isSameDay(date, selectedDate)) {
       setShowFlyout(false);
       return;
@@ -403,13 +503,26 @@ const CalendarView = ({ user }) => {
                       exit="exit"
                       transition={{ x: PANEL_SPRING, opacity: { duration: 0.2 } }}
                     >
-                      <MonthGrid
-                        month={currentDate}
-                        events={events}
-                        selectedDate={flyoutOpen ? selectedDate : null}
-                        onSelect={handleDateClick}
-                        closureFor={closureFor}
-                      />
+                      {isNarrow ? (
+                        <WeekGrid
+                          month={currentDate}
+                          weekIndex={Math.min(weekIndex, numWeeks - 1)}
+                          numWeeks={numWeeks}
+                          events={events}
+                          selectedDate={flyoutOpen ? selectedDate : null}
+                          onSelect={handleDateClick}
+                          closureFor={closureFor}
+                          onWeekChange={setWeekIndex}
+                        />
+                      ) : (
+                        <MonthGrid
+                          month={currentDate}
+                          events={events}
+                          selectedDate={flyoutOpen ? selectedDate : null}
+                          onSelect={handleDateClick}
+                          closureFor={closureFor}
+                        />
+                      )}
                     </motion.div>
                   </AnimatePresence>
                 </LayoutGroup>
