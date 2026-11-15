@@ -26,6 +26,14 @@
   --font-mono: "Geist Mono", ui-monospace;
 }
 
+/* The untinted default keeps a white accent in dark mode, but white on white
+   in light mode — give it a real accent there. Skipped when a theme-* class
+   is present so colour themes keep their own accent. */
+html:not(.dark):not([class*="theme-"]) {
+  --color-accent: 217 91% 60%; /* blue-600 */
+  --color-accent-contrast: 0 0% 100%;
+}
+
 /* Theme overrides */
 .theme-mint {
   --color-accent: 150 84% 37%; /* emerald-600 */

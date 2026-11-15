@@ -121,13 +121,6 @@ export const usePWAInstall = () => {
         setDismissed(true);
     }, []);
 
-    const resetDismissed = useCallback(() => {
-        try {
-            localStorage.removeItem('pwa_install_dismissed');
-        } catch {}
-        setDismissed(false);
-    }, []);
-
     // Prompt user to install the PWA (opens native browser prompt)
     const promptToInstall = useCallback(async () => {
         if (globalDeferredPrompt) {
@@ -173,7 +166,6 @@ export const usePWAInstall = () => {
         isIOS,
         dismissed,
         dismiss,
-        resetDismissed,
         promptToInstall,
         showIOSInstructions
     };

@@ -173,7 +173,7 @@ function App() {
             return null;
         }
     });
-    const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
+    const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'blue');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
     const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
     // Per-feature admin toggles from /api/system/status; missing keys mean on.

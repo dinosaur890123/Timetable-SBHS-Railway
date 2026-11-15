@@ -102,7 +102,7 @@ const SettingsView = ({
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
-    const { isInstalled, hasPrompt, isIOS, dismissed, resetDismissed, promptToInstall } = usePWAInstall();
+    const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     // Red dot until every class in the timetable has a link (personal or community).
     // Links reset each calendar year, so it comes back then too.
@@ -170,19 +170,6 @@ const SettingsView = ({
                             title="Install Synchron"
                             description="Use your browser's install option (address bar or menu) to add Synchron to your home screen."
                         />
-                    )}
-                    {dismissed && !isIOS && (
-                        <div className="px-4 py-2.5 sm:px-5 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-4">
-                            <p className="text-[12px] text-zinc-400 dark:text-zinc-500">
-                                Install prompt hidden from the navigation bar.
-                            </p>
-                            <button
-                                onClick={resetDismissed}
-                                className="shrink-0 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                            >
-                                Show again
-                            </button>
-                        </div>
                     )}
                 </Section>
             )}
