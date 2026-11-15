@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
 import { calendarPage, termsPage, closureLabel } from '../services/pageData';
@@ -47,7 +47,28 @@ const getEventTypeAccent = (type) => {
   }
 };
 
-const CELL_HEIGHT = 'min-h-[60px] sm:min-h-[100px]';
+// Soft tinted chips for the grid; filled badges are kept for the day panel.
+const getEventChipColor = (type) => {
+  switch (type) {
+    case 'assessment': return 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-950 dark:border-white';
+    case 'assignment': return 'bg-purple-100/80 text-purple-800 border-purple-200 dark:bg-purple-400/10 dark:text-purple-300 dark:border-purple-400/20';
+    case 'holiday': return 'bg-sky-100/80 text-sky-800 border-sky-200 dark:bg-sky-400/10 dark:text-sky-300 dark:border-sky-400/20';
+    default: return 'bg-zinc-100/80 text-zinc-600 border-zinc-200 dark:bg-white/[0.06] dark:text-zinc-300 dark:border-white/10';
+  }
+};
+
+const getEventDotColor = (type) => {
+  switch (type) {
+    case 'assessment': return 'bg-zinc-900 dark:bg-white';
+    case 'assignment': return 'bg-purple-500 dark:bg-purple-400';
+    case 'holiday': return 'bg-sky-500 dark:bg-sky-400';
+    default: return 'bg-zinc-400 dark:bg-zinc-500';
+  }
+};
+
+const CELL_HEIGHT = 'min-h-[56px] sm:min-h-[92px]';
+// Week/term column, then seven day columns.
+const GRID_COLS = 'grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[4rem_repeat(7,minmax(0,1fr))]';
 
 // One month: a term/week column, then the days. Pure render; the parent animates it in and out.
 const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
@@ -65,7 +86,7 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
     for (let col = 0; col < 7; col++) {
       const day = row * 7 + col - firstDayOfWeek + 1;
       if (day < 1 || day > totalDays) {
-        cells.push(<div key={`empty-${row}-${col}`} className={`bg-zinc-50 dark:bg-zinc-950 ${CELL_HEIGHT}`} />);
+        cells.push(<div key={`empty-${row}-${col}`} className={`bg-m-panel ${CELL_HEIGHT}`} />);
         continue;
       }
 
@@ -85,8 +106,12 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
           onClick={() => onSelect(date)}
           transition={SPRING}
           aria-pressed={isSelected}
-          className={`relative ${CELL_HEIGHT} p-1 sm:p-2 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
-            isTodayDate ? 'bg-zinc-100 dark:bg-zinc-800' : 'bg-white dark:bg-zinc-900'
+          className={`relative ${CELL_HEIGHT} px-1 pt-1.5 pb-1 sm:px-1.5 sm:pt-2 flex flex-col text-left transition-colors ${
+            isSelected
+              ? 'bg-accent/10 dark:bg-accent/15'
+              : isTodayDate
+                ? 'bg-accent/5 dark:bg-accent/10'
+                : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
           }`}
         >
           {/* The selection ring glides from day to day rather than jumping. */}
@@ -95,7 +120,7 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
               <motion.span
                 layoutId="calendar-selected-day"
                 aria-hidden
-                className="absolute inset-0.5 rounded-lg ring-2 ring-zinc-900 dark:ring-white pointer-events-none"
+                className="absolute inset-0.5 rounded-md ring-2 ring-accent pointer-events-none"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -103,38 +128,58 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
               />
             )}
           </AnimatePresence>
-          <span className={`relative inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-semibold ${
-            isTodayDate ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-zinc-900 dark:text-white'
-          }`}>
-            {day}
-          </span>
-          {closure && (
-            <span
-              title={closure}
-              className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-blue-500"
-            />
-          )}
-          {items.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 3 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, ease: EASE }}
-              className="relative mt-1 sm:mt-2 space-y-0.5 sm:space-y-1"
-            >
-              {items.slice(0, 2).map((event, i) => (
-                <div
-                  key={i}
-                  className={`px-1 py-0.5 sm:px-1.5 sm:py-0.5 text-[9px] sm:text-[10px] font-medium truncate rounded ${getEventTypeColor(event.type)}`}
-                >
-                  {event.title}
-                </div>
-              ))}
-              {items.length > 2 && (
-                <div className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400">
-                  +{items.length - 2} more
-                </div>
-              )}
-            </motion.div>
+          <div className="relative flex items-center gap-1.5">
+            <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[13px] sm:text-sm font-medium ${
+              isTodayDate
+                ? 'bg-accent text-accent-contrast'
+                : isSelected
+                  ? 'text-accent'
+                  : 'text-zinc-800 dark:text-zinc-200'
+            }`}>
+              {day}
+            </span>
+            {closure && (
+              <span
+                title={closure}
+                className="h-1 w-1 rounded-full bg-sky-500 shrink-0"
+              />
+            )}
+          </div>
+          {(items.length > 0 || (closure && items.length === 0)) && (
+            <div className="relative mt-auto pt-1">
+              {/* Narrow screens get colour dots; wider ones get named chips. */}
+              <div className="flex items-center gap-1 sm:hidden">
+                {items.slice(0, 3).map((event, i) => (
+                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${getEventDotColor(event.type)}`} />
+                ))}
+                {items.length > 3 && (
+                  <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">+{items.length - 3}</span>
+                )}
+                {closure && items.length === 0 && (
+                  <span className="min-w-0 flex-1 truncate text-[9px] font-medium text-sky-600 dark:text-sky-400">{closure}</span>
+                )}
+              </div>
+              <div className="hidden sm:block space-y-1">
+                {items.slice(0, 2).map((event, i) => (
+                  <div
+                    key={i}
+                    className={`px-1.5 py-0.5 text-[10px] font-medium truncate rounded-md border ${getEventChipColor(event.type)}`}
+                  >
+                    {event.title}
+                  </div>
+                ))}
+                {items.length > 2 && (
+                  <div className="px-1.5 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+                    +{items.length - 2} more
+                  </div>
+                )}
+                {closure && items.length === 0 && (
+                  <div className="px-1.5 text-[10px] font-medium text-sky-600 dark:text-sky-400 truncate">
+                    {closure}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </motion.button>
       );
@@ -142,13 +187,13 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
 
     rows.push(
       <React.Fragment key={row}>
-        <div className={`bg-zinc-50 dark:bg-zinc-950 ${CELL_HEIGHT} flex flex-col items-center justify-center border-r border-zinc-200 dark:border-zinc-800 w-8 sm:w-auto`}>
+        <div className={`bg-m-panel ${CELL_HEIGHT} flex flex-col items-center justify-center px-0.5`}>
           {weekInfo ? (
-            <div className="text-center px-0.5">
-              <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">T{weekInfo.term}</div>
-              <div className="text-[10px] sm:text-xs font-semibold text-zinc-900 dark:text-white mt-0.5">W{weekInfo.week}</div>
+            <div className="text-center">
+              <div className="font-mono text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">T{weekInfo.term}</div>
+              <div className="text-[11px] sm:text-xs font-semibold text-zinc-900 dark:text-white mt-0.5">W{weekInfo.week}</div>
               {weekInfo.weekType && (
-                <div className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">{weekInfo.weekType}</div>
+                <div className="hidden sm:block text-[9px] sm:text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{weekInfo.weekType}</div>
               )}
             </div>
           ) : (
@@ -160,7 +205,7 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
     );
   }
 
-  return <div className="grid grid-cols-8 gap-px bg-zinc-200 dark:bg-zinc-800">{rows}</div>;
+  return <div className={`grid ${GRID_COLS} gap-px bg-m-line`}>{rows}</div>;
 };
 
 const DayEvents = ({ date, group, closure }) => {
@@ -168,21 +213,21 @@ const DayEvents = ({ date, group, closure }) => {
   if (items.length === 0) {
     return (
       <div className="px-5 py-12 text-center">
-        <CalIcon size={32} className="text-zinc-400 dark:text-zinc-600 mx-auto mb-3" />
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm">No events</p>
+        <CalIcon size={28} className="text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+        <p className="text-sm text-zinc-400 dark:text-zinc-500">No events</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+    <div className="divide-y divide-m-line">
       {items.map((event, i) => (
         <motion.div
           key={`${format(date, 'yyyy-MM-dd')}-${i}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: Math.min(i, 6) * 0.04, duration: 0.24, ease: EASE }}
-          className="px-4 py-3 sm:px-5 sm:py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+          className="px-4 py-3 sm:px-5 sm:py-4 hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04] transition-colors"
         >
           <div className="flex items-start gap-3 sm:gap-4">
             <div className={`w-1 h-10 rounded-full shrink-0 mt-1 ${getEventTypeAccent(event.type)}`}></div>
@@ -219,6 +264,7 @@ const CalendarView = ({ user }) => {
   const [showFlyout, setShowFlyout] = useState(false);
   const [dayDirection, setDayDirection] = useState(1);
   const isWide = useMediaQuery('(min-width: 1024px)');
+  const panelRef = useRef(null);
 
   // Months already loaded (this session, saved on the device, or fetched in the background at
   // start-up) show at once and refresh underneath.
@@ -258,6 +304,13 @@ const CalendarView = ({ user }) => {
   const flyoutOpen = showFlyout && selectedDate && isSameMonth(selectedDate, currentDate);
   const selectedClosure = flyoutOpen ? closureFor(selectedDate) : null;
 
+  // On narrow screens the day panel unfolds below the grid, so bring it into view.
+  useEffect(() => {
+    if (flyoutOpen && !isWide) {
+      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [flyoutOpen, selectedDate, isWide]);
+
   // Wide screens: the panel grows sideways and the grid narrows with it. Narrow: it unfolds above.
   const panelMotion = isWide
     ? { initial: { width: 0, opacity: 0 }, animate: { width: 408, opacity: 1 }, exit: { width: 0, opacity: 0 } }
@@ -273,22 +326,22 @@ const CalendarView = ({ user }) => {
           className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
         >
           <div>
-            <h2 className="text-3xl font-bold dark:text-white text-zinc-900">Synchron Calendar</h2>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight dark:text-white text-zinc-900">Calendar</h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Events and important dates</p>
           </div>
 
           <div className="flex items-center gap-1">
             <motion.button
               onClick={() => goToMonth(addMonths(currentDate, -1))}
-              className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
+              className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-900/[0.05] dark:hover:text-white dark:hover:bg-white/[0.06] transition-colors"
               aria-label="Previous month"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
             </motion.button>
 
             <motion.button
               onClick={handleReset}
-              className="relative px-3 py-2 font-semibold bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[10.5rem] justify-center overflow-hidden"
+              className="relative px-3 py-2 font-medium bg-zinc-100 dark:bg-zinc-900 rounded-lg dark:text-zinc-100 text-zinc-900 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 min-w-[10.5rem] justify-center overflow-hidden"
               title="Back to this month"
             >
               {loading
@@ -314,10 +367,10 @@ const CalendarView = ({ user }) => {
 
             <motion.button
               onClick={() => goToMonth(addMonths(currentDate, 1))}
-              className="w-10 h-10 shrink-0 grid place-items-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:text-zinc-300 text-zinc-700 transition-colors"
+              className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 grid place-items-center rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-900/[0.05] dark:hover:text-white dark:hover:bg-white/[0.06] transition-colors"
               aria-label="Next month"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </motion.button>
           </div>
         </motion.div>
@@ -325,13 +378,14 @@ const CalendarView = ({ user }) => {
         <div className="flex flex-col lg:flex-row">
           {/* Calendar Grid */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="bg-m-card rounded-xl border border-m-line overflow-hidden">
               {/* Day Headers */}
-              <div className="grid grid-cols-8 border-b border-zinc-200 dark:border-zinc-800">
-                <div className="px-1 py-2 sm:px-2 sm:py-3 bg-zinc-50 dark:bg-zinc-950"></div>
+              <div className={`grid ${GRID_COLS} gap-px bg-m-line border-b border-m-line`}>
+                <div className="bg-m-panel py-2"></div>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="px-1 py-2 sm:px-2 sm:py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    {day}
+                  <div key={day} className="bg-m-panel px-1 py-2 sm:py-2.5 text-center">
+                    <span className="sm:hidden font-mono text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">{day[0]}</span>
+                    <span className="hidden sm:inline font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 dark:text-zinc-500">{day}</span>
                   </div>
                 ))}
               </div>
@@ -368,12 +422,13 @@ const CalendarView = ({ user }) => {
             {flyoutOpen && (
               <motion.aside
                 key="day-panel"
+                ref={panelRef}
                 {...panelMotion}
                 transition={{ ...PANEL_SPRING, opacity: { duration: 0.18 } }}
-                className="shrink-0 order-first lg:order-last overflow-hidden"
+                className="shrink-0 overflow-hidden"
               >
                 <div className="pb-4 lg:pb-0 lg:pl-6 lg:w-[408px]">
-                  <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden lg:sticky lg:top-8">
+                  <div className="bg-m-card rounded-xl border border-m-line overflow-hidden lg:sticky lg:top-8">
                     <AnimatePresence mode="popLayout" initial={false} custom={dayDirection}>
                       <motion.div
                         key={format(selectedDate, 'yyyy-MM-dd')}
@@ -389,7 +444,7 @@ const CalendarView = ({ user }) => {
                         transition={{ duration: 0.2, ease: EASE }}
                       >
                         {/* Flyout Header */}
-                        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80">
+                        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-m-line bg-m-panel">
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hidden sm:block">
@@ -405,7 +460,7 @@ const CalendarView = ({ user }) => {
                             <motion.button
                               onClick={() => setShowFlyout(false)}
                               aria-label="Close"
-                              className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                              className="w-8 h-8 shrink-0 grid place-items-center hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.08] rounded-lg transition-colors"
                             >
                               <X size={18} className="text-zinc-500 dark:text-zinc-400" />
                             </motion.button>
