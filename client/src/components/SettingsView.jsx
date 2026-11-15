@@ -136,66 +136,54 @@ const SettingsView = ({
                 </button>
             </div>
 
-            {/* PWA Install Section - moves here when dismissed from navigation bar, and disappears once installed */}
+            {/* PWA Install — disappears once installed. iOS gets manual instructions;
+                Chromium gets an Install button when the browser prompt is live. */}
             {!isInstalled && (
                 <Section label="Install App">
-                    <div className="px-4 py-3.5 sm:px-5">
-                        {isIOS ? (
-                            <div className="flex items-start gap-3">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                                    <Smartphone size={20} />
+                    {isIOS ? (
+                        <div className="px-4 py-3.5 sm:px-5 flex items-start gap-3">
+                            <Smartphone size={16} strokeWidth={1.8} className="shrink-0 mt-0.5 text-zinc-400" />
+                            <div className="min-w-0 flex-1">
+                                <div className="text-[14px] font-medium text-zinc-900 dark:text-white">
+                                    Add to Home Screen
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-1">Install on iPhone / iPad</div>
-                                    <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mb-2">
-                                        Tap the <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><Share2 size={14} /> Share</span> button in Safari, then choose <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><PlusCircle size={14} /> Add to Home Screen</span>.
-                                    </p>
-                                </div>
+                                <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                                    Tap <span className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-medium"><Share2 size={12} /> Share</span> in Safari, then <span className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-medium"><PlusCircle size={12} /> Add to Home Screen</span>.
+                                </p>
                             </div>
-                        ) : (
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                                <div className="flex items-start gap-3 min-w-0">
-                                    <div className="shrink-0 w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                                        <Download size={20} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-0.5">
-                                            Install Synchron
-                                        </div>
-                                        <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                                            Installing Synchron takes up no extra storage and allows faster offline access.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
-                                    {hasPrompt ? (
-                                        <button
-                                            onClick={promptToInstall}
-                                            className="h-9 px-4 rounded-lg bg-accent text-accent-contrast font-medium text-[13px] hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-sm"
-                                        >
-                                            <Download size={14} />
-                                            <span>Install</span>
-                                        </button>
-                                    ) : (
-                                        <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
-                                            Available in browser menu
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                        {dismissed && (
-                            <div className="mt-3 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between text-[12px] text-zinc-400 dark:text-zinc-500">
-                                <span>Install prompt was dismissed from the navigation bar.</span>
-                                <button
-                                    onClick={resetDismissed}
-                                    className="text-accent hover:underline font-medium"
-                                >
-                                    Restore to navigation bar
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : hasPrompt ? (
+                        <Row
+                            title="Install Synchron"
+                            description="Installing takes up no extra storage and allows faster offline access."
+                        >
+                            <button
+                                onClick={promptToInstall}
+                                className="h-8 px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
+                            >
+                                <Download size={13} />
+                                <span>Install</span>
+                            </button>
+                        </Row>
+                    ) : (
+                        <Row
+                            title="Install Synchron"
+                            description="Use your browser's install option (address bar or menu) to add Synchron to your home screen."
+                        />
+                    )}
+                    {dismissed && !isIOS && (
+                        <div className="px-4 py-2.5 sm:px-5 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-4">
+                            <p className="text-[12px] text-zinc-400 dark:text-zinc-500">
+                                Install prompt hidden from the navigation bar.
+                            </p>
+                            <button
+                                onClick={resetDismissed}
+                                className="shrink-0 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                            >
+                                Show again
+                            </button>
+                        </div>
+                    )}
                 </Section>
             )}
 
