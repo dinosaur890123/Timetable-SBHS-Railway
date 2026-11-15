@@ -23,10 +23,22 @@ export const VIEW_LABELS = {
     admin: 'Admin'
 };
 
-// Canvas mark swaps between the mono and LMS variants on row hover.
+// Canvas mark swaps between the mono and LMS variants on row hover. The mono
+// mark is masked so it inherits the row's icon colour like the lucide icons.
+const monoMask = {
+    WebkitMaskImage: "url('/canvas-mono.svg')",
+    maskImage: "url('/canvas-mono.svg')",
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center'
+};
+
 const CanvasIcon = ({ size = 16, className = '' }) => (
     <span className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size }}>
-        <img src="/canvas-mono.svg" alt="" className="block w-full h-full group-hover:hidden" />
+        <span className="block w-full h-full bg-current group-hover:hidden" style={monoMask} />
         <img src="/canvas-lms.svg" alt="" className="hidden w-full h-full group-hover:block" />
     </span>
 );
