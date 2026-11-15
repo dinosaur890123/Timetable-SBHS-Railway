@@ -50,10 +50,8 @@ const buildSlots = (timetableData) => {
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const originalTitle = period.title;
-        const isActualBreak = isBreakBell(bellId, period);
-        const isSportOrScripture = !isActualBreak && isBreakStylePeriod(bellId, period);
-
-        if (isActualBreak) {
+        const isBreak = isBreakStylePeriod(bellId, period);
+        if (isBreak) {
             period = { ...period, title: bell.bellDisplay };
         } else {
             period = applyPeriodVariations(period, bellId, classVariations, roomVariations);
@@ -63,17 +61,16 @@ const buildSlots = (timetableData) => {
 
         if (bellId === 'RC' || originalTitle?.toLowerCase().includes('roll call')) return null;
         // An empty Period 0 is just a gap before school starts.
-        if (isActualBreak && String(bellId) === '0') return null;
+        if (isBreak && String(bellId) === '0') return null;
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
-        return { bellId, bell, period, isBreak: isActualBreak || isSportOrScripture, isSportOrScripture: !!isSportOrScripture, startMin, endMin };
+        return { bellId, bell, period, isBreak, startMin, endMin };
     }).filter(Boolean).reduce((rows, slot) => {
         // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one.
-        // Don't fold sport/scripture periods - they should remain separate.
         const prev = rows[rows.length - 1];
         const label = slot.period.title?.replace(/\s*\d+$/, '');
-        if (prev?.isBreak && !prev.isSportOrScripture && slot.isBreak && !slot.isSportOrScripture && prev.period.title?.replace(/\s*\d+$/, '') === label) {
+        if (prev?.isBreak && slot.isBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
             prev.endMin = slot.endMin;
             return rows;
         }
@@ -82,7 +79,7 @@ const buildSlots = (timetableData) => {
     }, []);
 };
 
-const isClass = (slot) => !slot.isBreak && !slot.isSportOrScripture && slot.period.title && slot.period.title !== 'Free Period';
+const isClass = (slot) => !slot.isBreak && slot.period.title && slot.period.title !== 'Free Period';
 
 // Converts clipboard sessions to slot-like objects for the countdown
 const buildClipboardSlots = (sessions, dayKey) => {
@@ -266,7 +263,7 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
-        {slot.isSportOrScripture ? null : <SubjectDot colour={slot.period.colour} />}
+        <SubjectDot colour={slot.period.colour} />
         <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
             <span className="lg:hidden">{slot.period.title}</span>
             <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
@@ -342,9 +339,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
                 <RailLabel>Before school</RailLabel>
                 <Countdown
                     mins={first.startMin - nowMin}
-                    caption={first.isSportOrScripture
-                        ? `until ${first.period.title}`
-                        : first.isBreak
+                    caption={first.isBreak
                         ? `until ${first.period.title.replace(/\s*\d+$/, '')}`
                         : first.isExtracurricular ? 'until first session' : 'until first class'}
                 />

@@ -16,7 +16,7 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, isSportOrScripture, canvasLink, linksEnabled = true }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, linksEnabled = true }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
@@ -27,8 +27,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     const tooltipTimeoutRef = React.useRef(null);
 
     if (isBreak) {
-        // For sport/scripture, show the actual title in break style
-        const breakLabel = isSportOrScripture ? name : label;
         return (
             <motion.li
                 initial={{ opacity: 0 }}
@@ -38,28 +36,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             >
                 <div className={`flex items-center gap-4 ${dim}`}>
                 <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{bell.time}</span>
-                <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{breakLabel}</span>
-                <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
-                <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
-                    {isCurrent ? 'Now' : `${endMinutes - startMinutes} min`}
-                </span>
-                </div>
-            </motion.li>
-        );
-    }
-
-    // Sport/scripture periods should also render in break style
-    if (isSportOrScripture) {
-        return (
-            <motion.li
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: enterDelay(routineIndex) }}
-                className="px-3 py-1.5"
-            >
-                <div className={`flex items-center gap-4 ${dim}`}>
-                <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{bell.time}</span>
-                <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{name}</span>
+                <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{label}</span>
                 <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
                 <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
                     {isCurrent ? 'Now' : `${endMinutes - startMinutes} min`}
