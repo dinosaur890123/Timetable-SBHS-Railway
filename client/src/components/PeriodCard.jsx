@@ -16,7 +16,7 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, isActualBreak, canvasLink, linksEnabled = true }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, linksEnabled = true }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
@@ -38,11 +38,9 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{bell.time}</span>
                 <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{label}</span>
                 <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
-                {isActualBreak && (
-                    <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
-                        {isCurrent ? 'Now' : `${endMinutes - startMinutes} min`}
-                    </span>
-                )}
+                <span className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-accent' : 'text-zinc-400 dark:text-zinc-600'}`}>
+                    {isCurrent ? 'Now' : `${endMinutes - startMinutes} min`}
+                </span>
                 </div>
             </motion.li>
         );

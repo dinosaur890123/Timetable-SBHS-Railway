@@ -50,14 +50,9 @@ const buildSlots = (timetableData) => {
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const originalTitle = period.title;
-        const isActualBreak = isBreakBell(bellId, period);
-        const isBreakStyle = isBreakStylePeriod(bellId, period);
-
-        if (isActualBreak) {
+        const isBreak = isBreakStylePeriod(bellId, period);
+        if (isBreak) {
             period = { ...period, title: bell.bellDisplay };
-        } else if (isBreakStyle) {
-            // Keep original title for sport/scripture, just mark as break style
-            period = { ...period };
         } else {
             period = applyPeriodVariations(period, bellId, classVariations, roomVariations);
             const { name, colour } = describeClass(period, timetableData.timetable?.subjects);
@@ -66,17 +61,16 @@ const buildSlots = (timetableData) => {
 
         if (bellId === 'RC' || originalTitle?.toLowerCase().includes('roll call')) return null;
         // An empty Period 0 is just a gap before school starts.
-        if (isBreakStyle && String(bellId) === '0') return null;
+        if (isBreak && String(bellId) === '0') return null;
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
-        return { bellId, bell, period, isBreak: isBreakStyle, isActualBreak, startMin, endMin };
+        return { bellId, bell, period, isBreak, startMin, endMin };
     }).filter(Boolean).reduce((rows, slot) => {
-        // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one.
-        // Sport/scripture periods are styled as breaks but not merged.
+        // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one.
         const prev = rows[rows.length - 1];
         const label = slot.period.title?.replace(/\s*\d+$/, '');
-        if (prev?.isActualBreak && slot.isActualBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
+        if (prev?.isBreak && slot.isBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
             prev.endMin = slot.endMin;
             return rows;
         }
@@ -345,11 +339,9 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
                 <RailLabel>Before school</RailLabel>
                 <Countdown
                     mins={first.startMin - nowMin}
-                    caption={first.isActualBreak
+                    caption={first.isBreak
                         ? `until ${first.period.title.replace(/\s*\d+$/, '')}`
-                        : first.isBreak
-                            ? `until ${first.period.title}`
-                            : first.isExtracurricular ? 'until first session' : 'until first class'}
+                        : first.isExtracurricular ? 'until first session' : 'until first class'}
                 />
                 <ThenLine slot={first} prefix="First" />
             </RailCard>
@@ -365,7 +357,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         const start = current ? current.startMin : nowMin;
         return (
             <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
-                <RailLabel aside={schoolLeft}>{current ? (current.isActualBreak ? current.period.title.replace(/\s*\d+$/, '') : current.period.title) : 'Between classes'}</RailLabel>
+                <RailLabel aside={schoolLeft}>{current ? current.period.title.replace(/\s*\d+$/, '') : 'Between classes'}</RailLabel>
                 <Countdown mins={end - nowMin} caption="left" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />

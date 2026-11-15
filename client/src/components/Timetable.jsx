@@ -235,14 +235,9 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
-            const isActualBreak = isBreakBell(bellId, periodInfo);
-            const isBreakStyle = isBreakStylePeriod(bellId, periodInfo);
 
-            if (isActualBreak) {
+            if (isBreakStylePeriod(bellId, periodInfo)) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
-            } else if (isBreakStyle) {
-                // Keep original title for sport/scripture, just mark as break style
-                periodInfo = { ...periodInfo };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
                 const { name, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
@@ -263,18 +258,18 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
+            const isBreak = isBreakStylePeriod(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
-            if (isBreakStyle && String(bellId) === '0') return null;
+            if (isBreak && String(bellId) === '0') return null;
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak: isBreakStyle, isActualBreak,
-                label: isBreakStyle ? periodInfo.title : null
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak,
+                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
-            // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one row.
-            // Sport/scripture periods are styled as breaks but not merged.
+            // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
             const prev = rows[rows.length - 1];
-            if (prev?.isActualBreak && row.isActualBreak && prev.label === row.label) {
+            if (prev?.isBreak && row.isBreak && prev.label === row.label) {
                 prev.endMin = row.endMin;
                 prev.isCurrent = currentMinutes >= prev.startMin && currentMinutes < prev.endMin;
                 return rows;
@@ -554,7 +549,6 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             bell={data.bell}
                             label={data.label}
                             isBreak={data.isBreak}
-                            isActualBreak={data.isActualBreak}
                             isCurrent={data.isCurrent}
                             justStarted={data.bellId === startedBell}
                             isNext={data.isNext}
