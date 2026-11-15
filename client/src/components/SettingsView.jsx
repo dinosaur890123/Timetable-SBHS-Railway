@@ -27,8 +27,8 @@ const Section = ({ label, children }) => (
     </section>
 );
 
-const Row = ({ title, description, children, stack = false }) => (
-    <div className={`px-4 py-3.5 sm:px-5 flex ${stack ? 'flex-col gap-3' : 'items-center justify-between gap-4 sm:gap-6'}`}>
+const Row = ({ title, description, children, stack = false, className = '' }) => (
+    <div className={`px-4 py-3.5 sm:px-5 flex ${stack ? 'flex-col gap-3' : 'items-center justify-between gap-4 sm:gap-6'} ${className}`}>
         <div className="min-w-0">
             <div className="text-[14px] font-medium text-zinc-900 dark:text-white">{title}</div>
             {description && <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>}
@@ -189,7 +189,7 @@ const SettingsView = ({
                         ))}
                     </div>
                 </Row>
-                <Row title="Favicon" description="Choose the icon shown in browser tabs.">
+                <Row title="Favicon" description="Choose the icon shown in browser tabs." className="hidden md:flex">
                     <Segmented
                         id="favicon"
                         value={faviconType}
