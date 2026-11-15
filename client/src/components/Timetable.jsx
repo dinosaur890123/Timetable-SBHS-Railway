@@ -3,7 +3,7 @@ import { CalendarDays, AlertCircle, Coffee, Umbrella, Calendar } from 'lucide-re
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
-import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
@@ -234,7 +234,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (!bell) return null;
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
-            if (isBreakBell(bellId, periodInfo)) {
+            if (isBreakStylePeriod(bellId, periodInfo)) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
@@ -256,7 +256,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
-            const isBreak = isBreakBell(bellId, periodInfo);
+            const isBreak = isBreakStylePeriod(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
             if (isBreak && String(bellId) === '0') return null;
 

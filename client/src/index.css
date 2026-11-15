@@ -112,10 +112,8 @@
 .palette-sage__md li { margin: 2px 0; }
 
 /* Subject colours, straight from the timetable API (props from subjectInk() in utils/timetable.js).
-   Very pale colours deepen on light surfaces and very dark ones lift on dark surfaces. */
+   Dark mode colours used everywhere - no light/dark adjustments. */
 [data-tone] { --subject-ink: var(--subject); }
-html:not(.dark) [data-tone="pale"] { --subject-ink: color-mix(in oklab, var(--subject) 70%, black); }
-html.dark [data-tone="deep"] { --subject-ink: color-mix(in oklab, var(--subject) 50%, white); }
 .subject-fill { background-color: var(--subject-ink); }
 .subject-edge {
   box-shadow: inset 3px 0 0 var(--subject-ink);
