@@ -124,10 +124,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/seo-shell.css">
     <script>
-      // Apply the saved colour mode before first paint: the landing page follows the
-      // same theme preference as the signed-in app (light unless dark was chosen).
+      // Signed-out visitors always get the dark landing page; signed-in visitors keep
+      // their saved colour mode preference.
       try {
-        if ((localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
+        var hasSession = !!(localStorage.getItem('sbhs_access_token') || localStorage.getItem('sbhs_refresh_token') || localStorage.getItem('cached_user'));
+        if (!hasSession || (localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>
   </head>
@@ -136,13 +137,13 @@
          no-JS visitors get real content; SeoShellCleanup removes it after React mounts.
          Keep this copy in sync with the component. -->
     <div id="seo-shell" class="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
-      <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+      <div class="relative isolate flex h-[100dvh] md:h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
         <div aria-hidden="true" class="ambient ambient--panel" style="position: fixed; --ambient-a:#7cc8ff; --ambient-b:#8fe8c8; --ambient-c:#ffe08a;">
           <span class="ambient__blob ambient__blob--a"></span>
           <span class="ambient__blob ambient__blob--b"></span>
           <span class="ambient__blob ambient__blob--c"></span>
         </div>
-        <header class="sticky top-0 md:top-2 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+        <header class="relative z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
           <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
             <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="Synchron home">
               <span class="relative w-7 h-7 shrink-0">
@@ -160,7 +161,8 @@
 
         <div aria-hidden="true" class="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots"></div>
 
-        <main class="flex-1">
+        <div class="flex min-h-0 flex-1 flex-col">
+        <main class="flex-1 min-h-0 overflow-y-auto">
           <section class="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:pb-24">
             <div>
               <h1 class="text-[2.2rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
@@ -415,6 +417,7 @@
             </nav>
           </div>
         </footer>
+        </div>
       </div>
     </div>
     <script>

@@ -8,7 +8,7 @@ import { performLogin, getOauthConfig } from '../services/api';
 import { BrandMark } from './modern/ModernShell';
 import AmbientLight from './modern/AmbientLight';
 
-// The landing page follows the saved theme preference, same as the signed-in app.
+// The landing page is always dark; the saved theme preference only applies once signed in.
 
 const ease = [0.2, 0.8, 0.2, 1];
 
@@ -24,9 +24,11 @@ const Label = ({ children, className = '' }) => (
 const PREVIEW_DAY = [
   { time: '9:00', bell: '1', title: 'English', teacher: 'Ms Reid', room: '203', past: true },
   { time: '10:05', bell: '2', title: 'Physics', teacher: 'Mr Hall', room: '307', current: true, sub: true },
-  { break: 'Recess', time: '11:05', mins: '20 min' },
+  { break: 'Recess', time: '11:05', mins: '17 min' },
   { time: '11:25', bell: '3', title: 'Design & Technology', teacher: 'Mr Gray', room: '502', roomChange: true },
-  { time: '12:30', bell: '4', title: 'Mathematics Ext. 2', teacher: 'Mr Jones', room: '105' }
+  { time: '12:30', bell: '4', title: 'Mathematics Ext. 2', teacher: 'Mr Jones', room: '105' },
+  { break: 'Lunch', time: '13:30', mins: '37 min' },
+  { time: '14:10', bell: '5', title: 'History', teacher: 'Mr Smith', room: '105' }
 ];
 
 // A period is 60 minutes; the preview counts down through the back half of one and loops.
@@ -289,12 +291,11 @@ const LandingPage = ({ authError, clearAuthError }) => {
           {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
         </AnimatePresence>
 
-        {/* The same inset panel the signed-in app lives in */}
-        {/* overflow:clip (not hidden) keeps the rounded corners clipped without
-            becoming a scroll container, so the sticky header still works. */}
-        <div className="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+        {/* The same inset panel the signed-in app lives in: fixed height, header
+            outside the scroll area so content can never scroll up behind it. */}
+        <div className="relative isolate flex h-[100dvh] md:h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
           {ambientOn && <AmbientLight variant="panel" style={{ position: 'fixed' }} />}
-          <header className="sticky top-0 md:top-2 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+          <header className="relative z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
               <button onClick={handleLogoClick} className="flex min-w-0 items-center gap-2.5" aria-label="Synchron">
                 {useOriginalMark ? (
@@ -321,7 +322,8 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
           <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots" />
 
-          <main className="flex-1">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <main className="flex-1 min-h-0 overflow-y-auto">
             <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:pb-24">
               <motion.div
                 initial={{ opacity: 1, y: 8 }}
@@ -401,6 +403,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
               </nav>
             </div>
           </footer>
+          </div>
         </div>
       </div>
     </MotionConfig>
