@@ -322,8 +322,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
           <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots" />
 
-          <div className="flex min-h-0 flex-1 flex-col">
-            <main className="flex-1 min-h-0 overflow-y-auto">
+          <main className="flex-1 min-h-0 overflow-y-auto">
             <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:pb-24">
               <motion.div
                 initial={{ opacity: 1, y: 8 }}
@@ -391,19 +390,18 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 </div>
               </div>
             </section>
-          </main>
 
-          <footer className="border-t border-m-line">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron {new Date().getFullYear()}</span>
-              <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
-                <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
-                <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
-                <span>Built independently for SBHS</span>
-              </nav>
-            </div>
-          </footer>
-          </div>
+            <footer className="border-t border-m-line">
+              <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron {new Date().getFullYear()}</span>
+                <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+                  <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+                  <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+                  <span>Built independently for SBHS</span>
+                </nav>
+              </div>
+            </footer>
+          </main>
         </div>
       </div>
     </MotionConfig>
