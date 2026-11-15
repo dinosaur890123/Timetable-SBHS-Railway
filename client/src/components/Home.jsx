@@ -49,6 +49,7 @@ const buildSlots = (timetableData) => {
         if (!bell) return null;
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
+        const originalTitle = period.title;
         const isBreak = isBreakStylePeriod(bellId, period);
         if (isBreak) {
             period = { ...period, title: bell.bellDisplay };
@@ -58,7 +59,7 @@ const buildSlots = (timetableData) => {
             period = { ...period, fullTitle: name, colour };
         }
 
-        if (bellId === 'RC' || period.title?.toLowerCase().includes('roll call')) return null;
+        if (bellId === 'RC' || originalTitle?.toLowerCase().includes('roll call')) return null;
         // An empty Period 0 is just a gap before school starts.
         if (isBreak && String(bellId) === '0') return null;
 

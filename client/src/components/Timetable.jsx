@@ -234,6 +234,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (!bell) return null;
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
+            const originalTitle = periodInfo.title;
+
             if (isBreakStylePeriod(bellId, periodInfo)) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
             } else {
@@ -243,7 +245,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             }
 
             // Filter out roll call from timetable view
-            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) {
+            if (bellId === "RC" || (originalTitle && originalTitle.toLowerCase().includes("roll call"))) {
                 return null;
             }
 

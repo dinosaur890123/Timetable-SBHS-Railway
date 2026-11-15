@@ -39,8 +39,9 @@ export const isBreakBell = (bellId, periodInfo = null) => {
 export const isBreakStylePeriod = (bellId, periodInfo = null) => {
     if (isBreakBell(bellId, periodInfo)) return true;
     if (periodInfo && periodInfo.title) {
+        // Use same logic as canvaslink exceptions for sport/scripture detection
         const title = periodInfo.title.toLowerCase();
-        if (title.includes('sport') || title.includes('scripture')) return true;
+        if (title.includes('sport') || /^sp[\s-]?\d/.test(title) || title.includes('scripture')) return true;
     }
     return false;
 };
