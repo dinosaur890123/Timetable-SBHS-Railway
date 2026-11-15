@@ -48,6 +48,24 @@ const termSpans = (termsData) =>
         .filter(t => t.start && t.end)
         .sort((a, b) => a.start.localeCompare(b.start));
 
+const LAST_DAY_OF_TERM = /last\s+day\s+of\s+term/i;
+
+const lastDayOfTermDates = (eventsData) => {
+    if (!Array.isArray(eventsData)) return [];
+    return [...new Set(eventsData.flatMap(group => {
+        const date = ymd(group?.info?.date);
+        if (!date || !(group?.items || []).some(item => item?.title && LAST_DAY_OF_TERM.test(item.title))) return [];
+        return [date];
+    }))].sort();
+};
+
+const afterCalendarTermEnd = (key, spans, eventsData) =>
+    lastDayOfTermDates(eventsData).some(end => {
+        if (key <= end) return false;
+        const nextStart = spans.find(span => span.start > end)?.start;
+        return !nextStart || key < nextStart;
+    });
+
 // What a date is closed for, if anything: a named public holiday or staff development
 // day on a weekday, "School holidays" for any weekday outside every term's bounds, or
 // "School holidays" for any weekend outside every term's bounds (holiday weekends earn
@@ -58,7 +76,8 @@ export const closureLabel = (date, termsData, eventsData = null) => {
     const isWeekend = dow === 0 || dow === 6;
     const key = format(date, 'yyyy-MM-dd');
     const spans = termSpans(termsData);
-    const insideTerm = spans.length > 0 && spans.some(t => key >= t.start && key <= t.end);
+    const apiInTerm = spans.length > 0 && spans.some(t => key >= t.start && key <= t.end);
+    const insideTerm = apiInTerm && !afterCalendarTermEnd(key, spans, eventsData);
     // Weekends inside a term are never dotted - they're always non-teaching but expected.
     if (isWeekend && insideTerm) return null;
     // Named holidays and dev days earn a dot on weekdays.
