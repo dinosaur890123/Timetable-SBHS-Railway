@@ -100,7 +100,7 @@ Three layers, from back to front. Always use the `m-*` tokens for shell and cont
 | Token | Tailwind | Light | Dark | Use |
 | --- | --- | --- | --- | --- |
 | `--m-page` | `bg-m-page` | warm paper `241 241 238` | `10 10 12` | App background behind the sidebar and main panel |
-| `--m-panel` | `bg-m-panel` | `250 250 248` | `15 15 18` | Main content panel, topbar, dock (often at `/80` with `backdrop-blur-xl`) |
+| `--m-panel` | `bg-m-panel` | `250 250 248` | `15 15 18` | Main content panel, topbar, dock (often at `/75` with `backdrop-blur-xl`) |
 | `--m-card` | `bg-m-card` | `255 255 255` | `21 21 25` | Cards, inputs, palette, popovers |
 | `--m-line` | `border-m-line` | zinc-900 @ 8% | white @ 7% | Every hairline border and divider |
 

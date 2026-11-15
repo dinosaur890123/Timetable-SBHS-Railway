@@ -206,7 +206,7 @@ export const ModernTopbar = ({
             : { label: 'Synced', dot: 'bg-emerald-500', icon: null };
 
     return (
-        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 bg-m-panel/80 backdrop-blur-xl border-b border-m-line">
+        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 bg-m-panel/75 backdrop-blur-xl border-b border-m-line">
             <div className="flex items-center gap-3 min-w-0">
                 <button onClick={() => setView('home')} className="md:hidden" aria-label="Home">
                     <BrandMark />
@@ -296,7 +296,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
 
     return (
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/80 backdrop-blur-xl m-shadow-lg">
+            <div className="pointer-events-auto w-full max-w-md flex items-center gap-0.5 p-1 rounded-2xl border border-m-line bg-m-panel/75 backdrop-blur-xl m-shadow-lg">
                 {items.map(({ id, icon: Icon, label }) => {
                     const active = currentView === id;
                     return (

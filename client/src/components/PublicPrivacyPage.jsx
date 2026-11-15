@@ -6,7 +6,7 @@ import PrivacyView from './PrivacyView';
 const PublicPrivacyPage = () => (
     <div className="min-h-[100dvh] bg-m-page text-zinc-900 dark:text-zinc-100">
         <div className="relative isolate flex min-h-[100dvh] flex-col overflow-hidden bg-m-panel md:p-2 md:rounded-2xl md:border border-m-line">
-            <header className="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+            <header className="sticky top-0 z-30 border-b border-m-line bg-m-panel/75 backdrop-blur-xl">
                 <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5 sm:px-8">
                     <a href="/" className="flex items-center gap-2.5" aria-label="Synchron home">
                         <span className="relative w-7 h-7">
