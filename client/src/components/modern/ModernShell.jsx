@@ -305,7 +305,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
                             onClick={() => setView(id)}
                             aria-label={VIEW_LABELS[id]}
                             aria-current={active ? 'page' : undefined}
-                            className={`${itemClass} ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
+                            className={`${itemClass} ${active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
                         >
                             {active && (
                                 <motion.span
@@ -319,7 +319,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
                         </button>
                     );
                 })}
-                <button onClick={onOpenPalette} aria-label="More" className={`${itemClass} text-zinc-500 dark:text-zinc-400`}>
+                <button onClick={onOpenPalette} aria-label="More" className={`${itemClass} text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white`}>
                     <Menu size={19} strokeWidth={1.8} />
                     <span className="text-[12px] font-medium leading-none whitespace-nowrap">More</span>
                 </button>
@@ -465,8 +465,8 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                         }}
                                         className="group flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
                                     >
-                                        <action.icon size={20} className="text-zinc-600 dark:text-zinc-300" />
-                                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 text-center leading-tight">
+                                        <action.icon size={20} className="text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
+                                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-center leading-tight">
                                             {action.label}
                                         </span>
                                     </button>

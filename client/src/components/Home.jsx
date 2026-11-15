@@ -426,7 +426,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
-            <header className="mb-8 md:mb-10">
+            <header className="mb-4 md:mb-10">
                 <div className="md:flex md:items-start md:justify-between md:gap-4">
                     <div className="min-w-0">
                         <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
