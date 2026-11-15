@@ -278,6 +278,22 @@ export const setAiDisabled = async (disabled) => {
     }
 };
 
+// feature: 'timetableQa' | 'noticeRanking'; disabled: true turns it off for students.
+export const setAiFeature = async (feature, disabled) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/system/ai-feature`, {
+            method: 'POST',
+            headers: await getHeaders(),
+            body: JSON.stringify({ feature, disabled })
+        });
+        if (!response.ok) throw new Error('Failed to update Sage feature');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const fetchAiLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/ai/logs`, {

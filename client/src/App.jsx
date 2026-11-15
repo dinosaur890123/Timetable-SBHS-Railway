@@ -176,6 +176,8 @@ function App() {
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'zinc');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
     const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
+    // Per-feature admin toggles from /api/system/status; missing keys mean on.
+    const [aiFeatures, setAiFeatures] = useState({});
     const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
     const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
@@ -674,7 +676,7 @@ function App() {
     };
 
     const askSageInline = async (question) => {
-        if (aiGloballyDisabled) return 'Sage is under maintenance. Please check back later.';
+        if (aiGloballyDisabled || aiFeatures.timetableQa === false) return 'Sage is under maintenance. Please check back later.';
         try {
             return await querySage(question);
         } catch (err) {
@@ -685,7 +687,7 @@ function App() {
 
     const handleAskAiQuestion = async (e) => {
         e.preventDefault();
-        if (aiBlocked) {
+        if (sageBlocked) {
             setAiAnswer('Sage is under maintenance. Please check back later.');
             return;
         }
@@ -731,6 +733,9 @@ function App() {
                     setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setAiGloballyDisabled(!!systemData.aiDisabled);
+                    if (systemData.aiFeatures) {
+                        setAiFeatures(systemData.aiFeatures);
+                    }
                     if (systemData.aiProvider) {
                         setAiProviderName(systemData.aiProvider === 'gemini' ? 'Google Gemini' : systemData.aiProvider === 'hackclub' ? 'Hack Club AI' : systemData.aiProvider);
                     }
@@ -768,12 +773,17 @@ function App() {
     // Admins can disable AI app-wide; it then shows maintenance to everyone in
     // the normal UI. Admins still reach Sage through the admin panel's tester.
     const aiBlocked = aiGloballyDisabled;
+    // Admins can also switch off individual Sage features (Ask Sage vs notice
+    // ranking) without killing all of AI.
+    const sageFeatureOn = aiFeatures.timetableQa !== false;
+    const noticeRankingOn = aiFeatures.noticeRanking !== false;
+    const sageBlocked = aiBlocked || !sageFeatureOn;
 
     // Drop any briefing already loaded so notices revert to their raw order
-    // the moment AI is switched off.
+    // the moment AI (or just notice ranking) is switched off.
     useEffect(() => {
-        if (aiBlocked) setAiBriefing(null);
-    }, [aiBlocked]);
+        if (aiBlocked || !noticeRankingOn) setAiBriefing(null);
+    }, [aiBlocked, noticeRankingOn]);
 
     // Sage is a timetable companion — on mobile, dismiss it when navigating
     // to any page other than the timetable.
@@ -983,6 +993,10 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
+
+                    if (systemData.aiFeatures) {
+                        setAiFeatures(systemData.aiFeatures);
+                    }
 
                     if (Array.isArray(systemData.hiddenPages)) {
                         setHiddenPages(systemData.hiddenPages);
@@ -1212,7 +1226,7 @@ function App() {
 
     // Fetch AI Briefing in background once notices are loaded
     useEffect(() => {
-        if (aiDisabled || aiBlocked || !user || !notices || !notices.notices || notices.notices.length === 0) return;
+        if (aiDisabled || aiBlocked || !noticeRankingOn || !user || !notices || !notices.notices || notices.notices.length === 0) return;
 
         const getAiData = async () => {
             setAiLoading(true);
@@ -1226,7 +1240,7 @@ function App() {
             }
         };
         getAiData();
-    }, [notices, user, aiDisabled, aiBlocked]);
+    }, [notices, user, aiDisabled, aiBlocked, noticeRankingOn]);
 
     // Once signed in and idle, fetch every page's code so the first visit to each is instant.
     useEffect(() => {
@@ -1597,7 +1611,7 @@ function App() {
                                                         Today
                                                     </button>
                                                 )}
-                                                {!aiDisabled && (
+                                                {!aiDisabled && sageFeatureOn && (
                                                     <button
                                                         onClick={() => setShowAiModal(true)}
                                                         aria-label="Ask Sage about your timetable"
@@ -1704,7 +1718,7 @@ function App() {
 
                             {/* NOTICES VIEW */}
                             {currentView === 'notices' && (
-                                <DailyNotices notices={notices} aiBriefing={aiBlocked ? null : aiBriefing} user={user} />
+                                <DailyNotices notices={notices} aiBriefing={aiBlocked || !noticeRankingOn ? null : aiBriefing} user={user} />
                             )}
 
                             {/* AWARD SCHEME VIEW */}
@@ -1805,7 +1819,7 @@ function App() {
                             </h3>
 
                             <div className="sage-body">
-                                {aiBlocked ? (
+                                {sageBlocked ? (
                                     <div className="sage-answer animate-in fade-in duration-200">
                                         <p className="nf-meta sage-hint">Sage is under maintenance. Please check back later.</p>
                                     </div>
@@ -1865,13 +1879,13 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
-                onAskSage={aiDisabled ? null : askSageInline}
+                onAskSage={aiDisabled || !sageFeatureOn ? null : askSageInline}
                 {...buildCommands({
                     user,
                     setView: setCurrentView,
                     theme,
                     toggleTheme,
-                    onAskAi: aiDisabled ? null : () => { setCurrentView('home'); setShowAiModal(true); },
+                    onAskAi: aiDisabled || !sageFeatureOn ? null : () => { setCurrentView('home'); setShowAiModal(true); },
                     onSignOut: logout,
                     hiddenPages
                 })}

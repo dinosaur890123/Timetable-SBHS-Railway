@@ -62,7 +62,20 @@ let systemState = {
     aiProvider: 'hackclub',
     aiModel: 'qwen/qwen3-32b',
     aiDisabled: false,
+    aiFeatures: { timetableQa: true, noticeRanking: true },
     hiddenPages: []
+};
+
+// Sage features admins can toggle individually. Anything not listed here is
+// always on; a feature is off only when its flag is explicitly false.
+const AI_FEATURE_KEYS = new Set(['timetableQa', 'noticeRanking']);
+const DEFAULT_AI_FEATURES = { timetableQa: true, noticeRanking: true };
+
+const normalizeAiFeatures = (raw) => {
+    const parsed = typeof raw === 'string'
+        ? (() => { try { return JSON.parse(raw); } catch { return null; } })()
+        : raw;
+    return { ...DEFAULT_AI_FEATURES, ...(parsed && typeof parsed === 'object' ? parsed : {}) };
 };
 
 // System metrics for the admin dashboard, sampled every 10 seconds (last 20 samples).
@@ -209,26 +222,37 @@ async function readSystemState() {
         if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
         if (systemState.aiDisabled === undefined) systemState.aiDisabled = false;
+        if (!systemState.aiFeatures || typeof systemState.aiFeatures !== 'object') systemState.aiFeatures = { ...DEFAULT_AI_FEATURES };
         if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
     }
 
+    const baseCols = 'maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at';
     let result;
     try {
         result = await db.query(
-            'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, ai_disabled, hidden_pages, updated_at FROM system_state WHERE id = 1',
+            `SELECT ${baseCols}, ai_disabled, ai_features FROM system_state WHERE id = 1`,
             []
         );
     } catch (e) {
-        // Pre-migration databases lack ai_disabled; read without it rather than fail.
-        if (!/ai_disabled/.test(e?.message || '')) throw e;
-        result = await db.query(
-            'SELECT maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at FROM system_state WHERE id = 1',
-            []
-        );
+        // Pre-migration databases lack the newer AI columns; read without them
+        // rather than fail, and fall back to defaults below.
+        if (!/ai_disabled|ai_features/.test(e?.message || '')) throw e;
+        try {
+            result = await db.query(
+                `SELECT ${baseCols}, ai_disabled FROM system_state WHERE id = 1`,
+                []
+            );
+        } catch (e2) {
+            if (!/ai_disabled/.test(e2?.message || '')) throw e2;
+            result = await db.query(
+                `SELECT ${baseCols} FROM system_state WHERE id = 1`,
+                []
+            );
+        }
     }
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, hidden_pages: [], updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, ai_features: null, hidden_pages: [], updated_at: null };
     let hiddenPages = [];
     if (Array.isArray(row.hidden_pages)) {
         hiddenPages = row.hidden_pages;
@@ -245,6 +269,7 @@ async function readSystemState() {
         aiProvider: row.ai_provider || 'hackclub',
         aiModel: row.ai_model || 'qwen/qwen3-32b',
         aiDisabled: Boolean(row.ai_disabled),
+        aiFeatures: normalizeAiFeatures(row.ai_features),
         hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
 }
@@ -307,6 +332,40 @@ async function setAiDisabled(disabled) {
         );
     }
     return value;
+}
+
+// Toggles one Sage feature (e.g. 'timetableQa', 'noticeRanking'). `disabled`
+// is the new off state; stored flags only ever turn a feature off when false.
+async function setAiFeature(feature, disabled) {
+    if (!AI_FEATURE_KEYS.has(feature)) {
+        throw new Error(`Unknown AI feature: ${feature}`);
+    }
+    const value = !Boolean(disabled);
+
+    if (!isDbEnabled) {
+        systemState.aiFeatures = { ...DEFAULT_AI_FEATURES, ...(systemState.aiFeatures || {}), [feature]: value };
+        return systemState.aiFeatures;
+    }
+
+    systemStateCache = null;
+    const write = async () => {
+        const state = await getSystemState();
+        const features = { ...(state.aiFeatures || {}), [feature]: value };
+        await db.query(
+            'UPDATE system_state SET ai_features = $1::jsonb, updated_at = NOW() WHERE id = 1',
+            [JSON.stringify(features)]
+        );
+        return features;
+    };
+
+    try {
+        return await write();
+    } catch (e) {
+        // Self-heal databases that haven't run the schema migration yet.
+        if (!/ai_features/.test(e?.message || '')) throw e;
+        await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_features JSONB');
+        return await write();
+    }
 }
 
 async function setAiModel(model) {
@@ -862,13 +921,15 @@ const isAdminUser = async (studentId) => {
     return getAdminIds().includes(String(studentId));
 };
 
-// When an admin disables AI, the student-facing AI endpoints answer 503 so
-// clients can show a maintenance notice. Only timetable-qa (Ask Sage) lets
-// admins through, so the admin panel tester keeps working; every other AI
-// feature is dead for everyone. Returns true when the response was sent.
-const aiUnderMaintenance = async (req, res, { allowAdmin = false } = {}) => {
+// When an admin disables AI — globally or for a single Sage feature — the
+// student-facing AI endpoints answer 503 so clients can show a maintenance
+// notice. Only timetable-qa (Ask Sage) lets admins through, so the admin
+// panel tester keeps working; every other AI feature is dead for everyone.
+// Returns true when the response was sent.
+const aiUnderMaintenance = async (req, res, { allowAdmin = false, feature = null } = {}) => {
     const state = await getSystemState();
-    if (!state.aiDisabled) return false;
+    const featureOff = !!feature && state.aiFeatures?.[feature] === false;
+    if (!state.aiDisabled && !featureOff) return false;
     if (allowAdmin && await isAdminUser(String(req.user?.studentId || ''))) return false;
     res.status(503).json({ error: 'Sage is under maintenance' });
     return true;
@@ -1660,6 +1721,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             aiProvider: state.aiProvider || 'hackclub',
             aiModel: state.aiModel || 'qwen/qwen3-32b',
             aiDisabled: Boolean(state.aiDisabled),
+            aiFeatures: state.aiFeatures || {},
             hiddenPages: state.hiddenPages || [],
             availableHackClubModels,
             availableGeminiModels: [
@@ -1801,6 +1863,7 @@ app.get('/api/system/status', (req, res) => {
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
                 aiDisabled: Boolean(state.aiDisabled),
+                aiFeatures: state.aiFeatures || {},
                 aiProvider: state.aiProvider || 'hackclub',
                 hiddenPages: state.hiddenPages || []
             });
@@ -1899,6 +1962,25 @@ app.post('/api/system/ai-disabled', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI disabled error:', e);
         res.status(500).json({ error: 'Failed to update AI status' });
+    }
+});
+
+// POST /api/system/ai-feature (Admin only: toggle one Sage feature)
+app.post('/api/system/ai-feature', requireAuth, async (req, res) => {
+    try {
+        const { feature, disabled } = req.body || {};
+        if (!AI_FEATURE_KEYS.has(feature)) {
+            return res.status(400).json({ error: `Unknown AI feature: ${feature}` });
+        }
+        if (typeof disabled !== 'boolean') {
+            return res.status(400).json({ error: 'disabled must be a boolean' });
+        }
+        const aiFeatures = await setAiFeature(feature, disabled);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Sage feature ${feature} ${disabled ? 'DISABLED' : 'ENABLED'} for students`);
+        res.json({ success: true, aiFeatures });
+    } catch (e) {
+        console.error('Update AI feature error:', e);
+        res.status(500).json({ error: 'Failed to update Sage feature' });
     }
 });
 
@@ -2565,7 +2647,7 @@ const briefingInFlight = new Map(); // dateKey -> Promise
 
 // POST /api/ai/briefing
 app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res) => {
-    if (await aiUnderMaintenance(req, res)) return;
+    if (await aiUnderMaintenance(req, res, { feature: 'noticeRanking' })) return;
     const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
     try {
@@ -2809,7 +2891,7 @@ const fetchSageDaySchedule = async (req) => {
 
 // POST /api/ai/timetable-qa
 app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
-    if (await aiUnderMaintenance(req, res, { allowAdmin: true })) return;
+    if (await aiUnderMaintenance(req, res, { allowAdmin: true, feature: 'timetableQa' })) return;
     try {
         const studentId = String(req.user.studentId);
         const dbUser = await getUserById(studentId);
