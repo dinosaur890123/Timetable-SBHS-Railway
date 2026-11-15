@@ -175,7 +175,7 @@ const IconButton = ({ children, className = '', ...props }) => (
 
 export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
-    isOffline, usingCachedData, timetableViewMode, setTimetableViewMode,
+    isOffline, usingCachedData,
     aiDisabled, aiGloballyDisabled, aiBannerDismissed, onEnableAi, onDismissAi,
     buildNotes = [], adminNotices = [], onOpenBuildNotes, onOpenCanvasLinks, onOpenAdmin
 }) => {
@@ -205,30 +205,6 @@ export const ModernTopbar = ({
                         </motion.span>
                     </AnimatePresence>
                 </h1>
-
-                {currentView === 'home' && (
-                    <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
-                        {['daily', 'cycle'].map(mode => (
-                            <button
-                                key={mode}
-                                onClick={() => setTimetableViewMode(mode)}
-                                className={`relative px-2.5 py-1 text-xs font-medium capitalize rounded-md transition-colors ${timetableViewMode === mode ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
-                            >
-                                {timetableViewMode === mode && (
-                                    <motion.span
-                                        layoutId="m-tt-mode"
-                                        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                        className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
-                                    />
-                                )}
-                                <span className="relative">
-                                    <span className="md:hidden">{mode === 'daily' ? 'D' : 'C'}</span>
-                                    <span className="hidden md:inline">{mode}</span>
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
             </div>
 
             <div className="flex items-center gap-1.5">

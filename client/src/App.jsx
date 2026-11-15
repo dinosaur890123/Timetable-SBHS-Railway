@@ -1447,8 +1447,6 @@ function App() {
                     onOpenPalette={() => setPaletteOpen(true)}
                     isOffline={isOffline}
                     usingCachedData={usingCachedData}
-                    timetableViewMode={timetableViewMode}
-                    setTimetableViewMode={setTimetableViewMode}
                     aiDisabled={aiDisabled}
                     aiGloballyDisabled={aiGloballyDisabled}
                     aiBannerDismissed={aiBannerDismissed}
@@ -1529,6 +1527,8 @@ function App() {
                                     railTimetable={railTimetable}
                                     viewDate={viewDate}
                                     isCycle={timetableViewMode === 'cycle'}
+                                    viewMode={timetableViewMode}
+                                    onViewModeChange={setTimetableViewMode}
                                     clipboardSessions={showClipboardEvents ? clipboardSessions : []}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
