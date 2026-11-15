@@ -90,9 +90,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                         <span className="lg:hidden">{title || 'Free Period'}</span>
                         <span className="hidden lg:inline">{name || 'Free Period'}</span>
                     </h3>
-                    {hasCanvasLink && (
-                        <ArrowUpRight size={14} className="shrink-0 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
@@ -116,6 +113,13 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     <TeacherTreat name={fullTeacher} />
                 </div>
             </div>
+
+            {hasCanvasLink && (
+                <span className="hidden lg:inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
+                    Open Canvas
+                    <ArrowUpRight size={13} className="shrink-0" />
+                </span>
+            )}
 
             {room && (
                 <div className="shrink-0 text-right leading-tight">

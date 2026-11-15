@@ -30,17 +30,17 @@ const SessionRow = ({ session, isPast, index, onOpen }) => (
 // One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
 // on desktop, abbreviated on mobile.
 const CycleCell = ({ classInfo, onSelect }) => {
-    const { name, title, room, colour, isSelected } = classInfo;
+    const { name, title, room, colour, isSelected, isDimmed } = classInfo;
     const tinted = colour && !isSelected;
     return (
         <div
             onClick={onSelect}
             title={name}
             {...(tinted ? subjectInk(colour) : {})}
-            className={`press press-soft min-h-[2.75rem] sm:min-h-[3.25rem] px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border cursor-pointer transition-all hover:shadow-md flex flex-col justify-center ${
+            className={`press press-soft min-h-[2.75rem] sm:min-h-[3.25rem] px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-center ${
                 isSelected
                     ? 'bg-accent/10 border-accent/50 shadow-md'
-                    : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800`
+                    : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800 ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
             <span className="text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 text-zinc-900 dark:text-white">
@@ -370,7 +370,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (!periodInfo) return null;
             
             const bell = bells.find(b => b.bell === bellId);
-            const isSelected = selectedClass && periodInfo.title === selectedClass;
+            const isSelected = !!selectedClass && periodInfo.title === selectedClass;
+            const isDimmed = !!selectedClass && !isSelected;
             
             return {
                 ...describeClass(periodInfo, null, subjectIndex),
@@ -378,7 +379,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 room: periodInfo.room,
                 teacher: periodInfo.fullTeacher || periodInfo.teacher,
                 bell: bell?.bellDisplay || bellId,
-                isSelected
+                isSelected,
+                isDimmed
             };
         };
 
@@ -433,7 +435,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                                             if (!classInfo) {
                                                                 return (
                                                                     <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                                        <div className="min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg"></div>
+                                                                        <div className={`min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
                                                                     </td>
                                                                 );
                                                             }
