@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import {
-  ArrowRight, AlertOctagon, X, MapPin, UserRound, Clock, Home, CalendarDays, Newspaper,
+  ArrowRight, AlertOctagon, X, MapPin, UserRound, Home, CalendarDays, Newspaper,
   Award, Clipboard, GraduationCap
 } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
 import { BrandMark } from './modern/ModernShell';
+import AmbientLight from './modern/AmbientLight';
 
 // App keeps html.dark set while signed out, so this page is always dark.
 
@@ -17,12 +18,15 @@ const Label = ({ children, className = '' }) => (
   </div>
 );
 
-const PREVIEW_ROWS = [
-  { time: '9:00', period: '1', title: 'English', meta: 'Ms Reid · 203', state: 'past' },
-  { time: '10:05', period: '2', title: 'Physics', meta: 'Mr Hall for Mrs Shah · 307', state: 'current', sub: true },
-  { break: 'Recess', time: '11:05' },
-  { time: '11:25', period: '3', title: 'Design & Technology', meta: 'Mr Gray · 502, was 102', room: true },
-  { time: '12:30', period: '4', title: 'Mathematics Ext. 2', meta: 'Mr Jones · 105' }
+// Mirrors the day's PeriodCard rows: time and bell, subject, teacher line and room.
+// `past` dims a finished class, `current` gets the accent edge and "Now", and
+// `sub`/`roomChange` wear the same change-highlight the real rows use.
+const PREVIEW_DAY = [
+  { time: '9:00', bell: '1', title: 'English', teacher: 'Ms Reid', room: '203', past: true },
+  { time: '10:05', bell: '2', title: 'Physics', teacher: 'Mr Hall', room: '307', current: true, sub: true },
+  { break: 'Recess', time: '11:05', mins: '20 min' },
+  { time: '11:25', bell: '3', title: 'Design & Technology', teacher: 'Mr Gray', room: '502', roomChange: true },
+  { time: '12:30', bell: '4', title: 'Mathematics Ext. 2', teacher: 'Mr Jones', room: '105' }
 ];
 
 // A period is 60 minutes; the preview counts down through the back half of one and loops.
@@ -40,119 +44,116 @@ const useDemoCountdown = () => {
 
 const formatClock = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
-// A faithful miniature of the signed-in home page, built from the same pieces.
-const ProductPreview = () => {
+// The rail card from Home's NowCard: label, class, where, countdown, progress, next.
+const PreviewNowCard = () => {
   const remaining = useDemoCountdown();
   const progress = ((PERIOD_SECONDS - remaining) / PERIOD_SECONDS) * 100;
 
   return (
-    <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
-      <div className="flex items-center justify-between h-11 px-4 border-b border-m-line">
-        <span className="text-[13px] font-medium text-zinc-900 dark:text-white">My Synchron</span>
-        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Synced
+    <section className="rounded-2xl border border-m-line bg-m-card m-shadow p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+        <Label>Now · P2</Label>
+        <span className="text-[12px] text-zinc-400 tabular-nums">5h 48m left today</span>
+      </div>
+      <div className="text-base sm:text-lg font-semibold tracking-tight text-zinc-50 truncate">Physics</div>
+      <div className="mt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-[13px] text-zinc-500 min-w-0">
+        <span className="tabular-nums shrink-0">10:05–11:05</span>
+        <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />307</span>
+        <span className="inline-flex items-center gap-1 min-w-0"><UserRound size={12} className="shrink-0" /><span className="truncate">Mr Hall</span></span>
+      </div>
+      <div className="mt-2 sm:mt-4">
+        <div className="flex items-baseline gap-1.5 sm:gap-2">
+          <span className="text-[26px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums text-zinc-50">
+            {formatClock(remaining)}
+          </span>
+          <span className="text-xs sm:text-[13px] text-zinc-500">left</span>
+        </div>
+      </div>
+      <div className="mt-2 sm:mt-4 h-1 rounded-full bg-white/[0.07] overflow-hidden">
+        <div className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 min-w-0">
+        <ArrowRight size={12} className="shrink-0" />
+        <span className="shrink-0">Next</span>
+        <span className="font-medium text-zinc-300 truncate">Recess</span>
+        <span className="ml-auto shrink-0 tabular-nums">11:05</span>
+      </div>
+    </section>
+  );
+};
+
+// A faithful miniature of the signed-in home page — same topbar, greeting, day rows
+// and countdown rail — always in dark mode since signed-out visitors only see dark.
+const ProductPreview = () => (
+  <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
+    <div className="flex items-center justify-between gap-3 h-11 px-4 border-b border-m-line">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-[15px] font-medium tracking-tight text-zinc-100 truncate">My Synchron</span>
+        <span className="hidden sm:flex items-center p-0.5 rounded-lg bg-white/[0.06]">
+          <span className="px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-800 text-zinc-100">Daily</span>
+          <span className="px-2 py-0.5 text-[11px] font-medium rounded-md text-zinc-500">Cycle</span>
         </span>
       </div>
+      <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 shrink-0">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        Synced
+      </span>
+    </div>
 
-      <div className="relative p-4 sm:p-5 space-y-4">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots" />
+    <div className="relative isolate p-4 sm:p-5">
+      <AmbientLight variant="panel" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots" />
 
-        <div className="relative">
-          <div className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-            Good Morning, <span className="text-accent">Sam</span>
-          </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[12px] text-zinc-500 dark:text-zinc-400">
-            <span>Tuesday, 3 March</span>
-            <span className="px-1.5 py-px rounded-md border border-m-line bg-white/[0.04] text-zinc-700 dark:text-zinc-200">Today is TueA</span>
-          </div>
-        </div>
+      <header className="relative mb-6">
+        <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight leading-tight text-zinc-50">
+          Good Morning, <span className="text-accent">Sam</span>
+        </h1>
+        <p className="mt-1.5 text-[15px] text-zinc-500">Today is TueA · 6 classes</p>
+      </header>
 
-        <div className="relative grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-          <div className="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5">
-            <div className="flex items-center justify-between mb-2.5">
-              <Label>Today’s variations</Label>
-              <span className="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">2</span>
-            </div>
-            <ul className="space-y-2 text-[12.5px]">
-              <li>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P2</span>
-                  <span className="font-medium text-zinc-900 dark:text-white">Physics</span>
-                </div>
-                <div className="pl-5 flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-                  <UserRound size={11} /> Mr Hall covering
-                </div>
-              </li>
-              <li>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P3</span>
-                  <span className="font-medium text-zinc-900 dark:text-white truncate">Design &amp; Technology</span>
-                </div>
-                <div className="pl-5 flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                  <MapPin size={11} /> 102 → 502
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          <div className="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
-            <div className="flex items-center justify-between mb-2.5">
-              <Label>Now · Period 2</Label>
-              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:inline">Next: Recess</span>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[15px] font-semibold text-zinc-900 dark:text-white">Physics</div>
-                <div className="mt-1 flex items-center gap-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-400">
-                  <span className="inline-flex items-center gap-1"><Clock size={11} /> 10:05</span>
-                  <span className="inline-flex items-center gap-1"><MapPin size={11} /> 307</span>
-                </div>
+      {/* Rail first in the DOM so it sits above the list on narrow screens, like the app */}
+      <div className="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_210px]">
+        <div className="sm:order-2"><PreviewNowCard /></div>
+        <ol className="sm:order-1 -mx-3 space-y-0.5" aria-label="Example timetable">
+          {PREVIEW_DAY.map(row => row.break ? (
+            <li key={row.break} className="px-3 py-1.5">
+              <div className="flex items-center gap-4">
+                <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">{row.time}</span>
+                <span className="text-[12px] text-zinc-500">{row.break}</span>
+                <span className="flex-1 h-px bg-white/[0.06]" />
+                <span className="text-[12px] tabular-nums text-zinc-500">{row.mins}</span>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
-                  {formatClock(remaining)}
-                </div>
-                <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">left</div>
-              </div>
-            </div>
-            <div className="mt-auto pt-3">
-              <div className="h-1 rounded-full bg-white/[0.08] overflow-hidden">
-                <div className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <ol className="relative rounded-xl border border-m-line bg-m-card p-1.5 space-y-0.5" aria-label="Example timetable">
-          {PREVIEW_ROWS.map((row) => row.break ? (
-            <li key={row.break} className="flex items-center gap-3 px-2 py-1">
-              <span className="w-10 text-right text-[11px] tabular-nums text-zinc-600 dark:text-zinc-400">{row.time}</span>
-              <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">{row.break}</span>
-              <span className="flex-1 h-px bg-white/[0.07]" />
             </li>
           ) : (
-            <li
-              key={row.period}
-              className={`flex items-center gap-3 rounded-lg px-2 py-2 ${row.state === 'current' ? 'bg-white/[0.05] ring-1 ring-accent/60' : ''} ${row.state === 'past' ? 'opacity-45' : ''}`}
-            >
-              <span className={`w-10 text-right text-[12px] tabular-nums ${row.state === 'current' ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-600 dark:text-zinc-400'}`}>{row.time}</span>
-              <span className={`w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium ${row.state === 'current' ? 'bg-accent text-accent-contrast' : 'bg-white/[0.06] text-zinc-600 dark:text-zinc-300'}`}>
-                {row.period}
-              </span>
-              <div className="min-w-0 flex-1 flex items-baseline justify-between gap-3">
-                <span className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{row.title}</span>
-                <span className={`hidden sm:block truncate text-[11.5px] ${row.room ? 'text-amber-600 dark:text-amber-400' : row.sub ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'}`}>
-                  {row.meta}
-                </span>
+            <li key={row.bell} className="rounded-xl border border-white/[0.06]">
+              <div className={`relative flex items-center gap-4 px-3 py-3 ${row.past ? 'opacity-50' : ''}`}>
+                {row.current && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />}
+                <div className="w-11 shrink-0 text-right leading-tight">
+                  <div className={`text-[13px] tabular-nums ${row.current ? 'font-medium text-zinc-100' : 'text-zinc-500'}`}>{row.time}</div>
+                  <div className="mt-0.5 font-mono text-[11px] text-zinc-500">P{row.bell}</div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[15px] font-medium text-zinc-50">{row.title}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500">
+                    {row.current && <span className="shrink-0 font-medium text-accent">Now</span>}
+                    <span className={`truncate ${row.sub ? 'rounded-md px-1.5 py-0.5 change-highlight' : ''}`}>{row.teacher}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className={`text-[15px] font-medium tabular-nums ${row.roomChange ? 'rounded-md px-1.5 py-0.5 change-highlight' : 'text-zinc-50'}`}>{row.room}</div>
+                </div>
               </div>
             </li>
           ))}
+          <li className="flex items-center gap-4 px-3 pt-3">
+            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-500">15:10</span>
+            <span className="text-[12px] text-zinc-500">End of day</span>
+          </li>
         </ol>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 // Mirrors the signed-in sidebar, so the page doubles as a map of the app.
 const SECTIONS = [
