@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
-import { Megaphone, Users, ChevronDown, ChevronUp, Search, X, SearchX, FileText, ExternalLink } from 'lucide-react';
+import { Megaphone, ChevronDown, ChevronUp, Search, X, SearchX, FileText, ExternalLink } from 'lucide-react';
 import { motion, MotionConfig } from 'framer-motion';
 import { useNoteFlowFonts } from './study/noteflow';
 
@@ -74,22 +74,18 @@ const NoticeItem = ({ notice, index }) => {
         <button
           onClick={() => setExpanded(e => !e)}
           aria-expanded={expanded}
-          className="mt-2 -ml-1 px-1 py-1 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 flex items-center gap-1 rounded transition-colors"
+          className="mt-3 h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04] transition-colors"
         >
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {expanded ? 'Show less' : 'Show more'}
         </button>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-        {notice.authorName && <span className="font-medium text-zinc-600 dark:text-zinc-300">{notice.authorName}</span>}
-        {notice.displayYears && (
-          <span className="inline-flex items-center gap-1">
-            <Users size={12} />
-            {notice.displayYears}
-          </span>
-        )}
-      </div>
+      {notice.authorName && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="font-medium text-zinc-600 dark:text-zinc-300">{notice.authorName}</span>
+        </div>
+      )}
     </motion.article>
   );
 };
