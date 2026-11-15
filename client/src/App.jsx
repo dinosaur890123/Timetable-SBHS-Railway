@@ -1611,7 +1611,7 @@ function App() {
                                                         Today
                                                     </button>
                                                 )}
-                                                {!aiDisabled && sageFeatureOn && (
+                                                {!aiDisabled && (
                                                     <button
                                                         onClick={() => setShowAiModal(true)}
                                                         aria-label="Ask Sage about your timetable"
