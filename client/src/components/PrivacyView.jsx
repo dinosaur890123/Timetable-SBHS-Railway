@@ -356,7 +356,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
 
         {/* Footer */}
         <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
-            Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
+            © Synchron {new Date().getFullYear()} · BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
         </p>
     </div>
     );

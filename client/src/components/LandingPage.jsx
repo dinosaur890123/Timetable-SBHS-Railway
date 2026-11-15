@@ -389,7 +389,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
           <footer className="border-t border-m-line">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© {new Date().getFullYear()} Synchron</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron {new Date().getFullYear()}</span>
               <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
                 <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                 <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>

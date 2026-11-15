@@ -30,7 +30,7 @@ const PublicPrivacyPage = () => (
 
             <footer className="border-t border-m-line">
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© 2026 Synchron</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron {new Date().getFullYear()}</span>
                     <nav className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
                         <a href="/" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Home</a>
                         <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
