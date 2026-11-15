@@ -50,10 +50,14 @@ const buildSlots = (timetableData) => {
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const originalTitle = period.title;
-        const isBreak = isBreakStylePeriod(bellId, period);
         const isActualBreak = isBreakBell(bellId, period);
-        if (isBreak) {
+        const isBreakStyle = isBreakStylePeriod(bellId, period);
+
+        if (isActualBreak) {
             period = { ...period, title: bell.bellDisplay };
+        } else if (isBreakStyle) {
+            // Keep original title for sport/scripture, just mark as break style
+            period = { ...period };
         } else {
             period = applyPeriodVariations(period, bellId, classVariations, roomVariations);
             const { name, colour } = describeClass(period, timetableData.timetable?.subjects);
@@ -62,11 +66,11 @@ const buildSlots = (timetableData) => {
 
         if (bellId === 'RC' || originalTitle?.toLowerCase().includes('roll call')) return null;
         // An empty Period 0 is just a gap before school starts.
-        if (isBreak && String(bellId) === '0') return null;
+        if (isBreakStyle && String(bellId) === '0') return null;
 
         const startMin = getMinutes(bell.time);
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
-        return { bellId, bell, period, isBreak, isActualBreak, startMin, endMin };
+        return { bellId, bell, period, isBreak: isBreakStyle, isActualBreak, startMin, endMin };
     }).filter(Boolean).reduce((rows, slot) => {
         // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one.
         // Sport/scripture periods are styled as breaks but not merged.

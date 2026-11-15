@@ -235,9 +235,14 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
+            const isActualBreak = isBreakBell(bellId, periodInfo);
+            const isBreakStyle = isBreakStylePeriod(bellId, periodInfo);
 
-            if (isBreakStylePeriod(bellId, periodInfo)) {
+            if (isActualBreak) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
+            } else if (isBreakStyle) {
+                // Keep original title for sport/scripture, just mark as break style
+                periodInfo = { ...periodInfo };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
                 const { name, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
@@ -258,14 +263,12 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
-            const isBreak = isBreakStylePeriod(bellId, periodInfo);
-            const isActualBreak = isBreakBell(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
-            if (isBreak && String(bellId) === '0') return null;
+            if (isBreakStyle && String(bellId) === '0') return null;
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isActualBreak,
-                label: isBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak: isBreakStyle, isActualBreak,
+                label: isBreakStyle ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back actual breaks with the same name ("Lunch 1", "Lunch 2") into one row.
