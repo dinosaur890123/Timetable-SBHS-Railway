@@ -286,9 +286,9 @@ const LandingPage = ({ authError, clearAuthError }) => {
 
   return (
     <div className="min-h-[100dvh] bg-m-page p-1 md:px-4 text-zinc-900 dark:text-zinc-100">
-        <AnimatePresence>
-          {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
-        </AnimatePresence>
+      <AnimatePresence>
+        {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
+      </AnimatePresence>
 
         {/* The same inset panel the signed-in app lives in: fixed height, header
             outside the scroll area so content can never scroll up behind it. */}
@@ -317,6 +317,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
               >
                 Sign in
               </button>
+              </div>
             </div>
           </header>
 
