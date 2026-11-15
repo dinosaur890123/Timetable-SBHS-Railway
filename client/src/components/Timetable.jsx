@@ -412,7 +412,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             )}
                             <div className={`rounded-2xl border bg-m-card overflow-hidden ${isCurrentWeek ? 'border-accent/40' : 'border-m-line'}`}>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[56rem]">
+                                    <table className="w-full">
                                         <thead>
                                             <tr className="bg-m-panel border-b border-m-line">
                                                 {days.map(day => (

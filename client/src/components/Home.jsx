@@ -415,8 +415,8 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const extendedDayEnd = hasExtracurriculars ? Math.max(dayEnd, clipboardSlots[clipboardSlots.length - 1].endMin) : dayEnd;
     // The side rail only earns its place while the day is happening: up to two hours
     // before the first event until the last one (including extracurriculars). The
-    // container width follows the same rule in cycle view so the header doesn't
-    // jump when switching between daily and cycle.
+    // header width follows the same rule in cycle view so it doesn't jump when
+    // switching between daily and cycle.
     const railHours = isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
     const showRail = !isCycle && railHours;
 
@@ -427,8 +427,14 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
 
+    // Header and content get their own containers: the greeting/toggle always uses
+    // the daily width, while cycle keeps its wider table below.
+    const headerWidth = railHours ? 'max-w-5xl' : 'max-w-3xl';
+    const contentWidth = isCycle ? 'max-w-6xl' : headerWidth;
+
     return (
-        <div className={`mx-auto ${railHours ? 'max-w-5xl' : 'max-w-3xl'}`}>
+        <div>
+            <div className={`mx-auto ${headerWidth}`}>
             <header className="mb-4 md:mb-10">
                 <div className="md:flex md:items-start md:justify-between md:gap-4">
                     <div className="min-w-0">
@@ -440,7 +446,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
             </header>
+            </div>
 
+            <div className={`mx-auto ${contentWidth}`}>
             {/* Day swipes are handled on the page container in App, so they work
                 even over the empty space of a no-classes day. */}
             <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
@@ -455,6 +463,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                         <div className="lg:sticky lg:top-20">{rail}</div>
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );
