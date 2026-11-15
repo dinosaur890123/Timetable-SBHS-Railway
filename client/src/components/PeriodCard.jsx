@@ -16,7 +16,7 @@ const ChangeTag = ({ children, className = '' }) => (
     </span>
 );
 
-const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink }) => {
+const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, canvasLink, linksEnabled = true }) => {
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period;
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
@@ -46,9 +46,9 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
         );
     }
 
-    const hasCanvasLink = canvasLink && title && title !== 'Free Period';
+    const hasCanvasLink = linksEnabled && canvasLink && title && title !== 'Free Period';
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
-    const shouldShowCanvasTooltip = !hasCanvasLink && title && title !== 'Free Period' && !isLinklessTitle(title);
+    const shouldShowCanvasTooltip = linksEnabled && !hasCanvasLink && title && title !== 'Free Period' && !isLinklessTitle(title);
 
     React.useEffect(() => {
         return () => {

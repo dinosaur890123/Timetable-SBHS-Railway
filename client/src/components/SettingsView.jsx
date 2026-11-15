@@ -96,7 +96,7 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled, aiProviderName = 'an AI provider',
-    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, faviconType, setFaviconType, onSignOut, setView
+    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -216,6 +216,9 @@ const SettingsView = ({
                     dot={canvasLinksMissing}
                     onClick={() => setView('canvas-links')}
                 />
+                <Row title="Tap to open Canvas" description="Tapping a class opens its Canvas page. Your saved links are kept either way.">
+                    <Switch checked={canvasLinksEnabled} onChange={setCanvasLinksEnabled} label="Tap to open Canvas" />
+                </Row>
                 <LinkRow
                     icon={FileCode}
                     title="Build notes"

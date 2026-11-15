@@ -44,7 +44,7 @@ const readSnoozed = () => {
 
 const errorMessage = (error, fallback) => (error?.status ? error.message : fallback);
 
-export const CanvasLinksProvider = ({ children, completeTimetable, timetableData }) => {
+export const CanvasLinksProvider = ({ children, completeTimetable, timetableData, linksEnabled = true }) => {
     const [links, setLinks] = useState(readCache); // short class title -> url
     const [community, setCommunity] = useState({}); // class key -> { link, suggestions }
     const [canvasHost, setCanvasHost] = useState(DEFAULT_CANVAS_HOST);
@@ -282,6 +282,7 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
 
     const value = useMemo(() => ({
         links,
+        linksEnabled,
         community,
         classes,
         canvasHost,
@@ -298,7 +299,7 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         vote,
         snooze,
         reload: loadLinks
-    }), [links, community, classes, canvasHost, status, prompts, pending, linkNotices, markLinkNoticesRead, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
+    }), [links, linksEnabled, community, classes, canvasHost, status, prompts, pending, linkNotices, markLinkNoticesRead, getLink, keyFor, saveLink, removeLink, removeAllLinks, vote, snooze, loadLinks]);
 
     return (
         <CanvasLinksContext.Provider value={value}>

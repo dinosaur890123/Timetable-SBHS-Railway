@@ -177,8 +177,8 @@ const SubjectDot = ({ colour }) => colour
 // Canvas links are keyed by the short class code; the full name is what's shown on desktop,
 // abbreviated on mobile.
 const ClassTitle = ({ period, className }) => {
-    const { getLink } = useCanvasLinks();
-    const link = getLink(period.title, period.year);
+    const { getLink, linksEnabled } = useCanvasLinks();
+    const link = linksEnabled ? getLink(period.title, period.year) : null;
     const name = period.fullTitle || period.title;
     const shortName = period.title;
     return (

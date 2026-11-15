@@ -64,7 +64,7 @@ const DaySkeleton = () => (
 );
 
 const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [] }) => {
-    const { getLink } = useCanvasLinks();
+    const { getLink, linksEnabled } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
     const [openSession, setOpenSession] = useState(null);
@@ -555,6 +555,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                             startMinutes={data.startMin}
                             endMinutes={data.endMin}
                             canvasLink={getLink(data.periodInfo.title, data.periodInfo.year)}
+                            linksEnabled={linksEnabled}
                         />
                     ))}
                     {routineData.length > 0 && (

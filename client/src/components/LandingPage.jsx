@@ -69,7 +69,7 @@ const ProductPreview = () => {
         </div>
 
         <div className="relative grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-          <div className="rounded-xl border border-m-line bg-m-card p-3.5">
+          <div className="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5">
             <div className="flex items-center justify-between mb-2.5">
               <Label>Today’s variations</Label>
               <span className="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">2</span>
@@ -96,7 +96,7 @@ const ProductPreview = () => {
             </ul>
           </div>
 
-          <div className="rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
+          <div className="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
             <div className="flex items-center justify-between mb-2.5">
               <Label>Now · Period 2</Label>
               <span className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:inline">Next: Recess</span>
@@ -291,23 +291,23 @@ const LandingPage = ({ authError, clearAuthError }) => {
         <div className="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
           <header className="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-              <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label="Synchron">
+              <button onClick={handleLogoClick} className="flex min-w-0 items-center gap-2.5" aria-label="Synchron">
                 {useOriginalMark ? (
-                  <span className="grid grid-cols-2 gap-0.5 p-1.5 rounded-lg bg-white">
+                  <span className="grid shrink-0 grid-cols-2 gap-0.5 p-1.5 rounded-lg bg-white">
                     {[0, 1, 2, 3].map(i => <span key={i} className="w-1.5 h-1.5 rounded-[2px] bg-zinc-900" />)}
                   </span>
                 ) : (
                   <BrandMark />
                 )}
-                <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+                <span className="whitespace-nowrap text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
               </button>
-              <nav className="flex items-center gap-4 sm:gap-5" aria-label="Landing">
+              <nav className="hidden items-center gap-4 sm:flex sm:gap-5" aria-label="Landing">
                 <a href="#whats-inside" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                 <a href="/privacy" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
               </nav>
               <button
                 onClick={performLogin}
-                className="h-11 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="h-11 shrink-0 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
                 Sign in
               </button>
@@ -323,7 +323,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease }}
               >
-                <h1 className="text-[2.6rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
+                <h1 className="text-[2.2rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
                   Your timetable,
                   <br />
                   <span className="text-accent">live.</span>
@@ -389,7 +389,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
           <footer className="border-t border-m-line">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
               <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© {new Date().getFullYear()} Synchron</span>
-              <nav className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+              <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
                 <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                 <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
                 <span>Built independently for SBHS</span>

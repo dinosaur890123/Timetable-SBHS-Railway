@@ -180,6 +180,7 @@ function App() {
     const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
+    const [canvasLinksEnabled, setCanvasLinksEnabled] = useState(() => localStorage.getItem('canvas_links_enabled') !== 'false');
     const [faviconType, setFaviconType] = useState(() => localStorage.getItem('favicon_type') || 'default');
     const [buildNotes, setBuildNotes] = useState(() => {
         try {
@@ -607,6 +608,7 @@ function App() {
                 aiOptIn: !aiDisabled,
                 ambientLight,
                 showClipboardEvents,
+                canvasLinksEnabled,
                 faviconType,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
@@ -771,6 +773,11 @@ function App() {
         localStorage.setItem('show_clipboard_events', showClipboardEvents ? 'true' : 'false');
         savePreferences();
     }, [showClipboardEvents]);
+
+    useEffect(() => {
+        localStorage.setItem('canvas_links_enabled', canvasLinksEnabled ? 'true' : 'false');
+        savePreferences();
+    }, [canvasLinksEnabled]);
 
     useEffect(() => {
         localStorage.setItem('favicon_type', faviconType);
@@ -1012,6 +1019,10 @@ function App() {
                             if (prefs.showClipboardEvents !== undefined) {
                                 setShowClipboardEvents(prefs.showClipboardEvents);
                                 localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                            }
+                            if (prefs.canvasLinksEnabled !== undefined) {
+                                setCanvasLinksEnabled(prefs.canvasLinksEnabled);
+                                localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
                             }
                             if (prefs.faviconType !== undefined) {
                                 setFaviconType(prefs.faviconType);
@@ -1421,7 +1432,7 @@ function App() {
 
     return (
         <MotionConfig reducedMotion="user">
-        <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable}>
+        <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable} linksEnabled={canvasLinksEnabled}>
         <NotificationsContext.Provider value={notificationsValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
             {ambientLight && <AmbientLight variant="page" />}
@@ -1704,6 +1715,8 @@ function App() {
                                     setAmbientLight={setAmbientLight}
                                     showClipboardEvents={showClipboardEvents}
                                     setShowClipboardEvents={setShowClipboardEvents}
+                                    canvasLinksEnabled={canvasLinksEnabled}
+                                    setCanvasLinksEnabled={setCanvasLinksEnabled}
                                     faviconType={faviconType}
                                     setFaviconType={handleFaviconTypeChange}
                                     onSignOut={logout}

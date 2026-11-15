@@ -196,14 +196,30 @@ const CanvasLinkNotifications = ({
 
     useEffect(() => {
         if (!open) return undefined;
+        // The tap that closes the panel lands on the page underneath too —
+        // swallow its click so it only dismisses, never activates.
+        let swallowClick = false;
         const onDown = (e) => {
-            if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+            if (rootRef.current && !rootRef.current.contains(e.target)) {
+                setOpen(false);
+                swallowClick = true;
+            } else {
+                swallowClick = false;
+            }
+        };
+        const onClickCapture = (e) => {
+            if (!swallowClick) return;
+            swallowClick = false;
+            e.preventDefault();
+            e.stopPropagation();
         };
         const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('mousedown', onDown);
+        document.addEventListener('click', onClickCapture, true);
         document.addEventListener('keydown', onKey);
         return () => {
             document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('click', onClickCapture, true);
             document.removeEventListener('keydown', onKey);
         };
     }, [open]);

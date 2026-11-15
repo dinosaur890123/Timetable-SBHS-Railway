@@ -140,14 +140,14 @@
       <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
         <header class="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
           <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-            <a href="/" class="flex items-center gap-2.5" aria-label="Synchron home">
-              <span class="relative w-7 h-7">
+            <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="Synchron home">
+              <span class="relative w-7 h-7 shrink-0">
                 <img src="/synchron-rows-light-offwhite.svg" alt="" class="block w-full h-full rounded-lg" />
                 <span class="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page"></span>
               </span>
-              <span class="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+              <span class="whitespace-nowrap text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
             </a>
-            <nav class="flex items-center gap-4 sm:gap-5" aria-label="Landing">
+            <nav class="hidden items-center gap-4 sm:flex sm:gap-5" aria-label="Landing">
               <a href="#whats-inside" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
               <a href="/privacy" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
             </nav>
@@ -159,7 +159,7 @@
         <main class="flex-1">
           <section class="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:pb-24">
             <div>
-              <h1 class="text-[2.6rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
+              <h1 class="text-[2.2rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
                 Your timetable,<br />
                 <span class="text-accent">live.</span>
               </h1>
@@ -199,7 +199,7 @@
                 </div>
 
                 <div class="relative grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-                  <div class="rounded-xl border border-m-line bg-m-card p-3.5">
+                  <div class="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5">
                     <div class="flex items-center justify-between mb-2.5">
                       <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Today’s variations</span>
                       <span class="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">2</span>
@@ -222,7 +222,7 @@
                     </ul>
                   </div>
 
-                  <div class="rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
+                  <div class="min-w-0 rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
                     <div class="flex items-center justify-between mb-2.5">
                       <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Now · Period 2</span>
                       <span class="text-[11px] text-zinc-600 dark:text-zinc-400 hidden sm:inline">Next: Recess</span>
@@ -344,7 +344,7 @@
         <footer class="border-t border-m-line">
           <div class="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <span class="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© 2026 Synchron</span>
-            <nav class="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+            <nav class="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
               <a href="#whats-inside" class="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
               <a href="/privacy" class="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
               <a href="https://student.sbhs.net.au" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-white transition-colors">SBHS portal</a>
