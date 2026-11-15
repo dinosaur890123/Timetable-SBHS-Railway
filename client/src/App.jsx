@@ -309,6 +309,46 @@ function App() {
         return `${week}${weekType}`;
     }, [calMonth, viewDate]);
 
+    // Current cycle week letter ("A", "B", etc.), independent of whatever date is being browsed.
+    const currentWeekLetter = useMemo(() => {
+        const weekLetter = (name) => (name || '').trim().match(/([A-Z])$/)?.[1] || null;
+
+        // 1. Authoritative active/next school day from SBHS
+        const railName = railTimetable?.timetable?.timetable?.dayname || railTimetable?.timetable?.dayname;
+        const railLetter = weekLetter(railName);
+        if (railLetter) return railLetter;
+
+        // 2. Today's cached timetable if available
+        const todayData = peekDayTimetable(new Date());
+        const todayName = todayData?.timetable?.timetable?.dayname || todayData?.timetable?.dayname;
+        const todayLetter = weekLetter(todayName);
+        if (todayLetter) return todayLetter;
+
+        // 3. Calendar month data for today's week
+        if (calMonth) {
+            const now = new Date();
+            const dow = now.getDay();
+            const weekStart = format(addDays(now, -dow), 'yyyy-MM-dd');
+            const weekEnd = format(addDays(now, 6 - dow), 'yyyy-MM-dd');
+            const groups = calMonth.filter(g => {
+                const d = g.info?.date;
+                return d >= weekStart && d <= weekEnd && g.info?.weekType;
+            });
+            const calType = groups.map(g => g.info.weekType).find(Boolean);
+            if (calType) return calType;
+        }
+
+        // 4. Fallback to localStorage cached_timetable
+        try {
+            const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
+            const cachedName = cached?.timetable?.timetable?.dayname || cached?.timetable?.dayname;
+            const cachedLetter = weekLetter(cachedName);
+            if (cachedLetter) return cachedLetter;
+        } catch {}
+
+        return null;
+    }, [railTimetable, calMonth]);
+
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
@@ -1526,6 +1566,7 @@ function App() {
                                     viewMode={timetableViewMode}
                                     onViewModeChange={setTimetableViewMode}
                                     clipboardSessions={showClipboardEvents ? clipboardSessions : []}
+                                    currentWeek={currentWeekLetter}
                                     dayNav={timetableViewMode === 'daily' && (
                                         <>
                                         <div className="flex items-center justify-between gap-3 mb-3">
@@ -1648,10 +1689,12 @@ function App() {
                                     <Timetable
                                         timetableData={dayTimetable}
                                         completeTimetable={completeTimetable}
+                                        railTimetable={railTimetable}
                                         viewMode={timetableViewMode}
                                         clipboardSessions={showClipboardEvents ? clipboardSessions : []}
                                         date={viewDate}
                                         calendarEvents={calendarEvents}
+                                        currentWeek={currentWeekLetter}
                                     />
                                 </Home>
                             )}

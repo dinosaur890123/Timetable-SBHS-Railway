@@ -63,7 +63,7 @@ const DaySkeleton = () => (
     </ol>
 );
 
-const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [] }) => {
+const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [], currentWeek }) => {
     const { getLink, linksEnabled } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
@@ -81,11 +81,21 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     // Fetch terms data to check for school holidays - moved to top to avoid conditional hook calls
     const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
 
-    if (!timetableData) return <DaySkeleton />;
+    // Complete timetable from props or localStorage cache for cycle view
+    const resolvedCompleteTimetable = completeTimetable || (() => {
+        try {
+            return JSON.parse(localStorage.getItem('cached_complete_timetable') || 'null');
+        } catch {
+            return null;
+        }
+    })();
+
+    if (viewMode === 'cycle' && !resolvedCompleteTimetable) return <DaySkeleton />;
+    if (viewMode === 'daily' && !timetableData) return <DaySkeleton />;
 
     // The day being looked at: the date asked for, else the one the timetable says it's for.
     const todayKey = format(currentTime, 'yyyy-MM-dd');
-    const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData.date || todayKey);
+    const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData?.date || todayKey);
     const viewedDate = date || new Date(`${viewedKey}T00:00`);
 
     // Check if the current day is a staff development day
@@ -107,11 +117,11 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     const isSchoolHoliday = closure === 'School holidays';
     const minutesOf = (d) => d.getHours() * 60 + d.getMinutes();
 
-    const { bells, timetable } = timetableData;
+    const { bells, timetable } = timetableData || {};
     const innerTimetable = timetable?.timetable || timetable;
     // Weekends and holidays have no bells or periods. A reply that has rolled on to a later school day
     // counts as none too, so Monday's classes never show up under Saturday.
-    const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData.date || '') ? timetableData.date : viewedKey;
+    const servedKey = /^\d{4}-\d{2}-\d{2}$/.test(timetableData?.date || '') ? timetableData.date : viewedKey;
 
     // For daily view only: check if there are no classes
     if (viewMode === 'daily' && (!bells || !innerTimetable?.periods || servedKey > viewedKey)) {
@@ -201,12 +211,12 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         );
     }
 
-    const { periods } = innerTimetable;
-    const routine = innerTimetable.routine ? innerTimetable.routine.split(',') : [];
-    const classVariations = timetableData.classVariations || {};
-    const roomVariations = timetableData.roomVariations || {};
+    const { periods } = innerTimetable || {};
+    const routine = innerTimetable?.routine ? innerTimetable.routine.split(',') : [];
+    const classVariations = timetableData?.classVariations || {};
+    const roomVariations = timetableData?.roomVariations || {};
     const daySubjects = timetable?.subjects;
-    const subjectIndex = indexSubjects(completeTimetable);
+    const subjectIndex = indexSubjects(resolvedCompleteTimetable);
 
     const getMinutes = (timeStr) => {
         const [h, m] = timeStr.split(':').map(Number);
@@ -230,10 +240,10 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
 
     if (viewMode === 'daily') {
         routineData = routine.map((bellId, index) => {
-            const bell = bells.find(b => b.bell === bellId);
+            const bell = bells?.find(b => b.bell === bellId);
             if (!bell) return null;
 
-            let periodInfo = periods[bellId] || { title: bell.bellDisplay };
+            let periodInfo = periods?.[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
             const isRealBreak = isBreakBell(bellId, periodInfo);
 
@@ -257,7 +267,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             if (endMin > lastMin) lastMin = endMin;
 
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-            const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
+            const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells?.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
             const isBreak = isBreakStylePeriod(bellId, periodInfo);
             // An empty Period 0 is just a gap before school starts.
@@ -312,7 +322,8 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
     }
 
     const renderCycleView = () => {
-        if (!completeTimetable) {
+        const fullData = resolvedCompleteTimetable;
+        if (!fullData) {
             return (
                 <div className="rounded-2xl border border-m-line bg-m-card p-12 text-center mt-6">
                     <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-zinc-900/[0.04] dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400 grid place-items-center">
@@ -327,9 +338,21 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         
         // Handle different possible data structures
-        const bells = completeTimetable.bells || timetableData?.bells || [];
-        const timetableStructure = completeTimetable.timetable || completeTimetable;
+        const timetableStructure = fullData.timetable || fullData;
         const cycleDays = timetableStructure?.days || {};
+
+        // Bells if available (from fullData, timetableData, railTimetable, or cached)
+        const bells = fullData.bells
+            || timetableData?.bells
+            || railTimetable?.bells
+            || (() => {
+                try {
+                    const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
+                    return cached?.bells || [];
+                } catch {
+                    return [];
+                }
+            })();
 
         // The SBHS cycle runs over several weeks (usually A, B and C): days are keyed 1..15,
         // 1 = Monday A, 6 = Monday B, 11 = Monday C. Count the weeks from the highest day present.
@@ -341,36 +364,62 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const label = dayNums.map(n => weekLetter(cycleDays[n]?.dayname)).find(Boolean) || String.fromCharCode(65 + w);
             return { label, dayNums };
         });
-        const currentWeekLabel = weekLetter(innerTimetable?.dayname);
-        const allDayNums = weeks.flatMap(w => w.dayNums);
 
-        // Get all unique period slots across every day of the cycle, so rows line up between weeks
-        const allPeriodSlots = new Set();
-        allDayNums.forEach(dayNum => {
-            const dayData = cycleDays[dayNum];
-            if (dayData?.routine) {
-                dayData.routine.split(',').forEach(bellId => {
-                    const bell = bells.find(b => b.bell === bellId);
-                    if (bell) allPeriodSlots.add(bellId);
-                });
-            }
-        });
+        // Current week resolution: prop > railTimetable > innerTimetable > cached > null
+        const currentWeekLabel = currentWeek
+            || weekLetter(railTimetable?.timetable?.timetable?.dayname || railTimetable?.timetable?.dayname)
+            || weekLetter(innerTimetable?.dayname)
+            || (() => {
+                try {
+                    const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
+                    return weekLetter(cached?.timetable?.timetable?.dayname || cached?.timetable?.dayname);
+                } catch {
+                    return null;
+                }
+            })();
+
+        const allDayNums = weeks.flatMap(w => w.dayNums);
 
         // A period's class on a cycle day, or null for breaks, roll call and free periods
         const classPeriod = (dayNum, bellId) => {
             const periodInfo = cycleDays[dayNum]?.periods?.[bellId];
             if (!periodInfo) return null;
             if (isBreakBell(bellId, periodInfo)) return null;
-            if (bellId === "RC" || (periodInfo.title && periodInfo.title.toLowerCase().includes("roll call"))) return null;
+            if (bellId === "RC" || (periodInfo.title && String(periodInfo.title).toLowerCase().includes("roll call"))) return null;
             if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return null;
             return periodInfo;
         };
         
+        // Get all unique period slots across every day of the cycle, so rows line up between weeks.
+        // Derived from cycleDays routines and periods, independent of whether bells array exists!
+        const allPeriodSlots = new Set();
+        allDayNums.forEach(dayNum => {
+            const dayData = cycleDays[dayNum];
+            if (dayData?.routine) {
+                dayData.routine.split(',').forEach(bellId => {
+                    const cleanId = String(bellId).trim();
+                    if (cleanId && !isBreakBell(cleanId) && cleanId !== 'RC') {
+                        allPeriodSlots.add(cleanId);
+                    }
+                });
+            }
+            if (dayData?.periods) {
+                Object.keys(dayData.periods).forEach(bellId => {
+                    const cleanId = String(bellId).trim();
+                    if (cleanId && !isBreakBell(cleanId) && cleanId !== 'RC') {
+                        allPeriodSlots.add(cleanId);
+                    }
+                });
+            }
+        });
+        
         const periodSlots = Array.from(allPeriodSlots).sort((a, b) => {
             const bellA = bells.find(bell => bell.bell === a);
             const bellB = bells.find(bell => bell.bell === b);
-            if (!bellA || !bellB) return 0;
-            return bellA.time.localeCompare(bellB.time);
+            if (bellA?.time && bellB?.time) {
+                return bellA.time.localeCompare(bellB.time);
+            }
+            return String(a).localeCompare(String(b), undefined, { numeric: true });
         }).filter(bellId => {
             // The cycle grid shows teaching periods only; breaks don't earn a row.
             const bell = bells.find(b => b.bell === bellId);
@@ -393,7 +442,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                 title: periodInfo.title,
                 room: periodInfo.room,
                 teacher: periodInfo.fullTeacher || periodInfo.teacher,
-                bell: bell?.bellDisplay || bellId,
+                bell: bell?.bellDisplay || `Period ${bellId}`,
                 isSelected,
                 isDimmed
             };
@@ -438,32 +487,27 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {periodSlots.map(bellId => {
-                                                const bell = bells.find(b => b.bell === bellId);
-                                                if (!bell) return null;
-
-                                                return (
-                                                    <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
-                                                        {week.dayNums.map(dayNum => {
-                                                            const classInfo = getClassInfo(dayNum, bellId);
-                                                            
-                                                            if (!classInfo) {
-                                                                return (
-                                                                    <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                                        <div className={`min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
-                                                                    </td>
-                                                                );
-                                                            }
-
+                                            {periodSlots.map(bellId => (
+                                                <tr key={bellId} className="border-b border-zinc-900/[0.05] dark:border-white/[0.05] last:border-0">
+                                                    {week.dayNums.map(dayNum => {
+                                                        const classInfo = getClassInfo(dayNum, bellId);
+                                                        
+                                                        if (!classInfo) {
                                                             return (
                                                                 <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                                    <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />
+                                                                    <div className={`min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
                                                                 </td>
                                                             );
-                                                        })}
-                                                    </tr>
-                                                );
-                                            })}
+                                                        }
+
+                                                        return (
+                                                            <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                                <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

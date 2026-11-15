@@ -391,7 +391,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
 // My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
 // live countdown while school is on. Changes are marked on their rows.
-const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], dayNav, children }) => {
+const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -430,10 +430,26 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const railHours = isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
     const showRail = !isCycle && railHours;
 
-    const status = [
+    const weekLetter = (name) => (name || '').trim().match(/([A-Z])$/)?.[1] || null;
+    const resolvedCurrentWeek = currentWeek
+        || weekLetter(railTimetable?.timetable?.timetable?.dayname || railTimetable?.timetable?.dayname)
+        || weekLetter(inner?.dayname)
+        || (() => {
+            try {
+                const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
+                return weekLetter(cached?.timetable?.timetable?.dayname || cached?.timetable?.dayname);
+            } catch {
+                return null;
+            }
+        })();
+
+    const dailyStatus = [
         inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
         !showRail && firstClass ? `starts ${firstClass.bell.time}` : null
     ].filter(Boolean).join(' · ');
+
+    const cycleStatus = resolvedCurrentWeek ? `Currently Week ${resolvedCurrentWeek}` : null;
+    const status = isCycle ? cycleStatus : dailyStatus;
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
 
