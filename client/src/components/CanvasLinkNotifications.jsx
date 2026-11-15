@@ -79,6 +79,9 @@ const CanvasLinkNotifications = ({
     const [busyId, setBusyId] = useState(null);
     const [hidden, setHidden] = useState(pageHidden);
     const rootRef = useRef(null);
+    // Set when an outside press dismisses the panel; the matching click is
+    // swallowed so the tap can't also activate whatever is underneath.
+    const swallowClick = useRef(false);
 
     // The canvas-links page can be switched off app-wide; archived notices are
     // still worth listing, so only the suggestions section hides with it.
@@ -194,32 +197,37 @@ const CanvasLinkNotifications = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, pending, notices, adminNotices, linkNotices, buildNoteEntries, dismissedBuildNotes]);
 
+    // Stays mounted while the panel is closed: closing re-renders and would
+    // remove a listener scoped to `open` before the click it needs to eat.
     useEffect(() => {
-        if (!open) return undefined;
-        // The tap that closes the panel lands on the page underneath too —
-        // swallow its click so it only dismisses, never activates.
-        let swallowClick = false;
-        const onDown = (e) => {
-            if (rootRef.current && !rootRef.current.contains(e.target)) {
-                setOpen(false);
-                swallowClick = true;
-            } else {
-                swallowClick = false;
-            }
-        };
         const onClickCapture = (e) => {
-            if (!swallowClick) return;
-            swallowClick = false;
+            if (!swallowClick.current) return;
+            swallowClick.current = false;
             e.preventDefault();
             e.stopPropagation();
         };
+        document.addEventListener('click', onClickCapture, true);
+        return () => document.removeEventListener('click', onClickCapture, true);
+    }, []);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onDown = (e) => {
+            if (rootRef.current && !rootRef.current.contains(e.target)) {
+                setOpen(false);
+                swallowClick.current = true;
+                // If the press turns into a scroll instead of a tap, no click
+                // follows — don't leave the flag armed for a later one.
+                setTimeout(() => { swallowClick.current = false; }, 500);
+            } else {
+                swallowClick.current = false;
+            }
+        };
         const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('mousedown', onDown);
-        document.addEventListener('click', onClickCapture, true);
         document.addEventListener('keydown', onKey);
         return () => {
             document.removeEventListener('mousedown', onDown);
-            document.removeEventListener('click', onClickCapture, true);
             document.removeEventListener('keydown', onKey);
         };
     }, [open]);

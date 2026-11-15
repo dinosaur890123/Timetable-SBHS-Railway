@@ -353,6 +353,19 @@
         </footer>
       </div>
     </div>
+    <script>
+      // Signed-in reloads and OAuth returns shouldn't flash the public landing shell.
+      // Drop it before first paint when a session exists or we're mid-sign-in; React
+      // mounts into #root straight away. Signed-out visitors keep the shell for crawlers.
+      try {
+        var hasSession = !!(localStorage.getItem('sbhs_access_token') || localStorage.getItem('sbhs_refresh_token') || localStorage.getItem('cached_user'));
+        var isAuthReturn = !!new URLSearchParams(window.location.search).get('code');
+        if (hasSession || isAuthReturn) {
+          var shell = document.getElementById('seo-shell');
+          if (shell) shell.remove();
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
