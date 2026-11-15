@@ -6,6 +6,7 @@ import {
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 import CanvasLinkNotifications from '../CanvasLinkNotifications';
+import PWAInstallButton from '../PWAInstallButton';
 import { sageMarkdown } from '../../utils/sageMarkdown';
 
 export const VIEW_LABELS = {
@@ -247,6 +248,8 @@ export const ModernTopbar = ({
                 <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
                     <Search size={16} />
                 </IconButton>
+
+                <PWAInstallButton />
 
                 <CanvasLinkNotifications
                     aiDisabled={aiDisabled}

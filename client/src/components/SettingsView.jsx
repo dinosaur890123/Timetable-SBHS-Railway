@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield, Download } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
@@ -102,7 +102,7 @@ const SettingsView = ({
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky();
-    const { isInstalled, dismiss, showIOSInstructions } = usePWAInstall();
+    const { isInstalled, hasPrompt, isIOS, dismissed, resetDismissed, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     // Red dot until every class in the timetable has a link (personal or community).
     // Links reset each calendar year, so it comes back then too.
@@ -136,28 +136,65 @@ const SettingsView = ({
                 </button>
             </div>
 
-            {/* PWA Install Section - iOS only; other platforms use the browser's native install UI */}
-            {!isInstalled && showIOSInstructions && (
+            {/* PWA Install Section - moves here when dismissed from navigation bar, and disappears once installed */}
+            {!isInstalled && (
                 <Section label="Install App">
-                    <div className="px-4 py-3.5 sm:px-5 relative">
-                            <button
-                                onClick={dismiss}
-                                className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                aria-label="Dismiss"
-                            >
-                                <X size={16} />
-                            </button>
-                            <div className="flex items-start gap-3 pr-6">
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                                    <Smartphone size={20} className="text-blue-500" />
+                    <div className="px-4 py-3.5 sm:px-5">
+                        {isIOS ? (
+                            <div className="flex items-start gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                                    <Smartphone size={20} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-1">Install on iPhone/iPad</div>
+                                    <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-1">Install on iPhone / iPad</div>
                                     <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mb-2">
-                                        Tap the <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><Share2 size={14} /> Share</span> button, then choose "Add to Home Screen".
+                                        Tap the <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><Share2 size={14} /> Share</span> button in Safari, then choose <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><PlusCircle size={14} /> Add to Home Screen</span>.
                                     </p>
                                 </div>
                             </div>
+                        ) : (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className="shrink-0 w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                                        <Download size={20} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="text-[14px] font-medium text-zinc-900 dark:text-white mb-0.5">
+                                            Install Synchron
+                                        </div>
+                                        <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                                            Installing Synchron takes up no extra storage and allows faster offline access.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
+                                    {hasPrompt ? (
+                                        <button
+                                            onClick={promptToInstall}
+                                            className="h-9 px-4 rounded-lg bg-accent text-accent-contrast font-medium text-[13px] hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-sm"
+                                        >
+                                            <Download size={14} />
+                                            <span>Install</span>
+                                        </button>
+                                    ) : (
+                                        <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
+                                            Available in browser menu
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {dismissed && (
+                            <div className="mt-3 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center justify-between text-[12px] text-zinc-400 dark:text-zinc-500">
+                                <span>Install prompt was dismissed from the navigation bar.</span>
+                                <button
+                                    onClick={resetDismissed}
+                                    className="text-accent hover:underline font-medium"
+                                >
+                                    Restore to navigation bar
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </Section>
             )}
