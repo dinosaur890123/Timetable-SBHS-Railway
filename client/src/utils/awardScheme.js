@@ -245,6 +245,8 @@ export const summariseAwards = ({
         levels.sort((a, b) => a.pointsRequired - b.pointsRequired);
         const earned = levels.filter(n => n.state === 'earned');
         const next = levels.find(n => n.state !== 'earned') || null;
+        // Calculate the gap between consecutive levels (e.g., 30 between 30, 60, 90)
+        const levelGap = levels.length > 1 ? levels[1].pointsRequired - levels[0].pointsRequired : levels[0]?.pointsRequired || 30;
         return {
             id: String(levels[0].fromGroup ?? 'all'),
             name: areaName(levels),
@@ -254,6 +256,7 @@ export const summariseAwards = ({
             // Points the processed (earned) nominations already account for; only
             // points past this carry over into the next nomination.
             basePoints: earned.length ? Math.max(...earned.map(n => n.pointsRequired)) : 0,
+            levelGap,
             reached: levels.filter(n => n.state === 'reached').length,
             next,
             complete: !next

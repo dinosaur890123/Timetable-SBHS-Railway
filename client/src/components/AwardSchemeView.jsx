@@ -173,7 +173,7 @@ const AreasCard = ({ summary }) => {
                         // Until that nomination is officially issued, the overflow shows green.
                         const next = area.next;
                         const base = area.basePoints || 0;
-                        const required = next ? Math.max(1, next.pointsRequired - base) : 0;
+                        const required = area.levelGap || 30;
                         const toward = next ? Math.max(0, next.points - base) : area.points;
                         const reached = next?.state === 'reached';
                         const progress = required > 0 ? Math.min(1, toward / required) : 1;
@@ -477,7 +477,7 @@ const PlanView = ({ summary }) => {
                 .filter(a => a.category?.name === area.name)
                 .reduce((sum, a) => sum + a.points, 0);
             const base = area.basePoints || 0;
-            const required = area.next ? Math.max(1, area.next.pointsRequired - base) : 0;
+            const required = area.levelGap || 30;
             const toward = area.next ? Math.max(0, area.next.points - base) + plannedPoints : area.points + plannedPoints;
             const earned = area.earned + (area.next && toward >= required ? 1 : 0);
             return { ...area, plannedPoints, earned, toward, required };
@@ -643,7 +643,7 @@ const PlanView = ({ summary }) => {
                         <div className="space-y-4">
                             {summary.areas.map(area => {
                                 const base = area.basePoints || 0;
-                                const required = area.next ? Math.max(1, area.next.pointsRequired - base) : 0;
+                                const required = area.levelGap || 30;
                                 const toward = area.next ? Math.max(0, area.next.points - base) : area.points;
                                 return (
                                     <div key={area.id} className="py-2">
