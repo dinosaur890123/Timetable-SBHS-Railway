@@ -329,7 +329,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
                   <span className="text-accent">live.</span>
                 </h1>
                 <p className="mt-6 max-w-md text-base sm:text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  For Sydney Boys High School students: your periods, with substitutes and room changes already applied. Notices and the school calendar are in the same place. Sign in with your school account and it’s all there.
+                  A quick, one-stop app for your day. By students, for students at Sydney Boys High School.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
                   <button
