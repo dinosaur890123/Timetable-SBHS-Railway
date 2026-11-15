@@ -12,7 +12,7 @@ import { BrandMark } from './modern/ModernShell';
 const ease = [0.2, 0.8, 0.2, 1];
 
 const Label = ({ children, className = '' }) => (
-  <div className={`font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500 ${className}`}>
+  <div className={`font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400 ${className}`}>
     {children}
   </div>
 );
@@ -49,7 +49,7 @@ const ProductPreview = () => {
     <div className="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
       <div className="flex items-center justify-between h-11 px-4 border-b border-m-line">
         <span className="text-[13px] font-medium text-zinc-900 dark:text-white">My Synchron</span>
-        <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Synced
         </span>
@@ -72,12 +72,12 @@ const ProductPreview = () => {
           <div className="rounded-xl border border-m-line bg-m-card p-3.5">
             <div className="flex items-center justify-between mb-2.5">
               <Label>Today’s variations</Label>
-              <span className="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-500 dark:text-amber-400">2</span>
+              <span className="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">2</span>
             </div>
             <ul className="space-y-2 text-[12.5px]">
               <li>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] text-zinc-500">P2</span>
+                  <span className="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P2</span>
                   <span className="font-medium text-zinc-900 dark:text-white">Physics</span>
                 </div>
                 <div className="pl-5 flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
@@ -86,7 +86,7 @@ const ProductPreview = () => {
               </li>
               <li>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] text-zinc-500">P3</span>
+                  <span className="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P3</span>
                   <span className="font-medium text-zinc-900 dark:text-white truncate">Design &amp; Technology</span>
                 </div>
                 <div className="pl-5 flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
@@ -99,7 +99,7 @@ const ProductPreview = () => {
           <div className="rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
             <div className="flex items-center justify-between mb-2.5">
               <Label>Now · Period 2</Label>
-              <span className="text-[11px] text-zinc-400 hidden sm:inline">Next: Recess</span>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:inline">Next: Recess</span>
             </div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -113,7 +113,7 @@ const ProductPreview = () => {
                 <div className="text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
                   {formatClock(remaining)}
                 </div>
-                <div className="text-[11px] text-zinc-400 mt-1">left</div>
+                <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">left</div>
               </div>
             </div>
             <div className="mt-auto pt-3">
@@ -127,8 +127,8 @@ const ProductPreview = () => {
         <ol className="relative rounded-xl border border-m-line bg-m-card p-1.5 space-y-0.5" aria-label="Example timetable">
           {PREVIEW_ROWS.map((row) => row.break ? (
             <li key={row.break} className="flex items-center gap-3 px-2 py-1">
-              <span className="w-10 text-right text-[11px] tabular-nums text-zinc-500">{row.time}</span>
-              <span className="text-[11px] font-medium text-zinc-500">{row.break}</span>
+              <span className="w-10 text-right text-[11px] tabular-nums text-zinc-600 dark:text-zinc-400">{row.time}</span>
+              <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">{row.break}</span>
               <span className="flex-1 h-px bg-white/[0.07]" />
             </li>
           ) : (
@@ -136,13 +136,13 @@ const ProductPreview = () => {
               key={row.period}
               className={`flex items-center gap-3 rounded-lg px-2 py-2 ${row.state === 'current' ? 'bg-white/[0.05] ring-1 ring-accent/60' : ''} ${row.state === 'past' ? 'opacity-45' : ''}`}
             >
-              <span className={`w-10 text-right text-[12px] tabular-nums ${row.state === 'current' ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500'}`}>{row.time}</span>
-              <span className={`w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium ${row.state === 'current' ? 'bg-accent text-accent-contrast' : 'bg-white/[0.06] text-zinc-400'}`}>
+              <span className={`w-10 text-right text-[12px] tabular-nums ${row.state === 'current' ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-600 dark:text-zinc-400'}`}>{row.time}</span>
+              <span className={`w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium ${row.state === 'current' ? 'bg-accent text-accent-contrast' : 'bg-white/[0.06] text-zinc-600 dark:text-zinc-300'}`}>
                 {row.period}
               </span>
               <div className="min-w-0 flex-1 flex items-baseline justify-between gap-3">
                 <span className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{row.title}</span>
-                <span className={`hidden sm:block truncate text-[11.5px] ${row.room ? 'text-amber-600 dark:text-amber-400' : row.sub ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-500'}`}>
+                <span className={`hidden sm:block truncate text-[11.5px] ${row.room ? 'text-amber-600 dark:text-amber-400' : row.sub ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'}`}>
                   {row.meta}
                 </span>
               </div>
@@ -301,9 +301,13 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 )}
                 <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
               </button>
+              <nav className="flex items-center gap-4 sm:gap-5" aria-label="Landing">
+                <a href="#whats-inside" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+                <a href="/privacy" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+              </nav>
               <button
                 onClick={performLogin}
-                className="h-8 px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                className="h-11 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
                 Sign in
               </button>
@@ -315,18 +319,17 @@ const LandingPage = ({ authError, clearAuthError }) => {
           <main className="flex-1">
             <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:pb-24">
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 1, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease }}
               >
-                <Label className="mb-5">Sydney Boys High School</Label>
                 <h1 className="text-[2.6rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
                   Your timetable,
                   <br />
                   <span className="text-accent">live.</span>
                 </h1>
-                <p className="mt-6 max-w-md text-[15px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  Your periods, with substitutes and room changes already applied. Notices and the school calendar are in the same place. Sign in with your school account and it’s all there.
+                <p className="mt-6 max-w-md text-base sm:text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  For Sydney Boys High School students: your periods, with substitutes and room changes already applied. Notices and the school calendar are in the same place. Sign in with your school account and it’s all there.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
                   <button
@@ -337,13 +340,13 @@ const LandingPage = ({ authError, clearAuthError }) => {
                     <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
-                <p className="mt-6 max-w-sm text-xs leading-relaxed text-zinc-500 dark:text-zinc-600">
+                <p className="mt-6 max-w-sm text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
                   Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.
                 </p>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 1, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.12, ease }}
               >
@@ -351,12 +354,12 @@ const LandingPage = ({ authError, clearAuthError }) => {
               </motion.div>
             </section>
 
-            <section className="border-t border-m-line">
+            <section id="whats-inside" className="border-t border-m-line scroll-mt-16">
               <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 md:py-20">
                 <div className="grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] md:gap-16">
                   <div>
                     <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
-                    <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
+                    <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                       The same pages you’ll see in the sidebar once you sign in.
                     </p>
                   </div>
@@ -367,10 +370,10 @@ const LandingPage = ({ authError, clearAuthError }) => {
                         <ul className="divide-y divide-white/[0.06] border-y border-m-line">
                           {section.items.map(({ icon: Icon, title, body }) => (
                             <li key={title} className="flex gap-3 py-3.5">
-                              <Icon size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-zinc-400" />
+                              <Icon size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                               <div>
                                 <div className="text-sm font-medium text-zinc-900 dark:text-white">{title}</div>
-                                <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500">{body}</p>
+                                <p className="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">{body}</p>
                               </div>
                             </li>
                           ))}
@@ -384,9 +387,13 @@ const LandingPage = ({ authError, clearAuthError }) => {
           </main>
 
           <footer className="border-t border-m-line">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-1.5 px-5 py-5 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-600 sm:flex-row sm:justify-between sm:px-8">
-              <span>© {new Date().getFullYear()} Synchron</span>
-              <span>Built independently for SBHS</span>
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© {new Date().getFullYear()} Synchron</span>
+              <nav className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+                <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+                <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+                <span>Built independently for SBHS</span>
+              </nav>
             </div>
           </footer>
         </div>

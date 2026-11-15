@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Shield, Database, Cpu, Eye, Trash2, Lock, Server, Smartphone, LogOut } from 'lucide-react';
+import { ArrowLeft, Shield, Database, Cpu, Eye, Trash2, Lock, Server, Smartphone } from 'lucide-react';
 import { fetchDeletionRequest, requestDataDeletion } from '../services/api';
 
 const Section = ({ icon: Icon, title, children }) => (
@@ -17,7 +17,7 @@ const Section = ({ icon: Icon, title, children }) => (
 const Item = ({ label, children }) => (
     <div className="px-5 py-3.5">
         {label && (
-            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:text-zinc-500 mb-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 dark:text-zinc-400 mb-1">
                 {label}
             </div>
         )}
@@ -50,18 +50,19 @@ const GlanceRow = ({ what, where, when, canDelete }) => (
     </tr>
 );
 
-const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
+const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = false }) => {
     const [deletionRequest, setDeletionRequest] = useState(null);
     const [requestState, setRequestState] = useState('idle'); // idle | sending | error
     const [requestError, setRequestError] = useState('');
 
     useEffect(() => {
+        if (publicOnly) return undefined;
         let cancelled = false;
         fetchDeletionRequest()
             .then(data => { if (!cancelled) setDeletionRequest(data?.request || null); })
             .catch(() => { /* privacy page still works if the request can't be loaded */ });
         return () => { cancelled = true; };
-    }, []);
+    }, [publicOnly]);
 
     const handleRequestDeletion = async () => {
         if (!window.confirm('Request deletion of your account and all server-side data? An admin will review the request. Once completed, this cannot be undone.')) return;
@@ -83,12 +84,21 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         {/* Back */}
-        <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-        >
-            <ArrowLeft size={14} /> Back to Settings
-        </button>
+        {publicOnly ? (
+            <a
+                href="/"
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            >
+                <ArrowLeft size={14} /> Back to Synchron
+            </a>
+        ) : (
+            <button
+                onClick={onBack}
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            >
+                <ArrowLeft size={14} /> Back to Settings
+            </button>
+        )}
 
         {/* Hero */}
         <div className="space-y-1">
@@ -220,7 +230,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                     <thead>
                         <tr className="border-b border-zinc-900/[0.06] dark:border-white/[0.06]">
                             {['What', 'Stored where', 'Kept for', 'Deletable?'].map(h => (
-                                <th key={h} className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:text-zinc-500 font-medium">{h}</th>
+                                <th key={h} className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 dark:text-zinc-400 font-medium">{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -291,13 +301,14 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                 Your account record and Canvas links remain on the server so they're ready when you sign back in.
             </Item>
             <Item label="Requesting full deletion">
-                Use the button below to ask for your account and all associated server-side data to be removed.
-                The request appears in the admin panel, where an admin reviews and processes it.
-                Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.
+                {publicOnly
+                    ? 'Sign in to Synchron and open Settings → Privacy to ask for your account and all associated server-side data to be removed.'
+                    : 'Use the button below to ask for your account and all associated server-side data to be removed. The request appears in the admin panel, where an admin reviews and processes it. Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.'}
             </Item>
         </Section>
 
         {/* Request deletion */}
+        {!publicOnly && (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] dark:bg-red-500/[0.06] p-5 sm:p-6">
             <div className="flex items-start gap-3">
                 <Trash2 size={18} className="shrink-0 text-red-500 mt-0.5" />
@@ -332,6 +343,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
                 </div>
             </div>
         </div>
+        )}
 
         {/* Offline / PWA */}
         <Section icon={Smartphone} title="Offline &amp; PWA usage">
@@ -343,7 +355,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider' }) => {
         </Section>
 
         {/* Footer */}
-        <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
+        <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
             Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
         </p>
     </div>

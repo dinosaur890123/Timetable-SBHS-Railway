@@ -3,7 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Synchron</title>
+    <title>Synchron — live SBHS timetable and school notices</title>
+    <meta name="description" content="Free SBHS student app: live timetables, daily notices, school calendar, awards, Clipboard and Canvas links. Sign in with your school account." />
+    <link rel="canonical" href="https://synchron.work/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Synchron" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:title" content="Synchron — live SBHS timetable and school notices" />
+    <meta property="og:description" content="Live timetables with substitutes and room changes already applied, daily notices, the school calendar, awards, Clipboard sessions and Canvas links for Sydney Boys High School students." />
+    <meta property="og:url" content="https://synchron.work/" />
+    <meta property="og:image" content="https://synchron.work/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Synchron — live SBHS timetable for Sydney Boys High School" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Synchron — live SBHS timetable and school notices" />
+    <meta name="twitter:description" content="Live timetables with substitutes and room changes already applied, daily notices, the school calendar, awards, Clipboard sessions and Canvas links for Sydney Boys High School students." />
+    <meta name="twitter:image" content="https://synchron.work/og-image.png" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Synchron",
+      "url": "https://synchron.work/",
+      "logo": "https://synchron.work/synchron-rows-light-offwhite-512.png",
+      "email": "synchron.work@gmail.com",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "synchron.work@gmail.com",
+        "contactType": "customer support"
+      },
+      "description": "Synchron is a student-built app for Sydney Boys High School timetables, daily notices, calendar, awards, Clipboard sessions and Canvas links."
+    }
+    </script>
     <!-- Production -->
     <link href="https://pub-cea38733e1c8419caa7f81d6a2b2ec08.r2.dev/c5854aac-eb00-4f89-9fdc-bcb33ebfae1f/generated/favicon-32x32.png" rel="shortcut icon" type="image/x-icon">
     <link href="https://pub-cea38733e1c8419caa7f81d6a2b2ec08.r2.dev/c5854aac-eb00-4f89-9fdc-bcb33ebfae1f/generated/apple-touch-icon.png" rel="apple-touch-icon">
@@ -89,14 +122,237 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/seo-shell.css">
     <script>
-      // Apply the cached colour mode before first paint to avoid a flash.
+      // Apply the right colour mode before first paint: signed-out visitors always
+      // get the dark landing page; signed-in visitors keep their saved preference.
       try {
-        if ((localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
+        var hasSession = !!(localStorage.getItem('sbhs_access_token') || localStorage.getItem('sbhs_refresh_token'));
+        if (!hasSession || (localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>
   </head>
-  <body class="bg-zinc-900 text-white">
+  <body class="bg-m-page text-zinc-900 dark:text-zinc-100">
+    <!-- Prerendered signed-out landing shell. Mirrors LandingPage.jsx so crawlers and
+         no-JS visitors get real content; SeoShellCleanup removes it after React mounts.
+         Keep this copy in sync with the component. -->
+    <div id="seo-shell" class="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
+      <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
+        <header class="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+          <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
+            <a href="/" class="flex items-center gap-2.5" aria-label="Synchron home">
+              <span class="relative w-7 h-7">
+                <img src="/synchron-rows-light-offwhite.svg" alt="" class="block w-full h-full rounded-lg" />
+                <span class="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page"></span>
+              </span>
+              <span class="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+            </a>
+            <nav class="flex items-center gap-4 sm:gap-5" aria-label="Landing">
+              <a href="#whats-inside" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+              <a href="/privacy" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+            </nav>
+          </div>
+        </header>
+
+        <div aria-hidden="true" class="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots"></div>
+
+        <main class="flex-1">
+          <section class="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:pb-24">
+            <div>
+              <h1 class="text-[2.6rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
+                Your timetable,<br />
+                <span class="text-accent">live.</span>
+              </h1>
+              <p class="mt-6 max-w-md text-base sm:text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                For Sydney Boys High School students: your periods, with substitutes and room changes already applied. Notices and the school calendar are in the same place. Sign in with your school account and it’s all there.
+              </p>
+              <div class="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <a href="/" class="group inline-flex h-11 items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-5 text-sm font-medium text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
+                  Sign in with SBHS
+                </a>
+              </div>
+              <p class="mt-6 max-w-sm text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.
+              </p>
+            </div>
+
+            <div class="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
+              <div class="flex items-center justify-between h-11 px-4 border-b border-m-line">
+                <span class="text-[13px] font-medium text-zinc-900 dark:text-white">My Synchron</span>
+                <span class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Synced
+                </span>
+              </div>
+
+              <div class="relative p-4 sm:p-5 space-y-4">
+                <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots"></div>
+
+                <div class="relative">
+                  <div class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                    Good Morning, <span class="text-accent">Sam</span>
+                  </div>
+                  <div class="mt-1.5 flex items-center gap-2 text-[12px] text-zinc-600 dark:text-zinc-400">
+                    <span>Tuesday, 3 March</span>
+                    <span class="px-1.5 py-px rounded-md border border-m-line bg-white/[0.04] text-zinc-700 dark:text-zinc-200">Today is TueA</span>
+                  </div>
+                </div>
+
+                <div class="relative grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+                  <div class="rounded-xl border border-m-line bg-m-card p-3.5">
+                    <div class="flex items-center justify-between mb-2.5">
+                      <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Today’s variations</span>
+                      <span class="font-mono text-[10px] w-4 h-4 grid place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">2</span>
+                    </div>
+                    <ul class="space-y-2 text-[12.5px]">
+                      <li>
+                        <div class="flex items-baseline gap-1.5">
+                          <span class="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P2</span>
+                          <span class="font-medium text-zinc-900 dark:text-white">Physics</span>
+                        </div>
+                        <div class="pl-5 flex items-center gap-1.5 text-blue-700 dark:text-blue-400">Mr Hall covering</div>
+                      </li>
+                      <li>
+                        <div class="flex items-baseline gap-1.5">
+                          <span class="font-mono text-[10px] text-zinc-600 dark:text-zinc-400">P3</span>
+                          <span class="font-medium text-zinc-900 dark:text-white truncate">Design &amp; Technology</span>
+                        </div>
+                        <div class="pl-5 flex items-center gap-1.5 text-amber-700 dark:text-amber-400">502, was 102</div>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div class="rounded-xl border border-m-line bg-m-card p-3.5 flex flex-col">
+                    <div class="flex items-center justify-between mb-2.5">
+                      <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Now · Period 2</span>
+                      <span class="text-[11px] text-zinc-600 dark:text-zinc-400 hidden sm:inline">Next: Recess</span>
+                    </div>
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="text-[15px] font-semibold text-zinc-900 dark:text-white">Physics</div>
+                        <div class="mt-1 flex items-center gap-2.5 text-[11.5px] text-zinc-600 dark:text-zinc-400">
+                          <span>10:05</span>
+                          <span>307</span>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">24:13</div>
+                        <div class="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">left</div>
+                      </div>
+                    </div>
+                    <div class="mt-auto pt-3">
+                      <div class="h-1 rounded-full bg-black/[0.08] dark:bg-white/[0.08] overflow-hidden">
+                        <div class="h-full rounded-full bg-accent" style="width: 59%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <ol class="relative rounded-xl border border-m-line bg-m-card p-1.5 space-y-0.5" aria-label="Example timetable">
+                  <li class="flex items-center gap-3 px-2 py-1">
+                    <span class="w-10 text-right text-[11px] tabular-nums text-zinc-600 dark:text-zinc-400">11:05</span>
+                    <span class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Recess</span>
+                    <span class="flex-1 h-px bg-black/[0.08] dark:bg-white/[0.07]"></span>
+                  </li>
+                  <li class="flex items-center gap-3 rounded-lg px-2 py-2 opacity-60">
+                    <span class="w-10 text-right text-[12px] tabular-nums text-zinc-600 dark:text-zinc-400">9:00</span>
+                    <span class="w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium bg-black/[0.06] dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-300">1</span>
+                    <div class="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                      <span class="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">English</span>
+                      <span class="hidden sm:block truncate text-[11.5px] text-zinc-600 dark:text-zinc-400">Ms Reid · 203</span>
+                    </div>
+                  </li>
+                  <li class="flex items-center gap-3 rounded-lg px-2 py-2 bg-black/[0.04] dark:bg-white/[0.05] ring-1 ring-accent/60">
+                    <span class="w-10 text-right text-[12px] tabular-nums text-zinc-900 dark:text-white font-medium">10:05</span>
+                    <span class="w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium bg-accent text-accent-contrast">2</span>
+                    <div class="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                      <span class="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">Physics</span>
+                      <span class="hidden sm:block truncate text-[11.5px] text-blue-700 dark:text-blue-400">Mr Hall for Mrs Shah · 307</span>
+                    </div>
+                  </li>
+                  <li class="flex items-center gap-3 rounded-lg px-2 py-2">
+                    <span class="w-10 text-right text-[12px] tabular-nums text-zinc-600 dark:text-zinc-400">11:25</span>
+                    <span class="w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium bg-black/[0.06] dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-300">3</span>
+                    <div class="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                      <span class="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">Design &amp; Technology</span>
+                      <span class="hidden sm:block truncate text-[11.5px] text-amber-700 dark:text-amber-400">Mr Gray · 502, was 102</span>
+                    </div>
+                  </li>
+                  <li class="flex items-center gap-3 rounded-lg px-2 py-2">
+                    <span class="w-10 text-right text-[12px] tabular-nums text-zinc-600 dark:text-zinc-400">12:30</span>
+                    <span class="w-5 h-5 shrink-0 grid place-items-center rounded-md text-[11px] font-medium bg-black/[0.06] dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-300">4</span>
+                    <div class="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                      <span class="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">Mathematics Ext. 2</span>
+                      <span class="hidden sm:block truncate text-[11.5px] text-zinc-600 dark:text-zinc-400">Mr Jones · 105</span>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </section>
+
+          <section id="whats-inside" class="border-t border-m-line scroll-mt-16">
+            <div class="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 md:py-20">
+              <div class="grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] md:gap-16">
+                <div>
+                  <h2 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
+                  <p class="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                    The same pages you’ll see in the sidebar once you sign in.
+                  </p>
+                </div>
+                <div class="grid gap-10 sm:grid-cols-2">
+                  <div>
+                    <h3 class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Workspace</h3>
+                    <ul class="divide-y divide-black/[0.06] dark:divide-white/[0.06] border-y border-m-line">
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">My Synchron</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Today’s timetable with substitutes and room moves already applied, and a countdown to the bell.</p>
+                      </li>
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Calendar</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Term dates, events and which week of the cycle you’re in.</p>
+                      </li>
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Notices</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">The daily notices, readable on a phone.</p>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">School</h3>
+                    <ul class="divide-y divide-black/[0.06] dark:divide-white/[0.06] border-y border-m-line">
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Awards</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Your award scheme points and badges.</p>
+                      </li>
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Clipboard</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Sport and training sessions from Clipboard.</p>
+                      </li>
+                      <li class="py-3.5">
+                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Study</div>
+                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">NoteFlow, the all-in-one study app with an AI tutor.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer class="border-t border-m-line">
+          <div class="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <span class="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© 2026 Synchron</span>
+            <nav class="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+              <a href="#whats-inside" class="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+              <a href="/privacy" class="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+              <a href="https://student.sbhs.net.au" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-white transition-colors">SBHS portal</a>
+            </nav>
+          </div>
+        </footer>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

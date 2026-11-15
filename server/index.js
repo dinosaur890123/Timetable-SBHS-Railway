@@ -3557,9 +3557,13 @@ app.use(express.static(clientDist, {
     }
 }));
 
-// Fallback all unmatched routes to index.html (for client-side routing)
+// Fallback unmatched routes to the SPA shell. The public privacy page is a
+// separate prerendered document so crawlers and no-JS visitors can read it.
 app.get('*', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
+    if (req.path === '/privacy' || req.path === '/privacy/') {
+        return res.sendFile(path.join(clientDist, 'privacy.html'));
+    }
     res.sendFile(path.join(clientDist, 'index.html'));
 });
 

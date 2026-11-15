@@ -22,6 +22,7 @@ const zinc = Object.fromEntries([
 export default {
   content: [
     "./index.html",
+    "./privacy.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class',

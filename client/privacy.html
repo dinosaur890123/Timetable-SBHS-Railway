@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" data-ui="modern" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy — Synchron</title>
+    <meta name="description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <link rel="canonical" href="https://synchron.work/privacy" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Synchron" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:title" content="Privacy — Synchron" />
+    <meta property="og:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <meta property="og:url" content="https://synchron.work/privacy" />
+    <meta property="og:image" content="https://synchron.work/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Synchron privacy policy" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Privacy — Synchron" />
+    <meta name="twitter:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <meta name="twitter:image" content="https://synchron.work/og-image.png" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Synchron", "item": "https://synchron.work/" },
+        { "@type": "ListItem", "position": 2, "name": "Privacy", "item": "https://synchron.work/privacy" }
+      ]
+    }
+    </script>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0E1116">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/seo-shell.css">
+  </head>
+  <body class="bg-m-page text-zinc-900 dark:text-zinc-100">
+    <!-- Prerendered privacy shell. Mirrors PrivacyView.jsx in publicOnly mode so
+         crawlers and no-JS visitors get real content; SeoShellCleanup removes it
+         after React mounts. Keep this copy in sync with the component. -->
+    <div id="seo-shell" class="min-h-[100dvh] bg-m-page text-zinc-900 dark:text-zinc-100">
+      <div class="relative isolate flex min-h-[100dvh] flex-col overflow-hidden bg-m-panel md:p-2 md:rounded-2xl md:border border-m-line">
+        <header class="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+          <div class="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5 sm:px-8">
+            <a href="/" class="flex items-center gap-2.5" aria-label="Synchron home">
+              <span class="relative w-7 h-7">
+                <img src="/synchron-rows-light-offwhite.svg" alt="" class="block w-full h-full rounded-lg" />
+                <span class="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-m-page"></span>
+              </span>
+              <span class="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+            </a>
+            <a href="/" class="h-8 px-3 inline-flex items-center rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors">Home</a>
+          </div>
+        </header>
+
+        <main class="flex-1 px-4 py-8 sm:px-6">
+          <div class="p-4 sm:p-6 max-w-2xl mx-auto space-y-8">
+            <a href="/" class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+              <span aria-hidden="true">←</span> Back to Synchron
+            </a>
+
+            <div class="space-y-1">
+              <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Privacy</h1>
+              <p class="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Synchron is a third-party app that connects to the SBHS student portal. This page explains exactly what data is used, where it lives, and how to delete it.
+              </p>
+            </div>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">SBHS API data — timetable, notices, awards &amp; attendance</h2>
+              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Who fetches it.</strong> Your browser fetches timetable, notice, award, and attendance data directly from student.sbhs.net.au using your own access token. The Synchron server never sees or touches this data.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Where it’s stored.</strong> Only on your device — in localStorage and the browser’s Service Worker cache — so the app works offline and loads instantly. It is never sent to or stored on the Synchron server.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">SBHS terms compliance.</strong> Storing SBHS API results on a central server is prohibited by SBHS developer terms. Synchron complies: all SBHS data lives only in your browser.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">When it’s cleared.</strong> Signing out wipes localStorage and the Service Worker cache. Signing in as a different student also clears the previous student’s data before anything new is loaded.</p>
+              </div>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">Authentication tokens</h2>
+              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Access token.</strong> Your SBHS access token is stored only in localStorage. It is sent to the Synchron server only to validate your identity on each API request — the server reads it, verifies it with SBHS, and immediately discards it. It is never written to any database.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Token exchange.</strong> SBHS uses an OAuth 2 flow. Your browser sends an authorisation code to the Synchron server, which adds the client secret and exchanges it for a token with SBHS. This keeps the client secret out of the browser. The resulting tokens are sent back to your device; the server holds nothing after the exchange.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Clearing tokens.</strong> Signing out removes all tokens from localStorage immediately. The server has nothing to clear.</p>
+              </div>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">What the Synchron server stores</h2>
+              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Your account record.</strong> When you first sign in, Synchron creates an account row containing your student ID, name, email, and year group — sourced from the SBHS identity token. This is used to show your name in the admin panel, track your role, and sync preferences across devices.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Preferences.</strong> Theme, accent colour, ambient light, and similar UI settings are synced server-side so they carry across devices. Your AI opt-in choice is stored here too.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Canvas links.</strong> Class-to-Canvas URL mappings you create are stored server-side so they sync across your devices and can contribute to community suggestions for your class. Only you can read or modify your own links.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Feedback tickets.</strong> Feedback you submit is stored so the dev team can review and respond. Archived tickets are automatically deleted after 90 days.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Activity logs.</strong> Server-side events such as sign-ins, preference changes, and Canvas link updates are logged for security auditing. Logs older than 30 days are pruned on demand by administrators.</p>
+              </div>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">AI features (Sage) — opt-in only</h2>
+              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Opt-in.</strong> AI features are off by default. You must turn them on in Settings and can disable them at any time.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">What is sent.</strong> When you ask Sage a question, your typed question and your timetable data are included in the prompt sent to the AI provider. Award scheme data, attendance records, notes, assignments, and feedback are never sent to any AI provider.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">What Synchron stores.</strong> Your typed question (capped at 500 characters) and student ID are logged for admin review and abuse monitoring. AI answers are never stored on the Synchron server.</p>
+              </div>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">Data at a glance</h2>
+              <ul class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Timetable, notices, awards, attendance:</strong> your device only; cleared on sign-out.</li>
+                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">SBHS tokens:</strong> localStorage only; removed on sign-out.</li>
+                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Account, preferences, Canvas links, feedback, AI question logs:</strong> Synchron server; deletable by request or sign-out where noted.</li>
+                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">AI answers:</strong> never stored.</li>
+              </ul>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">Deleting your data</h2>
+              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Signing out.</strong> Signs you out and immediately wipes your tokens, timetable cache, and all offline data from this device. Your account record and Canvas links remain on the server so they’re ready when you sign back in.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Requesting full deletion.</strong> Sign in to Synchron and open Settings → Privacy to ask for your account and all associated server-side data to be removed. Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.</p>
+              </div>
+            </section>
+
+            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
+              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">Offline &amp; PWA usage</h2>
+              <p class="px-5 py-3.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                If you install Synchron as a PWA, your timetable and other SBHS data are cached on your device so the app works without a network. This cache is stored by your browser’s Service Worker — it never leaves your device. Signing out clears it.
+              </p>
+            </section>
+
+            <p class="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+              Synchron BETA · build latest
+            </p>
+          </div>
+        </main>
+
+        <footer class="border-t border-m-line">
+          <div class="mx-auto flex w-full max-w-3xl flex-col gap-2 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <span class="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© 2026 Synchron</span>
+            <nav class="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
+              <a href="/" class="hover:text-zinc-900 dark:hover:text-white transition-colors">Home</a>
+              <a href="/privacy" class="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
+              <a href="https://student.sbhs.net.au" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-white transition-colors">SBHS portal</a>
+            </nav>
+          </div>
+        </footer>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/privacy-main.jsx"></script>
+  </body>
+</html>

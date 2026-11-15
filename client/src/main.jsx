@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import SeoShellCleanup from './components/SeoShellCleanup.jsx'
 import './index.css'
 import './theme/modern.css'
 import './theme/colorThemes.css'
@@ -11,8 +12,10 @@ startAutoUpdate()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <SeoShellCleanup>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </SeoShellCleanup>
   </React.StrictMode>,
 )

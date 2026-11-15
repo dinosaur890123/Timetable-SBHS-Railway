@@ -1,0 +1,53 @@
+/* Critical styles for the prerendered SEO shell only. #seo-shell is removed
+   after React mounts, so these rules never affect the real app. They keep the
+   no-JS / pre-hydration page readable before the app's CSS bundle loads. */
+html { color-scheme: light dark; }
+body { margin: 0; }
+
+#seo-shell {
+  min-height: 100dvh;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f1f1ee;
+  color: #18181b;
+}
+html.dark #seo-shell {
+  background: #0e1116;
+  color: #f4f4f5;
+}
+
+#seo-shell h1 { margin: 0 0 0.75rem; font-size: 2rem; line-height: 1.05; letter-spacing: -0.02em; font-weight: 600; }
+#seo-shell h2 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; }
+#seo-shell h3 { margin: 0 0 0.25rem; font-size: 0.875rem; font-weight: 600; }
+#seo-shell p,
+#seo-shell li,
+#seo-shell td { font-size: 0.95rem; line-height: 1.6; }
+#seo-shell a { color: inherit; }
+#seo-shell img { max-width: 100%; height: auto; }
+
+#seo-shell header,
+#seo-shell footer,
+#seo-shell nav { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; flex-wrap: wrap; }
+#seo-shell main { padding: 1rem 1.25rem 2rem; }
+#seo-shell .max-w-2xl { max-width: 42rem; margin-left: auto; margin-right: auto; }
+#seo-shell .max-w-3xl { max-width: 48rem; margin-left: auto; margin-right: auto; }
+#seo-shell .max-w-6xl { max-width: 72rem; margin-left: auto; margin-right: auto; }
+#seo-shell .max-w-md { max-width: 28rem; }
+#seo-shell .max-w-sm { max-width: 24rem; }
+#seo-shell .max-w-xs { max-width: 20rem; }
+
+#seo-shell .rounded-2xl {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.6);
+}
+html.dark #seo-shell .rounded-2xl {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.03);
+}
+#seo-shell .divide-y > * + * { border-top: 1px solid rgb(0 0 0 / 0.06); padding-top: 0.75rem; }
+html.dark #seo-shell .divide-y > * + * { border-top-color: rgb(255 255 255 / 0.06); }
+#seo-shell ul { list-style: none; padding-left: 0; }
+#seo-shell .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+#seo-shell .uppercase { text-transform: uppercase; }
