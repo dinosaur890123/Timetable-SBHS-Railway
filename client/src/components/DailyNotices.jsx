@@ -57,8 +57,8 @@ const NoticeItem = ({ notice, index }) => {
       transition={{ delay: Math.min(index, 8) * 0.03 }}
       className="px-4 py-4 sm:px-6 sm:py-5"
     >
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-white leading-snug">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+        <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-white leading-snug min-w-0">
           {notice.title}
         </h3>
         <PriorityBadge notice={notice} />
@@ -141,7 +141,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
     <MotionConfig reducedMotion="user">
     <div className="w-full max-w-3xl mx-auto bg-m-card border border-m-line rounded-2xl overflow-hidden flex flex-col md:h-[calc(100dvh-9rem)]">
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-m-line bg-m-panel shrink-0 space-y-3">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 bg-m-card border border-m-line text-zinc-900 dark:text-white rounded-lg shrink-0">
               <Megaphone size={16} />
@@ -156,7 +156,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <a
               href="https://sbhs.co/hnpdf"
               target="_blank"
@@ -172,7 +172,7 @@ const DailyNotices = ({ notices, aiBriefing, user }) => {
               value={filterView}
               onChange={(e) => setFilterView(e.target.value)}
               aria-label="Filter notices by year"
-              className="shrink-0 bg-m-card border border-m-line text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex-1 min-w-0 sm:flex-none sm:shrink-0 bg-m-card border border-m-line text-zinc-900 dark:text-white text-sm font-medium h-9 px-3 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {FILTER_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
