@@ -115,7 +115,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             </div>
 
             {hasCanvasLink && (
-                <span className="hidden lg:inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
+                <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
                     <ArrowUpRight size={13} className="shrink-0" />
                 </span>
