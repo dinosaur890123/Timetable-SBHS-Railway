@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
-    CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
+    CornerDownLeft, WifiOff, Database, BookOpen, ArrowUpRight, FileCode
 } from 'lucide-react';
 import CanvasLinkNotifications from '../CanvasLinkNotifications';
 import { sageMarkdown } from '../../utils/sageMarkdown';
@@ -43,9 +43,29 @@ const CanvasIcon = ({ size = 16, className = '' }) => (
     </span>
 );
 
+// Same hover treatment as CanvasIcon: the grey crest is masked so it inherits
+// the row's icon colour, then the colour crest swaps in on hover.
+const crestMask = {
+    WebkitMaskImage: "url('/sydney-boys-high-school-crest-grey.svg')",
+    maskImage: "url('/sydney-boys-high-school-crest-grey.svg')",
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center'
+};
+
+const CrestIcon = ({ size = 16, className = '' }) => (
+    <span className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size }}>
+        <span className="block w-full h-full bg-current group-hover:hidden" style={crestMask} />
+        <img src="/Sydney_Boys_High_School_crest.svg" alt="" className="hidden w-full h-full object-contain group-hover:block" />
+    </span>
+);
+
 // External school sites shown alongside the School pages.
 const QUICK_LINKS = [
-    { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
+    { id: 'link-portal', label: 'Student Portal', icon: CrestIcon, href: 'https://student.sbhs.net.au' },
     { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' }
 ];
 
@@ -543,7 +563,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
     const quickActions = [
         { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
         { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
-        { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
+        { id: 'quick-portal', label: 'Student Portal', icon: CrestIcon, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
         { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
     ].filter(action => {
         // Filter out if the corresponding page is hidden
