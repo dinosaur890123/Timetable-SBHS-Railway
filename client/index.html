@@ -136,8 +136,13 @@
          no-JS visitors get real content; SeoShellCleanup removes it after React mounts.
          Keep this copy in sync with the component. -->
     <div id="seo-shell" class="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
-      <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
-        <header class="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+      <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+        <div aria-hidden="true" class="ambient ambient--panel" style="position: fixed; --ambient-a:#7cc8ff; --ambient-b:#8fe8c8; --ambient-c:#ffe08a;">
+          <span class="ambient__blob ambient__blob--a"></span>
+          <span class="ambient__blob ambient__blob--b"></span>
+          <span class="ambient__blob ambient__blob--c"></span>
+        </div>
+        <header class="sticky top-0 md:top-2 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
           <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
             <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="Synchron home">
               <span class="relative w-7 h-7 shrink-0">
@@ -202,7 +207,7 @@
                   <h1 class="text-[26px] sm:text-[30px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                     Good Morning, <span class="text-accent">Sam</span>
                   </h1>
-                  <p class="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">Today is TueA · 6 classes</p>
+                  <p class="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">Today is TueA · 4 classes</p>
                 </header>
 
                 <div class="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
@@ -278,7 +283,7 @@
                         <span class="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">11:05</span>
                         <span class="text-[12px] text-zinc-400 dark:text-zinc-500">Recess</span>
                         <span class="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]"></span>
-                        <span class="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-600">20 min</span>
+                        <span class="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-600">17 min</span>
                       </div>
                     </li>
                     <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
@@ -308,6 +313,31 @@
                           <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Mathematics Ext. 2</div>
                           <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
                             <span class="truncate">Mr Jones</span>
+                          </div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                          <div class="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">105</div>
+                        </div>
+                      </div>
+                    </li>
+                    <li class="px-3 py-1.5">
+                      <div class="flex items-center gap-4">
+                        <span class="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">13:30</span>
+                        <span class="text-[12px] text-zinc-400 dark:text-zinc-500">Lunch</span>
+                        <span class="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]"></span>
+                        <span class="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-600">37 min</span>
+                      </div>
+                    </li>
+                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
+                      <div class="relative flex items-center gap-4 px-3 py-3">
+                        <div class="w-11 shrink-0 text-right leading-tight">
+                          <div class="text-[13px] tabular-nums text-zinc-500 dark:text-zinc-400">14:10</div>
+                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P5</div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">History</div>
+                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
+                            <span class="truncate">Mr Smith</span>
                           </div>
                         </div>
                         <div class="shrink-0 text-right">

@@ -43,10 +43,10 @@ export const useSky = () => {
 
 // Three soft, slowly drifting glows in the colours of the current time of day.
 // `variant` is "panel" (top of the main panel, fading downwards) or "page" (behind everything).
-const AmbientLight = ({ variant = 'panel' }) => {
+const AmbientLight = ({ variant = 'panel', style }) => {
     const { colours: [a, b, c] } = useSky();
     return (
-        <div aria-hidden className={`ambient ambient--${variant}`}>
+        <div aria-hidden className={`ambient ambient--${variant}`} style={style}>
             <span className="ambient__blob ambient__blob--a" style={{ '--ambient-a': a }} />
             <span className="ambient__blob ambient__blob--b" style={{ '--ambient-b': b }} />
             <span className="ambient__blob ambient__blob--c" style={{ '--ambient-c': c }} />

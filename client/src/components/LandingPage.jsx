@@ -290,9 +290,11 @@ const LandingPage = ({ authError, clearAuthError }) => {
         </AnimatePresence>
 
         {/* The same inset panel the signed-in app lives in */}
-        <div className="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
-          {ambientOn && <AmbientLight variant="panel" />}
-          <header className="sticky top-0 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
+        {/* overflow:clip (not hidden) keeps the rounded corners clipped without
+            becoming a scroll container, so the sticky header still works. */}
+        <div className="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+          {ambientOn && <AmbientLight variant="panel" style={{ position: 'fixed' }} />}
+          <header className="sticky top-0 md:top-2 z-30 border-b border-m-line bg-m-panel/80 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
               <button onClick={handleLogoClick} className="flex min-w-0 items-center gap-2.5" aria-label="Synchron">
                 {useOriginalMark ? (
