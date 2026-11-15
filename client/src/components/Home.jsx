@@ -414,8 +414,11 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     // Extend dayEnd if extracurriculars go after school
     const extendedDayEnd = hasExtracurriculars ? Math.max(dayEnd, clipboardSlots[clipboardSlots.length - 1].endMin) : dayEnd;
     // The side rail only earns its place while the day is happening: up to two hours
-    // before the first event until the last one (including extracurriculars).
-    const showRail = !isCycle && isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
+    // before the first event until the last one (including extracurriculars). The
+    // container width follows the same rule in cycle view so the header doesn't
+    // jump when switching between daily and cycle.
+    const railHours = isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
+    const showRail = !isCycle && railHours;
 
     const status = [
         inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
@@ -425,7 +428,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
 
     return (
-        <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
+        <div className={`mx-auto ${railHours ? 'max-w-5xl' : 'max-w-3xl'}`}>
             <header className="mb-4 md:mb-10">
                 <div className="md:flex md:items-start md:justify-between md:gap-4">
                     <div className="min-w-0">
