@@ -236,7 +236,7 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             let periodInfo = periods[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
             const isActualBreak = isBreakBell(bellId, periodInfo);
-            const isSportOrScripture = isBreakStylePeriod(bellId, periodInfo) && !isActualBreak;
+            const isSportOrScripture = !isActualBreak && isBreakStylePeriod(bellId, periodInfo);
 
             if (isActualBreak) {
                 periodInfo = { ...periodInfo, title: bell.bellDisplay };
@@ -260,18 +260,19 @@ const Timetable = ({ timetableData, completeTimetable, viewMode = 'daily', showN
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
-            const isBreak = isBreakStylePeriod(bellId, periodInfo);
+            const isBreak = isActualBreak || isSportOrScripture;
             // An empty Period 0 is just a gap before school starts.
-            if (isBreak && String(bellId) === '0') return null;
+            if (isActualBreak && String(bellId) === '0') return null;
 
             return {
-                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isSportOrScripture,
+                bellId, index, bell, periodInfo, startMin, endMin, isCurrent, isNext, isBreak, isSportOrScripture: !!isSportOrScripture,
                 label: isActualBreak ? periodInfo.title.replace(/\s*\d+$/, '') : null
             };
         }).filter(Boolean).reduce((rows, row) => {
             // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one row.
+            // Don't fold sport/scripture periods - they should remain separate.
             const prev = rows[rows.length - 1];
-            if (prev?.isBreak && row.isBreak && prev.label === row.label) {
+            if (prev?.isBreak && !prev.isSportOrScripture && row.isBreak && !row.isSportOrScripture && prev.label === row.label) {
                 prev.endMin = row.endMin;
                 prev.isCurrent = currentMinutes >= prev.startMin && currentMinutes < prev.endMin;
                 return rows;
