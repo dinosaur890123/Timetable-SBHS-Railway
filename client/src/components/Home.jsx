@@ -381,11 +381,10 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
             <header className="mb-8 md:mb-10 flex items-start justify-between gap-4">
-                <div className="min-w-0">
+                <div className="flex-1 min-w-0">
                     <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                         {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                     </h1>
-                    {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
                 </div>
                 <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] shrink-0 mt-1">
                     {['daily', 'cycle'].map(mode => (
