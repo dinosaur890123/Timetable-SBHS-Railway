@@ -380,27 +380,31 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     return (
         <div className={`mx-auto ${isCycle ? 'max-w-6xl' : showRail ? 'max-w-5xl' : 'max-w-3xl'}`}>
             <header className="mb-8 md:mb-10">
-                <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
-                    {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
-                </h1>
-                {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
-                <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 w-fit">
-                    {['daily', 'cycle'].map(mode => (
-                        <button
-                            key={mode}
-                            onClick={() => onViewModeChange?.(mode)}
-                            className={`relative px-2.5 py-1 text-xs font-medium capitalize rounded-md transition-colors ${viewMode === mode ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
-                        >
-                            {viewMode === mode && (
-                                <motion.span
-                                    layoutId="m-tt-mode"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                    className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
-                                />
-                            )}
-                            <span className="relative">{mode}</span>
-                        </button>
-                    ))}
+                <div className="md:flex md:items-start md:justify-between md:gap-4">
+                    <div className="min-w-0">
+                        <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
+                            {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
+                        </h1>
+                        {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
+                    </div>
+                    <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-1 md:shrink-0 w-fit md:w-auto">
+                        {['daily', 'cycle'].map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => onViewModeChange?.(mode)}
+                                className={`relative px-2.5 py-1 text-xs font-medium capitalize rounded-md transition-colors ${viewMode === mode ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+                            >
+                                {viewMode === mode && (
+                                    <motion.span
+                                        layoutId="m-tt-mode"
+                                        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                                        className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
+                                    />
+                                )}
+                                <span className="relative">{mode}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
