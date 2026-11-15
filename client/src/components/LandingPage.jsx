@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight, AlertOctagon, X, MapPin, UserRound, Home, CalendarDays, Newspaper,
   Award, Clipboard, GraduationCap
@@ -285,15 +285,14 @@ const LandingPage = ({ authError, clearAuthError }) => {
   };
 
   return (
-    <MotionConfig reducedMotion="user">
-      <div className="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-[100dvh] bg-m-page p-1 md:px-4 text-zinc-900 dark:text-zinc-100">
         <AnimatePresence>
           {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
         </AnimatePresence>
 
         {/* The same inset panel the signed-in app lives in: fixed height, header
             outside the scroll area so content can never scroll up behind it. */}
-        <div className="relative isolate flex h-[100dvh] md:h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+        <div className="relative isolate flex h-[calc(100dvh-0.5rem)] md:h-[calc(100dvh-2rem)] mx-auto md:max-w-[1200px] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
           {ambientOn && <AmbientLight variant="panel" style={{ position: 'fixed' }} />}
           <header className="relative z-30 border-b border-m-line bg-m-panel/75 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
@@ -307,11 +306,12 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 )}
                 <span className="whitespace-nowrap text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
               </button>
-              <nav className="hidden items-center gap-4 sm:flex sm:gap-5" aria-label="Landing">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <nav className="hidden sm:flex items-center gap-5" aria-label="Landing">
                 <a href="#whats-inside" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                 <a href="/privacy" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
-              </nav>
-              <button
+                </nav>
+                <button
                 onClick={performLogin}
                 className="h-11 shrink-0 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
               >
@@ -325,9 +325,9 @@ const LandingPage = ({ authError, clearAuthError }) => {
           <main className="flex-1 min-h-0 overflow-y-auto">
             <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:pb-24">
               <motion.div
-                initial={{ opacity: 1, y: 8 }}
+                initial={{ opacity: 1, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease }}
+                transition={{ duration: 0 }}
               >
                 <h1 className="text-[2.2rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
                   Your timetable,
@@ -352,9 +352,10 @@ const LandingPage = ({ authError, clearAuthError }) => {
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 1, y: 12 }}
+                initial={{ opacity: 1, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.12, ease }}
+                transition={{ duration: 0 }}
+                className="hidden sm:block"
               >
                 <ProductPreview />
               </motion.div>
@@ -395,16 +396,15 @@ const LandingPage = ({ authError, clearAuthError }) => {
               <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
                 <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron {new Date().getFullYear()}</span>
                 <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
-                  <a href="#whats-inside" className="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+                  <a href="#whats-inside" className="hidden sm:block hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                   <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
-                  <span>Built independently for SBHS</span>
+                  <span className="hidden sm:block">Built independently for SBHS</span>
                 </nav>
               </div>
             </footer>
           </main>
         </div>
       </div>
-    </MotionConfig>
   );
 };
 
