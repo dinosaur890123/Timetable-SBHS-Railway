@@ -7,7 +7,6 @@ import {
 import { performLogin, getOauthConfig } from '../services/api';
 import { BrandMark } from './modern/ModernShell';
 import AmbientLight from './modern/AmbientLight';
-import PWAInstallButton from './PWAInstallButton';
 
 // The landing page is always dark; the saved theme preference only applies once signed in.
 
@@ -312,15 +311,12 @@ const LandingPage = ({ authError, clearAuthError }) => {
                 <a href="#whats-inside" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
                 <a href="/privacy" className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
               </nav>
-              <div className="flex items-center gap-2">
-                <PWAInstallButton />
-                <button
-                  onClick={performLogin}
-                  className="h-11 shrink-0 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                >
-                  Sign in
-                </button>
-              </div>
+              <button
+                onClick={performLogin}
+                className="h-11 shrink-0 px-4 sm:h-8 sm:px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              >
+                Sign in
+              </button>
             </div>
           </header>
 
