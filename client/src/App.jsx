@@ -67,6 +67,16 @@ const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
 
+// Token exchange and the first API calls can hit a browser local-network prompt.
+// When that fails, say the prompt is the likely cause instead of a generic auth error.
+const authErrorMessage = (err) => {
+    const base = err?.message || (typeof err === 'string' ? err : 'Failed to authenticate.');
+    if (/failed to fetch|network|timed out|abort|local network|permission|ERR_LOCAL_NETWORK|ERR_BLOCKED_BY/i.test(base)) {
+        return `${base} If your browser asked for local network access, choose Allow and try again.`;
+    }
+    return base;
+};
+
 // The day the app opens on: the next school day, unless a Clipboard session falls on a
 // weekend day before it (Saturday sport, Sunday rowing) — the earliest such day wins.
 // Sessions already over don't count: a finished Saturday morning shouldn't reopen Saturday.
@@ -218,6 +228,7 @@ function App() {
         return true;
     });
     const [authError, setAuthError] = useState(null);
+    const [authInProgress, setAuthInProgress] = useState(false);
     const [aiBriefing, setAiBriefing] = useState(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
@@ -875,12 +886,14 @@ function App() {
                     setLoading(false);
                     return;
                 }
+                setAuthInProgress(true);
                 try {
                     await exchangeToken(code);
                     setTokenScopeOutdated(false);
                 } catch (err) {
                     console.error(err);
-                    setAuthError(err.message || "Failed to authenticate.");
+                    setAuthError(authErrorMessage(err));
+                    setAuthInProgress(false);
                     setLoading(false);
                     return;
                 }
@@ -898,6 +911,7 @@ function App() {
                 // Drop the cached user so the sign-in screen shows instead of a session with no tokens.
                 localStorage.removeItem('cached_user');
                 setUser(null);
+                setAuthInProgress(false);
                 setLoading(false);
                 return;
             }
@@ -1036,6 +1050,7 @@ function App() {
                 console.error(error);
                 if (error.message?.includes("401")) logout();
             } finally {
+                setAuthInProgress(false);
                 setLoading(false);
             }
         };
@@ -1374,9 +1389,14 @@ function App() {
     if (loading) {
         return (
             <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center transition-colors">
-                <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-4 px-6 text-center">
                     <div className="w-10 h-10 border-4 border-accent/25 border-t-accent rounded-full animate-spin"></div>
-                    <p className="text-zinc-400 text-sm">Loading Synchron...</p>
+                    <p className="text-zinc-600 dark:text-zinc-300 text-sm">Loading Synchron...</p>
+                    {authInProgress && (
+                        <p className="max-w-sm text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                            If your browser asks for local network access, choose <span className="font-medium text-zinc-800 dark:text-zinc-200">Allow</span> so Synchron can finish signing you in.
+                        </p>
+                    )}
                 </div>
             </div>
         );
