@@ -3,6 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { useCachedLoad } from '../utils/pageCache';
+import { calendarPage, closureLabel, termsPage } from '../services/pageData';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { TeacherTreat } from './TeacherTreat';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
@@ -408,6 +410,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const [now, setNow] = useState(new Date());
     const [scanIn, setScanIn] = useState({ date: null, state: 'loading' });
     const [todayTimetable, setTodayTimetable] = useState(() => peekDayTimetable(new Date()));
+    const { data: termsData } = useCachedLoad(termsPage().key, termsPage().load);
+    const todayCalendar = user?.studentId ? calendarPage(user.studentId, now) : null;
+    const { data: calendarEvents } = useCachedLoad(todayCalendar?.key ?? null, todayCalendar?.load);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
@@ -434,9 +439,10 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const hasTodaySchedule = todaySlots.length > 0;
     const schoolStartMin = todaySlots[0]?.startMin ?? 9 * 60;
     const schoolEndMin = todaySlots.at(-1)?.endMin ?? 15 * 60 + 30;
-    // Today's actual timetable is the source of truth here: a real class schedule
-    // means this date should get a scan indicator, even if calendar closure data lags.
-    const isSchoolDay = getDay(now) !== 0 && getDay(now) !== 6 && hasTodaySchedule;
+    // Match the blue-dot closure logic used by the date picker, and only show the
+    // scan pill when today's actual timetable also contains classes.
+    const isSchoolDay = getDay(now) !== 0 && getDay(now) !== 6 && hasTodaySchedule
+        && termsData != null && calendarEvents != null && !closureLabel(now, termsData, calendarEvents);
     useEffect(() => {
         if (!user?.studentId || !isSchoolDay || !hasTodaySchedule) {
             setScanIn({ date: todayKey, state: 'unknown' });
