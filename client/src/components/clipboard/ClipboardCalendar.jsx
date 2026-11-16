@@ -141,7 +141,8 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                                             aria-label={`${sessionName(s)}${s.cancelled ? ', cancelled' : ''}. Show details`}
                                                         >
                                                             <span className="nf-cb-dot" />
-                                                            <span><span className="tnum">{formatTime12Hour(format(startOf(s), 'HH:mm'))}</span> {s.activity}</span>
+                                                            <span className="nf-cal__chip-time tnum">{formatTime12Hour(format(startOf(s), 'HH:mm'))}</span>
+                                                            <span className="nf-cal__chip-name">{s.activity}</span>
                                                         </button>
                                                     ))}
                                             </span>
