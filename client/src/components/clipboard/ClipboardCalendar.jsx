@@ -46,7 +46,8 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
         const tooltipWidth = 240;
         const tooltipHeight = 80;
         const x = Math.max(8, Math.min(rect.left + (rect.width - tooltipWidth) / 2, window.innerWidth - tooltipWidth - 8));
-        const y = Math.max(8, Math.min(rect.top - tooltipHeight - 8, window.innerHeight - tooltipHeight - 8));
+        // Sit just above the event, with a small overlap to visually attach the popup.
+        const y = Math.max(8, Math.min(rect.top - tooltipHeight + 12, window.innerHeight - tooltipHeight - 8));
         setTooltipPosition({ x, y });
         setHoveredSession(session);
     };
