@@ -7,7 +7,7 @@ export const formatTime12Hour = (timeStr) => {
     if (isNaN(hours) || isNaN(minutes)) return timeStr;
     const period = hours >= 12 ? 'pm' : 'am';
     const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return `${displayHours}:${String(minutes).padStart(2, '0')}\u00A0${period}`;
 };
 
 // Helpers for merging the school's daily variation feeds (substitute teachers /

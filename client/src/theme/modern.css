@@ -263,6 +263,10 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   91% { opacity: .45; transform: scale(.9) rotate(4deg); }
 }
 
+/* ---------- Prevent time wrapping ----------
+   Keep 12-hour times (e.g., "9:00 am") on a single line to avoid ugly wrapping. */
+.tabular-nums { white-space: nowrap; }
+
 /* ---------- Ambient light on phones ----------
    Below md the main panel fills the whole screen, so the page glow is hidden and
    the panel glow's blobs sit mostly above the viewport behind the blurred topbar.

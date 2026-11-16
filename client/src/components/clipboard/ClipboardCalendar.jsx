@@ -14,7 +14,7 @@ import ScheduleView from './ScheduleView';
 const WEEK = { weekStartsOn: 1 };
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // The month grid only works once the sheet is wide enough to show session chips.
-const MONTH_MIN_WIDTH = 640;
+const MONTH_MIN_WIDTH = 720;
 
 // A month of Clipboard sessions on one sheet. Wide screens get the month grid; narrow
 // ones get one week as a ruled agenda where tapping a session opens it straight away.
