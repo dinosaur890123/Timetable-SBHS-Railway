@@ -35,19 +35,15 @@ const ScheduleView = ({ sessions, onOpen }) => {
     const handleMouseEnter = (e, session) => {
         if (!isDesktop || !hasHover) return;
         const rect = e.currentTarget.getBoundingClientRect();
-        const tooltipWidth = 200;
+        const tooltipWidth = 240;
         const tooltipHeight = 80;
 
-        let x = rect.right + 8;
-        let y = rect.top;
+        let x = rect.left + (rect.width - tooltipWidth) / 2;
+        let y = rect.top - tooltipHeight - 8;
 
         // Keep tooltip within viewport
-        if (x + tooltipWidth > window.innerWidth) {
-            x = rect.left - tooltipWidth - 8;
-        }
-        if (y + tooltipHeight > window.innerHeight) {
-            y = window.innerHeight - tooltipHeight - 8;
-        }
+        x = Math.max(8, Math.min(x, window.innerWidth - tooltipWidth - 8));
+        y = Math.max(8, Math.min(y, window.innerHeight - tooltipHeight - 8));
 
         setTooltipPosition({ x, y });
         setHoveredSession(session);

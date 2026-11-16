@@ -167,12 +167,7 @@ export const SessionSheet = ({ session, onClose }) => {
 };
 
 // One quiet line in the day's timetable, laid out like a break row. Opens the sheet.
-export const SessionLine = ({ session, onOpen }) => {
-    const start = startOf(session);
-    const end = endOf(session);
-    const time = start ? `${clockTime(start)}${end ? ` – ${clockTime(end)}` : ''}` : session.time;
-    const where = session.location?.name || session.location?.address;
-    return (
+export const SessionLine = ({ session, onOpen }) => (
     <button
         type="button"
         data-no-press
@@ -184,11 +179,5 @@ export const SessionLine = ({ session, onOpen }) => {
         <span className="nf-cb-line__name">{sessionName(session)}</span>
         <span className="nf-cb-line__rule" aria-hidden="true" />
         <span className="nf-cb-line__where">{session.cancelled ? 'Cancelled' : session.location?.name || 'Clipboard'}</span>
-        <span className="nf-cb-hover" aria-hidden="true">
-            <strong>{sessionName(session)}</strong>
-            {time && <span>{time}</span>}
-            {where && <span>{where}</span>}
-        </span>
     </button>
-    );
-};
+);
