@@ -29,7 +29,7 @@ const formatDuration = (mins) => {
 
 const getScanTime = (record) => {
     const value = record && typeof record === 'object'
-        ? record.scanInDateTime || record.scannedAt || record.scanInAt || record.dateTime || record.time
+        ? record.timestamp || record.scanInDateTime || record.scannedAt || record.scanInAt || record.dateTime || record.time
         : null;
     if (!value) return null;
     const raw = String(value);
