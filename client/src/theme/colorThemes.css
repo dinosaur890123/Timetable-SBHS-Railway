@@ -103,14 +103,14 @@ html[data-ui="modern"].theme-blue {
   --m-card: 255 255 255;
 }
 html[data-ui="modern"].dark.theme-blue {
-  --black: 18 30 62;
-  --zinc-950: 24 38 74;
-  --zinc-900: 30 47 88;
-  --zinc-800: 44 64 112;
-  --zinc-700: 70 88 140;
-  --m-page: 18 32 66;
-  --m-panel: 24 40 78;
-  --m-card: 32 50 94;
+  --black: 11 16 22;
+  --zinc-950: 17 22 30;
+  --zinc-900: 23 29 38;
+  --zinc-800: 34 41 52;
+  --zinc-700: 54 61 74;
+  --m-page: 7 10 16;
+  --m-panel: 11 16 22;
+  --m-card: 17 22 30;
 }
 
 /* violet */
@@ -291,6 +291,42 @@ html[data-ui="modern"].dark.theme-sky {
   --m-page: 5 11 15;
   --m-panel: 9 16 22;
   --m-card: 14 23 29;
+}
+
+/* navy */
+html.theme-navy {
+  --white: 255 255 255;
+  --zinc-50: 246 249 255;
+  --zinc-100: 237 243 254;
+  --zinc-200: 220 229 245;
+  --zinc-300: 200 212 232;
+  --zinc-400: 148 162 186;
+  --zinc-500: 100 114 140;
+  --zinc-600: 70 82 106;
+  --zinc-700: 54 64 82;
+  --zinc-800: 32 39 52;
+  --zinc-900: 19 24 35;
+  --zinc-950: 7 10 16;
+}
+html[data-ui="modern"].theme-navy {
+  --white: 255 255 255;
+  --zinc-50: 244 248 255;
+  --zinc-100: 236 242 253;
+  --zinc-200: 224 232 246;
+  --zinc-300: 203 214 232;
+  --m-page: 232 240 252;
+  --m-panel: 245 249 255;
+  --m-card: 255 255 255;
+}
+html[data-ui="modern"].dark.theme-navy {
+  --black: 8 12 20;
+  --zinc-950: 13 18 28;
+  --zinc-900: 18 25 37;
+  --zinc-800: 28 37 52;
+  --zinc-700: 46 58 76;
+  --m-page: 5 8 14;
+  --m-panel: 8 12 20;
+  --m-card: 13 18 28;
 }
 
 /* ---------- Ambient accent (any non-default colour theme) ---------- */

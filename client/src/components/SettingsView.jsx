@@ -7,7 +7,7 @@ import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
-    { id: 'zinc', name: 'Default', swatch: 'bg-zinc-900 dark:bg-zinc-100' },
+    { id: 'navy', name: 'Navy', swatch: 'bg-blue-950' },
     { id: 'mint', name: 'Mint', swatch: 'bg-emerald-600' },
     { id: 'teal', name: 'Teal', swatch: 'bg-teal-600' },
     { id: 'sky', name: 'Sky', swatch: 'bg-sky-500' },

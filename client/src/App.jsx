@@ -135,7 +135,7 @@ import './components/sage.css';
 
 function App() {
     // State
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [currentView, setCurrentView] = useState('home');
     // Open on the school day worked out from the timetable saved on this device (today until its
     // last bell, then the next school day), so the right day shows before the network answers.
@@ -173,7 +173,7 @@ function App() {
             return null;
         }
     });
-    const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'blue');
+    const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'navy');
     const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
     const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
     // Per-feature admin toggles from /api/system/status; missing keys mean on.
@@ -887,6 +887,7 @@ function App() {
             'theme-mint',
             'theme-amber',
             'theme-blue',
+            'theme-navy',
             'theme-violet',
             'theme-rose',
             'theme-teal',
