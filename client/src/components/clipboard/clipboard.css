@@ -48,6 +48,8 @@ html[data-ui] .nf .nf-cb-tab[aria-selected="true"]::after {
 .nf-cb-rows b { display: block; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
 .nf-cb-rows .nf-meta { margin-top: 2px; }
 .nf-cb-rows__main { min-width: 0; flex: 1; }
+.nf-cb-team-link { display: block; border: 0; padding: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.nf-cb-team-link:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .nf-cb-status { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); }
 .nf-cb-status--ok { color: var(--ok); }
 

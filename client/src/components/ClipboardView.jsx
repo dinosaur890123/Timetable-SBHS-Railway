@@ -4,6 +4,7 @@ import { clipboardPage } from '../services/pageData';
 import { Tick, useNoteFlowFonts } from './study/noteflow';
 import { SessionSheet } from './clipboard/sessions';
 import ClipboardCalendar from './clipboard/ClipboardCalendar';
+import { fetchClipboardTeamDetails } from '../services/api';
 
 const TABS = [
     { id: 'calendar', label: 'Calendar' },
@@ -50,11 +51,21 @@ const ClipboardView = ({ user }) => {
     useNoteFlowFonts();
     const [activeTab, setActiveTab] = useState('calendar');
     const [openSession, setOpenSession] = useState(null);
+    const [selectedTeam, setSelectedTeam] = useState(null);
+    const [teamLoading, setTeamLoading] = useState(false);
 
     // Shows the last copy at once (from this session or saved on the device) while it refreshes.
     const page = user?.studentId ? clipboardPage(user.studentId) : null;
     const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
-    const { attendance = [], preExplained = [], sessions = [], teams = [], globalActivities = [] } = data || {};
+    const { attendance = [], preExplained = [], sessions = [], teams = [] } = data || {};
+    const openTeam = async (team) => {
+        setSelectedTeam({ ...team, members: [] });
+        if (!team.teamId) return;
+        setTeamLoading(true);
+        try { setSelectedTeam(await fetchClipboardTeamDetails(team.teamId)); }
+        catch { setSelectedTeam({ ...team, members: [], detailUnavailable: true }); }
+        finally { setTeamLoading(false); }
+    };
 
     if (loading) {
         return <ClipboardSkeleton />;
@@ -96,40 +107,29 @@ const ClipboardView = ({ user }) => {
 
                 {activeTab === 'teams' && (
                     <>
-                        {teams.length > 0 ? (
+                        {selectedTeam ? (
+                            <section className="nf-cb-team-detail">
+                                <button type="button" className="nf-cb-btn nf-cb-btn--bare" onClick={() => setSelectedTeam(null)}>All teams</button>
+                                <h2 className="nf-head">{selectedTeam.name}</h2>
+                                <p className="nf-meta">{teamLoading ? 'Loading team members...' : selectedTeam.detailUnavailable ? 'Team members could not be loaded.' : 'People in this team'}</p>
+                                {!teamLoading && selectedTeam.members?.length > 0 && <ul className="nf-cb-rows">{selectedTeam.members.map((member, index) => <li key={member.id || `${member.name}-${index}`}><b>{member.name}</b></li>)}</ul>}
+                                {!teamLoading && !selectedTeam.detailUnavailable && !selectedTeam.members?.length && <p className="nf-cb-empty">No team members were returned.</p>}
+                            </section>
+                        ) : teams.length > 0 ? (
                             <ul className="nf-cb-rows">
                                 {teams.map(team => (
                                     <li key={team.id}>
-                                        <div className="nf-cb-rows__main">
+                                        <button type="button" className="nf-cb-rows__main nf-cb-team-link" onClick={() => openTeam(team)}>
                                             <b>{team.name}</b>
-                                            <div className="nf-meta">
-                                                {[team.sportOrActivity, team.category].filter(Boolean).join(' Â· ')}
-                                            </div>
-                                        </div>
+                                            <div className="nf-meta">{[team.sportOrActivity, team.category].filter(Boolean).join(' / ')}</div>
+                                        </button>
                                         {team.season && <span className="nf-meta tnum">{team.season}</span>}
                                     </li>
                                 ))}
                             </ul>
-                        ) : (
-                            <p className="nf-cb-empty">You're not in any Clipboard teams yet.</p>
-                        )}
-
-                        {globalActivities.length > 0 && (
-                            <>
-                                <h2 className="nf-head">Everything on Clipboard</h2>
-                                <div className="nf-cb-catalogue">
-                                    {globalActivities.map(act => (
-                                        <div key={act.id}>
-                                            <b>{act.name}</b>
-                                            {act.department && <span className="nf-meta">{act.department}</span>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
+                        ) : <p className="nf-cb-empty">You're not in any Clipboard teams yet.</p>}
                     </>
                 )}
-
                 {activeTab === 'attendance' && (
                     attendance.length > 0 ? (
                         <ul className="nf-cb-rows">

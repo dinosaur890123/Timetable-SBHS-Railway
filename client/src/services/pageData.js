@@ -19,8 +19,7 @@ import {
     fetchStudentClipboardAttendance,
     fetchStudentPreExplainedAbsences,
     fetchStudentClipboardSessions,
-    fetchStudentClipboardTeams,
-    fetchGlobalActivities
+    fetchStudentClipboardTeams
 } from './api';
 import { prefetchCached } from '../utils/pageCache';
 
@@ -213,14 +212,13 @@ export const clipboardPage = (studentId) => ({
             settle(fetchStudentClipboardAttendance(studentId), previous?.attendance ?? []),
             settle(fetchStudentPreExplainedAbsences(studentId), previous?.preExplained ?? []),
             settle(fetchStudentClipboardSessions(studentId), previous?.sessions ?? []),
-            settle(fetchStudentClipboardTeams(studentId), previous?.teams ?? []),
-            settle(fetchGlobalActivities(), previous?.globalActivities ?? [])
+            settle(fetchStudentClipboardTeams(studentId), previous?.teams ?? [])
         ]);
         // Nothing answered at all: keep the saved copy (and the Cached badge) rather
         // than storing five empty lists over it.
         if (!results.some(r => r.ok)) throw new Error('Clipboard unavailable');
-        const [attendance, preExplained, sessions, teams, globalActivities] = results.map(r => r.value);
-        return { attendance, preExplained, sessions, teams, globalActivities };
+        const [attendance, preExplained, sessions, teams] = results.map(r => r.value);
+        return { attendance, preExplained, sessions, teams };
     }
 });
 

@@ -597,6 +597,8 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
                 longitude: item.location.longitude ?? null
             } : null,
             opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+            team: item.team?.name || item.teams?.[0]?.team?.name || item.teams?.[0]?.name || '',
+            teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
             staff: clipboardStaffList(item.staff),
             round: item.roundName || '',
             notes: item.studentParentNotes || item.notes || '',
@@ -651,6 +653,7 @@ export const fetchStudentClipboardTeams = (studentId) =>
         const parseTeams = (items) => {
             return items.map(item => ({
                 id: item.id || Math.random(),
+                teamId: item.team?.id || item.teamId || '',
                 name: item.team?.name || 'Team',
                 season: item.startDateTime ? String(new Date(item.startDateTime).getFullYear()) : '',
                 sportOrActivity: item.team?.activity?.name || '',
@@ -664,6 +667,20 @@ export const fetchStudentClipboardTeams = (studentId) =>
             return parseTeams(data);
         }
         return [];
+    });
+
+export const fetchClipboardTeamDetails = (teamId) =>
+    fetchFromBackend(`/clipboard/teams/${encodeURIComponent(teamId)}`).then(data => {
+        const team = data?.team || data;
+        const rawMembers = team?.members || team?.member || team?.students || [];
+        const members = (Array.isArray(rawMembers) ? rawMembers : []).map(entry => {
+            const student = entry.student || entry.user || entry;
+            return {
+                id: student.id || entry.id || '',
+                name: student.name || [student.givenName, student.familyName].filter(Boolean).join(' ') || student.displayName || ''
+            };
+        }).filter(member => member.name);
+        return { id: team?.id || teamId, name: team?.name || 'Team', members };
     });
 
 // Global APIs
