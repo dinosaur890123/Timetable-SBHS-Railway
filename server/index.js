@@ -2297,8 +2297,8 @@ app.get('/api/privacy/deletion-request', requireStudentAuth, async (req, res) =>
 // POST /api/privacy/deletion-request - Students delete immediately; admin accounts require review.
 app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
     try {
-        if (req.body?.confirmation !== 'Confirm') {
-            return res.status(400).json({ error: 'Type Confirm to continue' });
+        if (req.body?.confirmation !== 'CONFIRM') {
+            return res.status(400).json({ error: 'Type CONFIRM to continue. The word is case-sensitive.' });
         }
         const studentId = String(req.user.studentId);
         const isAdmin = await isAdminUser(studentId);

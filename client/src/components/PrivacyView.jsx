@@ -67,10 +67,10 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
     const handleRequestDeletion = async () => {
         const confirmation = window.prompt(
             isAdmin
-                ? 'Type Confirm to request deletion of your admin account. An admin will review the request.'
-                : 'Type Confirm to permanently delete your account and all server-side data. This cannot be undone.'
+                ? 'Type CONFIRM to request deletion of your admin account. An admin will review the request. The word is case-sensitive.'
+                : 'Type CONFIRM to permanently delete your account and all server-side data. This cannot be undone. The word is case-sensitive.'
         );
-        if (confirmation !== 'Confirm') return;
+        if (confirmation !== 'CONFIRM') return;
         setRequestState('sending');
         setRequestError('');
         try {
@@ -328,7 +328,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
                     <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                         {isAdmin
                             ? 'Your request will appear in the admin deletion requests page for review.'
-                            : 'Permanently deletes your account and associated data from Synchron, then signs you out. Type Confirm to proceed.'}
+                            : 'Permanently deletes your account and associated data from Synchron, then signs you out. Type CONFIRM to proceed; it is case-sensitive.'}
                     </p>
                     {pendingRequest ? (
                         <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 text-[13px] font-medium">
