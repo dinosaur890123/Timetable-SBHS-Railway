@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Bug, Lightbulb, Mail, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
-import { submitFeedback } from '../services/feedbackApi';
+import { fetchMyFeedback, submitFeedback } from '../services/feedbackApi';
 
 const categoryOptions = [
   {
@@ -46,6 +46,14 @@ const FieldLabel = ({ children }) => (
 const buttonPrimary = 'inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50';
 const buttonQuiet = 'inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.03] text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/[0.06] transition-colors';
 
+const feedbackStatus = (status) => {
+  if (status === 'implemented' || status === 'resolved') return { label: 'Implemented', colour: 'bg-emerald-500' };
+  if (status === 'rejected') return { label: 'Rejected', colour: 'bg-red-500' };
+  if (status === 'considering' || status === 'open') return { label: 'Under consideration', colour: 'bg-amber-400' };
+  if (status === 'archived') return { label: 'Archived', colour: 'bg-zinc-400' };
+  return { label: 'Received', colour: 'bg-zinc-400' };
+};
+
 const FeedbackView = ({ onBack }) => {
   const [category, setCategory] = useState('error');
   const [severity, setSeverity] = useState(3);
@@ -53,6 +61,50 @@ const FeedbackView = ({ onBack }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [submittedTicket, setSubmittedTicket] = useState(null);
+  const [activeTab, setActiveTab] = useState('submit');
+  const [myFeedback, setMyFeedback] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState(null);
+
+  const openMyFeedback = async () => {
+    setActiveTab('mine');
+    setFeedbackLoading(true);
+    setFeedbackError(null);
+    try { setMyFeedback(await fetchMyFeedback()); }
+    catch (err) { setFeedbackError(err.message || 'Failed to load your feedback'); }
+    finally { setFeedbackLoading(false); }
+  };
+
+  const tabs = (
+    <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+      <button type="button" onClick={() => setActiveTab('submit')} className={`${buttonQuiet} ${activeTab === 'submit' ? 'border-zinc-900 dark:border-white' : ''}`}>Send feedback</button>
+      <button type="button" onClick={openMyFeedback} className={`${buttonQuiet} ${activeTab === 'mine' ? 'border-zinc-900 dark:border-white' : ''}`}>My feedback</button>
+    </div>
+  );
+
+  if (activeTab === 'mine') {
+    return (
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><ArrowLeft size={14} /> Back to Settings</button>
+        {tabs}
+        <div className="space-y-1"><h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">My feedback</h1><p className="text-[13px] text-zinc-500 dark:text-zinc-400">Track the status of feedback you have submitted.</p></div>
+        {feedbackError && <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-[13px] text-red-700 dark:text-red-300">{feedbackError}</div>}
+        {feedbackLoading ? <p className="text-sm text-zinc-500">Loading your feedback...</p> : myFeedback.length ? (
+          <div className="space-y-4">{myFeedback.map(entry => {
+            const status = feedbackStatus(entry.status);
+            return <article key={entry.id} className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.02]">
+              <div className={`h-1.5 ${status.colour}`} />
+              <div className="p-5 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold text-zinc-900 dark:text-white capitalize">{entry.category}</h2><p className="mt-1 text-xs text-zinc-500">{entry.ticketNumber} | Submitted {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'date unavailable'}</p></div><span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{status.label}</span></div>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{entry.details}</p>
+                {entry.updatedAt && entry.updatedAt !== entry.createdAt && <p className="text-xs text-zinc-500">Updated {new Date(entry.updatedAt).toLocaleDateString()}</p>}
+              </div>
+            </article>;
+          })}</div>
+        ) : <p className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 px-5 py-8 text-center text-sm text-zinc-500">You have not submitted any feedback yet.</p>}
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,6 +143,7 @@ const FeedbackView = ({ onBack }) => {
         >
           <ArrowLeft size={14} /> Back to Settings
         </button>
+        {tabs}
 
         {/* Hero */}
         <div className="space-y-1">
@@ -144,6 +197,7 @@ const FeedbackView = ({ onBack }) => {
       >
         <ArrowLeft size={14} /> Back to Settings
       </button>
+      {tabs}
 
       {/* Hero */}
       <div className="space-y-1">

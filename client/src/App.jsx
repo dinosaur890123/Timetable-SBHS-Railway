@@ -130,6 +130,7 @@ import { format, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 import { NotificationsContext } from './context/NotificationsContext';
+import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
 import { Hl, useNoteFlowFonts } from './components/study/noteflow';
 import './components/sage.css';
 
@@ -471,6 +472,45 @@ function App() {
     const archiveNotice = useCallback((notice) => {
         setArchivedNotices(prev => [notice, ...prev.slice(0, ARCHIVED_NOTICE_LIMIT - 1)]);
     }, []);
+
+    const queueFeedbackStatusNotices = useCallback((updates = []) => {
+        updates.forEach(fb => {
+            const statusLabel = ({
+                considering: 'under consideration',
+                implemented: 'implemented',
+                resolved: 'implemented',
+                rejected: 'rejected'
+            })[fb.status] || fb.status;
+            archiveNotice({
+                id: `feedback-status-${fb.id}-${fb.status}`,
+                title: 'Feedback status updated',
+                message: `Your feedback ticket (${fb.ticketNumber}) is now ${statusLabel}.`,
+                type: ['implemented', 'resolved'].includes(fb.status) ? 'resolved' : 'feedback-status',
+                at: Date.now()
+            });
+        });
+    }, [archiveNotice]);
+
+    useEffect(() => {
+        if (!user?.studentId) return;
+        let active = true;
+        const pollFeedbackStatus = async () => {
+            try {
+                const updates = await fetchFeedbackStatusNotifications();
+                if (active && updates.length) queueFeedbackStatusNotices(updates);
+            } catch { /* Notifications can retry on the next poll. */ }
+        };
+        const initialTimer = setTimeout(pollFeedbackStatus, 15000);
+        const interval = setInterval(pollFeedbackStatus, 60000);
+        const onFocus = () => { if (!document.hidden) pollFeedbackStatus(); };
+        window.addEventListener('focus', onFocus);
+        return () => {
+            active = false;
+            clearTimeout(initialTimer);
+            clearInterval(interval);
+            window.removeEventListener('focus', onFocus);
+        };
+    }, [user?.studentId, queueFeedbackStatusNotices]);
 
     const removeNotice = useCallback((id) => {
         setArchivedNotices(prev => prev.filter(n => n.id !== id));
@@ -1039,17 +1079,8 @@ function App() {
                                     return updated;
                                 });
                             }
-                            if (dbSync.resolvedFeedbacks && dbSync.resolvedFeedbacks.length > 0) {
-                                dbSync.resolvedFeedbacks.forEach(fb => {
-                                    archiveNotice({
-                                        id: `feedback-resolved-${fb.id}`,
-                                        title: "Feedback Resolved",
-                                        message: `Your feedback ticket (${fb.ticketNumber}) has been marked as resolved by an admin. Thank you!`,
-                                        type: 'resolved',
-                                        at: Date.now()
-                                    });
-                                });
-                            }
+                            const feedbackUpdates = dbSync.feedbackStatusUpdates || dbSync.resolvedFeedbacks || [];
+                            if (feedbackUpdates.length) queueFeedbackStatusNotices(feedbackUpdates);
                         }
                     }).catch(e => console.log("Init sync failed silently", e));
 
@@ -1131,7 +1162,7 @@ function App() {
             }
         };
         init();
-    }, [archiveNotice]);
+    }, [queueFeedbackStatusNotices]);
 
     // Fetch complete timetable in the background once authenticated
     useEffect(() => {

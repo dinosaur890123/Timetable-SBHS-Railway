@@ -203,6 +203,26 @@ const formatFeedbackRow = (row) => ({
     updatedAt: toIso(row.updated_at)
 });
 
+const consumeFeedbackStatusUpdates = async (studentId) => {
+    const notifiedStatuses = ['resolved', 'considering', 'implemented', 'rejected'];
+    if (!isDbEnabled) {
+        const pending = feedbackEntries.filter(entry => String(entry.studentId) === String(studentId)
+            && notifiedStatuses.includes(entry.status) && entry.resolvedNotified === false);
+        pending.forEach(entry => { entry.resolvedNotified = true; });
+        return pending.map(entry => ({ id: entry.id, ticketNumber: entry.ticketNumber, status: entry.status }));
+    }
+
+    const result = await db.query(
+        `WITH pending AS (
+            UPDATE app_feedback SET resolved_notified = TRUE
+            WHERE student_id = $1 AND status IN ('resolved', 'considering', 'implemented', 'rejected') AND resolved_notified = FALSE
+            RETURNING id, ticket_number, status
+         ) SELECT id, ticket_number, status FROM pending`,
+        [String(studentId)]
+    );
+    return result.rows.map(row => ({ id: row.id, ticketNumber: row.ticket_number, status: row.status }));
+};
+
 // System state is read on every page load (/api/system/status) and by every AI
 // call, so it's cached briefly. Writes below clear the cache, so admin changes
 // show immediately on this server.
@@ -970,45 +990,11 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
         const dbUser = await upsertUser(safeUser);
         await addLog('REGISTER', `${safeUser.name} (${userId})`, 'User sync/login');
 
-        // Fetch pending feedback notifications where status is 'resolved' and user hasn't been notified
-        let resolvedFeedbacks = [];
-        if (!isDbEnabled) {
-            const pending = feedbackEntries.filter(f => String(f.studentId) === userId && f.status === 'resolved' && f.resolvedNotified === false);
-            resolvedFeedbacks = pending.map(f => ({
-                id: f.id,
-                ticketNumber: f.ticketNumber,
-                category: f.category,
-                details: f.details
-            }));
-            // Mark them as notified
-            pending.forEach(f => {
-                f.resolvedNotified = true;
-            });
-        } else {
-            const result = await db.query(
-                `SELECT id, ticket_number, category, details 
-                 FROM app_feedback 
-                 WHERE student_id = $1 AND status = 'resolved' AND resolved_notified = FALSE`,
-                [userId]
-            );
-            resolvedFeedbacks = result.rows.map(row => ({
-                id: row.id,
-                ticketNumber: row.ticket_number,
-                category: row.category,
-                details: row.details
-            }));
-            if (resolvedFeedbacks.length > 0) {
-                await db.query(
-                    `UPDATE app_feedback 
-                     SET resolved_notified = TRUE 
-                     WHERE student_id = $1 AND status = 'resolved' AND resolved_notified = FALSE`,
-                    [userId]
-                );
-            }
-        }
+        // Deliver each admin status change once, on registration or the notification poll.
+        const feedbackStatusUpdates = await consumeFeedbackStatusUpdates(userId);
 
-        console.log(`User registered/updated: ${safeUser.name} (${userId}). Found ${resolvedFeedbacks.length} pending feedback notifications.`);
-        res.json({ success: true, user: dbUser, resolvedFeedbacks });
+        console.log(`User registered/updated: ${safeUser.name} (${userId}). Found ${feedbackStatusUpdates.length} pending feedback status notifications.`);
+        res.json({ success: true, user: dbUser, feedbackStatusUpdates, resolvedFeedbacks: feedbackStatusUpdates.filter(entry => entry.status === 'resolved') });
     } catch (e) {
         console.error('Register error:', e);
         res.status(500).json({ error: 'Failed to register user' });
@@ -1130,6 +1116,7 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
                 severity,
                 details,
                 status: 'open',
+                resolvedNotified: true,
                 createdAt: now,
                 updatedAt: now
             };
@@ -1137,8 +1124,8 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
             if (feedbackEntries.length > 200) feedbackEntries.pop();
         } else {
             const result = await db.query(
-                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, status, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, 'open', NOW(), NOW())
+                `INSERT INTO app_feedback (id, ticket_number, student_id, category, severity, details, status, resolved_notified, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'open', TRUE, NOW(), NOW())
                  RETURNING id, ticket_number, student_id, category, severity, details, status, created_at, updated_at`,
                 [id, ticketNumber, studentId, category, severity, details]
             );
@@ -1150,6 +1137,40 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     } catch (e) {
         console.error('Feedback submit error:', e);
         res.status(500).json({ error: 'Failed to submit feedback' });
+    }
+});
+
+// GET /api/feedback - List feedback submitted by the authenticated student only.
+app.get('/api/feedback', requireStudentAuth, async (req, res) => {
+    try {
+        const studentId = String(req.user.studentId);
+        if (!isDbEnabled) {
+            const entries = feedbackEntries
+                .filter(entry => String(entry.studentId) === studentId)
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            return res.json({ success: true, feedback: entries });
+        }
+
+        const result = await db.query(
+            `SELECT id, ticket_number, student_id, category, severity, details, status, created_at, updated_at
+             FROM app_feedback WHERE student_id = $1 ORDER BY created_at DESC`,
+            [studentId]
+        );
+        res.json({ success: true, feedback: result.rows.map(formatFeedbackRow) });
+    } catch (e) {
+        console.error('Student feedback list error:', e);
+        res.status(500).json({ error: 'Failed to fetch your feedback' });
+    }
+});
+
+// GET /api/feedback/notifications - Claim unseen status changes for the signed-in student.
+app.get('/api/feedback/notifications', requireStudentAuth, async (req, res) => {
+    try {
+        const updates = await consumeFeedbackStatusUpdates(String(req.user.studentId));
+        res.json({ success: true, feedbackStatusUpdates: updates });
+    } catch (e) {
+        console.error('Feedback status notification error:', e);
+        res.status(500).json({ error: 'Failed to fetch feedback status updates' });
     }
 });
 
@@ -2425,8 +2446,8 @@ app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
         const { id } = req.params;
         const { status } = req.body || {};
 
-        if (!status || !['open', 'resolved', 'archived'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status value. Must be open, resolved, or archived.' });
+        if (!status || !['open', 'resolved', 'archived', 'considering', 'implemented', 'rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid feedback status.' });
         }
 
         let updatedEntry;
@@ -2435,16 +2456,16 @@ app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
             if (index === -1) {
                 return res.status(404).json({ error: 'Feedback entry not found' });
             }
-            feedbackEntries[index].status = status;
-            if (status === 'resolved') {
+            if (feedbackEntries[index].status !== status) {
                 feedbackEntries[index].resolvedNotified = false;
             }
+            feedbackEntries[index].status = status;
             feedbackEntries[index].updatedAt = new Date();
             updatedEntry = feedbackEntries[index];
         } else {
             const result = await db.query(
                 `UPDATE app_feedback 
-                 SET status = $1, resolved_notified = CASE WHEN $1 = 'resolved' THEN FALSE ELSE resolved_notified END, updated_at = NOW() 
+                 SET status = $1, resolved_notified = CASE WHEN status IS DISTINCT FROM $1 THEN FALSE ELSE resolved_notified END, updated_at = NOW()
                  WHERE id = $2 
                  RETURNING id, ticket_number, student_id, category, severity, details, status, resolved_notified, created_at, updated_at`,
                 [status, String(id)]
@@ -2505,8 +2526,8 @@ app.put('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
         if (!Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ error: 'Missing or invalid feedback IDs array' });
         }
-        if (!status || !['open', 'resolved', 'archived'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status value. Must be open, resolved, or archived.' });
+        if (!status || !['open', 'resolved', 'archived', 'considering', 'implemented', 'rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid feedback status.' });
         }
 
         const idsStrings = ids.map(id => String(id));
@@ -2514,17 +2535,17 @@ app.put('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
             idsStrings.forEach(id => {
                 const index = feedbackEntries.findIndex(f => String(f.id) === id);
                 if (index !== -1) {
-                    feedbackEntries[index].status = status;
-                    if (status === 'resolved') {
+                    if (feedbackEntries[index].status !== status) {
                         feedbackEntries[index].resolvedNotified = false;
                     }
+                    feedbackEntries[index].status = status;
                     feedbackEntries[index].updatedAt = new Date();
                 }
             });
         } else {
             await db.query(
                 `UPDATE app_feedback 
-                 SET status = $1, resolved_notified = CASE WHEN $1 = 'resolved' THEN FALSE ELSE resolved_notified END, updated_at = NOW() 
+                 SET status = $1, resolved_notified = CASE WHEN status IS DISTINCT FROM $1 THEN FALSE ELSE resolved_notified END, updated_at = NOW()
                  WHERE id = ANY($2)`,
                 [status, idsStrings]
             );

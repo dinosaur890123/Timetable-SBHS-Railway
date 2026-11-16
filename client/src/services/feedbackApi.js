@@ -29,3 +29,20 @@ export const submitFeedback = async ({ category, severity, details }) => {
         throw error;
     }
 };
+
+export const fetchMyFeedback = async () => {
+    const response = await fetch(`${API_URL}/feedback`, { headers: await getHeaders() });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to load your feedback');
+    }
+    const data = await response.json();
+    return Array.isArray(data.feedback) ? data.feedback : [];
+};
+
+export const fetchFeedbackStatusNotifications = async () => {
+    const response = await fetch(`${API_URL}/feedback/notifications`, { headers: await getHeaders() });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return Array.isArray(data.feedbackStatusUpdates) ? data.feedbackStatusUpdates : [];
+};

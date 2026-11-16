@@ -557,6 +557,17 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     };
 
+    const handleSetFeedbackStatus = async (entry, status) => {
+        try {
+            await updateFeedbackStatus(entry.id, status);
+            const updated = { ...entry, status, updatedAt: new Date().toISOString() };
+            setFeedback(prev => prev.map(item => item.id === entry.id ? updated : item));
+            setViewingFeedback(updated);
+        } catch (err) {
+            alert('Failed to update status.');
+        }
+    };
+
     const handleToggleBlacklist = async (userId, currentBlacklisted) => {
         const action = currentBlacklisted ? 'unblacklist' : 'blacklist';
         if (!window.confirm(`Are you sure you want to ${action} this user? This will ${currentBlacklisted ? 'restore their access' : 'block their access to the application'}.`)) return;
@@ -847,7 +858,10 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             fb.name?.toLowerCase().includes(term) ||
             fb.email?.toLowerCase().includes(term) ||
             fb.studentId?.toLowerCase().includes(term);
-        const matchesStatus = feedbackStatusFilter === 'All' || fb.status === feedbackStatusFilter;
+        const matchesStatus = feedbackStatusFilter === 'All'
+            || fb.status === feedbackStatusFilter
+            || (feedbackStatusFilter === 'open' && fb.status === 'considering')
+            || (feedbackStatusFilter === 'resolved' && fb.status === 'implemented');
         return matchesSearch && matchesStatus;
     });
 
@@ -2021,18 +2035,10 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <div className="flex gap-2">
                         {selectedFeedback.size > 0 && (
                             <>
-                                <button 
-                                    onClick={() => handleBulkUpdateFeedbackStatus('resolved')}
-                                    className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 dark:text-emerald-400 rounded-lg transition-colors flex items-center gap-1 border border-emerald-200/20"
-                                >
-                                    Resolve ({selectedFeedback.size})
-                                </button>
-                                <button 
-                                    onClick={() => handleBulkUpdateFeedbackStatus('archived')}
-                                    className="text-xs font-semibold px-3 py-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg transition-colors flex items-center gap-1 border border-zinc-200/20"
-                                >
-                                    Archive ({selectedFeedback.size})
-                                </button>
+                                <button onClick={() => handleBulkUpdateFeedbackStatus('considering')} className="text-xs font-semibold px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg">Under consideration</button>
+                                <button onClick={() => handleBulkUpdateFeedbackStatus('implemented')} className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg">Implemented</button>
+                                <button onClick={() => handleBulkUpdateFeedbackStatus('rejected')} className="text-xs font-semibold px-3 py-1.5 bg-red-100 text-red-800 rounded-lg">Rejected</button>
+                                <button onClick={() => handleBulkUpdateFeedbackStatus('archived')} className="text-xs font-semibold px-3 py-1.5 bg-zinc-200 text-zinc-700 rounded-lg">Archive</button>
                                 <button 
                                     onClick={handleBulkDeleteFeedback}
                                     className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-950/60 dark:text-red-400 rounded-lg transition-colors flex items-center gap-1 border border-red-200/20"
@@ -2050,8 +2056,9 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         onChange={(e) => setFeedbackStatusFilter(e.target.value)}
                         className="px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="open">Open Requests</option>
-                        <option value="resolved">Resolved</option>
+                        <option value="open">Under consideration</option>
+                        <option value="resolved">Implemented</option>
+                        <option value="rejected">Rejected</option>
                         <option value="archived">Archived</option>
                         <option value="All">All Feedback</option>
                     </select>
@@ -2682,10 +2689,11 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
                         <div>
                             <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
-                            <span className={`font-bold capitalize ${
-                                viewingFeedback.status === 'open' ? 'text-blue-500' :
-                                viewingFeedback.status === 'resolved' ? 'text-green-500' : 'text-zinc-500'
-                            }`}>{viewingFeedback.status}</span>
+                            <span className={`font-bold ${
+                                ['open', 'considering'].includes(viewingFeedback.status) ? 'text-amber-500' :
+                                ['resolved', 'implemented'].includes(viewingFeedback.status) ? 'text-green-500' :
+                                viewingFeedback.status === 'rejected' ? 'text-red-500' : 'text-zinc-500'
+                            }`}>{({ open: 'Under consideration', considering: 'Under consideration', resolved: 'Implemented', implemented: 'Implemented', rejected: 'Rejected', archived: 'Archived' })[viewingFeedback.status] || viewingFeedback.status}</span>
                         </div>
                         <div>
                             <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Severity</span>
@@ -2723,38 +2731,14 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </div>
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-2 justify-between">
                     <div className="flex gap-2">
-                        {viewingFeedback.status !== 'resolved' && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await updateFeedbackStatus(viewingFeedback.id, 'resolved');
-                                        setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'resolved', updatedAt: new Date().toISOString() } : item));
-                                        setViewingFeedback(null);
-                                    } catch (err) {
-                                        alert("Failed to update status.");
-                                    }
-                                }}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-                            >
-                                Mark as Resolved
-                            </button>
-                        )}
-                        {viewingFeedback.status !== 'archived' && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await updateFeedbackStatus(viewingFeedback.id, 'archived');
-                                        setFeedback(prev => prev.map(item => item.id === viewingFeedback.id ? { ...item, status: 'archived', updatedAt: new Date().toISOString() } : item));
-                                        setViewingFeedback(null);
-                                    } catch (err) {
-                                        alert("Failed to update status.");
-                                    }
-                                }}
-                                className="px-4 py-2 bg-zinc-650 hover:bg-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-                            >
-                                Archive
-                            </button>
-                        )}
+                        {[
+                            ['considering', 'Under consideration', 'bg-amber-500 hover:bg-amber-600'],
+                            ['implemented', 'Implemented', 'bg-green-600 hover:bg-green-700'],
+                            ['rejected', 'Rejected', 'bg-red-600 hover:bg-red-700']
+                        ].map(([status, label, colour]) => (
+                            <button key={status} onClick={() => handleSetFeedbackStatus(viewingFeedback, status)} className={`px-3 py-2 ${colour} text-white text-sm font-semibold rounded-lg transition-colors shadow-sm`}>{label}</button>
+                        ))}
+                        {viewingFeedback.status !== 'archived' && <button onClick={() => handleSetFeedbackStatus(viewingFeedback, 'archived')} className="px-3 py-2 bg-zinc-600 hover:bg-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">Archive</button>}
                         <button
                             onClick={async () => {
                                 try {
