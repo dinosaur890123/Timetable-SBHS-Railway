@@ -1075,7 +1075,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             ) : (
                 filteredLogs.map((log, i) => (
                     <div key={i} className="flex gap-3 hover:bg-zinc-900/50 p-0.5 rounded">
-                        <span className="text-zinc-600 select-none">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                        <span className="text-zinc-600 select-none">[{new Date(log.timestamp).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })}]</span>
                         <span className={`font-bold ${log.action === 'ERROR' ? 'text-red-400' :
                             log.action === 'WARNING' ? 'text-yellow-400' :
                                 log.action === 'REGISTER' ? 'text-green-400' :
@@ -1267,7 +1267,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                         return (
                                             <tr key={log.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 transition-colors">
                                                 <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
-                                                    {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(log.timestamp).toLocaleString('en-AU', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                                                 </td>
                                                 <td className="px-4 py-3 text-xs">
                                                     <div className="font-semibold text-zinc-900 dark:text-white">
@@ -1411,7 +1411,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm text-zinc-900 dark:text-white leading-snug">{n.message}</p>
                                     <p className="text-xs text-zinc-500 mt-0.5">
-                                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                                        {n.createdAt ? new Date(n.createdAt).toLocaleString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
                                         {` · ${n.dismissals ?? 0} dismissal${(n.dismissals ?? 0) === 1 ? '' : 's'}`}
                                         {n.createdByName ? ` · by ${n.createdByName}` : n.createdBy ? ` · by ${n.createdBy}` : ''}
                                     </p>
@@ -2310,7 +2310,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                     </td>
                                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{req.email}</td>
                                     <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                                        {req.createdAt ? new Date(req.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                                        {req.createdAt ? new Date(req.createdAt).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : '—'}
                                     </td>
                                     <td className="px-6 py-4">
                                         {(() => {
@@ -2603,7 +2603,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         </div>                        <div>
                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">AI Log Details</h3>
                             <p className="text-xs text-zinc-500 mt-1">
-                                Student: {users.find(u => String(u.id) === String(viewingAiLog.studentId))?.name || 'Unknown Student'} ({viewingAiLog.studentId}) • {new Date(viewingAiLog.timestamp).toLocaleString()}
+                                Student: {users.find(u => String(u.id) === String(viewingAiLog.studentId))?.name || 'Unknown Student'} ({viewingAiLog.studentId}) • {new Date(viewingAiLog.timestamp).toLocaleString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </p>
                         </div>
                     </div>

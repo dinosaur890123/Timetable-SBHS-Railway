@@ -190,7 +190,7 @@ html[data-ui] .nf.nf-cb-line:hover .nf-cb-line__name { text-decoration: underlin
 
 .nf-schedule-dayhead {
     display: flex; align-items: baseline; gap: 12px; padding: 14px 16px 10px;
-    background: var(--sheet);
+    background: var(--wash);
 }
 
 .nf-schedule-dayname {

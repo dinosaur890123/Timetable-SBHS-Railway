@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { subjectInk, isBreakBell } from '../utils/timetable';
+import { subjectInk, isBreakBell, formatTime12Hour } from '../utils/timetable';
 import { isLinklessTitle } from '../utils/canvasLinks';
 import { TeacherTreat } from './TeacherTreat';
 
@@ -46,7 +46,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 className="px-3 py-1.5"
             >
                 <div className={`flex items-center gap-4 ${dim}`}>
-                    <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{bell?.time}</span>
+                    <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{formatTime12Hour(bell?.time)}</span>
                     <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{breakLabel}</span>
                     <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
                     {isActuallyRealBreak ? (
@@ -91,7 +91,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             )}
 
             <div className="w-11 shrink-0 text-right leading-tight">
-                <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{bell.time}</div>
+                <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</div>
                 <div className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P{bell.bell}</div>
             </div>
 

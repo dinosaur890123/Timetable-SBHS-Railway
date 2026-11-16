@@ -1,5 +1,15 @@
 import { isLinklessTitle } from './canvasLinks';
 
+// Convert 24-hour time string (HH:mm) to 12-hour format (h:mm am/pm)
+export const formatTime12Hour = (timeStr) => {
+    if (!timeStr) return '';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return timeStr;
+    const period = hours >= 12 ? 'pm' : 'am';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
 // Helpers for merging the school's daily variation feeds (substitute teachers /
 // room changes) into the raw period data returned by timetable/daytimetable.json.
 //

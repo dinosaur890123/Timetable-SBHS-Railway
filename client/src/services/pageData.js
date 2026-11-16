@@ -154,7 +154,7 @@ const loadMonth = async (monthDate) => {
           title: assignment.title,
           type: 'assignment',
           subject: assignment.subject,
-          time: assignment.dueDate ? format(new Date(assignment.dueDate), 'HH:mm') : '',
+          time: assignment.dueDate ? format(new Date(assignment.dueDate), 'h:mm a') : '',
           status: assignment.status,
           priority: assignment.priority,
           notes: assignment.notes
