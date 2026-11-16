@@ -103,14 +103,14 @@ html[data-ui="modern"].theme-blue {
   --m-card: 255 255 255;
 }
 html[data-ui="modern"].dark.theme-blue {
-  --black: 11 16 22;
-  --zinc-950: 17 22 30;
-  --zinc-900: 23 29 38;
-  --zinc-800: 34 41 52;
-  --zinc-700: 54 61 74;
-  --m-page: 7 10 16;
-  --m-panel: 11 16 22;
-  --m-card: 17 22 30;
+  --black: 18 30 62;
+  --zinc-950: 24 38 74;
+  --zinc-900: 30 47 88;
+  --zinc-800: 44 64 112;
+  --zinc-700: 70 88 140;
+  --m-page: 18 32 66;
+  --m-panel: 24 40 78;
+  --m-card: 32 50 94;
 }
 
 /* violet */

@@ -135,7 +135,7 @@ import './components/sage.css';
 
 function App() {
     // State
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
     const [currentView, setCurrentView] = useState('home');
     // Open on the school day worked out from the timetable saved on this device (today until its
     // last bell, then the next school day), so the right day shows before the network answers.
