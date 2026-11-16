@@ -27,6 +27,18 @@ const formatDuration = (mins) => {
     return hrs > 0 ? `${hrs}h ${total % 60}m` : `${total}m`;
 };
 
+const getScanTime = (record) => {
+    const value = record && typeof record === 'object'
+        ? record.scanInDateTime || record.scannedAt || record.scanInAt || record.dateTime || record.time
+        : null;
+    if (!value) return null;
+    const raw = String(value);
+    const date = /^\d{1,2}:\d{2}(:\d{2})?$/.test(raw)
+        ? new Date(`1970-01-01T${raw}`)
+        : new Date(raw);
+    return Number.isNaN(date.getTime()) ? null : format(date, 'h:mm a');
+};
+
 const formatCountdown = (mins) => {
     const totalSeconds = Math.max(0, Math.round(mins * 60));
     const hrs = Math.floor(totalSeconds / 3600);
@@ -409,7 +421,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         const load = async () => {
             try {
                 const record = await fetchStudentAttendanceScanIn(user.studentId, selectedDateKey);
-                if (active) setScanIn({ date: selectedDateKey, state: record ? 'scanned' : 'not-scanned' });
+                if (active) setScanIn({ date: selectedDateKey, state: record ? 'scanned' : 'not-scanned', time: getScanTime(record) });
             } catch {
                 if (active) setScanIn({ date: selectedDateKey, state: 'unknown' });
             }
@@ -488,9 +500,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
                         {scanIn.date === selectedDateKey && scanIn.state !== 'loading' && scanIn.state !== 'unknown' && (
-                            <p className={`mt-1 flex items-center gap-1.5 text-xs ${scanIn.state === 'scanned' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                            <p className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${scanIn.state === 'scanned' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                {scanIn.state === 'scanned' ? 'Scanned on' : 'Not scanned yet'}
+                                {scanIn.state === 'scanned' ? `Scanned on${scanIn.time ? ` at ${scanIn.time}` : ''}` : 'Not scanned yet'}
                             </p>
                         )}
                     </div>
