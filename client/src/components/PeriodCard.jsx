@@ -112,10 +112,8 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                         >
                             Now
                         </motion.span>
-                    ) : isNext ? (
-                        <span className="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">Up next</span>
                     ) : null}
-                    {(isCurrent || isNext) && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
+                    {isCurrent && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
                     {fullTeacher && (
                         <span className={`truncate hidden sm:inline ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
                             {fullTeacher === 'No teacher' ? null : fullTeacher}

@@ -590,6 +590,12 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const status = isCycle ? cycleStatus : dailyStatus;
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
+    const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
+    const shownScanIn = afterSchool ? nextDayScanIn : scanIn;
+    const shownScanDate = afterSchool ? nextDayKey : todayKey;
+    const showScanPill = (afterSchool || isSchoolDay)
+        && shownScanIn.date === shownScanDate
+        && ['scanned', 'not-scanned'].includes(shownScanIn.state);
 
     // Header and content get their own containers: the greeting/toggle always uses
     // the daily width, while cycle keeps its wider table below.
@@ -599,28 +605,21 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     return (
         <div>
             <div className={`mx-auto ${headerWidth}`}>
-            <header className="mb-4 md:mb-10">
+            <header className={showScanPill ? 'mb-1 md:mb-3' : 'mb-4 md:mb-10'}>
                 <div className="md:flex md:items-start md:justify-between md:gap-4">
                     <div className="min-w-0">
                         <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
-                        {(() => {
-                            const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
-                            const shown = afterSchool ? nextDayScanIn : scanIn;
-                            const shownDate = afterSchool ? nextDayKey : todayKey;
-                            const showPill = (afterSchool || isSchoolDay) && shown.date === shownDate && ['scanned', 'not-scanned'].includes(shown.state);
-                            if (!showPill) return null;
-                            return (
-                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${shown.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
-                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${shown.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                        {showScanPill && (
+                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${shownScanIn.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
+                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${shownScanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                                 <span>{afterSchool
-                                    ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shown.state === 'scanned' ? `Scanned on at ${shown.time || 'time unavailable'}` : 'Not scanned yet'}`
-                                    : shown.state === 'scanned' ? `Scanned on today at ${shown.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
+                                    ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shownScanIn.state === 'scanned' ? `Scanned on at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet'}`
+                                    : shownScanIn.state === 'scanned' ? `Scanned on today at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
                             </p>
-                            );
-                        })()}
+                        )}
                     </div>
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
