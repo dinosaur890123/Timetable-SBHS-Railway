@@ -43,7 +43,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: enterDelay(routineIndex) }}
-                className="px-1 sm:px-3 py-1.5"
+                className="px-2.5 sm:px-3 py-1.5"
             >
                 <div className={`flex items-center gap-3 ${dim}`}>
                     <span className="w-[3.25rem] shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{formatTime12Hour(bell?.time)}</span>
@@ -82,7 +82,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     };
 
     const content = (
-        <div className={`relative flex items-center gap-3 px-1 sm:px-3 py-3 ${dim}`}>
+        <div className={`relative flex items-center gap-3 px-2.5 sm:px-3 py-3 ${dim}`}>
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
                 <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
