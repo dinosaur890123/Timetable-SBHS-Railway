@@ -3,7 +3,7 @@ import { CalendarDays, AlertCircle, Coffee, Umbrella, Calendar } from 'lucide-re
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
-import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, subjectInk } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
@@ -11,10 +11,7 @@ import { termsPage, closureLabel } from '../services/pageData';
 import { useCachedLoad } from '../utils/pageCache';
 
 // A Clipboard session in the day: one line at its start time, dimmed once it's over like a break.
-const SessionRow = ({ session, isPast, index, onOpen }) => {
-    const startTime = startOf(session);
-    const timeStr = startTime ? format(startTime, 'HH:mm') : '';
-    return (
+const SessionRow = ({ session, isPast, index, onOpen }) => (
     <motion.li
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -23,13 +20,12 @@ const SessionRow = ({ session, isPast, index, onOpen }) => {
     >
         <div className={`flex items-center gap-4 transition-opacity duration-700 ${isPast ? 'opacity-50 hover:opacity-100' : ''}`}>
             <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
-                {formatTime12Hour(timeStr)}
+                {format(startOf(session), 'HH:mm')}
             </span>
             <SessionLine session={session} onOpen={onOpen} />
         </div>
     </motion.li>
-    );
-};
+);
 
 // One class in the cycle grid: its subject colour as an edge and a faint wash, full name up to two lines
 // on desktop, abbreviated on mobile.
@@ -625,7 +621,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                     {routineData.length > 0 && (
                         <li className="flex items-center gap-4 px-3 pt-3">
                             <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
-                                {formatTime12Hour(routineData[routineData.length - 1].bell.endTime)}
+                                {routineData[routineData.length - 1].bell.endTime}
                             </span>
                             <span className="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
                         </li>
