@@ -12,6 +12,33 @@ const updateGlobalPrompt = (prompt) => {
     promptListeners.forEach(listener => listener(prompt));
 };
 
+const DISMISS_KEY = 'pwa_install_dismissed';
+const DISMISS_MONTHS = 2;
+
+const readDismissed = () => {
+    try {
+        const saved = localStorage.getItem(DISMISS_KEY);
+        if (!saved) return false;
+
+        // Migrate the old permanent boolean dismissal into a two-month cooldown.
+        const dismissedAt = saved === 'true' ? Date.now() : Number(saved);
+        if (!Number.isFinite(dismissedAt)) {
+            localStorage.removeItem(DISMISS_KEY);
+            return false;
+        }
+        const expiresAt = new Date(dismissedAt);
+        expiresAt.setMonth(expiresAt.getMonth() + DISMISS_MONTHS);
+        if (Date.now() < expiresAt.getTime()) {
+            if (saved === 'true') localStorage.setItem(DISMISS_KEY, String(dismissedAt));
+            return true;
+        }
+        localStorage.removeItem(DISMISS_KEY);
+        return false;
+    } catch {
+        return false;
+    }
+};
+
 if (typeof window !== 'undefined') {
     // Listen to beforeinstallprompt event (Chromium browsers)
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -49,11 +76,7 @@ export const usePWAInstall = () => {
     const [hasPrompt, setHasPrompt] = useState(() => Boolean(globalDeferredPrompt));
     const [platform, setPlatform] = useState('desktop');
     const [dismissed, setDismissed] = useState(() => {
-        try {
-            return localStorage.getItem('pwa_install_dismissed') === 'true';
-        } catch {
-            return false;
-        }
+        return readDismissed();
     });
 
     useEffect(() => {
@@ -116,7 +139,7 @@ export const usePWAInstall = () => {
 
     const dismiss = useCallback(() => {
         try {
-            localStorage.setItem('pwa_install_dismissed', 'true');
+            localStorage.setItem(DISMISS_KEY, String(Date.now()));
         } catch {}
         setDismissed(true);
     }, []);
