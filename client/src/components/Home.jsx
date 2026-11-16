@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
-import { format, addDays, parseISO } from 'date-fns';
+import { format, addDays, parseISO, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { useCachedLoad } from '../utils/pageCache';
+import { closureLabel, termsPage } from '../services/pageData';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { TeacherTreat } from './TeacherTreat';
-import { fetchStudentAttendanceScanIn } from '../services/api';
+import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -407,35 +409,98 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
     const [scanIn, setScanIn] = useState({ date: null, state: 'loading' });
+    const [todayTimetable, setTodayTimetable] = useState(() => peekDayTimetable(new Date()));
+    const { data: termsData } = useCachedLoad(termsPage().key, termsPage().load);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
+    // Use the real day's bell times for polling bounds, independent of the date
+    // currently selected in the timetable.
+    const day = railTimetable || timetableData;
+    const slots = buildSlots(day);
     const todayKey = format(now, 'yyyy-MM-dd');
-    const selectedDateKey = format(viewDate || now, 'yyyy-MM-dd');
     useEffect(() => {
         if (!user?.studentId) return;
         let active = true;
-        const load = async () => {
-            try {
-                const record = await fetchStudentAttendanceScanIn(user.studentId, selectedDateKey);
-                if (active) setScanIn({ date: selectedDateKey, state: record ? 'scanned' : 'not-scanned', time: getScanTime(record) });
-            } catch {
-                if (active) setScanIn({ date: selectedDateKey, state: 'unknown' });
+        setTodayTimetable(peekDayTimetable(now) || null);
+        fetchDayTimetable(now)
+            .then(data => { if (active) setTodayTimetable(data); })
+            .catch(() => {});
+        return () => { active = false; };
+    }, [user?.studentId, todayKey]);
+
+    const todayMatches = todayTimetable?.date === todayKey;
+    const todaySlots = todayMatches ? buildSlots(todayTimetable) : [];
+    const hasTodaySchedule = todaySlots.length > 0;
+    const schoolStartMin = todaySlots[0]?.startMin ?? 9 * 60;
+    const schoolEndMin = todaySlots.at(-1)?.endMin ?? 15 * 60 + 30;
+    const schoolCalendarReady = termsData != null;
+    const isSchoolDay = schoolCalendarReady && getDay(now) !== 0 && getDay(now) !== 6 && !closureLabel(now, termsData);
+    useEffect(() => {
+        if (!user?.studentId || !isSchoolDay || !hasTodaySchedule) {
+            setScanIn({ date: todayKey, state: 'unknown' });
+            return;
+        }
+        let active = true;
+        let scanned = false;
+        let timer;
+        const scheduleInitialCheck = () => {
+            clearTimeout(timer);
+            const current = new Date();
+            const currentMin = current.getHours() * 60 + current.getMinutes();
+            if (currentMin < 6 * 60) {
+                timer = setTimeout(poll, (6 * 60 - currentMin) * 60000);
+            } else {
+                poll();
             }
         };
-        setScanIn({ date: selectedDateKey, state: 'loading' });
-        load();
-        return () => { active = false; };
-    }, [user?.studentId, selectedDateKey]);
+        const poll = async () => {
+            const current = new Date();
+            const currentMin = current.getHours() * 60 + current.getMinutes();
+            if (!active || scanned || document.visibilityState === 'hidden' || currentMin >= schoolEndMin) return;
+            try {
+                const record = await fetchStudentAttendanceScanIn(user.studentId, todayKey);
+                if (!active) return;
+                if (record) {
+                    scanned = true;
+                    setScanIn({ date: todayKey, state: 'scanned', time: getScanTime(record) });
+                    return;
+                }
+                setScanIn({ date: todayKey, state: 'not-scanned' });
+            } catch {
+                if (!active) return;
+                setScanIn({ date: todayKey, state: 'unknown' });
+            }
+            if (!active || scanned || document.visibilityState === 'hidden') return;
+            const minutesUntilStart = schoolStartMin - currentMin;
+            const delay = currentMin < 7 * 60
+                ? 1800000
+                : currentMin < 8 * 60 ? 300000
+                    : minutesUntilStart > 30 ? 120000
+                        : minutesUntilStart > 0 ? 60000 : 1800000;
+            const untilEnd = Math.max(0, (schoolEndMin - currentMin) * 60000);
+            if (untilEnd > 0) timer = setTimeout(poll, Math.min(delay, untilEnd));
+        };
+        setScanIn({ date: todayKey, state: 'loading' });
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') clearTimeout(timer);
+            else scheduleInitialCheck();
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        scheduleInitialCheck();
+        return () => {
+            active = false;
+            clearTimeout(timer);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [user?.studentId, todayKey, isSchoolDay, hasTodaySchedule, schoolStartMin, schoolEndMin]);
 
     // The greeting and rail describe the real school day (today, or the next one after
     // school), not whichever day is being browsed below. Falls back to the viewed day
     // until that's loaded.
-    const day = railTimetable || timetableData;
-    const slots = buildSlots(day);
     const inner = day?.timetable?.timetable || day?.timetable;
     const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = dayKey === todayKey;
@@ -499,10 +564,10 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
-                        {scanIn.date === selectedDateKey && scanIn.state !== 'loading' && scanIn.state !== 'unknown' && (
-                            <p className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${scanIn.state === 'scanned' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                        {isSchoolDay && hasTodaySchedule && nowMin < schoolEndMin && scanIn.date === todayKey && scanIn.state !== 'loading' && scanIn.state !== 'unknown' && (
+                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanIn.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
                                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                {scanIn.state === 'scanned' ? `Scanned on${scanIn.time ? ` at ${scanIn.time}` : ''}` : 'Not scanned yet'}
+                                <span>{scanIn.state === 'scanned' ? `Scanned on today at ${scanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
                             </p>
                         )}
                     </div>
