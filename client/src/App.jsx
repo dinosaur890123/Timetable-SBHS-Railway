@@ -277,6 +277,16 @@ function App() {
             return false;
         }
     });
+    // Admin-controlled seasonal glow (Christmas / NYE palettes); the dates
+    // themselves are checked inside AmbientLight.
+    const [festiveAmbient, setFestiveAmbient] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_system');
+            return cached ? !!JSON.parse(cached).festiveAmbient : false;
+        } catch {
+            return false;
+        }
+    });
     const [hiddenPages, setHiddenPages] = useState(() => {
         try {
             const cachedSystem = localStorage.getItem('cached_system');
@@ -733,6 +743,7 @@ function App() {
                     setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
                     setAiGloballyDisabled(!!systemData.aiDisabled);
+                    setFestiveAmbient(!!systemData.festiveAmbient);
                     if (systemData.aiFeatures) {
                         setAiFeatures(systemData.aiFeatures);
                     }
@@ -994,6 +1005,7 @@ function App() {
                     setBroadcast(systemData.broadcast);
 
                     setMaintenance(systemData.maintenance);
+                    setFestiveAmbient(!!systemData.festiveAmbient);
 
                     if (systemData.aiFeatures) {
                         setAiFeatures(systemData.aiFeatures);
@@ -1475,6 +1487,7 @@ function App() {
                     <LandingPage
                         authError={authError}
                         clearAuthError={() => setAuthError(null)}
+                        festiveAmbient={festiveAmbient}
                     />
                 </Suspense>
             </div>
@@ -1486,7 +1499,7 @@ function App() {
         <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable} linksEnabled={canvasLinksEnabled}>
         <NotificationsContext.Provider value={notificationsValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
-            {ambientLight && <AmbientLight variant="page" />}
+            {ambientLight && <AmbientLight variant="page" festive={festiveAmbient} />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
             <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-hidden bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
@@ -1512,7 +1525,7 @@ function App() {
                         setCurrentView('admin');
                     }}
                 />
-                {ambientLight && <AmbientLight variant="panel" />}
+                {ambientLight && <AmbientLight variant="panel" festive={festiveAmbient} />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
 
                 <div className="relative flex-1 min-h-0 flex flex-col overflow-x-hidden overflow-y-auto">
@@ -1767,6 +1780,7 @@ function App() {
                                     aiProviderName={aiProviderName}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
+                                    festiveAmbient={festiveAmbient}
                                     showClipboardEvents={showClipboardEvents}
                                     setShowClipboardEvents={setShowClipboardEvents}
                                     canvasLinksEnabled={canvasLinksEnabled}

@@ -96,12 +96,12 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled, aiProviderName = 'an AI provider',
-    ambientLight, setAmbientLight, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
+    ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
-    const sky = useSky();
+    const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     // Red dot until every class in the timetable has a link (personal or community).

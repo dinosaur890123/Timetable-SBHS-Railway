@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, setAiFeature, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory, deleteBroadcastNotification } from '../services/adminApi';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell, PartyPopper } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, setAiFeature, setFestiveAmbient, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory, deleteBroadcastNotification } from '../services/adminApi';
 import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
@@ -697,6 +697,20 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             loadData();
         } catch (err) {
             alert("Failed to update Sage feature.");
+        } finally {
+            setUpdatingConfig(false);
+        }
+    };
+
+    const handleToggleFestiveAmbient = async () => {
+        const target = !stats?.festiveAmbient;
+        setUpdatingConfig(true);
+        try {
+            const data = await setFestiveAmbient(target);
+            setStats(prev => prev ? { ...prev, festiveAmbient: data.festiveAmbient ?? target } : null);
+            loadData();
+        } catch (err) {
+            alert("Failed to update festive ambient setting.");
         } finally {
             setUpdatingConfig(false);
         }
@@ -1794,6 +1808,38 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Festive ambient light — seasonal glow for everyone */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <div>
+                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                            <PartyPopper size={16} />
+                            Festive ambient light
+                        </h4>
+                        <p className="text-xs text-zinc-550 mt-1">
+                            {stats?.festiveAmbient
+                                ? 'Forced on — the ambient glow uses the festive palettes right now (Christmas red & green, or NYE gold, hot pink, silver and electric blue in season).'
+                                : 'Automatic — the glow turns Christmas red & green Dec 1–26, then New Year\'s Eve gold, hot pink, silver and electric blue through Jan 6. Enable to force it on any time.'}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={!!stats?.festiveAmbient}
+                        aria-label="Festive ambient light"
+                        onClick={handleToggleFestiveAmbient}
+                        disabled={updatingConfig || stats?.festiveAmbient === undefined}
+                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${
+                            stats?.festiveAmbient ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                        }`}
+                    >
+                        <span
+                            className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                                stats?.festiveAmbient ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                    </button>
                 </div>
 
                 {/* Admin-only Sage tester — bypasses the student-facing AI kill switch */}

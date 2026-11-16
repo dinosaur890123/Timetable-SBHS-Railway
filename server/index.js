@@ -63,6 +63,7 @@ let systemState = {
     aiModel: 'qwen/qwen3-32b',
     aiDisabled: false,
     aiFeatures: { timetableQa: true, noticeRanking: true },
+    festiveAmbient: false,
     hiddenPages: []
 };
 
@@ -223,36 +224,16 @@ async function readSystemState() {
         if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
         if (systemState.aiDisabled === undefined) systemState.aiDisabled = false;
         if (!systemState.aiFeatures || typeof systemState.aiFeatures !== 'object') systemState.aiFeatures = { ...DEFAULT_AI_FEATURES };
+        if (systemState.festiveAmbient === undefined) systemState.festiveAmbient = false;
         if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
     }
 
-    const baseCols = 'maintenance, broadcast_message, broadcast_type, ai_provider, ai_model, hidden_pages, updated_at';
-    let result;
-    try {
-        result = await db.query(
-            `SELECT ${baseCols}, ai_disabled, ai_features FROM system_state WHERE id = 1`,
-            []
-        );
-    } catch (e) {
-        // Pre-migration databases lack the newer AI columns; read without them
-        // rather than fail, and fall back to defaults below.
-        if (!/ai_disabled|ai_features/.test(e?.message || '')) throw e;
-        try {
-            result = await db.query(
-                `SELECT ${baseCols}, ai_disabled FROM system_state WHERE id = 1`,
-                []
-            );
-        } catch (e2) {
-            if (!/ai_disabled/.test(e2?.message || '')) throw e2;
-            result = await db.query(
-                `SELECT ${baseCols} FROM system_state WHERE id = 1`,
-                []
-            );
-        }
-    }
+    // SELECT * keeps older databases working: columns added by later migrations
+    // are simply absent and fall back to defaults below.
+    const result = await db.query('SELECT * FROM system_state WHERE id = 1', []);
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, ai_features: null, hidden_pages: [], updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, ai_features: null, festive_ambient: false, hidden_pages: [], updated_at: null };
     let hiddenPages = [];
     if (Array.isArray(row.hidden_pages)) {
         hiddenPages = row.hidden_pages;
@@ -270,8 +251,37 @@ async function readSystemState() {
         aiModel: row.ai_model || 'qwen/qwen3-32b',
         aiDisabled: Boolean(row.ai_disabled),
         aiFeatures: normalizeAiFeatures(row.ai_features),
+        festiveAmbient: Boolean(row.festive_ambient),
         hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
+}
+
+// Admin override for the seasonal ambient glow. The festive palettes
+// (Christmas Dec 1–26, NYE Dec 27–Jan 6) activate automatically in season;
+// this flag forces them on outside those dates.
+async function setFestiveAmbient(enabled) {
+    const value = Boolean(enabled);
+    if (!isDbEnabled) {
+        systemState.festiveAmbient = value;
+        return value;
+    }
+
+    systemStateCache = null;
+    try {
+        await db.query(
+            'UPDATE system_state SET festive_ambient = $1, updated_at = NOW() WHERE id = 1',
+            [value]
+        );
+    } catch (e) {
+        // Self-heal databases that haven't run the schema migration yet.
+        if (!/festive_ambient/.test(e?.message || '')) throw e;
+        await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS festive_ambient BOOLEAN NOT NULL DEFAULT FALSE');
+        await db.query(
+            'UPDATE system_state SET festive_ambient = $1, updated_at = NOW() WHERE id = 1',
+            [value]
+        );
+    }
+    return value;
 }
 
 async function setHiddenPages(hiddenPages) {
@@ -1722,6 +1732,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             aiModel: state.aiModel || 'qwen/qwen3-32b',
             aiDisabled: Boolean(state.aiDisabled),
             aiFeatures: state.aiFeatures || {},
+            festiveAmbient: Boolean(state.festiveAmbient),
             hiddenPages: state.hiddenPages || [],
             availableHackClubModels,
             availableGeminiModels: [
@@ -1864,6 +1875,7 @@ app.get('/api/system/status', (req, res) => {
                 broadcast: state.broadcast,
                 aiDisabled: Boolean(state.aiDisabled),
                 aiFeatures: state.aiFeatures || {},
+                festiveAmbient: Boolean(state.festiveAmbient),
                 aiProvider: state.aiProvider || 'hackclub',
                 hiddenPages: state.hiddenPages || []
             });
@@ -1981,6 +1993,22 @@ app.post('/api/system/ai-feature', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Update AI feature error:', e);
         res.status(500).json({ error: 'Failed to update Sage feature' });
+    }
+});
+
+// POST /api/system/festive-ambient (Admin only: seasonal glow toggle)
+app.post('/api/system/festive-ambient', requireAuth, async (req, res) => {
+    try {
+        const { enabled } = req.body || {};
+        if (typeof enabled !== 'boolean') {
+            return res.status(400).json({ error: 'enabled must be a boolean' });
+        }
+        const festiveAmbient = await setFestiveAmbient(enabled);
+        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Festive ambient light ${festiveAmbient ? 'ENABLED' : 'DISABLED'} for all students`);
+        res.json({ success: true, festiveAmbient });
+    } catch (e) {
+        console.error('Update festive ambient error:', e);
+        res.status(500).json({ error: 'Failed to update festive ambient setting' });
     }
 });
 

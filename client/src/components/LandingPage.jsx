@@ -268,7 +268,7 @@ const AuthErrorDialog = ({ authError, onDismiss }) => {
   );
 };
 
-const LandingPage = ({ authError, clearAuthError }) => {
+const LandingPage = ({ authError, clearAuthError, festiveAmbient = false }) => {
   // Easter egg: three clicks on the logo bring back the original four-square mark.
   const [logoClicks, setLogoClicks] = useState(0);
   const [useOriginalMark, setUseOriginalMark] = useState(false);
@@ -294,7 +294,7 @@ const LandingPage = ({ authError, clearAuthError }) => {
         {/* The same inset panel the signed-in app lives in: fixed height, header
             outside the scroll area so content can never scroll up behind it. */}
         <div className="relative isolate flex h-[100dvh] md:h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
-          {ambientOn && <AmbientLight variant="panel" style={{ position: 'fixed' }} />}
+          {ambientOn && <AmbientLight variant="panel" festive={festiveAmbient} style={{ position: 'fixed' }} />}
           <header className="relative z-30 border-b border-m-line bg-m-panel/75 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
               <button onClick={handleLogoClick} className="flex min-w-0 items-center gap-2.5" aria-label="Synchron">

@@ -319,14 +319,20 @@ html[data-ui="modern"].theme-navy {
   --m-card: 255 255 255;
 }
 html[data-ui="modern"].dark.theme-navy {
-  --black: 8 12 20;
-  --zinc-950: 13 18 28;
-  --zinc-900: 18 25 37;
-  --zinc-800: 28 37 52;
-  --zinc-700: 46 58 76;
-  --m-page: 5 8 14;
-  --m-panel: 8 12 20;
-  --m-card: 13 18 28;
+  --black: 10 15 24;
+  --zinc-950: 16 22 33;
+  --zinc-900: 22 30 44;
+  --zinc-800: 33 43 60;
+  --zinc-700: 52 64 82;
+  --m-page: 8 12 19;
+  --m-panel: 12 17 26;
+  --m-card: 18 25 37;
+}
+/* Dark mode lifts the accent a little so it reads on the lighter navy surfaces,
+   but stays deeper and duller than the blue theme's 217 91% 60%. */
+html.dark.theme-navy {
+  --color-accent: 222 55% 48%;
+  --color-accent-contrast: 0 0% 100%;
 }
 
 /* ---------- Ambient accent (any non-default colour theme) ---------- */

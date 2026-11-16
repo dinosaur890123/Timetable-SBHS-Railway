@@ -294,6 +294,23 @@ export const setAiFeature = async (feature, disabled) => {
     }
 };
 
+// Seasonal ambient glow: auto-active Christmas Dec 1–26 and NYE Dec 27–Jan 6;
+// this toggle forces the festive palettes on at any other time.
+export const setFestiveAmbient = async (enabled) => {
+    try {
+        const response = await apiFetch(`${ADMIN_API_URL}/system/festive-ambient`, {
+            method: 'POST',
+            headers: await getHeaders(),
+            body: JSON.stringify({ enabled })
+        });
+        if (!response.ok) throw new Error('Failed to update festive ambient setting');
+        return await response.json();
+    } catch (error) {
+        console.error("Admin API Error:", error);
+        throw error;
+    }
+};
+
 export const fetchAiLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/ai/logs`, {
