@@ -3,6 +3,7 @@ import { format, addMonths, startOfMonth, endOfMonth, isToday, isSameDay, isSame
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, X, RotateCcw } from 'lucide-react';
 import { calendarPage, termsPage, closureLabel } from '../services/pageData';
 import { useCachedLoad } from '../utils/pageCache';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { motion, AnimatePresence, LayoutGroup, MotionConfig } from 'framer-motion';
 
 // Motion follows DESIGN.md: springs for things that move, short fades for things that swap.
@@ -16,17 +17,6 @@ const slide = {
   enter: (dir) => ({ x: dir * 48, opacity: 0 }),
   center: { x: 0, opacity: 1 },
   exit: (dir) => ({ x: dir * -48, opacity: 0 })
-};
-
-const useMediaQuery = (query) => {
-  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-  return matches;
 };
 
 const getEventTypeColor = (type) => {
