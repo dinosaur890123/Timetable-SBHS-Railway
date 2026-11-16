@@ -21,8 +21,8 @@ const SessionRow = ({ session, isPast, index, onOpen }) => {
         transition={{ delay: Math.min(index, 8) * 0.03 }}
         className="px-3 py-1.5"
     >
-        <div className={`flex items-center gap-4 transition-opacity duration-700 ${isPast ? 'opacity-50 hover:opacity-100' : ''}`}>
-            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
+        <div className={`flex items-center gap-3 transition-opacity duration-700 ${isPast ? 'opacity-50 hover:opacity-100' : ''}`}>
+            <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
                 {formatTime12Hour(timeStr)}
             </span>
             <SessionLine session={session} onOpen={onOpen} />
@@ -623,8 +623,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                         />
                     ))}
                     {routineData.length > 0 && (
-                        <li className="flex items-center gap-4 px-3 pt-3">
-                            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                        <li className="flex items-center gap-3 px-3 pt-3">
+                            <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
                                 {formatTime12Hour(routineData[routineData.length - 1].bell.endTime)}
                             </span>
                             <span className="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
