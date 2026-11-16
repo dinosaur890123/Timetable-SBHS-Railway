@@ -101,7 +101,7 @@ const SheetBody = ({ session, onClose, still }) => {
                         />
                     )}
                     {maps && (
-                        <a className="nf-pop__link" href={maps} target="_blank" rel="noopener noreferrer">
+                        <a className={`nf-pop__link${hasCoords(location) ? '' : ' is-next-line'}`} href={maps} target="_blank" rel="noopener noreferrer">
                             Open in Maps <ArrowUpRight size={14} strokeWidth={1.75} />
                         </a>
                     )}
