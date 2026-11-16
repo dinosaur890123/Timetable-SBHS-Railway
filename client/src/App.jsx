@@ -1122,7 +1122,9 @@ function App() {
 
             } catch (error) {
                 console.error(error);
-                if (error.message?.includes("401")) logout();
+                // Sign out only once the session can't be renewed; a 401 while the refresh
+                // token is still good (offline, SBHS slow) leaves the student signed in.
+                if (error.message?.includes("401") && !isAuthenticated()) logout();
             } finally {
                 setAuthInProgress(false);
                 setLoading(false);

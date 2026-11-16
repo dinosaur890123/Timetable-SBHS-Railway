@@ -163,41 +163,76 @@ const hasFreshToken = () => {
 };
 
 // SBHS access tokens last an hour; the 90-day refresh token gets a new pair.
-// Refresh tokens are single-use, so concurrent callers share one refresh.
+// Refresh tokens are single-use, so concurrent callers share one refresh — within
+// this tab through refreshInFlight, and across tabs (and the installed app) through
+// a Web Lock. Without the lock, two tabs waking together both spend the same token,
+// and the loser used to clear the winner's fresh pair and sign every tab out.
 let refreshInFlight = null;
+const REFRESH_LOCK = 'sbhs-token-refresh';
 
-export const refreshAccessToken = () => {
-    if (refreshInFlight) return refreshInFlight;
+// Run `task` while holding the cross-tab refresh lock, where the browser has one.
+const withRefreshLock = (task) => (typeof navigator !== 'undefined' && navigator.locks?.request
+    ? navigator.locks.request(REFRESH_LOCK, task)
+    : task());
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// One refresh against SBHS. `forced` refreshes even if the stored token looks fresh,
+// for when the API has just turned the stored token away.
+const runRefresh = async (forced) => {
     const refreshToken = localStorage.getItem('sbhs_refresh_token');
-    if (!refreshToken || !CLIENT_ID) return Promise.resolve(null);
-
-    refreshInFlight = (async () => {
-        try {
-            const response = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
-            if (!response.ok) {
-                // Another tab may have spent this refresh token first; use the pair it stored.
-                if (localStorage.getItem('sbhs_refresh_token') !== refreshToken && hasFreshToken()) return getAccessToken();
-                if (response.status === 400 || response.status === 401) clearTokens();
-                return null;
+    if (!refreshToken || !CLIENT_ID) return null;
+    try {
+        const response = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
+        if (!response.ok) {
+            // A tab without Web Locks may have spent this token first: give it a moment
+            // to store its pair, and use that instead of signing everyone out.
+            if (response.status === 400 || response.status === 401) {
+                for (let i = 0; i < 3; i++) {
+                    if (localStorage.getItem('sbhs_refresh_token') !== refreshToken) return getAccessToken();
+                    await sleep(500);
+                }
+                // Still our token after waiting: SBHS has genuinely rejected it.
+                if (localStorage.getItem('sbhs_refresh_token') === refreshToken) clearTokens();
+                else return getAccessToken();
             }
-            const data = await response.json();
-            storeTokens(data);
-            return data.access_token;
-        } catch (error) {
-            // Offline or SBHS unreachable: keep the tokens and try again next time.
-            console.error('Token refresh failed:', error);
             return null;
-        } finally {
-            refreshInFlight = null;
         }
-    })();
+        const data = await response.json();
+        storeTokens(data);
+        return data.access_token;
+    } catch (error) {
+        // Offline or SBHS unreachable: keep the tokens and try again next time.
+        console.error('Token refresh failed:', error);
+        return null;
+    }
+};
+
+export const refreshAccessToken = ({ forced = true } = {}) => {
+    if (refreshInFlight) return refreshInFlight;
+    if (!localStorage.getItem('sbhs_refresh_token') || !CLIENT_ID) return Promise.resolve(null);
+
+    const startingToken = localStorage.getItem('sbhs_access_token');
+    refreshInFlight = withRefreshLock(async () => {
+        // While this tab waited for the lock, another may have refreshed already.
+        const accessNow = localStorage.getItem('sbhs_access_token');
+        if (accessNow && accessNow !== startingToken && hasFreshToken()) return accessNow;
+        if (!forced && hasFreshToken()) return accessNow;
+        return runRefresh(forced);
+    }).finally(() => {
+        refreshInFlight = null;
+    });
     return refreshInFlight;
 };
+
+// Signed out for good: SBHS rejected the refresh token, so there's nothing left to renew with.
+// A failed refresh for any other reason (offline, SBHS slow) keeps the session.
+const sessionLapsed = () => !localStorage.getItem('sbhs_refresh_token');
 
 // The current access token, refreshed first if it has expired. Null when signed out.
 export const getValidAccessToken = async () => {
     if (hasFreshToken()) return getAccessToken();
-    const fresh = await refreshAccessToken();
+    const fresh = await refreshAccessToken({ forced: false });
     // Offline the token can't be renewed, but the expired one still opens the offline copy.
     if (!fresh && !navigator.onLine) return getAccessToken();
     return fresh;
@@ -237,7 +272,10 @@ async function fetchWithAuth(endpoint) {
     }
 
     if (!response.ok) {
-        if (response.status === 401) logout();
+        // Only sign out once SBHS has rejected the refresh token too. A 401 with a
+        // refresh token still in hand (offline, SBHS slow, one endpoint refusing)
+        // just fails this request.
+        if (response.status === 401 && sessionLapsed()) logout();
         throw new Error(`API Error ${response.status}: ${endpoint}`);
     }
     return response.json();
