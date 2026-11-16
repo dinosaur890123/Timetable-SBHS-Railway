@@ -46,8 +46,8 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
         const tooltipWidth = 240;
         const tooltipHeight = 80;
         const x = Math.max(8, Math.min(rect.left + (rect.width - tooltipWidth) / 2, window.innerWidth - tooltipWidth - 8));
-        // Sit just above the event, with a small overlap to visually attach the popup.
-        const y = Math.max(8, Math.min(rect.top - tooltipHeight + 12, window.innerHeight - tooltipHeight - 8));
+        // Keep the popup fully above the event with a small visual gap.
+        const y = Math.max(8, Math.min(rect.top - tooltipHeight - 6, window.innerHeight - tooltipHeight - 8));
         setTooltipPosition({ x, y });
         setHoveredSession(session);
     };
@@ -176,8 +176,9 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                     className="nf-schedule-tooltip"
                     style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, zIndex: 100 }}
                 >
-                    <div className="nf-schedule-tooltip-inner">
+                    <div className={`nf-schedule-tooltip-inner${hoveredSession.cancelled ? ' is-cancelled' : ''}`}>
                         <b>{sessionName(hoveredSession)}</b>
+                        {hoveredSession.cancelled && <div className="nf-schedule-tooltip-cancelled">Cancelled</div>}
                         <div className="nf-meta tnum">
                             {clockTime(startOf(hoveredSession))}{endOf(hoveredSession) ? ` – ${clockTime(endOf(hoveredSession))}` : ''}
                         </div>
