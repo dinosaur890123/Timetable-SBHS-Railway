@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, MapPin, UserRound } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
-import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { TeacherTreat } from './TeacherTreat';
 
@@ -253,7 +253,7 @@ const ClassTitle = ({ period, className }) => {
 
 const Where = ({ slot }) => (
     <div className="mt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
-        <span className="tabular-nums shrink-0">{slot.bell.time}{slot.bell.endTime ? `–${slot.bell.endTime}` : ''}</span>
+        <span className="tabular-nums shrink-0">{formatTime12Hour(slot.bell.time)}{slot.bell.endTime ? `–${formatTime12Hour(slot.bell.endTime)}` : ''}</span>
         {slot.period.room && (
             <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />{slot.period.room}</span>
         )}
@@ -272,7 +272,7 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
             <span className="lg:hidden">{slot.period.title}</span>
             <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
         </span>
-        <span className="ml-auto shrink-0 tabular-nums">{slot.bell.time}</span>
+        <span className="ml-auto shrink-0 tabular-nums">{formatTime12Hour(slot.bell.time)}</span>
     </div>
 );
 
@@ -445,7 +445,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     const dailyStatus = [
         inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
-        !showRail && firstClass ? `starts ${firstClass.bell.time}` : null
+        !showRail && firstClass ? `starts ${formatTime12Hour(firstClass.bell.time)}` : null
     ].filter(Boolean).join(' · ');
 
     const cycleStatus = resolvedCurrentWeek ? `Currently Week ${resolvedCurrentWeek}` : null;

@@ -96,13 +96,8 @@ html[data-ui] .nf .nf-cal__day.is-weekend { background: color-mix(in srgb, var(-
 }
 html[data-ui] .nf .nf-cal__chip:hover { border-color: var(--rule-2); background: var(--wash); }
 .nf-cal__day.is-out .nf-cal__chip { opacity: .6; }
-.nf-cal__chip.is-cancelled .nf-cal__chip-name { text-decoration: line-through; color: var(--ink-3); }
-.nf-cal__chip-time {
-  flex-shrink: 0; width: 56px; text-align: right; font-size: 11px; color: var(--ink-3);
-}
-.nf-cal__chip-name {
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.nf-cal__chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nf-cal__chip.is-cancelled span:last-child { text-decoration: line-through; color: var(--ink-3); }
 
 /* Narrow screens: one week as a ruled agenda. Only days with sessions appear;
    each opens straight into the session sheet on tap. */
