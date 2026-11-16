@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ArrowRight, MapPin, UserRound } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { format, addDays, parseISO, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import { TeacherTreat } from './TeacherTreat';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
 
 const getMinutes = (timeStr) => {
@@ -282,18 +281,6 @@ const ClassTitle = ({ period, className }) => {
     );
 };
 
-const Where = ({ slot }) => (
-    <div className="mt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
-        <span className="tabular-nums shrink-0">{formatTime12Hour(slot.bell.time)}{slot.bell.endTime ? `–${formatTime12Hour(slot.bell.endTime)}` : ''}</span>
-        {slot.period.room && (
-            <span className="inline-flex items-center gap-1 shrink-0"><MapPin size={12} />{slot.period.room}</span>
-        )}
-        {slot.period.fullTeacher && (
-            <span className="inline-flex items-center gap-1 min-w-0"><UserRound size={12} className="shrink-0" /><span className="truncate">{slot.period.fullTeacher}</span><TeacherTreat name={slot.period.fullTeacher} /></span>
-        )}
-    </div>
-);
-
 const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <ArrowRight size={12} className="shrink-0" />
@@ -406,14 +393,11 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     }
 
     const isExtracurricular = current.isExtracurricular;
-    const label = isExtracurricular ? 'Now · Extracurricular' : `Now · P${current.bellId}`;
 
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
-            <RailLabel aside={schoolLeft}>{label}</RailLabel>
             <ClassTitle period={current.period} className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
-            <Where slot={current} />
-            <div className="mt-2 sm:mt-4"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
+            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
         </RailCard>
