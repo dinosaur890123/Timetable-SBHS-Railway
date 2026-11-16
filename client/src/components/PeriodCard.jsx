@@ -83,14 +83,13 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const content = (
         <div className={`relative flex items-center gap-4 px-3 py-3 ${dim}`}>
-            {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
-            {colour ? (
-                <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
-            ) : isCurrent && (
-                <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />
-            )}
-
-            <div className="w-11 shrink-0 text-right leading-tight">
+            <div className="w-11 shrink-0 text-right leading-tight relative">
+                {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
+                {colour ? (
+                    <span aria-hidden className={`absolute right-0 top-0.5 bottom-0.5 w-[2px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
+                ) : isCurrent && (
+                    <span aria-hidden className="absolute right-0 top-0.5 bottom-0.5 w-[1.5px] rounded-full bg-accent" />
+                )}
                 <div className={`text-[13px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</div>
                 <div className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P{bell.bell}</div>
             </div>
