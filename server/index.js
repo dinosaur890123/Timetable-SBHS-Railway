@@ -2749,8 +2749,8 @@ const formatSageSessions = (items) => {
         .filter(Boolean)
         .sort((a, b) => a.start - b.start);
 
-    const upcoming = sessions.filter((s) => s.start.getTime() >= now - DAY_MS).slice(0, 8);
-    const recent = sessions.filter((s) => s.start.getTime() < now - DAY_MS).slice(-5).reverse();
+    const upcoming = sessions.filter((s) => s.start.getTime() >= now - DAY_MS).slice(0, 20);
+    const recent = sessions.filter((s) => s.start.getTime() < now - DAY_MS).slice(-8).reverse();
     const parts = [];
     if (upcoming.length) parts.push(`Upcoming:\n${upcoming.map((s) => `- ${s.line}`).join('\n')}`);
     if (recent.length) parts.push(`Recent:\n${recent.map((s) => `- ${s.line}`).join('\n')}`);
@@ -2765,7 +2765,11 @@ const fetchSageClipboardSessions = async (req) => {
     if (cached && Date.now() - cached.at < SAGE_SESSIONS_TTL_MS) return cached.text;
 
     try {
+        const currentYear = new Date().getFullYear();
         const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/clipboard/sessions`);
+        url.searchParams.set('date[after]', `${currentYear}-01-01`);
+        url.searchParams.set('date[before]', `${currentYear}-12-31`);
+        url.searchParams.set('_itemsPerPage', '300');
         const response = await fetch(url.toString(), {
             headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
             signal: AbortSignal.timeout(8000)
@@ -3196,6 +3200,33 @@ const checkStudentAccess = async (req, res) => {
 // Asking for plain JSON returns collections as arrays rather than JSON-LD `member` wrappers.
 const SBHS_PORTAL_API = 'https://api.sbhs.net.au/api/core';
 
+// Forwards query string params to upstream URL, preserving bracketed parameter
+// names (e.g. date[after], date[before]) without Express qs nested-object stringification.
+const forwardPortalQueryParams = (targetUrl, req) => {
+    const rawUrl = req.originalUrl || req.url || '';
+    const queryIdx = rawUrl.indexOf('?');
+    if (queryIdx !== -1) {
+        const rawParams = new URLSearchParams(rawUrl.slice(queryIdx + 1));
+        rawParams.forEach((val, key) => targetUrl.searchParams.append(key, val));
+        return;
+    }
+    if (req.query && typeof req.query === 'object') {
+        const appendNested = (obj, prefix = '') => {
+            for (const [k, v] of Object.entries(obj)) {
+                const key = prefix ? `${prefix}[${k}]` : k;
+                if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+                    appendNested(v, key);
+                } else if (Array.isArray(v)) {
+                    v.forEach(item => targetUrl.searchParams.append(`${key}[]`, String(item)));
+                } else if (v !== undefined && v !== null) {
+                    targetUrl.searchParams.append(key, String(v));
+                }
+            }
+        };
+        appendNested(req.query);
+    }
+};
+
 // Main proxy/mock resolver for student endpoints
 const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const isAuthorized = await checkStudentAccess(req, res);
@@ -3205,9 +3236,22 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
             const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/${subpath}`);
-            Object.entries(req.query).forEach(([key, val]) => {
-                url.searchParams.append(key, val);
-            });
+            forwardPortalQueryParams(url, req);
+
+            // If clipboard/sessions is requested without explicit date filters, default to
+            // the full current school year and 300 items per page so the upstream API
+            // does not default to a rolling 3-week window.
+            if (subpath === 'clipboard/sessions') {
+                if (!url.searchParams.has('date[after]') && !url.searchParams.has('date[before]')) {
+                    const currentYear = new Date().getFullYear();
+                    url.searchParams.set('date[after]', `${currentYear}-01-01`);
+                    url.searchParams.set('date[before]', `${currentYear}-12-31`);
+                }
+                if (!url.searchParams.has('_itemsPerPage')) {
+                    url.searchParams.set('_itemsPerPage', '300');
+                }
+            }
+
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(8000)
@@ -3231,9 +3275,7 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
         try {
             const url = new URL(`${SBHS_PORTAL_API}/${subpath}`);
-            Object.entries(req.query).forEach(([key, val]) => {
-                url.searchParams.append(key, val);
-            });
+            forwardPortalQueryParams(url, req);
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(8000)

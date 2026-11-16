@@ -468,7 +468,7 @@ const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
 const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
 
 export const fetchStudentClipboardAttendance = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/attendance`)
+    fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`)
     .then(data => {
         const parseAttendance = (items) => {
             return items.map(item => ({
@@ -489,7 +489,7 @@ export const fetchStudentClipboardAttendance = (studentId) =>
     });
 
 export const fetchStudentPreExplainedAbsences = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences`)
+    fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences?_itemsPerPage=100`)
     .then(data => {
         const parsePreExplained = (items) => {
             return items.map(item => ({
@@ -509,47 +509,81 @@ export const fetchStudentPreExplainedAbsences = (studentId) =>
         return [];
     });
 
-export const fetchStudentClipboardSessions = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/sessions`)
-    .then(data => {
-        const parseSessions = (items) => {
-            return items.map(item => ({
-                id: item.id || Math.random(),
-                activity: item.activity?.name || item.title || 'Session',
-                title: item.title && item.title !== item.activity?.name ? item.title : '',
-                date: formatDay(item.startDateTime),
-                time: formatTimeRange(item.startDateTime, item.endDateTime),
-                start: item.startDateTime || null,
-                end: item.endDateTime || null,
-                // A LocationLink: name, address and coordinates.
-                location: item.location ? {
-                    name: item.location.name || '',
-                    address: item.location.address || '',
-                    latitude: item.location.latitude ?? null,
-                    longitude: item.location.longitude ?? null
-                } : null,
-                opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
-                round: item.roundName || '',
-                notes: item.studentParentNotes || item.notes || '',
-                cancelled: !!item.cancelled,
-                result: item.scored ? {
-                    outcome: item.result || '',
-                    us: item.organisationScore ?? null,
-                    them: item.opponentScore ?? null
-                } : null
-            })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseSessions(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseSessions(data);
-        }
+export const fetchStudentClipboardSessions = async (studentId, options = {}) => {
+    const currentYear = options.year || new Date().getFullYear();
+    const params = new URLSearchParams();
+    params.set('date[after]', options.startDate || `${currentYear}-01-01`);
+    params.set('date[before]', options.endDate || `${currentYear}-12-31`);
+    params.set('_itemsPerPage', String(options.itemsPerPage || 300));
+    if (options.page) params.set('_page', String(options.page));
+    if (options.context) params.set('context', String(options.context));
+
+    const parseSessions = (items) => {
+        return items.map(item => ({
+            id: item.id || Math.random(),
+            activity: item.activity?.name || item.title || 'Session',
+            title: item.title && item.title !== item.activity?.name ? item.title : '',
+            date: formatDay(item.startDateTime),
+            time: formatTimeRange(item.startDateTime, item.endDateTime),
+            start: item.startDateTime || null,
+            end: item.endDateTime || null,
+            // A LocationLink: name, address and coordinates.
+            location: item.location ? {
+                name: item.location.name || '',
+                address: item.location.address || '',
+                latitude: item.location.latitude ?? null,
+                longitude: item.location.longitude ?? null
+            } : null,
+            opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+            round: item.roundName || '',
+            notes: item.studentParentNotes || item.notes || '',
+            cancelled: !!item.cancelled,
+            result: item.scored ? {
+                outcome: item.result || '',
+                us: item.organisationScore ?? null,
+                them: item.opponentScore ?? null
+            } : null
+        })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+    };
+
+    const extractItems = (data) => {
+        if (data && data.member && Array.isArray(data.member)) return data.member;
+        if (Array.isArray(data)) return data;
         return [];
-    });
+    };
+
+    try {
+        const firstData = await fetchFromBackend(`/students/${studentId}/clipboard/sessions?${params.toString()}`);
+        const items = extractItems(firstData);
+
+        // If the first page hit the 300 item ceiling and caller did not request a single specific page,
+        // paginate to retrieve all remaining sessions.
+        if (!options.page && items.length >= 300) {
+            let pageNum = 1;
+            while (pageNum < 10) {
+                pageNum++;
+                params.set('_page', String(pageNum));
+                try {
+                    const nextPageData = await fetchFromBackend(`/students/${studentId}/clipboard/sessions?${params.toString()}`);
+                    const nextItems = extractItems(nextPageData);
+                    if (!nextItems.length) break;
+                    items.push(...nextItems);
+                    if (nextItems.length < 300) break;
+                } catch {
+                    break;
+                }
+            }
+        }
+
+        return parseSessions(items);
+    } catch (err) {
+        console.error('Failed to fetch clipboard sessions:', err);
+        return [];
+    }
+};
 
 export const fetchStudentClipboardTeams = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/teams`)
+    fetchFromBackend(`/students/${studentId}/clipboard/teams?_itemsPerPage=100`)
     .then(data => {
         const parseTeams = (items) => {
             return items.map(item => ({
