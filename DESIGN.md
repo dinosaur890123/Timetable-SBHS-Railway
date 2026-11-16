@@ -332,6 +332,21 @@ the bell pulse stop entirely, and blurs are dropped. Don't bypass this with inli
 
 ---
 
+## Landing page
+
+`client/src/components/LandingPage.jsx` is what signed-out visitors see. It is always dark and, unlike the app,
+scrolls as an ordinary document (no inset panel, no inner scroll area).
+
+- **Hero:** the headline, one primary "Sign in with SBHS" button, and a miniature of the real home page. The miniature
+  eases back slightly as you scroll away.
+- **The day:** a Tuesday told as five chapters (before school, a substitute and room change, the countdown, Clipboard at
+  lunch, tomorrow saved offline). A sticky clock rolls from 8:00 to 15:20 as you scroll, the day's rail beside it dims
+  what's past and marks what's on like the timetable does, and the ambient light follows that clock instead of the real
+  one. Each chapter's time is reached when its middle crosses a reading line at 60% of the viewport. This is measured
+  with `getBoundingClientRect`, not framer's `useScroll({ target })`, because `offsetTop` ignores the `--ui-scale` zoom.
+- **What's inside:** the rest of the sidebar as a numbered index, not a grid of icon cards.
+- Every UI fragment is drawn with the same classes as the real component it mirrors. Only show features the app has.
+
 ## Voice
 
 Short, lowercase-friendly UI copy in sentence case. Verbs on actions ("Switch to dark mode", "Sign out"). Names of
