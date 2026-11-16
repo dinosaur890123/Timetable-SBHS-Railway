@@ -1799,7 +1799,7 @@ function App() {
 
                             {/* PRIVACY VIEW */}
                             {currentView === 'privacy' && (
-                                <PrivacyView onBack={() => setCurrentView('profile')} aiProviderName={aiProviderName} />
+                                <PrivacyView onBack={() => setCurrentView('profile')} aiProviderName={aiProviderName} isAdmin={user?.role === 'Admin'} />
                             )}
 
                             {/* ADMIN VIEW */}

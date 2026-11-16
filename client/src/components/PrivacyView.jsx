@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Shield, Database, Cpu, Eye, Trash2, Lock, Server, Smartphone } from 'lucide-react';
-import { fetchDeletionRequest, requestDataDeletion } from '../services/api';
+import { fetchDeletionRequest, requestDataDeletion, logout } from '../services/api';
 
 const Section = ({ icon: Icon, title, children }) => (
     <section className="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
@@ -50,7 +50,7 @@ const GlanceRow = ({ what, where, when, canDelete }) => (
     </tr>
 );
 
-const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = false }) => {
+const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = false, isAdmin = false }) => {
     const [deletionRequest, setDeletionRequest] = useState(null);
     const [requestState, setRequestState] = useState('idle'); // idle | sending | error
     const [requestError, setRequestError] = useState('');
@@ -65,11 +65,20 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
     }, [publicOnly]);
 
     const handleRequestDeletion = async () => {
-        if (!window.confirm('Request deletion of your account and all server-side data? An admin will review the request. Once completed, this cannot be undone.')) return;
+        const confirmation = window.prompt(
+            isAdmin
+                ? 'Type Confirm to request deletion of your admin account. An admin will review the request.'
+                : 'Type Confirm to permanently delete your account and all server-side data. This cannot be undone.'
+        );
+        if (confirmation !== 'Confirm') return;
         setRequestState('sending');
         setRequestError('');
         try {
             const data = await requestDataDeletion();
+            if (data.deleted) {
+                logout();
+                return;
+            }
             setDeletionRequest(data.request || null);
             setRequestState('idle');
         } catch (e) {
@@ -78,7 +87,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
         }
     };
 
-    const pendingRequest = deletionRequest?.status === 'pending' ? deletionRequest : null;
+    const pendingRequest = isAdmin && deletionRequest?.status === 'pending' ? deletionRequest : null;
 
     return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -300,10 +309,12 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
                 Signs you out and immediately wipes your tokens, timetable cache, and all offline data from this device.
                 Your account record and Canvas links remain on the server so they're ready when you sign back in.
             </Item>
-            <Item label="Requesting full deletion">
+            <Item label="Full account deletion">
                 {publicOnly
-                    ? 'Sign in to Synchron and open Settings → Privacy to ask for your account and all associated server-side data to be removed.'
-                    : 'Use the button below to ask for your account and all associated server-side data to be removed. The request appears in the admin panel, where an admin reviews and processes it. Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.'}
+                    ? 'Sign in to Synchron and open Settings → Privacy to permanently delete your account and associated server-side data.'
+                    : isAdmin
+                        ? 'Admin account deletion requests appear in the admin panel for review. Regular student accounts are deleted immediately after confirmation.'
+                        : 'Your account and associated server-side data are deleted immediately after confirmation. You will be signed out; SBHS data stored on this device is cleared separately when you sign out.'}
             </Item>
         </Section>
 
@@ -313,17 +324,18 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
             <div className="flex items-start gap-3">
                 <Trash2 size={18} className="shrink-0 text-red-500 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-white">Request data deletion</h2>
+                    <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-white">{isAdmin ? 'Request admin account deletion' : 'Delete account'}</h2>
                     <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                        Sends a request to the Synchron admins to permanently delete your account and everything stored
-                        against it on our servers. SBHS data on your device is cleared separately by signing out.
+                        {isAdmin
+                            ? 'Your request will appear in the admin deletion requests page for review.'
+                            : 'Permanently deletes your account and associated data from Synchron, then signs you out. Type Confirm to proceed.'}
                     </p>
                     {pendingRequest ? (
                         <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 text-[13px] font-medium">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Deletion requested{pendingRequest.createdAt ? ` on ${new Date(pendingRequest.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}` : ''} — pending admin review
                         </div>
-                    ) : deletionRequest?.status === 'completed' ? (
+                    ) : isAdmin && deletionRequest?.status === 'completed' ? (
                         <div className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[13px] font-medium">
                             Your server-side data has been deleted.
                         </div>
@@ -334,7 +346,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
                             className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors"
                         >
                             <Trash2 size={15} />
-                            {requestState === 'sending' ? 'Sending request…' : 'Request data deletion'}
+                            {requestState === 'sending' ? (isAdmin ? 'Sending request…' : 'Deleting account…') : (isAdmin ? 'Request account deletion' : 'Delete account')}
                         </button>
                     )}
                     {requestError && (

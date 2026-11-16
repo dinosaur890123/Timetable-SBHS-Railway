@@ -387,6 +387,19 @@ const createPgStore = (db) => {
             );
             return result.rows[0]?.id || this.findShared(year, classKey, courseId);
         },
+        async anonymizeContributor(studentId) {
+            await db.query(
+                "UPDATE canvas_class_links SET submitted_by = 'anonymous' WHERE submitted_by = $1",
+                [studentId]
+            );
+            await db.query('DELETE FROM canvas_class_link_votes WHERE student_id = $1', [studentId]);
+        },
+        async anonymizeDeletedContributors() {
+            await db.query(
+                `UPDATE canvas_class_links l SET submitted_by = 'anonymous'
+                 WHERE NOT EXISTS (SELECT 1 FROM app_users u WHERE u.id = l.submitted_by)`
+            );
+        },
         async getShared(id) {
             const result = await db.query(
                 `SELECT id, class_key, class_name, course_id, school_year, submitted_by, locked_status,
@@ -675,6 +688,22 @@ const createMemoryStore = (getMemoryUsers) => {
             };
             shared.push(link);
             return link.id;
+        },
+        async anonymizeContributor(studentId) {
+            for (const link of shared) {
+                if (link.submittedBy === studentId) link.submittedBy = 'anonymous';
+            }
+            for (const [key, vote] of votes) {
+                if (vote.studentId === studentId) votes.delete(key);
+            }
+        },
+        async anonymizeDeletedContributors() {
+            const knownUsers = new Set((getMemoryUsers?.() || []).map(user => String(user.id)));
+            for (const link of shared) {
+                if (link.submittedBy !== 'anonymous' && !knownUsers.has(String(link.submittedBy))) {
+                    link.submittedBy = 'anonymous';
+                }
+            }
         },
         async getShared(id) {
             const link = shared.find(l => l.id === id);
@@ -1432,6 +1461,11 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             res.status(500).json({ error: 'Failed to delete link' });
         }
     });
+
+    return {
+        anonymizeContributor: (studentId) => store.anonymizeContributor(String(studentId)),
+        anonymizeDeletedContributors: () => store.anonymizeDeletedContributors()
+    };
 };
 
 module.exports = {

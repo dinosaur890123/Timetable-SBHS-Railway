@@ -1117,7 +1117,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         {activeTab === 'analytics' && (
             <div className="space-y-6">
                 {/* Headline metrics */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         label="Active Today"
                         value={stats?.activeToday || 0}
@@ -1153,6 +1153,13 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             value: `${stats?.totalUsers ? Math.round((inactiveCount / stats.totalUsers) * 100) : 0}%`,
                             pct: stats?.totalUsers ? (inactiveCount / stats.totalUsers) * 100 : 0,
                         }}
+                    />
+                    <StatCard
+                        label="Accounts Deleted"
+                        value={stats?.accountsDeletedPastMonth || 0}
+                        description="In the past 30 days"
+                        icon={Trash2}
+                        iconClass="bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                     />
                 </div>
 

@@ -783,7 +783,7 @@ export const requestDataDeletion = async () => {
     const response = await timedFetch(`${SYSTEM_API_URL}/privacy/deletion-request`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({})
+        body: JSON.stringify({ confirmation: 'Confirm' })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {

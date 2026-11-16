@@ -43,6 +43,10 @@ let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
 let deletionRequests = []; // Data deletion requests memory fallback
+let anonymizeCanvasContributions = {
+    anonymizeContributor: async () => {},
+    anonymizeDeletedContributors: async () => {}
+};
 let broadcastNotificationsMemory = []; // { id, message, createdBy, createdAt } memory fallback
 const broadcastNotificationDismissalsMemory = new Set(); // `${broadcastId}:${studentId}` memory fallback
 let buildNotesMemory = [
@@ -731,6 +735,7 @@ async function deleteUserById(id) {
 // up by hand. Audit logs are kept — they prune after 30 days.
 async function deleteStudentData(studentId) {
     const id = String(studentId);
+    await anonymizeCanvasContributions.anonymizeContributor(id);
     if (!isDbEnabled) {
         users = users.filter(u => String(u.id) !== id);
         notes = notes.filter(n => String(n.studentId) !== id);
@@ -1002,7 +1007,7 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
 });
 
 // Canvas course links: students' own links and links shared between classmates.
-registerCanvasLinkRoutes(app, {
+anonymizeCanvasContributions = registerCanvasLinkRoutes(app, {
     db,
     isDbEnabled,
     requireStudentAuth,
@@ -1011,6 +1016,9 @@ registerCanvasLinkRoutes(app, {
     isAdminUser,
     addLog,
     getMemoryUsers: () => users
+});
+anonymizeCanvasContributions.anonymizeDeletedContributors().catch(err => {
+    console.warn('[privacy] Could not anonymize links from previously deleted accounts:', err?.message || err);
 });
 
 // GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
@@ -1644,13 +1652,29 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
         const isPostgresDb = isDbEnabled;
         let dbHealth = 'Offline';
+        let accountsDeletedPastMonth = 0;
         if (isPostgresDb) {
             try {
                 await db.query('SELECT 1');
                 dbHealth = 'Online';
+                const deletedResult = await db.query(
+                    `SELECT COUNT(*)::int AS count FROM logs
+                     WHERE action = 'PRIVACY'
+                       AND created_at >= NOW() - INTERVAL '30 days'
+                       AND (details = 'Self-service account deletion'
+                         OR details LIKE 'Fulfilled data deletion request%')`
+                );
+                accountsDeletedPastMonth = Number(deletedResult.rows[0]?.count || 0);
             } catch (e) {
                 dbHealth = `Error: ${e?.message || e}`;
             }
+        } else {
+            const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+            accountsDeletedPastMonth = logs.filter(log => {
+                const deleted = String(log.details || '') === 'Self-service account deletion'
+                    || String(log.details || '').startsWith('Fulfilled data deletion request');
+                return log.action === 'PRIVACY' && deleted && new Date(log.timestamp).getTime() >= cutoff;
+            }).length;
         }
 
         // Aggregate year breakdown
@@ -1746,6 +1770,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 
         res.json({
             totalUsers: allUsers.length,
+            accountsDeletedPastMonth,
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
@@ -2269,10 +2294,25 @@ app.get('/api/privacy/deletion-request', requireStudentAuth, async (req, res) =>
     }
 });
 
-// POST /api/privacy/deletion-request - Student asks for their server-side data to be deleted
+// POST /api/privacy/deletion-request - Students delete immediately; admin accounts require review.
 app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
     try {
+        if (req.body?.confirmation !== 'Confirm') {
+            return res.status(400).json({ error: 'Type Confirm to continue' });
+        }
         const studentId = String(req.user.studentId);
+        const isAdmin = await isAdminUser(studentId);
+        if (!isAdmin) {
+            await deleteStudentData(studentId);
+            if (!isDbEnabled) {
+                deletionRequests = deletionRequests.filter(r => String(r.studentId) !== studentId);
+            } else {
+                await db.query('DELETE FROM data_deletion_requests WHERE student_id = $1', [studentId]);
+            }
+            await addLog('PRIVACY', 'SYSTEM', 'Self-service account deletion');
+            return res.json({ success: true, deleted: true });
+        }
+
         const name = [req.user.givenName, req.user.surname].filter(Boolean).join(' ').trim() || null;
         const email = req.user.email ? String(req.user.email) : null;
 
@@ -2723,11 +2763,6 @@ app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res)
     }
 });
 
-// Clipboard sessions change rarely, so the compact summary Sage sees is cached
-// per student — Ask Sage doesn't hit the portal API on every question.
-const sageSessionsCache = new Map(); // studentId -> { at, text }
-const SAGE_SESSIONS_TTL_MS = 15 * 60 * 1000;
-
 const pad2 = (n) => String(n).padStart(2, '0');
 const ymdOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const fmtSageDate = (d) => d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
@@ -2782,8 +2817,6 @@ const fetchSageClipboardSessions = async (req) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
     const studentId = String(req.user.studentId);
-    const cached = sageSessionsCache.get(studentId);
-    if (cached && Date.now() - cached.at < SAGE_SESSIONS_TTL_MS) return cached.text;
 
     try {
         const currentYear = new Date().getFullYear();
@@ -2797,16 +2830,14 @@ const fetchSageClipboardSessions = async (req) => {
         });
         if (!response.ok) {
             console.warn(`[ai] SBHS clipboard/sessions returned ${response.status}`);
-            return cached?.text ?? null;
+            return null;
         }
         const data = await response.json();
         const items = Array.isArray(data) ? data : (Array.isArray(data?.member) ? data.member : []);
-        const text = formatSageSessions(items);
-        sageSessionsCache.set(studentId, { at: Date.now(), text });
-        return text;
+        return formatSageSessions(items);
     } catch (e) {
         console.warn('[ai] clipboard/sessions fetch failed:', e?.message || e);
-        return cached?.text ?? null;
+        return null;
     }
 };
 
@@ -2816,8 +2847,6 @@ const fetchSageClipboardSessions = async (req) => {
 // day timetables (same endpoint the app uses) and hand Sage the answer:
 // explicit dates, 24-hour times, cycle day names, substitutions applied.
 
-const sageScheduleCache = new Map(); // studentId -> { at, text }
-const SAGE_SCHEDULE_TTL_MS = 30 * 60 * 1000;
 const SAGE_SCHEDULE_DAYS = 5;
 const SBHS_TIMETABLE_API = 'https://student.sbhs.net.au/api/timetable/daytimetable.json';
 
@@ -2917,8 +2946,6 @@ const fetchSageDaySchedule = async (req) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
     const studentId = String(req.user.studentId);
-    const cached = sageScheduleCache.get(studentId);
-    if (cached && Date.now() - cached.at < SAGE_SCHEDULE_TTL_MS) return cached;
 
     try {
         const dates = nextSchoolDates(new Date(), SAGE_SCHEDULE_DAYS);
@@ -2932,13 +2959,11 @@ const fetchSageDaySchedule = async (req) => {
         };
         const days = await Promise.all(dates.map(d => fetchDay(d).catch(() => null)));
         const blocks = days.filter(Boolean);
-        if (!blocks.length) return cached ?? null;
-        const result = { at: Date.now(), text: blocks.join('\n\n') };
-        sageScheduleCache.set(studentId, result);
-        return result;
+        if (!blocks.length) return null;
+        return { text: blocks.join('\n\n') };
     } catch (e) {
         console.warn('[ai] day schedule fetch failed:', e?.message || e);
-        return cached ?? null;
+        return null;
     }
 };
 
