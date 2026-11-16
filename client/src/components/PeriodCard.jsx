@@ -43,10 +43,10 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: enterDelay(routineIndex) }}
-                className="px-3 py-1.5"
+                className="px-1 sm:px-3 py-1.5"
             >
                 <div className={`flex items-center gap-3 ${dim}`}>
-                    <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{formatTime12Hour(bell?.time)}</span>
+                    <span className="w-[3.25rem] shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">{formatTime12Hour(bell?.time)}</span>
                     <span className={`text-[12px] ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'}`}>{breakLabel}</span>
                     <span className="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]" />
                     {isActuallyRealBreak ? (
@@ -82,7 +82,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     };
 
     const content = (
-        <div className={`relative flex items-center gap-3 px-3 py-3 ${dim}`}>
+        <div className={`relative flex items-center gap-3 px-1 sm:px-3 py-3 ${dim}`}>
             {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
                 <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
@@ -90,7 +90,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent" />
             )}
 
-            <div className="w-16 shrink-0 text-right leading-tight">
+            <div className="w-[3.25rem] shrink-0 text-right leading-tight">
                 <div className={`text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</div>
                 <div className="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P{bell.bell}</div>
             </div>
