@@ -7,7 +7,7 @@ import {
 } from 'date-fns';
 import { Hl } from '../study/noteflow';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { dayKeyOf, sessionInk, sessionName, startOf } from './sessions';
+import { clockTime, dayKeyOf, endOf, sessionInk, sessionName, startOf } from './sessions';
 import { formatTime12Hour } from '../../utils/timetable';
 import ScheduleView from './ScheduleView';
 
@@ -36,6 +36,20 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
     const isMonthView = isWideViewport && sheetWide;
     const [month, setMonth] = useState(() => startOfMonth(new Date()));
     const [week, setWeek] = useState(() => startOfWeek(new Date(), WEEK));
+    const [hoveredSession, setHoveredSession] = useState(null);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const hasFineHover = useMediaQuery('(hover: hover) and (pointer: fine)');
+
+    const handleEventMouseEnter = (event, session) => {
+        if (!isWideViewport || !hasFineHover) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const tooltipWidth = 240;
+        const tooltipHeight = 80;
+        const x = Math.max(8, Math.min(rect.left + (rect.width - tooltipWidth) / 2, window.innerWidth - tooltipWidth - 8));
+        const y = Math.max(8, Math.min(rect.top - tooltipHeight - 8, window.innerHeight - tooltipHeight - 8));
+        setTooltipPosition({ x, y });
+        setHoveredSession(session);
+    };
 
     const byDay = useMemo(() => {
         const map = {};
@@ -103,6 +117,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
             </div>
 
             {isMonthView ? (
+            <>
             <div className="nf-sheet nf-cal__sheet">
                 <div className="nf-cal__week" aria-hidden="true">
                     {DOW.map((d) => <div key={d} className="nf-cal__dow">{d}</div>)}
@@ -138,6 +153,8 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                                             data-no-press
                                                             className={`nf-cal__chip ${s.cancelled ? 'is-cancelled' : ''}`}
                                                             onClick={() => onOpen(s)}
+                                                            onMouseEnter={(event) => handleEventMouseEnter(event, s)}
+                                                            onMouseLeave={() => setHoveredSession(null)}
                                                             aria-label={`${sessionName(s)}${s.cancelled ? ', cancelled' : ''}. Show details`}
                                                         >
                                                             <span className="nf-cb-dot" style={sessionInk(s)} />
@@ -153,6 +170,21 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                     ))}
                 </div>
             </div>
+            {hoveredSession && isMonthView && hasFineHover && (
+                <div
+                    className="nf-schedule-tooltip"
+                    style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, zIndex: 100 }}
+                >
+                    <div className="nf-schedule-tooltip-inner">
+                        <b>{sessionName(hoveredSession)}</b>
+                        <div className="nf-meta tnum">
+                            {clockTime(startOf(hoveredSession))}{endOf(hoveredSession) ? ` – ${clockTime(endOf(hoveredSession))}` : ''}
+                        </div>
+                        {hoveredSession.location?.name && <div className="nf-meta">{hoveredSession.location.name}</div>}
+                    </div>
+                </div>
+            )}
+            </>
             ) : (
             <ScheduleView sessions={weekSessions} onOpen={onOpen} />
             )}
