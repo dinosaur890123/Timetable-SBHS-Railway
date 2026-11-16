@@ -467,6 +467,20 @@ export const fetchStudentRollover = (studentId) =>
 const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
 const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
 
+// Clipboard staff come back as UserLink objects ({ firstName, lastName, sisId })
+// or plain names; IRIs to user resources carry no display name, so they're skipped.
+const clipboardStaffName = (member) => {
+    if (!member) return '';
+    if (typeof member === 'string') {
+        return member.includes('://') || member.startsWith('/') ? '' : member;
+    }
+    return [member.firstName, member.lastName].filter(Boolean).join(' ')
+        || member.name || member.displayName || '';
+};
+const clipboardStaffList = (staff) => (Array.isArray(staff) ? staff : staff ? [staff] : [])
+    .map(clipboardStaffName)
+    .filter(Boolean);
+
 export const fetchStudentClipboardAttendance = (studentId) => 
     fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`)
     .then(data => {
@@ -537,6 +551,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
                 longitude: item.location.longitude ?? null
             } : null,
             opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+            staff: clipboardStaffList(item.staff),
             round: item.roundName || '',
             notes: item.studentParentNotes || item.notes || '',
             cancelled: !!item.cancelled,
