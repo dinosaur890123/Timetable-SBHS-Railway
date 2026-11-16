@@ -105,9 +105,6 @@ const SheetBody = ({ session, onClose, still }) => {
                         {session.round && <small>{session.round}</small>}
                     </Row>
                 )}
-                {session.staff?.length > 0 && (
-                    <Row label="Staff">{session.staff.join(', ')}</Row>
-                )}
                 {session.notes && <Row label="Notes"><span className="nf-pop__notes">{session.notes}</span></Row>}
             </dl>
 
