@@ -31,7 +31,7 @@ const hasCoords = (location) => Number.isFinite(Number(location?.latitude)) && N
 
 const mapsUrl = (location) => {
     if (hasCoords(location)) return `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
-    const query = [location?.name, location?.address].filter(Boolean).join(', ');
+    const query = location?.address || '';
     return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
 };
 
@@ -54,7 +54,7 @@ const SheetBody = ({ session, onClose, still }) => {
     const start = startOf(session);
     const end = endOf(session);
     const { location, result } = session;
-    const maps = location && mapsUrl(location);
+    const maps = location && (hasCoords(location) || location.address) ? mapsUrl(location) : null;
     const when = start
         ? `${format(start, 'EEEE d MMMM')}, ${clockTime(start)}${end ? ` to ${clockTime(end)}` : ''}`
         : [session.date, session.time].filter(Boolean).join(', ');
