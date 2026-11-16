@@ -39,6 +39,24 @@ const getScanTime = (record) => {
     return Number.isNaN(date.getTime()) ? null : format(date, 'h:mm a');
 };
 
+const SCAN_STATUS_CACHE_KEY = 'attendance_scan_status';
+const readScanStatusCache = (studentId, date) => {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SCAN_STATUS_CACHE_KEY) || 'null');
+        return cached?.studentId === studentId && cached?.date === date
+            && ['scanned', 'not-scanned'].includes(cached?.state) ? cached : null;
+    } catch {
+        return null;
+    }
+};
+
+const saveScanStatusCache = (studentId, status) => {
+    if (!['scanned', 'not-scanned'].includes(status.state)) return;
+    try {
+        localStorage.setItem(SCAN_STATUS_CACHE_KEY, JSON.stringify({ studentId, ...status }));
+    } catch { /* The live status still works when storage is unavailable. */ }
+};
+
 const formatCountdown = (mins) => {
     const totalSeconds = Math.max(0, Math.round(mins * 60));
     const hrs = Math.floor(totalSeconds / 3600);
@@ -406,7 +424,11 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 // live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
-    const [scanIn, setScanIn] = useState({ date: null, state: 'loading' });
+    const [scanIn, setScanIn] = useState(() => {
+        const date = format(new Date(), 'yyyy-MM-dd');
+        return readScanStatusCache(user?.studentId, date) || { date: null, state: 'loading' };
+    });
+    const [nextDayScanIn, setNextDayScanIn] = useState({ date: null, state: 'loading' });
     const [todayTimetable, setTodayTimetable] = useState(() => peekDayTimetable(new Date()));
 
     useEffect(() => {
@@ -434,10 +456,17 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const hasTodaySchedule = todaySlots.length > 0;
     const schoolStartMin = todaySlots[0]?.startMin ?? 9 * 60;
     const schoolEndMin = todaySlots.at(-1)?.endMin ?? 15 * 60 + 30;
+    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const afterSchool = hasTodaySchedule && nowMin >= schoolEndMin;
     const isSchoolDay = getDay(now) !== 0 && getDay(now) !== 6 && hasTodaySchedule;
     useEffect(() => {
         if (!user?.studentId || !isSchoolDay || !hasTodaySchedule) {
             setScanIn({ date: todayKey, state: 'unknown' });
+            return;
+        }
+        const cachedStatus = readScanStatusCache(user.studentId, todayKey);
+        if (cachedStatus?.state === 'scanned') {
+            setScanIn(cachedStatus);
             return;
         }
         let active = true;
@@ -462,10 +491,14 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                 if (!active) return;
                 if (record) {
                     scanned = true;
-                    setScanIn({ date: todayKey, state: 'scanned', time: getScanTime(record) });
+                    const nextStatus = { date: todayKey, state: 'scanned', time: getScanTime(record) };
+                    setScanIn(nextStatus);
+                    saveScanStatusCache(user.studentId, nextStatus);
                     return;
                 }
-                setScanIn({ date: todayKey, state: 'not-scanned' });
+                const nextStatus = { date: todayKey, state: 'not-scanned' };
+                setScanIn(nextStatus);
+                saveScanStatusCache(user.studentId, nextStatus);
             } catch {
                 if (!active) return;
                 setScanIn({ date: todayKey, state: 'unknown' });
@@ -480,7 +513,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             const untilEnd = Math.max(0, (schoolEndMin - currentMin) * 60000);
             if (untilEnd > 0) timer = setTimeout(poll, Math.min(delay, untilEnd));
         };
-        setScanIn({ date: todayKey, state: 'loading' });
+        if (!cachedStatus) setScanIn({ date: todayKey, state: 'loading' });
         const onVisibilityChange = () => {
             if (document.visibilityState === 'hidden') clearTimeout(timer);
             else scheduleInitialCheck();
@@ -494,6 +527,37 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         };
     }, [user?.studentId, todayKey, isSchoolDay, hasTodaySchedule, schoolStartMin, schoolEndMin]);
 
+    // At today's last bell, switch the pill to tomorrow's scan record when tomorrow
+    // has classes. This is a single lookup; polling for today has already stopped.
+    useEffect(() => {
+        if (!user?.studentId || !afterSchool) return;
+        const nextDate = addDays(now, 1);
+        const nextDateKey = format(nextDate, 'yyyy-MM-dd');
+        const cached = readScanStatusCache(user.studentId, nextDateKey);
+        setNextDayScanIn(cached || { date: nextDateKey, state: 'loading' });
+        let active = true;
+        (async () => {
+            try {
+                const timetable = await fetchDayTimetable(nextDate);
+                if (timetable?.date !== nextDateKey || buildSlots(timetable).length === 0) {
+                    if (active) setNextDayScanIn({ date: nextDateKey, state: 'unknown' });
+                    return;
+                }
+                if (active && !cached) setNextDayScanIn({ date: nextDateKey, state: 'not-scanned' });
+                const record = await fetchStudentAttendanceScanIn(user.studentId, nextDateKey);
+                if (!active) return;
+                const status = record
+                    ? { date: nextDateKey, state: 'scanned', time: getScanTime(record) }
+                    : { date: nextDateKey, state: 'not-scanned' };
+                setNextDayScanIn(status);
+                saveScanStatusCache(user.studentId, status);
+            } catch {
+                if (active) setNextDayScanIn({ date: nextDateKey, state: 'unknown' });
+            }
+        })();
+        return () => { active = false; };
+    }, [user?.studentId, todayKey, afterSchool]);
+
     // The greeting and rail describe the real school day (today, or the next one after
     // school), not whichever day is being browsed below. Falls back to the viewed day
     // until that's loaded.
@@ -501,8 +565,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = dayKey === todayKey;
     const isTomorrow = dayKey === format(addDays(now, 1), 'yyyy-MM-dd');
-    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-
     const classCount = slots.filter(isClass).length;
     const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : format(new Date(`${dayKey}T00:00`), 'EEEE');
 
@@ -560,12 +622,21 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
-                        {isSchoolDay && hasTodaySchedule && nowMin < schoolEndMin && scanIn.date === todayKey && scanIn.state !== 'loading' && scanIn.state !== 'unknown' && (
-                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanIn.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
-                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                <span>{format(now, 'EEE d MMM')} · {scanIn.state === 'scanned' ? `Scanned on today at ${scanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
+                        {(() => {
+                            const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
+                            const shown = afterSchool ? nextDayScanIn : scanIn;
+                            const shownDate = afterSchool ? nextDayKey : todayKey;
+                            const showPill = (afterSchool || isSchoolDay) && shown.date === shownDate && ['scanned', 'not-scanned'].includes(shown.state);
+                            if (!showPill) return null;
+                            return (
+                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${shown.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
+                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${shown.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                <span>{afterSchool
+                                    ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shown.state === 'scanned' ? `Scanned on at ${shown.time || 'time unavailable'}` : 'Not scanned yet'}`
+                                    : shown.state === 'scanned' ? `Scanned on today at ${shown.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
                             </p>
-                        )}
+                            );
+                        })()}
                     </div>
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
