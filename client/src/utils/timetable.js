@@ -38,13 +38,16 @@ const variationMatchesPeriod = (variation, periodInfo) => {
 export const isBreakBell = (bellId, periodInfo = null) => {
     if (!bellId) return false;
     const id = String(bellId).toUpperCase().trim();
-    if (id === "R" || id === "L" || id === "RC") return true;
+    if (id === 'RC') return true;
     if (periodInfo && periodInfo.title) {
         const title = String(periodInfo.title).toLowerCase();
-        if (title.includes('lunch') || title.includes('recess')) return true;
+        // R/L can identify a lunch slot that contains a real class. An
+        // assigned class title takes precedence over the legacy bell code.
+        if (title.includes('lunch') || title.includes('recess') || title.includes('roll call')) return true;
         if (id === "0" && title === "period 0") return true;
+        return false;
     }
-    return false;
+    return id === 'R' || id === 'L';
 };
 
 // Check if a period represents sport or scripture using the same exception logic as canvas links

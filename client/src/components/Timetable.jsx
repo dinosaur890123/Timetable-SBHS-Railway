@@ -303,7 +303,17 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             }
             rows.push({ ...row });
             return rows;
-        }, []);
+        }, []).map((row, index, rows) => {
+            const lunchRows = rows
+                .map((candidate, rowIndex) => ({ candidate, rowIndex }))
+                .filter(({ candidate }) => candidate.isRealBreak && /lunch/i.test(candidate.periodInfo.title || candidate.bell.bellDisplay || ''));
+            const splitByClass = lunchRows.length > 1 && rows
+                .slice(lunchRows[0].rowIndex + 1, lunchRows[lunchRows.length - 1].rowIndex)
+                .some(middle => !middle.isBreak && middle.periodInfo.title && middle.periodInfo.title !== 'Free Period');
+            if (!splitByClass || !row.isRealBreak || !/lunch/i.test(row.periodInfo.title || row.bell.bellDisplay || '')) return row;
+            const lunchNumber = lunchRows.findIndex(({ rowIndex }) => rowIndex === index) + 1;
+            return { ...row, label: `Lunch ${lunchNumber}` };
+        });
 
         // A bell has just rung if the live row changed since the last tick on the same day.
         // Opening the page or browsing to another day never counts as a bell.
@@ -402,7 +412,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             if (dayData?.routine) {
                 dayData.routine.split(',').forEach(bellId => {
                     const cleanId = String(bellId).trim();
-                    if (cleanId && !isBreakBell(cleanId) && cleanId !== 'RC') {
+                    if (cleanId && cleanId !== 'RC') {
                         allPeriodSlots.add(cleanId);
                     }
                 });
@@ -410,7 +420,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             if (dayData?.periods) {
                 Object.keys(dayData.periods).forEach(bellId => {
                     const cleanId = String(bellId).trim();
-                    if (cleanId && !isBreakBell(cleanId) && cleanId !== 'RC') {
+                    if (cleanId && cleanId !== 'RC') {
                         allPeriodSlots.add(cleanId);
                     }
                 });
@@ -425,10 +435,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             }
             return String(a).localeCompare(String(b), undefined, { numeric: true });
         }).filter(bellId => {
-            // The cycle grid shows teaching periods only; breaks don't earn a row.
-            const bell = bells.find(b => b.bell === bellId);
-            if (isBreakBell(bellId, { title: bell?.bellDisplay })) return false;
-            // Keep the period if it has at least one class anywhere in the cycle
+            // Keep assigned classes, including lunch classes whose period code
+            // may be R or L. Empty break slots are filtered out by classPeriod.
             return allDayNums.some(dayNum => classPeriod(dayNum, bellId));
         });
 
