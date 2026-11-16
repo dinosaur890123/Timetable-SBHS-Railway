@@ -8,6 +8,7 @@ import {
 import { Hl } from '../study/noteflow';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { clockTime, dayKeyOf, sessionName, startOf } from './sessions';
+import ScheduleView from './ScheduleView';
 
 const WEEK = { weekStartsOn: 1 };
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -72,9 +73,12 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
     };
 
     const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(week, i)), [week]);
-    const weekRows = weekDays
-        .map((day) => ({ day, sessions: byDay[format(day, 'yyyy-MM-dd')] || [] }))
-        .filter((row) => row.sessions.length > 0);
+    const weekSessions = useMemo(() => {
+        return weekDays.flatMap(day => {
+            const key = format(day, 'yyyy-MM-dd');
+            return byDay[key] || [];
+        });
+    }, [weekDays, byDay]);
 
     return (
         <section className="nf-cal" ref={sectionRef}>
@@ -149,33 +153,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                 </div>
             </div>
             ) : (
-            <div className="nf-sheet nf-cal__weeklist">
-                {weekRows.length > 0 ? weekRows.map(({ day, sessions: daySessions }) => (
-                    <div key={day.toISOString()} className="nf-cal__daygroup">
-                        <div className="nf-cal__dayhead">
-                            <span className="nf-cal__downame">{format(day, 'EEE')}</span>
-                            <span className={`nf-cal__datenum tnum ${isToday(day) ? 'is-today' : ''}`}>
-                                {isToday(day) ? <Hl still={still}>{format(day, 'd MMM')}</Hl> : format(day, 'd MMM')}
-                            </span>
-                        </div>
-                        {daySessions.map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                data-no-press
-                                className={`nf-cb-session nf-cal__event rounded-none ${s.cancelled ? 'is-cancelled' : ''}`}
-                                onClick={() => onOpen(s)}
-                                aria-label={`${sessionName(s)}${s.cancelled ? ', cancelled' : ''}. Show details`}
-                            >
-                                <span className="nf-cb-session__time tnum">{clockTime(startOf(s))}</span>
-                                <span className="nf-cb-session__name">{sessionName(s)}</span>
-                            </button>
-                        ))}
-                    </div>
-                )) : (
-                    <p className="nf-cb-empty">Nothing on Clipboard this week.</p>
-                )}
-            </div>
+            <ScheduleView sessions={weekSessions} onOpen={onOpen} />
             )}
         </section>
     );

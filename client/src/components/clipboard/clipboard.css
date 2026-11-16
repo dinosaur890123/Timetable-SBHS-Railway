@@ -179,3 +179,60 @@ html[data-ui] .nf.nf-cb-line {
 .nf-cb-line__rule { flex: 1; min-width: 12px; height: 1px; background: var(--rule); }
 .nf-cb-line__where { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-3); }
 html[data-ui] .nf.nf-cb-line:hover .nf-cb-line__name { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Schedule View ---------- */
+
+.nf-schedule { padding: 0; }
+.nf-schedule-empty { padding: 48px 0; text-align: center; color: var(--ink-3); }
+
+.nf-schedule-day { padding: 0; }
+.nf-schedule-day + .nf-schedule-day { border-top: 1px solid var(--rule); }
+
+.nf-schedule-dayhead {
+    display: flex; align-items: baseline; gap: 12px; padding: 14px 16px 10px;
+    background: var(--sheet);
+}
+
+.nf-schedule-dayname {
+    font-weight: 600; font-size: 16px; letter-spacing: -0.01em; color: var(--ink);
+}
+
+.nf-schedule-date {
+    font-size: 14px; color: var(--ink-3); font-weight: 500;
+}
+
+.nf-schedule-date.is-today { color: var(--ink); font-weight: 600; }
+
+.nf-schedule-events { display: flex; flex-direction: column; }
+
+html[data-ui] .nf .nf-schedule-event {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 14px 16px; border: 0; border-bottom: 1px solid var(--rule);
+    background: var(--sheet); color: var(--ink); text-align: left; font: inherit; cursor: pointer;
+    transition: background-color 110ms cubic-bezier(.2, .7, .2, 1);
+}
+
+html[data-ui] .nf .nf-schedule-event:hover { background: var(--wash); }
+.nf-schedule-event:last-child { border-bottom: 0; }
+
+.nf-schedule-time {
+    flex-shrink: 0; font-size: 14px; color: var(--ink-2); font-weight: 500;
+}
+
+.nf-schedule-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 999px;
+    background: var(--violet); flex-shrink: 0;
+}
+
+.nf-schedule-event.is-cancelled .nf-schedule-dot {
+    background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-4);
+}
+
+.nf-schedule-name {
+    flex: 1; min-width: 0; font-weight: 500; font-size: 15px;
+    letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.nf-schedule-event.is-cancelled .nf-schedule-name {
+    text-decoration: line-through; color: var(--ink-3);
+}
