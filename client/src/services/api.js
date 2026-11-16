@@ -511,9 +511,11 @@ export const fetchStudentPreExplainedAbsences = (studentId) =>
 
 export const fetchStudentClipboardSessions = async (studentId, options = {}) => {
     const currentYear = options.year || new Date().getFullYear();
+    const lastYear = options.year ? currentYear : currentYear + 1;
     const params = new URLSearchParams();
     params.set('date[after]', options.startDate || `${currentYear}-01-01`);
-    params.set('date[before]', options.endDate || `${currentYear}-12-31`);
+    // Keep next year's sessions available when the timetable is navigated forward.
+    params.set('date[before]', options.endDate || `${lastYear}-12-31`);
     params.set('_itemsPerPage', String(options.itemsPerPage || 300));
     if (options.page) params.set('_page', String(options.page));
     if (options.context) params.set('context', String(options.context));
