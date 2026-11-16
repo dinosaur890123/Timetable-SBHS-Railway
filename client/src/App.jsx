@@ -1285,6 +1285,8 @@ function App() {
                     })
                     .catch(err => {
                         console.error("Failed to load Clipboard sessions:", err);
+                        // Forget the failed request so the next call tries again.
+                        clipboardSessionsRequest.current = { id: null, promise: null };
                         return clipboardSessions;
                     })
             };

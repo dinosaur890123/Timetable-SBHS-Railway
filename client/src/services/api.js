@@ -642,8 +642,10 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
 
         return parseSessions(items);
     } catch (err) {
+        // Throw rather than return []: an empty list is saved as "no sessions" over the
+        // copy on the device, which is how an SBHS hiccup blanked the whole calendar.
         console.error('Failed to fetch clipboard sessions:', err);
-        return [];
+        throw err;
     }
 };
 

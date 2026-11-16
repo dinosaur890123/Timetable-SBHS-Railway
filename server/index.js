@@ -3227,6 +3227,20 @@ const forwardPortalQueryParams = (targetUrl, req) => {
     }
 };
 
+// SBHS can be slow on big collections (a year of Clipboard sessions); the browser waits 20s.
+const PORTAL_TIMEOUT_MS = 15000;
+
+// A signed-in student's request that SBHS failed. Sending the mock (an empty list) here
+// used to look like "no data" and overwrite the copy saved on the device, so a slow or
+// failing SBHS blanked pages like Clipboard. An error lets the app keep its saved copy.
+// 404 still gets the mock: it means there's nothing there, not that SBHS failed.
+// 401 becomes 403 so a Core API refusal is never read as the sign-in having lapsed.
+const sendPortalFailure = (res, status, generateMockData, user) => {
+    if (status === 404) return res.json(generateMockData(user));
+    const code = !status ? 504 : status >= 500 ? 502 : status === 401 ? 403 : status;
+    return res.status(code).json({ error: 'sbhs_unavailable', upstreamStatus: status || null });
+};
+
 // Main proxy/mock resolver for student endpoints
 const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const isAuthorized = await checkStudentAccess(req, res);
@@ -3254,16 +3268,18 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
 
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(8000)
+                signal: AbortSignal.timeout(PORTAL_TIMEOUT_MS)
             });
             if (response.ok) {
                 const data = await response.json();
                 return res.json(data);
             }
             const detail = (await response.text().catch(() => '')).slice(0, 300);
-            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}, falling back to mock: ${detail}`);
+            console.warn(`[proxy] SBHS API returned ${response.status} for ${subpath}: ${detail}`);
+            return sendPortalFailure(res, response.status, generateMockData, req.user);
         } catch (e) {
             console.error(`[proxy] SBHS API call failed for ${subpath}:`, e.message);
+            return sendPortalFailure(res, 0, generateMockData, req.user);
         }
     }
     res.json(generateMockData(req.user));
@@ -3278,16 +3294,18 @@ const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
             forwardPortalQueryParams(url, req);
             const response = await fetch(url.toString(), {
                 headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(8000)
+                signal: AbortSignal.timeout(PORTAL_TIMEOUT_MS)
             });
             if (response.ok) {
                 const data = await response.json();
                 return res.json(data);
             }
             const detail = (await response.text().catch(() => '')).slice(0, 300);
-            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}, falling back to mock: ${detail}`);
+            console.warn(`[proxy] SBHS API returned ${response.status} for global ${subpath}: ${detail}`);
+            return sendPortalFailure(res, response.status, generateMockData, req.user);
         } catch (e) {
             console.error(`[proxy] SBHS API call failed for global ${subpath}:`, e.message);
+            return sendPortalFailure(res, 0, generateMockData, req.user);
         }
     }
     res.json(generateMockData(req.user));
