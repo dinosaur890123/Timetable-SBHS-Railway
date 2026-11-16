@@ -249,7 +249,9 @@ export const ModernTopbar = ({
                     <Search size={16} />
                 </IconButton>
 
-                <PWAInstallButton />
+                <div className="hidden md:block">
+                    <PWAInstallButton />
+                </div>
 
                 <CanvasLinkNotifications
                     aiDisabled={aiDisabled}

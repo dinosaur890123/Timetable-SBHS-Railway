@@ -18,15 +18,15 @@ const SKY = [
 // through the 26th, then a New Year's Eve mix of gold, hot pink, silver and
 // electric blue through January 6. Same [hour, name, three colours] shape.
 const CHRISTMAS_SKY = [
-    [0, 'christmas night', ['#7f1d1d', '#14532d', '#991b1b']],
-    [5, 'before dawn', ['#9f1239', '#166534', '#b91c1c']],
-    [6.5, 'dawn', ['#f87171', '#4ade80', '#dc2626']],
-    [9, 'morning', ['#fca5a5', '#86efac', '#ef4444']],
-    [12.5, 'midday', ['#ef4444', '#22c55e', '#b91c1c']],
-    [15.5, 'afternoon', ['#fb7185', '#34d399', '#dc2626']],
-    [18, 'sunset', ['#f43f5e', '#4ade80', '#7f1d1d']],
-    [20, 'evening', ['#be123c', '#16a34a', '#991b1b']],
-    [24, 'christmas night', ['#7f1d1d', '#14532d', '#991b1b']]
+    [0, 'christmas night', ['#7f1d1d', '#991b1b', '#14532d']],
+    [5, 'before dawn', ['#9f1239', '#b91c1c', '#166534']],
+    [6.5, 'dawn', ['#f87171', '#dc2626', '#4ade80']],
+    [9, 'morning', ['#fca5a5', '#ef4444', '#86efac']],
+    [12.5, 'midday', ['#ef4444', '#b91c1c', '#22c55e']],
+    [15.5, 'afternoon', ['#fb7185', '#dc2626', '#34d399']],
+    [18, 'sunset', ['#f43f5e', '#7f1d1d', '#4ade80']],
+    [20, 'evening', ['#be123c', '#991b1b', '#16a34a']],
+    [24, 'christmas night', ['#7f1d1d', '#991b1b', '#14532d']]
 ];
 
 const NYE_SKY = [
