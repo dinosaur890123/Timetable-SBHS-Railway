@@ -1187,13 +1187,16 @@ function App() {
         // Today until its last bell, then the next school day — or the next weekend day
         // with a Clipboard session when there is one before it. If that can't be worked
         // out (offline with nothing saved), the app stays on today.
+        const provisionalDay = startDay || new Date();
         (async () => {
             try {
                 const { date } = await fetchNextSchoolDay();
                 const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
                 const openDay = weekendClipboardDay(date, sessions);
                 setDefaultDate(openDay);
-                setViewDate(openDay);
+                // This request can finish after the user has already moved to another day.
+                // Only replace the provisional startup date while it is still selected.
+                setViewDate(current => isSameDay(current, provisionalDay) ? openDay : current);
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
             }
