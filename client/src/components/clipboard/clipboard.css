@@ -185,12 +185,15 @@ html[data-ui] .nf.nf-cb-line:hover .nf-cb-line__name { text-decoration: underlin
 .nf-schedule { padding: 0; }
 .nf-schedule-empty { padding: 48px 0; text-align: center; color: var(--ink-3); }
 
-.nf-schedule-day { padding: 12px 0; }
-.nf-schedule-day + .nf-schedule-day { border-top: 1px solid var(--rule); }
+.nf-schedule-day {
+    padding: 0; margin-bottom: 12px;
+    background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px;
+    overflow: hidden;
+}
 
 .nf-schedule-dayhead {
     display: flex; align-items: baseline; gap: 12px; padding: 14px 16px 10px;
-    background: var(--wash); border-radius: 12px;
+    background: var(--wash);
 }
 
 .nf-schedule-dayname {
@@ -205,8 +208,6 @@ html[data-ui] .nf.nf-cb-line:hover .nf-cb-line__name { text-decoration: underlin
 
 .nf-schedule-events {
     display: flex; flex-direction: column;
-    background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px;
-    overflow: hidden;
 }
 
 html[data-ui] .nf .nf-schedule-event {
@@ -215,9 +216,6 @@ html[data-ui] .nf .nf-schedule-event {
     background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer;
     transition: background-color 110ms cubic-bezier(.2, .7, .2, 1);
 }
-
-html[data-ui] .nf .nf-schedule-event:hover { background: var(--wash); }
-.nf-schedule-event:last-child { border-bottom: 0; }
 
 html[data-ui] .nf .nf-schedule-event:hover { background: var(--wash); }
 .nf-schedule-event:last-child { border-bottom: 0; }
