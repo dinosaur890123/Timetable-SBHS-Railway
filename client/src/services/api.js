@@ -492,6 +492,16 @@ async function fetchFromBackend(endpoint) {
 // page needs (dates, categories and groups, nominations, prizes).
 export const fetchStudentAwards = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/awards`).then(data => normaliseList(data, normaliseIssuedAward));
+// Scan-in detail is keyed by the school date (YYYY-MM-DD). A 404 means no scan
+// has been recorded for that date; other failures should stay unknown in the UI.
+export const fetchStudentAttendanceScanIn = async (studentId, date) => {
+    try {
+        return await fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${encodeURIComponent(date)}`);
+    } catch (error) {
+        if (String(error?.message || '').includes('Backend API Error 404')) return null;
+        throw error;
+    }
+};
 export const fetchStudentBadges = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/badges`).then(data => normaliseList(data, normaliseIssuedAward));
 export const fetchStudentDecorations = (studentId) =>

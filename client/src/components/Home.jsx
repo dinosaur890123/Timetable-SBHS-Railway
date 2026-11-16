@@ -5,6 +5,7 @@ import { format, addDays, parseISO } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { TeacherTreat } from './TeacherTreat';
+import { fetchStudentAttendanceScanIn } from '../services/api';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -393,11 +394,30 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 // live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
+    const [scanIn, setScanIn] = useState({ date: null, state: 'loading' });
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    const todayKey = format(now, 'yyyy-MM-dd');
+    const selectedDateKey = format(viewDate || now, 'yyyy-MM-dd');
+    useEffect(() => {
+        if (!user?.studentId) return;
+        let active = true;
+        const load = async () => {
+            try {
+                const record = await fetchStudentAttendanceScanIn(user.studentId, selectedDateKey);
+                if (active) setScanIn({ date: selectedDateKey, state: record ? 'scanned' : 'not-scanned' });
+            } catch {
+                if (active) setScanIn({ date: selectedDateKey, state: 'unknown' });
+            }
+        };
+        setScanIn({ date: selectedDateKey, state: 'loading' });
+        load();
+        return () => { active = false; };
+    }, [user?.studentId, selectedDateKey]);
 
     // The greeting and rail describe the real school day (today, or the next one after
     // school), not whichever day is being browsed below. Falls back to the viewed day
@@ -405,7 +425,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const day = railTimetable || timetableData;
     const slots = buildSlots(day);
     const inner = day?.timetable?.timetable || day?.timetable;
-    const todayKey = format(now, 'yyyy-MM-dd');
     const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = dayKey === todayKey;
     const isTomorrow = dayKey === format(addDays(now, 1), 'yyyy-MM-dd');
@@ -468,6 +487,12 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
                         {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
+                        {scanIn.date === selectedDateKey && scanIn.state !== 'loading' && scanIn.state !== 'unknown' && (
+                            <p className={`mt-1 flex items-center gap-1.5 text-xs ${scanIn.state === 'scanned' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                {scanIn.state === 'scanned' ? 'Scanned on' : 'Not scanned yet'}
+                            </p>
+                        )}
                     </div>
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
