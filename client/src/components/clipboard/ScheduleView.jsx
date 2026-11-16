@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef } from 'react';
 import { format, isToday } from 'date-fns';
 import { Hl, useNoteFlowFonts } from '../study/noteflow';
 import { useReducedMotion } from 'framer-motion';
-import { startOf, clockTime, sessionName, endOf } from './sessions';
+import { startOf, clockTime, sessionInk, sessionName, endOf } from './sessions';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 // A mobile-friendly schedule view with events grouped by day
@@ -91,7 +91,7 @@ const ScheduleView = ({ sessions, onOpen }) => {
                                 <span
                                     className="nf-schedule-dot"
                                     aria-hidden="true"
-                                    style={s.colour ? { background: s.colour } : undefined}
+                                    style={sessionInk(s)}
                                 />
                                 <span className="nf-schedule-name">{sessionName(s)}</span>
                             </button>

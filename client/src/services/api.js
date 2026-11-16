@@ -477,6 +477,13 @@ const clipboardStaffName = (member) => {
     return [member.firstName, member.lastName].filter(Boolean).join(' ')
         || member.name || member.displayName || '';
 };
+// An activity's hexColour, as "#rrggbb". The API may omit the "#", send a short
+// "#rgb", or send null; anything that isn't a hex colour is dropped.
+const clipboardColour = (hex) => {
+    const m = typeof hex === 'string' && hex.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    return m ? `#${m[1].toLowerCase()}` : null;
+};
+
 const clipboardStaffList = (staff) => (Array.isArray(staff) ? staff : staff ? [staff] : [])
     .map(clipboardStaffName)
     .filter(Boolean);
@@ -539,6 +546,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
             id: item.id || Math.random(),
             activity: item.activity?.name || item.title || 'Session',
             title: item.title && item.title !== item.activity?.name ? item.title : '',
+            colour: clipboardColour(item.activity?.hexColour),
             date: formatDay(item.startDateTime),
             time: formatTimeRange(item.startDateTime, item.endDateTime),
             start: item.startDateTime || null,

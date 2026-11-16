@@ -7,7 +7,7 @@ import {
 } from 'date-fns';
 import { Hl } from '../study/noteflow';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { clockTime, dayKeyOf, sessionName, startOf } from './sessions';
+import { dayKeyOf, sessionInk, sessionName, startOf } from './sessions';
 import { formatTime12Hour } from '../../utils/timetable';
 import ScheduleView from './ScheduleView';
 
@@ -140,7 +140,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                                             onClick={() => onOpen(s)}
                                                             aria-label={`${sessionName(s)}${s.cancelled ? ', cancelled' : ''}. Show details`}
                                                         >
-                                                            <span className="nf-cb-dot" />
+                                                            <span className="nf-cb-dot" style={sessionInk(s)} />
                                                             <span><span className="tnum">{formatTime12Hour(format(startOf(s), 'HH:mm'))}</span> {s.activity}</span>
                                                         </button>
                                                     ))}

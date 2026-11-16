@@ -22,6 +22,10 @@ export const clockTime = (date) => (date ? `${format(date, 'h:mm')} ${format(dat
 
 export const sessionName = (session) => session.title || session.activity;
 
+// The activity's own colour on its dot, through a CSS variable so the cancelled
+// style (a hollow ring) still wins. Falls back to Clipboard violet.
+export const sessionInk = (session) => (session?.colour ? { '--cb-colour': session.colour } : undefined);
+
 const hasCoords = (location) => Number.isFinite(Number(location?.latitude)) && Number.isFinite(Number(location?.longitude))
     && !(Number(location.latitude) === 0 && Number(location.longitude) === 0);
 
@@ -70,7 +74,10 @@ const SheetBody = ({ session, onClose, still }) => {
             <button type="button" className="nf-cb-btn nf-cb-btn--bare nf-pop__close" onClick={onClose} aria-label="Close">
                 <X size={16} strokeWidth={1.75} />
             </button>
-            <span className="nf-meta">{session.cancelled ? `${session.activity}, cancelled` : session.title ? session.activity : 'Clipboard'}</span>
+            <span className="nf-meta nf-pop__meta">
+                <span className="nf-cb-dot" aria-hidden="true" style={sessionInk(session)} />
+                {session.cancelled ? `${session.activity}, cancelled` : session.title ? session.activity : 'Clipboard'}
+            </span>
             <h2 className="nf-pop__title">{sessionName(session)}</h2>
 
             <dl className="nf-pop__rows">
@@ -173,7 +180,7 @@ export const SessionLine = ({ session, onOpen }) => {
         onClick={() => onOpen(session)}
         aria-label={`${sessionName(session)}${session.cancelled ? ', cancelled' : ''}. Show details`}
     >
-        <span className="nf-cb-dot" aria-hidden="true" />
+        <span className="nf-cb-dot" aria-hidden="true" style={sessionInk(session)} />
         <span className="nf-cb-line__name">{sessionName(session)}</span>
         <span className="nf-cb-line__rule" aria-hidden="true" />
         <span className="nf-cb-line__where">{session.cancelled ? 'Cancelled' : session.location?.name || 'Clipboard'}</span>
