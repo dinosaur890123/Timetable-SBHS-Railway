@@ -25,18 +25,6 @@ export const onCachedDataChange = (listener) => {
 const store = new Map();
 const inFlight = new Map();
 const FRESH_FOR = 60 * 1000;
-// Keep recently used page data for smooth navigation, but don't let browsing
-// through calendar months grow the session cache without bound.
-const MAX_MEMORY_ENTRIES = 8;
-
-const remember = (key, entry) => {
-    // Map insertion order doubles as least-recently-used order.
-    store.delete(key);
-    store.set(key, entry);
-    if (store.size > MAX_MEMORY_ENTRIES) {
-        store.delete(store.keys().next().value);
-    }
-};
 
 // Bump when the shape of what a page saves changes, so an old saved copy is never read back.
 const SAVED_PREFIX = 'page_cache:v2:';
@@ -85,13 +73,9 @@ const writeSaved = (key, entry) => {
 
 // The entry for a key: this session's, or the copy saved on the device.
 const lookup = (key) => {
-    if (store.has(key)) {
-        const entry = store.get(key);
-        remember(key, entry);
-        return entry;
-    }
+    if (store.has(key)) return store.get(key);
     const saved = readSaved(key);
-    if (saved) remember(key, saved);
+    if (saved) store.set(key, saved);
     return saved;
 };
 
@@ -103,7 +87,7 @@ export const loadCached = (key, load) => {
     const request = load(previous)
         .then(value => {
             const entry = { value, at: Date.now() };
-            remember(key, entry);
+            store.set(key, entry);
             writeSaved(key, entry);
             return value;
         })
