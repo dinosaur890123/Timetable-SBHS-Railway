@@ -133,8 +133,8 @@ const buildClipboardSlots = (sessions, dayKey) => {
                 bellId: 'EC',
                 bell: { time: session.start.split('T')[1]?.substring(0, 5), endTime: session.end.split('T')[1]?.substring(0, 5) },
                 period: {
-                    title: session.activity,
-                    fullTitle: session.title ? `${session.activity}: ${session.title}` : session.activity,
+                    title: session.title || session.activity,
+                    fullTitle: session.title || session.activity,
                     room: session.location?.name || null,
                     isExtracurricular: true
                 },
@@ -260,7 +260,7 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
         <SubjectDot colour={slot.period.colour} />
-        <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
+        <span className={`font-medium text-zinc-800 dark:text-zinc-200 ${slot.isExtracurricular ? 'min-w-0 flex-1 whitespace-normal break-words' : 'truncate'}`}>
             <span className="lg:hidden">{slot.period.title}</span>
             <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
         </span>
@@ -370,7 +370,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
-            <ClassTitle period={current.period} className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate" />
+            <ClassTitle period={current.period} className={`text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white ${isExtracurricular ? 'whitespace-normal break-words' : 'truncate'}`} />
             <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
@@ -594,7 +594,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                             </p>
                         )}
                     </div>
-                    <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+                    <div className="hidden md:block">
+                        <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+                    </div>
                 </div>
             </header>
             </div>
@@ -605,6 +607,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
                 {/* On phones the countdown sits above the list so it's seen first */}
                 {rail && <div className="lg:hidden">{rail}</div>}
+                <div className="mb-5 md:hidden">
+                    <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+                </div>
                 <section className="min-w-0">
                     {dayNav}
                     {children}
