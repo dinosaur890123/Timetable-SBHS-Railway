@@ -557,7 +557,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
     const shownScanIn = afterSchool ? nextDayScanIn : scanIn;
     const shownScanDate = afterSchool ? nextDayKey : todayKey;
-    const showScanPill = (afterSchool || isSchoolDay)
+    const showScanPill = !afterSchool && isSchoolDay
         && shownScanIn.date === shownScanDate
         && ['scanned', 'not-scanned'].includes(shownScanIn.state);
     const scanUrgent = !afterSchool && shownScanIn.state === 'not-scanned'
