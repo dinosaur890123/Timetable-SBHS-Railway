@@ -476,10 +476,14 @@ const PlanView = ({ summary }) => {
             const plannedPoints = plannedAwards
                 .filter(a => a.category?.name === area.name)
                 .reduce((sum, a) => sum + a.points, 0);
-            const base = area.basePoints || 0;
+            const areaNominations = summary.nominationLadder.filter(n => String(n.fromGroup ?? 'all') === area.id);
+            const projectedPoints = area.points + plannedPoints;
+            const hypotheticallyReached = areaNominations.filter(n => n.state !== 'earned' && projectedPoints >= n.pointsRequired);
+            const earnedLevels = areaNominations.filter(n => n.state === 'earned');
+            const base = Math.max(0, ...earnedLevels.map(n => n.pointsRequired), ...hypotheticallyReached.map(n => n.pointsRequired));
             const required = area.levelGap || 30;
-            const toward = area.next ? Math.max(0, area.next.points - base) + plannedPoints : area.points + plannedPoints;
-            const earned = area.earned + (area.next && toward >= required ? 1 : 0);
+            const toward = Math.max(0, projectedPoints - base);
+            const earned = area.earned + hypotheticallyReached.length;
             return { ...area, plannedPoints, earned, toward, required };
         });
 
@@ -533,10 +537,10 @@ const PlanView = ({ summary }) => {
             </Card>
 
             {/* Search Results (compact) */}
-            {groups.length > 0 && (
+            {term && (groups.length > 0 || query.trim()) && (
                 <Card>
-                    <CardTitle aside={plural(groups.reduce((sum, g) => sum + g.items.length, 0), 'award')}>Search Results</CardTitle>
-                    <ul className="divide-y divide-m-line -my-2.5">
+                    <CardTitle aside={groups.length > 0 ? plural(groups.reduce((sum, g) => sum + g.items.length, 0), 'award') : null}>Search Results</CardTitle>
+                    {groups.length > 0 ? <ul className="divide-y divide-m-line -my-2.5">
                         {groups.flatMap(g => g.items).slice(0, 10).map(a => (
                             <li key={a.id} className="py-2.5 flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]">
                                 <div className="flex-1 min-w-0">
@@ -557,7 +561,7 @@ const PlanView = ({ summary }) => {
                                 </button>
                             </li>
                         ))}
-                    </ul>
+                    </ul> : <Empty>No awards match your search.</Empty>}
                     {groups.reduce((sum, g) => sum + g.items.length, 0) > 10 && (
                         <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
                             Showing first 10 results. Refine your search to see more.

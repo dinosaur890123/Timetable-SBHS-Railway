@@ -201,48 +201,22 @@ const RailLabel = ({ children, aside }) => (
     </div>
 );
 
-// The rail's card, washed with the live class's colour. `phase` names what it is showing
-// (before school, a break, a class); when that changes the card pulses once, a sheen sweeps
-// across and the new content rises in, so a bell is something you notice.
+// The rail's card, washed with the live class's colour. Phase changes update the content
+// directly so the card stays quiet while the timetable moves through the day.
 const RailCard = ({ children, colour, phase }) => {
-    const previous = useRef(phase);
-    const [changedAt, setChangedAt] = useState(0);
-    // Reduced motion keeps the swap but drops the blur, which framer-motion would still play.
-    const still = useReducedMotion();
-
-    useEffect(() => {
-        if (previous.current === phase) return;
-        previous.current = phase;
-        setChangedAt(Date.now());
-    }, [phase]);
-
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
             className={`relative overflow-hidden rounded-2xl border border-m-line bg-m-card m-shadow p-3 sm:p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
         >
-            {changedAt > 0 && (
-                <>
-                    <span key={`pulse-${changedAt}`} aria-hidden className="absolute inset-0 rounded-2xl pointer-events-none period-start" />
-                    <motion.span
-                        key={`sheen-${changedAt}`}
-                        aria-hidden
-                        className="absolute inset-y-0 left-0 w-2/3 pointer-events-none"
-                        style={{ background: 'linear-gradient(100deg, transparent, color-mix(in srgb, var(--subject-ink, hsl(var(--color-accent))) 26%, transparent), transparent)' }}
-                        initial={{ x: '-110%' }}
-                        animate={{ x: '170%' }}
-                        transition={{ duration: 1.25, ease: [0.2, 0.8, 0.2, 1] }}
-                    />
-                </>
-            )}
             <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                     key={phase}
                     className="relative"
-                    initial={still ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.97, filter: 'blur(8px)' }}
-                    animate={still ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                    exit={still ? { opacity: 0, transition: { duration: 0.1 } } : { opacity: 0, y: -10, filter: 'blur(6px)', transition: { duration: 0.18 } }}
-                    transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
                 >
                     {children}
                 </motion.div>

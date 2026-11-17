@@ -204,16 +204,6 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
   transition-timing-function: cubic-bezier(.2, .8, .2, 1);
 }
 
-/* ---------- Period change: the class that just started announces itself once ---------- */
-.period-start {
-  animation: period-start 1.6s cubic-bezier(.2, .8, .2, 1) 1;
-}
-@keyframes period-start {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--period-glow, var(--subject-ink, hsl(var(--color-accent)))) 55%, transparent); }
-  70% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--period-glow, var(--subject-ink, hsl(var(--color-accent)))) 0%, transparent); }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-
 .period-stripe { animation: period-stripe 1.1s cubic-bezier(.34, 1.56, .64, 1) 1; transform-origin: left center; }
 @keyframes period-stripe { 0% { scale: 1 1; } 35% { scale: 2.2 1.06; } 100% { scale: 1 1; } }
 
@@ -233,7 +223,7 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
   }
   /* Infinite loops at 0.001ms would strobe: hold the light still instead. */
   html[data-ui="modern"] .ambient__blob { animation: none !important; }
-  html[data-ui="modern"] :is(.period-start, .period-stripe) { animation: none !important; }
+  html[data-ui="modern"] .period-stripe { animation: none !important; }
 }
 
 /* ---------- Scale ----------

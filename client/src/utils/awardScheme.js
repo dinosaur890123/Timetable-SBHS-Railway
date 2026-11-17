@@ -245,8 +245,10 @@ export const summariseAwards = ({
         levels.sort((a, b) => a.pointsRequired - b.pointsRequired);
         const earned = levels.filter(n => n.state === 'earned');
         const next = levels.find(n => n.state !== 'earned') || null;
-        // Calculate the gap between consecutive levels (e.g., 30 between 30, 60, 90)
-        const levelGap = levels.length > 1 ? levels[1].pointsRequired - levels[0].pointsRequired : levels[0]?.pointsRequired || 30;
+        // Progress always rolls over in 30-point blocks. The first nomination
+        // threshold can be higher, but it must not change the displayed block
+        // size or the planning view's progress calculation.
+        const levelGap = 30;
         return {
             id: String(levels[0].fromGroup ?? 'all'),
             name: areaName(levels),
