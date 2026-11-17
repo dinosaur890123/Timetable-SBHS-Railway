@@ -38,7 +38,6 @@ app.use(express.json({ limit: '1mb' }));
 // In-memory fallback storage (used only when POSTGRES_URL/DATABASE_URL is not set)
 let users = [];
 let logs = []; // System logs
-let aiUsageLogs = []; // AI usage logs memory fallback
 let notes = []; // Study notes memory fallback
 let feedbackEntries = []; // Feedback submissions memory fallback
 let assignments = []; // Homework/assignments memory fallback
@@ -63,24 +62,8 @@ let buildNotesMemory = [
 let systemState = {
     maintenance: false,
     broadcast: null, // { message: "...", type: "info/warning/error" }
-    aiProvider: 'hackclub',
-    aiModel: 'qwen/qwen3-32b',
-    aiDisabled: false,
-    aiFeatures: { timetableQa: true, noticeRanking: true },
     festiveAmbient: false,
     hiddenPages: []
-};
-
-// Sage features admins can toggle individually. Anything not listed here is
-// always on; a feature is off only when its flag is explicitly false.
-const AI_FEATURE_KEYS = new Set(['timetableQa', 'noticeRanking']);
-const DEFAULT_AI_FEATURES = { timetableQa: true, noticeRanking: true };
-
-const normalizeAiFeatures = (raw) => {
-    const parsed = typeof raw === 'string'
-        ? (() => { try { return JSON.parse(raw); } catch { return null; } })()
-        : raw;
-    return { ...DEFAULT_AI_FEATURES, ...(parsed && typeof parsed === 'object' ? parsed : {}) };
 };
 
 // System metrics for the admin dashboard, sampled every 10 seconds (last 20 samples).
@@ -156,36 +139,6 @@ const addLog = async (action, user, details) => {
     );
 };
 
-// Logs one AI interaction for admin visibility and rate-limit auditing.
-// question MUST be the student's raw typed text only (capped at 500 chars by the
-// caller). No timetable JSON, system-prompt context, or AI-generated answer is stored.
-const addAiLog = async (studentId, question, provider, model, status = 'ok') => {
-    const log = {
-        id: crypto.randomUUID(),
-        timestamp: new Date(),
-        studentId: studentId || 'UNKNOWN',
-        question: String(question || '').slice(0, 500), // cap enforced defensively
-        status: status || 'ok',
-        provider: provider || 'unknown',
-        model: model || 'unknown'
-    };
-
-    if (!isDbEnabled) {
-        aiUsageLogs.unshift(log);
-        if (aiUsageLogs.length > 100) aiUsageLogs.pop();
-        return;
-    }
-
-    try {
-        await db.query(
-            'INSERT INTO ai_usage_logs (id, created_at, student_id, question, status, provider, model) VALUES ($1, NOW(), $2, $3, $4, $5, $6)',
-            [log.id, log.studentId, log.question, log.status, log.provider, log.model]
-        );
-    } catch (err) {
-        console.error('Failed to write AI log to DB:', err);
-    }
-};
-
 const FEEDBACK_CATEGORIES = new Set(['error', 'suggestion']);
 
 const generateFeedbackTicket = () => {
@@ -227,8 +180,7 @@ const consumeFeedbackStatusUpdates = async (studentId) => {
     return result.rows.map(row => ({ id: row.id, ticketNumber: row.ticket_number, status: row.status }));
 };
 
-// System state is read on every page load (/api/system/status) and by every AI
-// call, so it's cached briefly. Writes below clear the cache, so admin changes
+// System state is read on every page load (/api/system/status), so it's cached briefly. Writes below clear the cache, so admin changes
 // show immediately on this server.
 const SYSTEM_STATE_TTL_MS = 10 * 1000;
 let systemStateCache = null; // { at, value }
@@ -244,10 +196,6 @@ async function getSystemState() {
 
 async function readSystemState() {
     if (!isDbEnabled) {
-        if (!systemState.aiProvider) systemState.aiProvider = 'hackclub';
-        if (!systemState.aiModel) systemState.aiModel = 'qwen/qwen3-32b';
-        if (systemState.aiDisabled === undefined) systemState.aiDisabled = false;
-        if (!systemState.aiFeatures || typeof systemState.aiFeatures !== 'object') systemState.aiFeatures = { ...DEFAULT_AI_FEATURES };
         if (systemState.festiveAmbient === undefined) systemState.festiveAmbient = false;
         if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
         return systemState;
@@ -257,7 +205,7 @@ async function readSystemState() {
     // are simply absent and fall back to defaults below.
     const result = await db.query('SELECT * FROM system_state WHERE id = 1', []);
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, ai_provider: 'hackclub', ai_model: 'qwen/qwen3-32b', ai_disabled: false, ai_features: null, festive_ambient: false, hidden_pages: [], updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, festive_ambient: false, hidden_pages: [], updated_at: null };
     let hiddenPages = [];
     if (Array.isArray(row.hidden_pages)) {
         hiddenPages = row.hidden_pages;
@@ -271,10 +219,6 @@ async function readSystemState() {
     return {
         maintenance: Boolean(row.maintenance),
         broadcast: row.broadcast_message ? { message: row.broadcast_message, type: row.broadcast_type || 'info', id: row.updated_at } : null,
-        aiProvider: row.ai_provider || 'hackclub',
-        aiModel: row.ai_model || 'qwen/qwen3-32b',
-        aiDisabled: Boolean(row.ai_disabled),
-        aiFeatures: normalizeAiFeatures(row.ai_features),
         festiveAmbient: Boolean(row.festive_ambient),
         hiddenPages: Array.isArray(hiddenPages) ? hiddenPages : []
     };
@@ -321,90 +265,6 @@ async function setHiddenPages(hiddenPages) {
         [JSON.stringify(cleanPages)]
     );
     return cleanPages;
-}
-
-async function setAiConfig(provider, model) {
-    const cleanProvider = provider === 'gemini' ? 'gemini' : 'hackclub';
-    let defaultModel = cleanProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
-    const cleanModel = model || defaultModel;
-
-    if (!isDbEnabled) {
-        systemState.aiProvider = cleanProvider;
-        systemState.aiModel = cleanModel;
-        return { aiProvider: cleanProvider, aiModel: cleanModel };
-    }
-
-    systemStateCache = null;
-    await db.query(
-        'UPDATE system_state SET ai_provider = $1, ai_model = $2, updated_at = NOW() WHERE id = 1',
-        [cleanProvider, cleanModel]
-    );
-
-    return { aiProvider: cleanProvider, aiModel: cleanModel };
-}
-
-async function setAiDisabled(disabled) {
-    const value = Boolean(disabled);
-    if (!isDbEnabled) {
-        systemState.aiDisabled = value;
-        return value;
-    }
-
-    systemStateCache = null;
-    try {
-        await db.query(
-            'UPDATE system_state SET ai_disabled = $1, updated_at = NOW() WHERE id = 1',
-            [value]
-        );
-    } catch (e) {
-        // Self-heal databases that haven't run the schema migration yet.
-        if (!/ai_disabled/.test(e?.message || '')) throw e;
-        await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_disabled BOOLEAN NOT NULL DEFAULT FALSE');
-        await db.query(
-            'UPDATE system_state SET ai_disabled = $1, updated_at = NOW() WHERE id = 1',
-            [value]
-        );
-    }
-    return value;
-}
-
-// Toggles one Sage feature (e.g. 'timetableQa', 'noticeRanking'). `disabled`
-// is the new off state; stored flags only ever turn a feature off when false.
-async function setAiFeature(feature, disabled) {
-    if (!AI_FEATURE_KEYS.has(feature)) {
-        throw new Error(`Unknown AI feature: ${feature}`);
-    }
-    const value = !Boolean(disabled);
-
-    if (!isDbEnabled) {
-        systemState.aiFeatures = { ...DEFAULT_AI_FEATURES, ...(systemState.aiFeatures || {}), [feature]: value };
-        return systemState.aiFeatures;
-    }
-
-    systemStateCache = null;
-    const write = async () => {
-        const state = await getSystemState();
-        const features = { ...(state.aiFeatures || {}), [feature]: value };
-        await db.query(
-            'UPDATE system_state SET ai_features = $1::jsonb, updated_at = NOW() WHERE id = 1',
-            [JSON.stringify(features)]
-        );
-        return features;
-    };
-
-    try {
-        return await write();
-    } catch (e) {
-        // Self-heal databases that haven't run the schema migration yet.
-        if (!/ai_features/.test(e?.message || '')) throw e;
-        await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_features JSONB');
-        return await write();
-    }
-}
-
-async function setAiModel(model) {
-    const res = await setAiConfig(undefined, model);
-    return res.aiModel;
 }
 
 async function setBroadcast(message, type) {
@@ -741,11 +601,9 @@ async function deleteStudentData(studentId) {
         notes = notes.filter(n => String(n.studentId) !== id);
         assignments = assignments.filter(a => String(a.studentId) !== id);
         feedbackEntries = feedbackEntries.filter(f => String(f.studentId) !== id);
-        aiUsageLogs = aiUsageLogs.filter(l => String(l.studentId) !== id);
         return;
     }
 
-    await db.query('DELETE FROM ai_usage_logs WHERE student_id = $1', [id]);
     await db.query('DELETE FROM canvas_class_link_votes WHERE student_id = $1', [id]);
     await db.query('DELETE FROM app_users WHERE id = $1', [id]);
 }
@@ -954,20 +812,6 @@ const isAdminUser = async (studentId) => {
         console.error('[auth] Admin role check failed:', e?.message || e);
     }
     return getAdminIds().includes(String(studentId));
-};
-
-// When an admin disables AI — globally or for a single Sage feature — the
-// student-facing AI endpoints answer 503 so clients can show a maintenance
-// notice. Only timetable-qa (Ask Sage) lets admins through, so the admin
-// panel tester keeps working; every other AI feature is dead for everyone.
-// Returns true when the response was sent.
-const aiUnderMaintenance = async (req, res, { allowAdmin = false, feature = null } = {}) => {
-    const state = await getSystemState();
-    const featureOff = !!feature && state.aiFeatures?.[feature] === false;
-    if (!state.aiDisabled && !featureOff) return false;
-    if (allowAdmin && await isAdminUser(String(req.user?.studentId || ''))) return false;
-    res.status(503).json({ error: 'Sage is under maintenance' });
-    return true;
 };
 
 // Routes
@@ -1629,27 +1473,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         const allUsers = await listUsers();
         const state = await getSystemState();
 
-        let availableHackClubModels = ['qwen/qwen3-32b'];
-        try {
-            const modelsRes = await fetch('https://ai.hackclub.com/proxy/v1/models', { signal: AbortSignal.timeout(5000) });
-            if (modelsRes.ok) {
-                const modelsData = await modelsRes.json();
-                if (modelsData && Array.isArray(modelsData.data)) {
-                    availableHackClubModels = modelsData.data.map(m => m.id);
-                }
-            }
-        } catch (e) {
-            console.warn('[ai] Failed to fetch live models list:', e.message);
-            availableHackClubModels = [
-                'qwen/qwen3-32b',
-                'meta-llama/llama-3-8b-instruct',
-                'meta-llama/llama-3-70b-instruct',
-                'mistralai/mixtral-8x7b-instruct',
-                'openai/gpt-4o-mini',
-                'anthropic/claude-3-haiku'
-            ];
-        }
-
         const isPostgresDb = isDbEnabled;
         let dbHealth = 'Offline';
         let accountsDeletedPastMonth = 0;
@@ -1774,19 +1597,8 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             systemStatus: state.maintenance ? 'Maintenance' : 'Operational',
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage().heapUsed,
-            aiProvider: state.aiProvider || 'hackclub',
-            aiModel: state.aiModel || 'qwen/qwen3-32b',
-            aiDisabled: Boolean(state.aiDisabled),
-            aiFeatures: state.aiFeatures || {},
             festiveAmbient: Boolean(state.festiveAmbient),
             hiddenPages: state.hiddenPages || [],
-            availableHackClubModels,
-            availableGeminiModels: [
-                'gemini-1.5-flash',
-                'gemini-1.5-pro',
-                'gemini-2.0-flash',
-                'gemini-2.5-flash'
-            ],
             activeSessions: tokenVerifier.activeCount(),
             history: statsHistory,
             
@@ -1919,10 +1731,7 @@ app.get('/api/system/status', (req, res) => {
             res.json({
                 maintenance: state.maintenance,
                 broadcast: state.broadcast,
-                aiDisabled: Boolean(state.aiDisabled),
-                aiFeatures: state.aiFeatures || {},
                 festiveAmbient: Boolean(state.festiveAmbient),
-                aiProvider: state.aiProvider || 'hackclub',
                 hiddenPages: state.hiddenPages || []
             });
         } catch (e) {
@@ -1972,73 +1781,6 @@ app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('Prune logs error:', e);
         res.status(500).json({ error: 'Failed to prune old logs' });
-    }
-});
-
-// POST /api/system/ai-model
-app.post('/api/system/ai-model', requireAuth, async (req, res) => {
-    try {
-        const { model } = req.body || {};
-        if (!model) {
-            return res.status(400).json({ error: 'Missing model name' });
-        }
-        const updated = await setAiConfig(undefined, model);
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI model to ${updated.aiModel}`);
-        res.json({ success: true, aiModel: updated.aiModel });
-    } catch (e) {
-        console.error('Update AI model error:', e);
-        res.status(500).json({ error: 'Failed to update AI model' });
-    }
-});
-
-// POST /api/system/ai-config
-app.post('/api/system/ai-config', requireAuth, async (req, res) => {
-    try {
-        const { provider, model } = req.body || {};
-        if (!provider) {
-            return res.status(400).json({ error: 'Missing provider name' });
-        }
-        const updated = await setAiConfig(provider, model);
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Changed AI config to ${updated.aiProvider} (${updated.aiModel})`);
-        res.json({ success: true, ...updated });
-    } catch (e) {
-        console.error('Update AI config error:', e);
-        res.status(500).json({ error: 'Failed to update AI configuration' });
-    }
-});
-
-// POST /api/system/ai-disabled (Admin only: global AI kill switch)
-app.post('/api/system/ai-disabled', requireAuth, async (req, res) => {
-    try {
-        const { disabled } = req.body || {};
-        if (typeof disabled !== 'boolean') {
-            return res.status(400).json({ error: 'disabled must be a boolean' });
-        }
-        const aiDisabled = await setAiDisabled(disabled);
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `AI features ${aiDisabled ? 'DISABLED' : 'ENABLED'} for all students`);
-        res.json({ success: true, aiDisabled });
-    } catch (e) {
-        console.error('Update AI disabled error:', e);
-        res.status(500).json({ error: 'Failed to update AI status' });
-    }
-});
-
-// POST /api/system/ai-feature (Admin only: toggle one Sage feature)
-app.post('/api/system/ai-feature', requireAuth, async (req, res) => {
-    try {
-        const { feature, disabled } = req.body || {};
-        if (!AI_FEATURE_KEYS.has(feature)) {
-            return res.status(400).json({ error: `Unknown AI feature: ${feature}` });
-        }
-        if (typeof disabled !== 'boolean') {
-            return res.status(400).json({ error: 'disabled must be a boolean' });
-        }
-        const aiFeatures = await setAiFeature(feature, disabled);
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', `Sage feature ${feature} ${disabled ? 'DISABLED' : 'ENABLED'} for students`);
-        res.json({ success: true, aiFeatures });
-    } catch (e) {
-        console.error('Update AI feature error:', e);
-        res.status(500).json({ error: 'Failed to update Sage feature' });
     }
 });
 
@@ -2628,600 +2370,16 @@ app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
 // GET /api/users/:id/timetable
 // REMOVED FOR PRIVACY
 
-let aiMemoryCache = {};
-
-// AI calls cost money and can hang: cap how often each student can make them,
-// how big their input can be, and how long the provider gets to answer.
-const AI_TIMEOUT_MS = 30 * 1000;
-const aiLimit = rateLimit(
-    [makeLimiter(20, 60 * 60 * 1000), makeLimiter(60, 24 * 60 * 60 * 1000)],
-    (req) => String(req.user?.studentId),
-    'You’ve used the AI features a lot recently. Try again later.'
-);
-const briefingLimit = rateLimit(
-    [makeLimiter(30, 60 * 60 * 1000)],
-    (req) => String(req.user?.studentId),
-    'Too many requests. Try again later.'
-);
-const clip = (value, max) => String(value ?? '').slice(0, max);
-
-// Today's notices, straight from SBHS with the student's own token. The briefing
-// is shared by every student, so it must never be built from notices a client
-// sent in.
-const fetchTodaysNotices = async (authHeader) => {
-    const response = await fetch('https://student.sbhs.net.au/api/dailynews/list.json', {
-        headers: { Authorization: authHeader },
-        signal: AbortSignal.timeout(8000)
-    });
-    if (!response.ok) throw new Error(`SBHS notices request failed (${response.status})`);
-    const data = await response.json();
-    return Array.isArray(data?.notices) ? data.notices : [];
-};
-
-// Only the AI's ranking is cached — [{index, priority}] numbers, never notice
-// content. Clients sort their own locally-fetched notices with it.
-const readBriefingCache = async (dateKey) => {
-    if (aiMemoryCache[dateKey]) return aiMemoryCache[dateKey];
-    if (!isDbEnabled) return null;
-    try {
-        const cacheResult = await db.query(
-            'SELECT notice_priorities FROM ai_cache WHERE date_key = $1',
-            [dateKey]
-        );
-        if (cacheResult.rows.length === 0) return null;
-        const cached = cacheResult.rows[0].notice_priorities;
-        if (!Array.isArray(cached)) return null;
-        aiMemoryCache[dateKey] = cached;
-        return cached;
-    } catch (err) {
-        console.error('[ai-cache] Failed to query cache database:', err);
-        return null;
-    }
-};
-
-const writeBriefingCache = async (dateKey, priorities) => {
-    aiMemoryCache[dateKey] = priorities;
-    if (!isDbEnabled) return;
-    try {
-        await db.query(
-            'INSERT INTO ai_cache (date_key, notice_priorities) VALUES ($1, $2::jsonb) ON CONFLICT (date_key) DO UPDATE SET notice_priorities = EXCLUDED.notice_priorities, created_at = NOW()',
-            [dateKey, JSON.stringify(priorities)]
-        );
-    } catch (err) {
-        console.error('[ai-cache] Failed to write cache to DB:', err);
-    }
-};
-
-const parseAiJson = (aiText) => {
-    let jsonText = String(aiText || '').trim();
-    if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
-    else if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
-    if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
-    return JSON.parse(jsonText.trim());
-};
-
-const generateBriefing = async (notices) => {
-    if (notices.length === 0) return { priorities: [] };
-
-    const promptNotices = notices.map((n, i) => ({
-        index: i,
-        title: n.title || '',
-        content: (n.content || '').replace(/<[^>]*>/g, ''), // strip HTML to save context window tokens
-        isMeeting: n.isMeeting || 0,
-        displayYears: n.displayYears || 'All Students'
-    }));
-
-    const systemPrompt = `You are a school assistant. Prioritize the daily school notices.
-Return a JSON object in this exact format:
-{
-  "prioritizedNotices": [
-    {
-      "index": 0, // The index of the notice in the original array
-      "priority": 3 // 1 to 5, where 5 is highest/urgent (meetings today, deadlines, important year assemblies) and 1 is lowest
-    }
-  ]
-}
-Return ONLY the JSON. Do not include markdown code block wraps.`;
-
-    const { aiText } = await runAiPrompt(systemPrompt, `Here are today's notices:\n${JSON.stringify(promptNotices)}`, await getSystemState(), 'application/json');
-    const parsed = parseAiJson(aiText);
-    const priorities = Array.isArray(parsed.prioritizedNotices) ? parsed.prioritizedNotices : [];
-
-    return { priorities };
-};
-
-// One briefing is generated per day; students who ask while it's being made wait
-// for the same result instead of starting their own AI call.
-const briefingInFlight = new Map(); // dateKey -> Promise
-
-// POST /api/ai/briefing
-app.post('/api/ai/briefing', requireStudentAuth, briefingLimit, async (req, res) => {
-    if (await aiUnderMaintenance(req, res, { feature: 'noticeRanking' })) return;
-    const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
-
-    try {
-        const cached = await readBriefingCache(dateKey);
-        if (cached) return res.json({ priorities: cached });
-
-        if (!briefingInFlight.has(dateKey)) {
-            const job = (async () => {
-                const notices = await fetchTodaysNotices(req.headers.authorization);
-                const result = await generateBriefing(notices);
-                await writeBriefingCache(dateKey, result.priorities);
-                console.log(`[ai] Briefing priorities cached for ${dateKey}`);
-                return result;
-            })().finally(() => briefingInFlight.delete(dateKey));
-            briefingInFlight.set(dateKey, job);
-        }
-        const result = await briefingInFlight.get(dateKey);
-        res.json({ priorities: result.priorities });
-    } catch (err) {
-        // Nothing is cached, so the next request tries again. The client keeps
-        // its own notice order when priorities come back null.
-        console.error('[ai] Briefing failed:', err?.message || err);
-        res.json({ priorities: null });
-    }
-});
-
-const pad2 = (n) => String(n).padStart(2, '0');
-const ymdOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-const fmtSageDate = (d) => d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-
-// "(today)", "(tomorrow)", "(in 3 days)"… anchored to the server's current date so
-// the model never has to work out which day a session falls on.
-const sageRelLabel = (date) => {
-    const d = new Date(`${date}T00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diff = Math.round((d - today) / 86400000);
-    if (diff === 0) return ' (today)';
-    if (diff === 1) return ' (tomorrow)';
-    if (diff === -1) return ' (yesterday)';
-    return diff > 0 ? ` (in ${diff} days)` : ` (${-diff} days ago)`;
-};
-
-const formatSageSessions = (items) => {
-    const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    const sessions = (Array.isArray(items) ? items : [])
-        .map((s) => {
-            const start = s.startDateTime ? new Date(s.startDateTime) : null;
-            if (!start || Number.isNaN(start.getTime())) return null;
-            const end = s.endDateTime ? new Date(s.endDateTime) : null;
-            const time = end && !Number.isNaN(end.getTime())
-                ? `${start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}–${end.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}`
-                : start.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
-            const relDay = ymdOf(start);
-            return {
-                start,
-                line: `${fmtSageDate(start)}${sageRelLabel(relDay)}, ${time} — ${s.title || s.activity?.name || 'Session'}`
-                    + `${s.activity?.name && s.title && s.title !== s.activity.name ? ` (${s.activity.name})` : ''}`
-                    + `${s.location?.name ? `, ${s.location.name}` : ''}`
-                    + `${s.opponent?.name || typeof s.opponent === 'string' ? ` vs ${s.opponent?.name || s.opponent}` : ''}`
-                    + `${s.cancelled ? ' [cancelled]' : ''}`
-                    + `${s.scored && (s.organisationScore != null || s.opponentScore != null) ? `, score ${s.organisationScore ?? '?'}–${s.opponentScore ?? '?'}` : ''}`
-            };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.start - b.start);
-
-    const upcoming = sessions.filter((s) => s.start.getTime() >= now - DAY_MS).slice(0, 20);
-    const recent = sessions.filter((s) => s.start.getTime() < now - DAY_MS).slice(-8).reverse();
-    const parts = [];
-    if (upcoming.length) parts.push(`Upcoming:\n${upcoming.map((s) => `- ${s.line}`).join('\n')}`);
-    if (recent.length) parts.push(`Recent:\n${recent.map((s) => `- ${s.line}`).join('\n')}`);
-    return parts.join('\n') || null;
-};
-
-const fetchSageClipboardSessions = async (req) => {
-    const authHeader = req.headers['authorization'];
-    if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
-    const studentId = String(req.user.studentId);
-
-    try {
-        const currentYear = new Date().getFullYear();
-        const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/clipboard/sessions`);
-        url.searchParams.set('date[after]', `${currentYear}-01-01`);
-        url.searchParams.set('date[before]', `${currentYear}-12-31`);
-        url.searchParams.set('_itemsPerPage', '300');
-        const response = await fetch(url.toString(), {
-            headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(8000)
-        });
-        if (!response.ok) {
-            console.warn(`[ai] SBHS clipboard/sessions returned ${response.status}`);
-            return null;
-        }
-        const data = await response.json();
-        const items = Array.isArray(data) ? data : (Array.isArray(data?.member) ? data.member : []);
-        return formatSageSessions(items);
-    } catch (e) {
-        console.warn('[ai] clipboard/sessions fetch failed:', e?.message || e);
-        return null;
-    }
-};
-
-// --- Dated class schedule -------------------------------------------------
-// The cycle JSON alone forces the model to compute which cycle day a date
-// falls on — it gets that wrong. Instead we fetch the next few school days'
-// day timetables (same endpoint the app uses) and hand Sage the answer:
-// explicit dates, 24-hour times, cycle day names, substitutions applied.
-
-const SAGE_SCHEDULE_DAYS = 5;
-const SBHS_TIMETABLE_API = 'https://student.sbhs.net.au/api/timetable/daytimetable.json';
-
-// Next N Mon–Fri dates from `from`, as YYYY-MM-DD strings.
-const nextSchoolDates = (from, count) => {
-    const dates = [];
-    const d = new Date(from);
-    d.setHours(0, 0, 0, 0);
-    while (dates.length < count) {
-        const dow = d.getDay();
-        if (dow !== 0 && dow !== 6) dates.push(ymdOf(d));
-        d.setDate(d.getDate() + 1);
-    }
-    return dates;
-};
-
-const sageIsBreak = (bellId, title) => {
-    const id = String(bellId ?? '').toUpperCase();
-    if (id === 'R' || id === 'L' || id === 'RC') return true;
-    return /lunch|recess|roll\s*call|free\s*period/i.test(String(title || ''));
-};
-
-// Same matching rule as the client's variationMatchesPeriod.
-const sageVarMatches = (variation, periodInfo) => {
-    if (!variation || !periodInfo) return false;
-    if (variation.title && periodInfo.title && variation.title !== periodInfo.title) return false;
-    if (variation.year != null && periodInfo.year != null && String(variation.year) !== String(periodInfo.year)) return false;
-    return true;
-};
-
-// One day timetable -> a compact dated block, or null when there's nothing on.
-const summariseSageDay = (data, dateKey) => {
-    const inner = data?.timetable?.timetable || data?.timetable;
-    const periods = inner?.periods || {};
-    const bells = Array.isArray(data?.bells) ? data.bells : [];
-    // SBHS rolls non-school days forward to the next school day — don't list
-    // the same day twice under two dates.
-    if (/^\d{4}-\d{2}-\d{2}$/.test(data?.date || '') && data.date !== dateKey) return null;
-    const routine = typeof inner?.routine === 'string'
-        ? inner.routine.split(',').map(s => s.trim()).filter(Boolean)
-        : Object.keys(periods);
-    if (!routine.length) return null;
-
-    // Period titles are short codes ("Ma1"); the subjects map has full names.
-    const subjectIndex = {};
-    Object.values(inner?.subjects || {}).forEach(s => {
-        if (s?.shortTitle) subjectIndex[`${s.year ?? ''}${s.shortTitle}`] = s;
-    });
-    const fullName = (p) => {
-        const subject = subjectIndex[`${p?.year ?? ''}${p?.title ?? ''}`];
-        if (!subject?.title) return p?.title || '';
-        const prefix = subject.year != null ? `${subject.year} ` : null;
-        return prefix && subject.title.startsWith(prefix) ? subject.title.slice(prefix.length) : subject.title;
-    };
-
-    const rows = [];
-    for (const bellId of routine) {
-        const bell = bells.find(b => String(b.bell) === String(bellId));
-        const p = periods[bellId];
-        if (!p) continue; // free period
-        if (sageIsBreak(bellId, p.title || bell?.bellDisplay)) continue;
-
-        let teacher = p.fullTeacher || p.teacher || '';
-        let room = p.room || '';
-        const flags = [];
-        const classVar = data?.classVariations?.[bellId];
-        if (sageVarMatches(classVar, p)) {
-            const type = String(classVar.type || '').toLowerCase();
-            if (type === 'replacement') {
-                teacher = classVar.casualSurname || classVar.casual || teacher;
-                flags.push('sub');
-            } else if (type === 'nocover') {
-                teacher = 'No teacher';
-                flags.push('no cover');
-            }
-        }
-        const roomVar = data?.roomVariations?.[bellId];
-        if (sageVarMatches(roomVar, p) && roomVar.roomTo) {
-            if (roomVar.roomFrom && roomVar.roomFrom !== room) flags.push(`was ${roomVar.roomFrom}`);
-            room = roomVar.roomTo;
-        }
-
-        const time = bell?.time && bell?.endTime ? `${bell.time}–${bell.endTime}` : (bell?.time || '');
-        const label = bell?.bellDisplay || `Period ${bellId}`;
-        const name = fullName(p) || p.title || label;
-        const detail = [teacher, room ? `Rm ${room}` : ''].filter(Boolean).join(', ');
-        rows.push(`- ${label} ${time} — ${name}${detail ? `, ${detail}` : ''}${flags.length ? ` [${flags.join(', ')}]` : ''}`);
-    }
-    if (!rows.length) return null;
-
-    const dayname = inner?.dayname ? `, cycle day "${inner.dayname}"` : '';
-    const rel = sageRelLabel(dateKey);
-    return `${fmtSageDate(new Date(`${dateKey}T00:00`))}${rel}${dayname}:\n${rows.join('\n')}`;
-};
-
-const fetchSageDaySchedule = async (req) => {
-    const authHeader = req.headers['authorization'];
-    if (process.env.BYPASS_AUTH === 'true' || !authHeader?.startsWith('Bearer ')) return null;
-    const studentId = String(req.user.studentId);
-
-    try {
-        const dates = nextSchoolDates(new Date(), SAGE_SCHEDULE_DAYS);
-        const fetchDay = async (dateKey) => {
-            const response = await fetch(`${SBHS_TIMETABLE_API}?date=${dateKey}`, {
-                headers: { 'Authorization': authHeader, 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(8000)
-            });
-            if (!response.ok) return null;
-            return summariseSageDay(await response.json(), dateKey);
-        };
-        const days = await Promise.all(dates.map(d => fetchDay(d).catch(() => null)));
-        const blocks = days.filter(Boolean);
-        if (!blocks.length) return null;
-        return { text: blocks.join('\n\n') };
-    } catch (e) {
-        console.warn('[ai] day schedule fetch failed:', e?.message || e);
-        return null;
-    }
-};
-
-// POST /api/ai/timetable-qa
-app.post('/api/ai/timetable-qa', requireStudentAuth, aiLimit, async (req, res) => {
-    if (await aiUnderMaintenance(req, res, { allowAdmin: true, feature: 'timetableQa' })) return;
-    try {
-        const studentId = String(req.user.studentId);
-        const dbUser = await getUserById(studentId);
-        if (!dbUser) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const { timetable, currentMinutes, completeTimetable } = req.body || {};
-        const question = clip(req.body?.question, 500).trim();
-        if (!question) {
-            return res.status(400).json({ error: 'Missing question' });
-        }
-
-        const systemStateObj = await getSystemState();
-        const activeProvider = systemStateObj.aiProvider || 'hackclub';
-        const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
-        const providerName = activeProvider === 'gemini' ? 'Google Gemini' : activeProvider === 'hackclub' ? 'Hack Club AI' : activeProvider;
-
-        // Construct a prompt with explicit dates: a dated class schedule for the
-        // next school days, the full cycle for anything further out, and the
-        // student's Clipboard sessions — all with concrete dates and times so
-        // the model never has to work out which day something falls on.
-        const now = new Date();
-        const todayDateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        const nowTimeStr = now.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
-        const todayDayname = timetable?.timetable?.dayname || timetable?.dayname || 'Unknown';
-        const [sessionsText, schedule] = await Promise.all([
-            fetchSageClipboardSessions(req),
-            fetchSageDaySchedule(req)
-        ]);
-        const scheduleText = schedule?.text || null;
-
-        const systemPrompt = `You are Sage, a school assistant. Answer timetable and Clipboard session questions using the data below.
-
-- Today: ${todayDateStr}; current time ${nowTimeStr} (${currentMinutes} min since midnight). Today's cycle day: ${todayDayname}.
-- Dated class schedule (times are 24-hour; authoritative for the dates shown, substitutions and room changes already applied):
-${scheduleText || 'unavailable'}
-- Full cycle timetable (all cycle days — use only for dates NOT covered by the dated schedule): ${JSON.stringify(completeTimetable)}
-- Clipboard sessions (sport/activities): ${sessionsText || 'unavailable'}
-
-Rules: be brief (1-2 sentences, markdown bullets for lists). Every date and time above is exact — never move a class or session onto a different day, and never assume something scheduled for another date is today. If the dated schedule is unavailable or the date asked about is beyond it, work it out from the cycle carefully or say you only have the next few school days rather than guessing. School runs Mon-Fri. Decline questions unrelated to the timetable or Clipboard sessions politely. If asked about storage or who processes data: your typed question, timetable, and Clipboard session details are sent to ${providerName} to generate the answer; only your typed question text (not timetable or session data) is logged for admin review; answers are never stored. Don't assume teacher genders.`;
-
-        let answer = '';
-
-        if (activeProvider === 'gemini') {
-            const apiKey = process.env.GEMINI_API_KEY;
-            if (!apiKey) {
-                answer = "AI features are temporarily unavailable because the API key is not configured on the server.";
-            } else {
-                console.log(`[ai] Querying Google Gemini API (${activeModel}) for Timetable Q&A...`);
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `${systemPrompt}\n\nQuestion: ${question}`
-                            }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.4,
-                            maxOutputTokens: 150
-                        }
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Gemini API responded with status ${response.status}`);
-                }
-
-                const aiData = await response.json();
-                answer = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-            }
-        } else {
-            const apiKey = process.env.HACKCLUB_AI_API_KEY;
-            if (!apiKey) {
-                answer = "AI features are temporarily unavailable because the API key is not configured on the server.";
-            } else {
-                console.log(`[ai] Querying Hack Club AI (${activeModel}) for Timetable Q&A...`);
-                const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
-                    method: 'POST',
-                    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: activeModel,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: question }
-                        ],
-                        temperature: 0.4,
-                        max_tokens: 150
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Hack Club AI responded with status ${response.status}`);
-                }
-
-                const aiData = await response.json();
-                answer = aiData.choices?.[0]?.message?.content?.trim() || '';
-            }
-        }
-
-        await addAiLog(req.user?.studentId || 'UNKNOWN', question, activeProvider, activeModel);
-        res.json({ answer });
-
-    } catch (err) {
-        console.error('[ai-timetable-qa] Failed:', err);
-        const errMsg = 'Failed to generate answer';
-        await addAiLog(req.user?.studentId || 'UNKNOWN', clip(req.body?.question || '', 500).trim(), 'unknown', 'unknown', 'error').catch(() => {});
-        res.status(500).json({ error: errMsg });
-    }
-});
-
-async function runAiPrompt(systemPrompt, userPrompt, systemStateObj, responseMimeType = 'text/plain') {
-    const activeProvider = systemStateObj.aiProvider || 'hackclub';
-    const activeModel = systemStateObj.aiModel || (activeProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b');
-
-    let aiText = '';
-
-    if (activeProvider === 'gemini') {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            throw new Error('GEMINI_API_KEY is not set on the server.');
-        }
-
-        const body = {
-            contents: [{
-                parts: [{
-                    text: `${systemPrompt}\n\n${userPrompt}`
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.3
-            }
-        };
-
-        if (responseMimeType === 'application/json') {
-            body.generationConfig.responseMimeType = 'application/json';
-        }
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Gemini API responded with status ${response.status}`);
-        }
-
-        const aiData = await response.json();
-        aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    } else {
-        const apiKey = process.env.HACKCLUB_AI_API_KEY;
-        if (!apiKey) {
-            throw new Error('HACKCLUB_AI_API_KEY is not set on the server.');
-        }
-
-        const response = await fetch('https://ai.hackclub.com/proxy/v1/chat/completions', {
-            method: 'POST',
-            signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: activeModel,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.3
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Hack Club AI responded with status ${response.status}`);
-        }
-
-        const aiData = await response.json();
-        aiText = aiData.choices?.[0]?.message?.content?.trim() || '';
-    }
-
-    return { aiText, activeProvider, activeModel };
-}
-
 // POST /api/cache/clear
 app.post('/api/cache/clear', requireAuth, async (req, res) => {
     try {
         console.log('Cache clear requested by admin');
-        aiMemoryCache = {};
-        if (isDbEnabled) {
-            await db.query('DELETE FROM ai_cache', []);
-        }
-        res.json({ success: true, message: 'Server cache and AI cache cleared successfully' });
+        res.json({ success: true, message: 'Server cache cleared successfully' });
     } catch (e) {
         console.error('Clear cache error:', e);
         res.status(500).json({ error: 'Failed to clear cache' });
     }
 });
-
-// GET /api/ai/logs (Admin only: view AI usage logs)
-app.get('/api/ai/logs', requireAuth, async (req, res) => {
-    try {
-        if (!isDbEnabled) {
-            return res.json(aiUsageLogs);
-        }
-        const result = await db.query(
-            'SELECT id, created_at, student_id, question, status, provider, model FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100',
-            []
-        );
-        const out = result.rows.map(row => ({
-            id: row.id,
-            timestamp: row.created_at,
-            studentId: row.student_id,
-            question: row.question,
-            status: row.status,
-            provider: row.provider,
-            model: row.model
-        }));
-        res.json(out);
-    } catch (e) {
-        console.error('AI logs fetch error:', e);
-        res.status(500).json({ error: 'Failed to fetch AI usage logs' });
-    }
-});
-
-// POST /api/ai/cache/clear (Admin only: clear AI briefings cache)
-app.post('/api/ai/cache/clear', requireAuth, async (req, res) => {
-    try {
-        console.log('AI cache clear requested by admin');
-        aiMemoryCache = {};
-        if (isDbEnabled) {
-            await db.query('DELETE FROM ai_cache', []);
-        }
-        await addLog('SETTINGS', req.user?.studentId || 'ADMIN', 'Cleared AI cache (briefing notices and summary)');
-        res.json({ success: true, message: 'AI Cache cleared successfully' });
-    } catch (e) {
-        console.error('Clear AI cache error:', e);
-        res.status(500).json({ error: 'Failed to clear AI cache' });
-    }
-});
-
-
 
 // --- NEW STUDENT & PORTAL ENDPOINTS ---
 

@@ -248,52 +248,6 @@ export const updateHiddenPages = async (hiddenPages) => {
     }
 };
 
-export const updateAiConfig = async (provider, model) => {
-    try {
-        const response = await apiFetch(`${ADMIN_API_URL}/system/ai-config`, {
-            method: 'POST',
-            headers: await getHeaders(),
-            body: JSON.stringify({ provider, model })
-        });
-        if (!response.ok) throw new Error('Failed to update AI configuration');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const setAiDisabled = async (disabled) => {
-    try {
-        const response = await apiFetch(`${ADMIN_API_URL}/system/ai-disabled`, {
-            method: 'POST',
-            headers: await getHeaders(),
-            body: JSON.stringify({ disabled })
-        });
-        if (!response.ok) throw new Error('Failed to update AI status');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-// feature: 'timetableQa' | 'noticeRanking'; disabled: true turns it off for students.
-export const setAiFeature = async (feature, disabled) => {
-    try {
-        const response = await apiFetch(`${ADMIN_API_URL}/system/ai-feature`, {
-            method: 'POST',
-            headers: await getHeaders(),
-            body: JSON.stringify({ feature, disabled })
-        });
-        if (!response.ok) throw new Error('Failed to update Sage feature');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
 // Seasonal ambient glow: auto-active Christmas Dec 1–26 and NYE Dec 27–Jan 6;
 // this toggle forces the festive palettes on at any other time.
 export const setFestiveAmbient = async (enabled) => {
@@ -304,33 +258,6 @@ export const setFestiveAmbient = async (enabled) => {
             body: JSON.stringify({ enabled })
         });
         if (!response.ok) throw new Error('Failed to update festive ambient setting');
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const fetchAiLogs = async () => {
-    try {
-        const response = await apiFetch(`${ADMIN_API_URL}/ai/logs`, {
-            headers: await getHeaders()
-        });
-        if (!response.ok) throw new Error(`Failed to fetch AI logs (HTTP ${response.status})`);
-        return await response.json();
-    } catch (error) {
-        console.error("Admin API Error:", error);
-        throw error;
-    }
-};
-
-export const clearAiCache = async () => {
-    try {
-        const response = await apiFetch(`${ADMIN_API_URL}/ai/cache/clear`, {
-            method: 'POST',
-            headers: await getHeaders()
-        });
-        if (!response.ok) throw new Error('Failed to clear AI cache');
         return await response.json();
     } catch (error) {
         console.error("Admin API Error:", error);

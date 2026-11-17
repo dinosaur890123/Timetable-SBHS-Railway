@@ -6,9 +6,6 @@ CREATE TABLE IF NOT EXISTS system_state (
   maintenance BOOLEAN NOT NULL DEFAULT FALSE,
   broadcast_message TEXT NULL,
   broadcast_type TEXT NULL,
-  ai_provider TEXT NOT NULL DEFAULT 'hackclub',
-  ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b',
-  ai_disabled BOOLEAN NOT NULL DEFAULT FALSE,
   festive_ambient BOOLEAN NOT NULL DEFAULT FALSE,
   version TEXT NOT NULL DEFAULT '1.0.0',
   hidden_pages JSONB NOT NULL DEFAULT '[]',
@@ -42,32 +39,9 @@ CREATE TABLE IF NOT EXISTS logs (
 
 CREATE INDEX IF NOT EXISTS logs_created_at_idx ON logs (created_at DESC);
 
-CREATE TABLE IF NOT EXISTS ai_cache (
-  date_key TEXT PRIMARY KEY, -- 'YYYY-MM-DD' (Sydney time)
-  notice_priorities JSONB NOT NULL, -- AI-generated [{index, priority}] only; no notice content
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- Migrations
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_model TEXT NOT NULL DEFAULT 'qwen/qwen3-32b';
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_provider TEXT NOT NULL DEFAULT 'hackclub';
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS ai_disabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS festive_ambient BOOLEAN NOT NULL DEFAULT FALSE;
-
-CREATE TABLE IF NOT EXISTS ai_usage_logs (
-  id TEXT PRIMARY KEY,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  student_id TEXT NOT NULL,
-  -- Raw text typed by the student only (max 500 chars). No timetable JSON,
-  -- system prompt context, or AI-generated answer is ever stored here.
-  question TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'ok',
-  provider TEXT NOT NULL,
-  model TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS ai_usage_logs_created_at_idx ON ai_usage_logs (created_at DESC);
 
 -- Stripe subscription billing migrations
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
@@ -277,12 +251,11 @@ CREATE TABLE IF NOT EXISTS app_build_notes (
 
 CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);
 
--- Privacy: purge stored AI-derived/API content, then reshape the AI tables.
--- Runs last so both tables exist on fresh databases; idempotent on re-runs.
-DELETE FROM ai_usage_logs;
-DELETE FROM ai_cache;
-ALTER TABLE ai_usage_logs DROP COLUMN IF EXISTS answer;
-ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ok';
-ALTER TABLE ai_cache DROP COLUMN IF EXISTS briefing;
-ALTER TABLE ai_cache DROP COLUMN IF EXISTS prioritized_notices;
-ALTER TABLE ai_cache ADD COLUMN IF NOT EXISTS notice_priorities JSONB;
+-- AI features removed: drop their tables and system_state columns.
+-- Idempotent on re-runs and a no-op on fresh databases.
+DROP TABLE IF EXISTS ai_usage_logs;
+DROP TABLE IF EXISTS ai_cache;
+ALTER TABLE system_state DROP COLUMN IF EXISTS ai_provider;
+ALTER TABLE system_state DROP COLUMN IF EXISTS ai_model;
+ALTER TABLE system_state DROP COLUMN IF EXISTS ai_disabled;
+ALTER TABLE system_state DROP COLUMN IF EXISTS ai_features;

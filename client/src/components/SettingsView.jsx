@@ -95,7 +95,7 @@ const Switch = ({ checked, onChange, label }) => (
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
 const SettingsView = ({
-    user, theme, setTheme, colorTheme, setColorTheme, aiDisabled, setAiDisabled, aiProviderName = 'an AI provider',
+    user, theme, setTheme, colorTheme, setColorTheme,
     ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
@@ -215,9 +215,6 @@ const SettingsView = ({
             </Section>
 
             <Section label="Features">
-                <Row title={<>AI features <span className="sage-name">by Sage</span></>} description="Off by default. When enabled: prioritised daily notices and answers to questions about your timetable.">
-                    <Switch checked={!aiDisabled} onChange={(on) => setAiDisabled(!on)} label="AI features" />
-                </Row>
                 <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
                     <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard on timetable" />
                 </Row>
@@ -243,7 +240,7 @@ const SettingsView = ({
                 <LinkRow
                     icon={Shield}
                     title="Privacy & data"
-                    description="What Synchron stores, what goes to the AI provider, and how to delete your data."
+                    description="What Synchron stores and how to delete your data."
                     onClick={() => setView('privacy')}
                 />
             </Section>
@@ -259,7 +256,6 @@ const SettingsView = ({
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
                 © Synchron {new Date().getFullYear()} · BETA · build {__APP_BUILD__.sha}
-                {aiProviderName === 'Google Gemini' && <span className="block mt-1 normal-case tracking-normal">AI powered by Google Gemini. Google Gemini is a trademark of Google LLC.</span>}
             </p>
         </div>
     );
