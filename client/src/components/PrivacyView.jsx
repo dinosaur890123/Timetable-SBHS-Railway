@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Shield, Database, Cpu, Eye, Trash2, Lock, Server, Smartphone } from 'lucide-react';
+import { ArrowLeft, Shield, Database, Eye, Trash2, Lock, Server, Smartphone } from 'lucide-react';
 import { fetchDeletionRequest, requestDataDeletion, logout } from '../services/api';
 
 const Section = ({ icon: Icon, title, children }) => (
@@ -50,7 +50,7 @@ const GlanceRow = ({ what, where, when, canDelete }) => (
     </tr>
 );
 
-const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = false, isAdmin = false }) => {
+const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
     const [deletionRequest, setDeletionRequest] = useState(null);
     const [requestState, setRequestState] = useState('idle'); // idle | sending | error
     const [requestError, setRequestError] = useState('');
@@ -169,7 +169,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
             </Item>
             <Item label="Preferences">
                 Theme, accent colour, ambient light, and similar UI settings are synced server-side so they carry across devices.
-                Your AI opt-in choice is stored here too. These are your own choices, not SBHS API data.
+                These are your own choices, not SBHS API data.
             </Item>
             <Item label="Canvas links">
                 Class-to-Canvas URL mappings you create are stored server-side so they sync across your devices and (optionally)
@@ -182,53 +182,6 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
             <Item label="Activity logs">
                 Server-side events (sign-ins, preference changes, Canvas link updates) are logged for security auditing.
                 Logs older than 30 days are pruned on demand by administrators.
-            </Item>
-        </Section>
-
-        {/* AI features */}
-        <Section icon={Cpu} title="AI features (Sage) — opt-in only">
-            <Item label="Opt-in">
-                AI features are <strong className="font-medium text-zinc-800 dark:text-zinc-200">off by default.</strong>{' '}
-                You must turn them on in Settings. You can disable them at any time and they stop immediately.
-            </Item>
-            <Item label="What is sent to the AI provider">
-                When you ask Sage a question, your <strong className="font-medium text-zinc-800 dark:text-zinc-200">typed question</strong> and
-                your <strong className="font-medium text-zinc-800 dark:text-zinc-200">timetable data</strong> (already on your device from SBHS)
-                are included in the prompt sent to {aiProviderName}. This is necessary so Sage can answer questions about your schedule.
-                The AI provider's own privacy policy applies to data it receives.
-            </Item>
-            <Item label="What is NOT sent to the AI provider">
-                Award scheme data, attendance records, notes, assignments, and feedback are never sent to any AI provider.
-            </Item>
-            <Item label="What Synchron stores from AI interactions">
-                <ul className="mt-1 space-y-1.5">
-                    <li className="flex items-start gap-2">
-                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                        <span>
-                            <strong className="font-medium text-zinc-800 dark:text-zinc-200">Your typed question</strong> (capped at 500 characters)
-                            and your student ID are logged for admin review and abuse monitoring.
-                            Timetable context is not stored — only the raw text you typed.
-                        </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                        <span>
-                            <strong className="font-medium text-zinc-800 dark:text-zinc-200">AI answers are never stored</strong> on the Synchron server.
-                        </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-                        <span>
-                            For the daily notice ranking (Sage briefing), only an ordered list of notice
-                            indices is cached — no notice text is ever stored server-side.
-                        </span>
-                    </li>
-                </ul>
-            </Item>
-            <Item label="AI provider">
-                The active AI provider is shown in Settings. Currently:{' '}
-                <strong className="font-medium text-zinc-800 dark:text-zinc-200">{aiProviderName}</strong>.
-                AI features are only available when you're signed in with a valid SBHS account.
             </Item>
         </Section>
 
@@ -263,7 +216,7 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
                 canDelete={<Tag colour="green">Request below</Tag>}
             />
             <GlanceRow
-                what="UI preferences &amp; AI opt-in"
+                what="UI preferences"
                 where={<><Tag colour="blue">localStorage</Tag><Tag colour="amber">Synchron server</Tag></>}
                 when={<Tag colour="zinc">Until changed</Tag>}
                 canDelete={<Tag colour="green">Sign out / request below</Tag>}
@@ -279,24 +232,6 @@ const PrivacyView = ({ onBack, aiProviderName = 'an AI provider', publicOnly = f
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">90 days after archival</Tag>}
                 canDelete={<Tag colour="zinc">Auto-purged</Tag>}
-            />
-            <GlanceRow
-                what="Sage question text (AI log)"
-                where={<Tag colour="amber">Synchron server</Tag>}
-                when={<Tag colour="zinc">Admin-prunable</Tag>}
-                canDelete={<Tag colour="green">Request below</Tag>}
-            />
-            <GlanceRow
-                what="AI answers"
-                where={<Tag colour="green">Never stored</Tag>}
-                when={<Tag>—</Tag>}
-                canDelete={<Tag>—</Tag>}
-            />
-            <GlanceRow
-                what="AI briefing notice priorities"
-                where={<Tag colour="amber">Synchron server (index only)</Tag>}
-                when={<Tag colour="zinc">1 day / clearable by admin</Tag>}
-                canDelete={<Tag colour="green">Admin can clear cache</Tag>}
             />
                     </tbody>
                 </table>

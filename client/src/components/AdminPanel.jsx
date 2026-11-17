@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, Database, BarChart3, Sparkles, Brain, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell, PartyPopper } from 'lucide-react';
-import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, updateAiConfig, setAiDisabled, setAiFeature, setFestiveAmbient, fetchAiLogs, clearAiCache, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory, deleteBroadcastNotification } from '../services/adminApi';
-import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin, fetchTimetableQa } from '../services/api';
+import { Link as LinkIcon, Lock, ShieldCheck, AlertCircle, Users, Activity, Settings, Search, MoreVertical, RefreshCw, Trash2, Eye, Edit2, X, Terminal, Radio, MessageSquare, Zap, Info, BarChart3, MessageCircle, EyeOff, FileCode, Plus, Check, Pin, ExternalLink, Flag, TrendingUp, UserX, CalendarDays, Bell, PartyPopper } from 'lucide-react';
+import { fetchUsers, fetchAdminStats, deleteUser, clearServerCache, updateUser, fetchLogs, setBroadcast, setMaintenanceMode, promoteUserToAdmin, pruneOldLogs, setFestiveAmbient, fetchAdminFeedback, updateFeedbackStatus, deleteFeedback, bulkUpdateFeedbackStatus, bulkDeleteFeedback, toggleUserBlacklist, updateHiddenPages, fetchAdminBuildNotes, saveAdminBuildNote, deleteAdminBuildNote, fetchDeletionRequests, updateDeletionRequest, fetchAdminCanvasLinks, setAdminCanvasLinkStatus, deleteAdminCanvasLink, resetAdminCanvasLinkReports, fetchBroadcastHistory, deleteBroadcastNotification } from '../services/adminApi';
+import { fetchSystemStatus, isAuthenticated as isSignedIn, performLogin } from '../services/api';
 import AdminCanvasLinks from './AdminCanvasLinks';
 
 const YEAR_GROUPS = ['7', '8', '9', '10', '11', '12', 'Staff', 'Unknown'];
@@ -88,14 +88,13 @@ const StatCard = ({ label, value, description, icon: Icon, iconClass, ratio }) =
     </div>
 );
 
-const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, timetable, completeTimetable, initialTab = null }) => {
+const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, initialTab = null }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Data States
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
-    const [aiLogs, setAiLogs] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [deletionRequests, setDeletionRequests] = useState([]);
     const [canvasReports, setCanvasReports] = useState([]);
@@ -128,13 +127,11 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [logSearchTerm, setLogSearchTerm] = useState('');
-    const [aiLogSearchTerm, setAiLogSearchTerm] = useState('');
     const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
     const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('open');
     const [deletionStatusFilter, setDeletionStatusFilter] = useState('pending');
     const [resolvingDeletionId, setResolvingDeletionId] = useState(null);
     const [roleFilter, setRoleFilter] = useState('All');
-    const [viewingAiLog, setViewingAiLog] = useState(null); // Full log object for modal
     const [viewingFeedback, setViewingFeedback] = useState(null); // Feedback object for detail modal
     const [editingUser, setEditingUser] = useState(null); // User object for edit modal
     const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
@@ -142,7 +139,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
-    const [clearingAiCache, setClearingAiCache] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(null);
 
     // Close user menu when clicking outside
@@ -203,16 +199,14 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             fetchAdminStats(),
             fetchLogs(),
             fetchSystemStatus(),
-            fetchAiLogs(),
             fetchAdminFeedback(),
             fetchDeletionRequests()
         ]);
-        const [usersRes, statsRes, logsRes, systemRes, aiLogsRes, feedbackRes, deletionRes] = results;
+        const [usersRes, statsRes, logsRes, systemRes, feedbackRes, deletionRes] = results;
 
         if (usersRes.status === 'fulfilled') setUsers(usersRes.value || []);
         if (statsRes.status === 'fulfilled') setStats(statsRes.value);
         if (logsRes.status === 'fulfilled') setLogs(logsRes.value || []);
-        if (aiLogsRes.status === 'fulfilled') setAiLogs(aiLogsRes.value || []);
         if (feedbackRes.status === 'fulfilled') setFeedback(feedbackRes.value || []);
         if (deletionRes.status === 'fulfilled') setDeletionRequests(deletionRes.value || []);
         if (systemRes.status === 'fulfilled') {
@@ -224,7 +218,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             }
         }
 
-        const labels = ['users', 'stats', 'logs', 'system status', 'AI logs', 'feedback', 'deletion requests'];
+        const labels = ['users', 'stats', 'logs', 'system status', 'feedback', 'deletion requests'];
         const failed = results
             .map((res, i) => (res.status === 'rejected' ? { label: labels[i], reason: res.reason } : null))
             .filter(Boolean);
@@ -470,22 +464,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     };
 
-    const handleClearAiCache = async () => {
-        if (!window.confirm("Are you sure you want to clear the AI briefing cache? This will force a new generation on the next student access.")) return;
-        setClearingAiCache(true);
-        try {
-            await clearAiCache();
-            alert("AI cache cleared successfully.");
-            loadData();
-        } catch (err) {
-            alert("Failed to clear AI cache.");
-        } finally {
-            setClearingAiCache(false);
-        }
-    };
-
-
-
     const handlePruneOldLogs = async () => {
         if (!window.confirm("Are you sure you want to prune old logs? This will delete all audit/system logs older than 30 days.")) return;
         setIsPruningLogs(true);
@@ -581,31 +559,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     };
 
     const [updatingConfig, setUpdatingConfig] = useState(false);
-    const [customModelName, setCustomModelName] = useState('');
-    const [enteringCustomModel, setEnteringCustomModel] = useState(false);
-
-    // Admin-only Sage tester: works even while AI is disabled for students.
-    const [sageQuestion, setSageQuestion] = useState('');
-    const [sageAnswer, setSageAnswer] = useState('');
-    const [sageLoading, setSageLoading] = useState(false);
-
-    const handleAskSage = async (e) => {
-        e.preventDefault();
-        if (!sageQuestion.trim() || sageLoading) return;
-        setSageLoading(true);
-        setSageAnswer('');
-        try {
-            const now = new Date();
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const data = await fetchTimetableQa(sageQuestion.trim(), timetable, currentMinutes, completeTimetable);
-            setSageAnswer(data.answer || "Couldn't generate an answer. Please try again.");
-        } catch (err) {
-            console.error("Admin Sage test failed:", err);
-            setSageAnswer("Couldn't reach Sage. Please check your network and try again.");
-        } finally {
-            setSageLoading(false);
-        }
-    };
 
     // Hidden pages state (localStorage-based)
     const [availablePages] = useState([
@@ -635,84 +588,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     }, [propHiddenPages]);
 
-    useEffect(() => {
-        if (stats?.aiModel) {
-            setCustomModelName(stats.aiModel);
-        }
-    }, [stats?.aiModel]);
-
-    const modelOptions = stats?.aiProvider === 'gemini'
-        ? (stats?.availableGeminiModels || [])
-        : (stats?.availableHackClubModels || []);
-    const showModelInput = enteringCustomModel || (!!customModelName && !modelOptions.includes(customModelName));
-
-    const handleProviderChange = async (e) => {
-        const selectedProvider = e.target.value;
-        const defaultModel = selectedProvider === 'gemini' ? 'gemini-1.5-flash' : 'qwen/qwen3-32b';
-        setEnteringCustomModel(false);
-        setUpdatingConfig(true);
-        try {
-            await updateAiConfig(selectedProvider, defaultModel);
-            setStats(prev => prev ? { ...prev, aiProvider: selectedProvider, aiModel: defaultModel } : null);
-            alert(`AI provider updated to ${selectedProvider} with default model ${defaultModel}`);
-            loadData();
-        } catch (err) {
-            alert("Failed to update AI provider configuration.");
-        } finally {
-            setUpdatingConfig(false);
-        }
-    };
-
-    const handleModelSave = async () => {
-        const modelToSave = customModelName.trim();
-        if (!modelToSave) return;
-        setUpdatingConfig(true);
-        try {
-            await updateAiConfig(stats?.aiProvider || 'hackclub', modelToSave);
-            setStats(prev => prev ? { ...prev, aiModel: modelToSave } : null);
-            alert(`AI briefing model updated to ${modelToSave}`);
-            loadData();
-        } catch (err) {
-            alert("Failed to update AI briefing model.");
-        } finally {
-            setUpdatingConfig(false);
-        }
-    };
-
-    const handleToggleAiDisabled = async () => {
-        const target = !stats?.aiDisabled;
-        setUpdatingConfig(true);
-        try {
-            await setAiDisabled(target);
-            setStats(prev => prev ? { ...prev, aiDisabled: target } : null);
-            loadData();
-        } catch (err) {
-            alert("Failed to update AI status.");
-        } finally {
-            setUpdatingConfig(false);
-        }
-    };
-
-    // Per-feature Sage toggles — independent of the global AI kill switch.
-    const AI_FEATURES = [
-        { key: 'timetableQa', label: 'Ask Sage', desc: 'Timetable Q&A popout and command palette' },
-        { key: 'noticeRanking', label: 'Notice priority', desc: 'AI ranking of daily notices' }
-    ];
-
-    const handleToggleAiFeature = async (feature) => {
-        const currentlyEnabled = stats?.aiFeatures?.[feature] !== false;
-        setUpdatingConfig(true);
-        try {
-            const data = await setAiFeature(feature, currentlyEnabled);
-            setStats(prev => prev ? { ...prev, aiFeatures: data.aiFeatures || prev.aiFeatures } : null);
-            loadData();
-        } catch (err) {
-            alert("Failed to update Sage feature.");
-        } finally {
-            setUpdatingConfig(false);
-        }
-    };
-
     const handleToggleFestiveAmbient = async () => {
         const target = !stats?.festiveAmbient;
         setUpdatingConfig(true);
@@ -724,13 +599,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             alert("Failed to update festive ambient setting.");
         } finally {
             setUpdatingConfig(false);
-        }
-    };
-
-    const handleModelKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleModelSave();
         }
     };
 
@@ -831,18 +699,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         log.user?.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
         log.details?.toLowerCase().includes(logSearchTerm.toLowerCase())
     );
-
-    const filteredAiLogs = aiLogs.filter(log => {
-        const term = aiLogSearchTerm.toLowerCase();
-        const studentName = users.find(u => String(u.id) === String(log.studentId))?.name || '';
-        return (
-            String(log.studentId || '').toLowerCase().includes(term) ||
-            studentName.toLowerCase().includes(term) ||
-            String(log.question || '').toLowerCase().includes(term) ||
-            String(log.model || '').toLowerCase().includes(term) ||
-            String(log.provider || '').toLowerCase().includes(term)
-        );
-    });
 
     const growthData = stats?.growthData || [];
     const totalSignups = growthData.reduce((sum, d) => sum + (d.count || 0), 0);
@@ -1219,113 +1075,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </div>
                 </div>
 
-                {/* Timetable Text AI Usage Logs */}
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-6">
-                    <PanelHeader
-                        icon={Brain}
-                        tone="bg-purple-50 text-purple-600 border-purple-200/50 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/30"
-                        title="Timetable Text AI Activity"
-                        subtitle="Audit log of student AI questions"
-                    >
-                        <div className="relative w-full md:w-72">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                            <input
-                                type="text"
-                                placeholder="Search questions, student IDs, models..."
-                                value={aiLogSearchTerm}
-                                onChange={(e) => setAiLogSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </div>
-                    </PanelHeader>
-
-                    {/* AI Quick Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Total Questions</span>
-                            <span className="text-xl font-bold text-zinc-900 dark:text-white mt-1 block">{aiLogs.length}</span>
-                        </div>
-                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Filtered Queries</span>
-                            <span className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1 block">{filteredAiLogs.length}</span>
-                        </div>
-                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Gemini API Calls</span>
-                            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1 block">
-                                {aiLogs.filter(l => String(l.provider).toLowerCase() === 'gemini').length}
-                            </span>
-                        </div>
-                        <div className="border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">Hack Club AI Calls</span>
-                            <span className="text-xl font-bold text-green-600 dark:text-green-400 mt-1 block">
-                                {aiLogs.filter(l => String(l.provider).toLowerCase() !== 'gemini').length}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* AI Logs Feed */}
-                    <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                        <table className="w-full text-left border-collapse text-sm">
-                            <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-semibold border-b border-zinc-200 dark:border-zinc-800">
-                                <tr>
-                                    <th className="px-4 py-3 w-32">Time</th>
-                                    <th className="px-4 py-3 w-48">Student</th>
-                                    <th className="px-4 py-3 w-36">Model Provider</th>
-                                    <th className="px-4 py-3">Question</th>
-                                    <th className="px-4 py-3 w-24 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                                {filteredAiLogs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-zinc-500 font-mono text-xs">
-                                            {aiLogs.length === 0 ? '[NO AI USAGE LOGS FOUND]' : '[NO MATCHING LOGS FOUND]'}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredAiLogs.map((log) => {
-                                        const isGemini = String(log.provider).toLowerCase() === 'gemini';
-                                        return (
-                                            <tr key={log.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 transition-colors">
-                                                <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
-                                                    {new Date(log.timestamp).toLocaleString('en-AU', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs">
-                                                    <div className="font-semibold text-zinc-900 dark:text-white">
-                                                        {users.find(u => String(u.id) === String(log.studentId))?.name || 'Unknown Student'}
-                                                    </div>
-                                                    <div className="text-zinc-500 font-mono text-[11px] mt-0.5">
-                                                        {log.studentId}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-xs whitespace-nowrap">
-                                                    <span className={`px-2 py-0.5 rounded-full font-semibold border text-[11px] ${
-                                                        isGemini 
-                                                            ? 'bg-blue-50/80 text-blue-700 border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30' 
-                                                            : 'bg-green-50/80 text-green-700 border-green-200/50 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'
-                                                    }`}>
-                                                        {isGemini ? 'Gemini' : 'Hack Club'} ({log.model?.split('/').pop()})
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 max-w-xs truncate text-zinc-900 dark:text-zinc-50 font-medium">
-                                                    {log.question}
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        onClick={() => setViewingAiLog(log)}
-                                                        className="text-xs px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-lg transition-colors font-medium border border-zinc-200/20"
-                                                    >
-                                                        Details
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         )}
 
@@ -1671,166 +1420,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 subtitle="Perform system maintenance tasks."
             />
             <div className="space-y-4">
-                {/* AI Provider Config */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <Database size={16} />
-                            AI Provider
-                        </h4>
-                        <p className="text-xs text-zinc-550 mt-1">Choose the active AI provider backend (requires appropriate API keys in .env)</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
-                        <select
-                            value={stats?.aiProvider || 'hackclub'}
-                            disabled={updatingConfig}
-                            onChange={handleProviderChange}
-                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
-                        >
-                            <option value="hackclub">Hack Club AI</option>
-                            <option value="gemini">Google Gemini API</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* AI Model Config */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <Sparkles size={16} />
-                            Select Daily AI Briefing Model
-                        </h4>
-                        <p className="text-xs text-zinc-550 mt-1">Choose or type the LLM model to generate student morning briefings from the active provider</p>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {updatingConfig && <span className="text-xs text-zinc-450 font-mono animate-pulse mr-1">updating...</span>}
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            {showModelInput ? (
-                                <>
-                                    <input
-                                        type="text"
-                                        value={customModelName}
-                                        disabled={updatingConfig}
-                                        onChange={(e) => setCustomModelName(e.target.value)}
-                                        onKeyDown={handleModelKeyDown}
-                                        placeholder="Enter model name..."
-                                        className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
-                                    />
-                                    {modelOptions.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => { setEnteringCustomModel(false); setCustomModelName(modelOptions[0]); }}
-                                            className="px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-zinc-700 rounded-lg transition-colors"
-                                        >
-                                            List
-                                        </button>
-                                    )}
-                                </>
-                            ) : (
-                                <select
-                                    value={customModelName}
-                                    disabled={updatingConfig}
-                                    onChange={(e) => {
-                                        if (e.target.value === '__custom__') {
-                                            setEnteringCustomModel(true);
-                                        } else {
-                                            setCustomModelName(e.target.value);
-                                        }
-                                    }}
-                                    className="flex-1 sm:w-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none"
-                                >
-                                    {modelOptions.map(m => (
-                                        <option key={m} value={m}>{m}</option>
-                                    ))}
-                                    <option value="__custom__">Custom…</option>
-                                </select>
-                            )}
-                            <button
-                                type="button"
-                                onClick={handleModelSave}
-                                disabled={updatingConfig || !customModelName.trim() || customModelName.trim() === stats?.aiModel}
-                                className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg text-sm disabled:opacity-50"
-                            >
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* AI Kill Switch */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <Brain size={16} />
-                            AI features for everyone
-                        </h4>
-                        <p className="text-xs text-zinc-550 mt-1">
-                            {stats?.aiDisabled
-                                ? 'Disabled — Ask Sage and notice ranking show a maintenance notice. Use the tester below to verify.'
-                                : 'When disabled, all AI features (Ask Sage and notice ranking) return a maintenance notice for everyone.'}
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={!stats?.aiDisabled}
-                        aria-label="AI features"
-                        onClick={handleToggleAiDisabled}
-                        disabled={updatingConfig || stats?.aiDisabled === undefined}
-                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${
-                            stats?.aiDisabled ? 'bg-zinc-300 dark:bg-zinc-700' : 'bg-green-500'
-                        }`}
-                    >
-                        <span
-                            className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                                stats?.aiDisabled ? 'translate-x-0' : 'translate-x-5'
-                            }`}
-                        />
-                    </button>
-                </div>
-
-                {/* Per-feature Sage toggles */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                        <Sparkles size={16} />
-                        Sage features
-                    </h4>
-                    <p className="text-xs text-zinc-550 mt-1 mb-3">
-                        Switch individual Sage features off for students without disabling all of AI. The global switch above overrides these.
-                    </p>
-                    <div className="space-y-3">
-                        {AI_FEATURES.map(({ key, label, desc }) => {
-                            const enabled = stats?.aiFeatures?.[key] !== false;
-                            return (
-                                <div key={key} className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{label}</p>
-                                        <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={enabled}
-                                        aria-label={label}
-                                        onClick={() => handleToggleAiFeature(key)}
-                                        disabled={updatingConfig || stats?.aiFeatures === undefined}
-                                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${
-                                            enabled ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-700'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                                                enabled ? 'translate-x-5' : 'translate-x-0'
-                                            }`}
-                                        />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
                 {/* Festive ambient light — seasonal glow for everyone */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
@@ -1863,37 +1452,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </button>
                 </div>
 
-                {/* Admin-only Sage tester — bypasses the student-facing AI kill switch */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                        <Sparkles size={16} />
-                        Test Sage (Admin Only)
-                    </h4>
-                    <p className="text-xs text-zinc-550 mt-1 mb-3">
-                        Ask Sage a timetable question. Works even while AI is disabled for students.
-                    </p>
-                    <form onSubmit={handleAskSage} className="flex gap-2">
-                        <input
-                            type="text"
-                            value={sageQuestion}
-                            onChange={(e) => setSageQuestion(e.target.value)}
-                            disabled={sageLoading}
-                            placeholder={sageLoading ? "Sage is typing…" : "e.g. What room is my next class?"}
-                            className="flex-1 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
-                        />
-                        <button
-                            type="submit"
-                            disabled={sageLoading || !sageQuestion.trim()}
-                            className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-semibold transition-opacity rounded-lg text-sm disabled:opacity-50"
-                        >
-                            {sageLoading ? "Asking…" : "Ask"}
-                        </button>
-                    </form>
-                    {sageAnswer && (
-                        <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{sageAnswer}</p>
-                    )}
-                </div>
-
                 <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white">Clear Application Cache (Local)</h4>
@@ -1917,23 +1475,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
                     >
                         Clear Server Cache
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div>
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
-                            <Sparkles size={16} className="text-purple-500" />
-                            Clear AI Cache
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-1">Clear cached daily notice rankings from the database and memory</p>
-                    </div>
-                    <button
-                        onClick={handleClearAiCache}
-                        disabled={clearingAiCache}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors text-sm shadow-sm disabled:opacity-50"
-                    >
-                        {clearingAiCache ? 'Clearing...' : 'Clear AI Cache'}
                     </button>
                 </div>
 
@@ -2600,71 +2141,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
-    )
-}
-
-{/* AI Log Detail Modal */}
-{
-    viewingAiLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                <div className="flex justify-between items-center p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-purple-100 dark:bg-purple-950/40 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-200/20">
-                            <Brain className="w-5 h-5 animate-pulse" />
-                        </div>                        <div>
-                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">AI Log Details</h3>
-                            <p className="text-xs text-zinc-500 mt-1">
-                                Student: {users.find(u => String(u.id) === String(viewingAiLog.studentId))?.name || 'Unknown Student'} ({viewingAiLog.studentId}) • {new Date(viewingAiLog.timestamp).toLocaleString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={() => setViewingAiLog(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
-                    {/* Metadata */}
-                    <div className="grid grid-cols-3 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Provider</span>
-                            <span className="font-bold text-zinc-900 dark:text-white capitalize">{viewingAiLog.provider}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Model</span>
-                            <span className="font-bold text-zinc-900 dark:text-white">{viewingAiLog.model}</span>
-                        </div>
-                        <div>
-                            <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
-                            <span className={`font-bold ${viewingAiLog.status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                                {viewingAiLog.status === 'error' ? 'Error' : 'OK'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Question */}
-                    <div className="space-y-4 text-left">
-                        <div className="space-y-1.5">
-                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Question</span>
-                            <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-2xl rounded-tl-none border border-zinc-200 dark:border-zinc-800 text-sm">
-                                {viewingAiLog.question}
-                            </div>
-                        </div>
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                            AI responses are not stored.
-                        </p>
-                    </div>
-                </div>
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
-                    <button
-                        onClick={() => setViewingAiLog(null)}
-                        className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-lg transition-colors shadow-sm"
-                    >
-                        Close
-                    </button>
-                </div>
             </div>
         </div>
     )

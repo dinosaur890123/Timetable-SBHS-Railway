@@ -31,9 +31,9 @@ const clearOfflineData = async () => {
 };
 
 // fetch with a time limit, so a server that stops answering shows an error
-// instead of a spinner that never ends. AI requests get longer.
+// instead of a spinner that never ends.
 const timedFetch = async (url, options = {}, timeoutMs) => {
-    const limit = timeoutMs ?? (String(url).includes('/ai/') ? 60000 : 20000);
+    const limit = timeoutMs ?? 20000;
     // The service worker falls back to its offline copy when the network is too
     // slow, which can happen while the device still reports being online. In that
     // case give the network a couple more chances before settling for the copy.
@@ -438,38 +438,6 @@ export const fetchSystemStatus = async () => {
     } catch {
         return null;
     }
-};
-
-export const fetchAiBriefing = async (notices) => {
-    const token = await getValidAccessToken();
-    const response = await timedFetch(`${SYSTEM_API_URL}/ai/briefing`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ notices })
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch AI briefing: ${response.status}`);
-    }
-    return response.json();
-};
-
-export const fetchTimetableQa = async (question, timetable, currentMinutes, completeTimetable) => {
-    const token = await getValidAccessToken();
-    const response = await timedFetch(`${SYSTEM_API_URL}/ai/timetable-qa`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ question, timetable, currentMinutes, completeTimetable })
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch Timetable Q&A: ${response.status}`);
-    }
-    return response.json();
 };
 
 async function fetchFromBackend(endpoint) {

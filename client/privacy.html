@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy — Synchron</title>
-    <meta name="description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <meta name="description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links and feedback, plus how to request deletion." />
     <link rel="canonical" href="https://synchron.work/privacy" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Synchron" />
     <meta property="og:locale" content="en_AU" />
     <meta property="og:title" content="Privacy — Synchron" />
-    <meta property="og:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <meta property="og:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links and feedback, plus how to request deletion." />
     <meta property="og:url" content="https://synchron.work/privacy" />
     <meta property="og:image" content="https://synchron.work/og-image.png" />
     <meta property="og:image:width" content="1200" />
@@ -19,7 +19,7 @@
     <meta property="og:image:alt" content="Synchron privacy policy" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Privacy — Synchron" />
-    <meta name="twitter:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links, feedback and AI features, plus how to request deletion." />
+    <meta name="twitter:description" content="How Synchron handles SBHS timetable data, tokens, preferences, Canvas links and feedback, plus how to request deletion." />
     <meta name="twitter:image" content="https://synchron.work/og-image.png" />
     <script type="application/ld+json">
     {
@@ -96,19 +96,10 @@
               <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">What the Synchron server stores</h2>
               <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                 <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Your account record.</strong> When you first sign in, Synchron creates an account row containing your student ID, name, email, and year group — sourced from the SBHS identity token. This is used to show your name in the admin panel, track your role, and sync preferences across devices.</p>
-                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Preferences.</strong> Theme, accent colour, ambient light, and similar UI settings are synced server-side so they carry across devices. Your AI opt-in choice is stored here too.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Preferences.</strong> Theme, accent colour, ambient light, and similar UI settings are synced server-side so they carry across devices.</p>
                 <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Canvas links.</strong> Class-to-Canvas URL mappings you create are stored server-side so they sync across your devices and can contribute to community suggestions for your class. Only you can read or modify your own links.</p>
                 <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Feedback tickets.</strong> Feedback you submit is stored so the dev team can review and respond. Archived tickets are automatically deleted after 90 days.</p>
                 <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Activity logs.</strong> Server-side events such as sign-ins, preference changes, and Canvas link updates are logged for security auditing. Logs older than 30 days are pruned on demand by administrators.</p>
-              </div>
-            </section>
-
-            <section class="rounded-2xl border border-zinc-900/[0.07] dark:border-white/[0.07] bg-white/70 dark:bg-white/[0.025] overflow-hidden">
-              <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">AI features (Sage) — opt-in only</h2>
-              <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Opt-in.</strong> AI features are off by default. You must turn them on in Settings and can disable them at any time.</p>
-                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">What is sent.</strong> When you ask Sage a question, your typed question and your timetable data are included in the prompt sent to the AI provider. Award scheme data, attendance records, notes, assignments, and feedback are never sent to any AI provider.</p>
-                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">What Synchron stores.</strong> Your typed question (capped at 500 characters) and student ID are logged for admin review and abuse monitoring. AI answers are never stored on the Synchron server.</p>
               </div>
             </section>
 
@@ -117,8 +108,7 @@
               <ul class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                 <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Timetable, notices, awards, attendance:</strong> your device only; cleared on sign-out.</li>
                 <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">SBHS tokens:</strong> localStorage only; removed on sign-out.</li>
-                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Account, preferences, Canvas links, feedback, AI question logs:</strong> Synchron server; deletable by request or sign-out where noted.</li>
-                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">AI answers:</strong> never stored.</li>
+                <li class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Account, preferences, Canvas links, feedback:</strong> Synchron server; deletable by request or sign-out where noted.</li>
               </ul>
             </section>
 
@@ -126,7 +116,7 @@
               <h2 class="px-5 py-4 border-b border-zinc-900/[0.06] dark:border-white/[0.06] text-[13px] font-semibold text-zinc-900 dark:text-white">Deleting your data</h2>
               <div class="divide-y divide-zinc-900/[0.06] dark:divide-white/[0.06] text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                 <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Signing out.</strong> Signs you out and immediately wipes your tokens, timetable cache, and all offline data from this device. Your account record and Canvas links remain on the server so they’re ready when you sign back in.</p>
-                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Requesting full deletion.</strong> Sign in to Synchron and open Settings → Privacy to ask for your account and all associated server-side data to be removed. Admin-level deletion removes your account row, Canvas links, feedback, and AI log entries.</p>
+                <p class="px-5 py-3.5"><strong class="font-medium text-zinc-800 dark:text-zinc-200">Requesting full deletion.</strong> Sign in to Synchron and open Settings → Privacy to ask for your account and all associated server-side data to be removed. Admin-level deletion removes your account row, Canvas links, and feedback.</p>
               </div>
             </section>
 

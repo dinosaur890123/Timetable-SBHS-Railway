@@ -24,13 +24,6 @@ const PriorityBadge = ({ notice }) => {
       </span>
     );
   }
-  if (notice.priority >= 4) {
-    return (
-      <span className="nf-serif shrink-0 px-2.5 py-1 rounded-md text-[13px] leading-none bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-        High priority
-      </span>
-    );
-  }
   return null;
 };
 
@@ -94,23 +87,14 @@ const NoticeItem = ({ notice, index }) => {
   );
 };
 
-const DailyNotices = ({ notices, aiBriefing, user }) => {
+const DailyNotices = ({ notices, user }) => {
   useNoteFlowFonts();
   const baseNotices = notices?.notices || [];
-  // The server only returns the AI's ranking ([{index, priority}]); the notices
-  // themselves stay client-side. Indices refer to the original array order.
-  const allNotices = useMemo(() => {
-    const prios = aiBriefing?.priorities;
-    const byIndex = Array.isArray(prios) && prios.length > 0
-      ? new Map(prios.map(p => [p.index, p.priority ?? 1]))
-      : null;
-    if (!byIndex) {
-      return [...baseNotices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0));
-    }
-    return baseNotices
-      .map((n, i) => ({ ...n, priority: byIndex.get(i) ?? 1 }))
-      .sort((a, b) => b.priority - a.priority);
-  }, [baseNotices, aiBriefing]);
+  // Meetings first; otherwise keep SBHS's order.
+  const allNotices = useMemo(
+    () => [...baseNotices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0)),
+    [baseNotices]
+  );
   const [filterView, setFilterView] = useState('curated');
   const [query, setQuery] = useState('');
 

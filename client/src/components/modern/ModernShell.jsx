@@ -1,13 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
-    MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut, Sparkles,
+    MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 import CanvasLinkNotifications from '../CanvasLinkNotifications';
 import PWAInstallButton from '../PWAInstallButton';
-import { sageMarkdown } from '../../utils/sageMarkdown';
 
 export const VIEW_LABELS = {
     home: 'My Synchron',
@@ -197,7 +196,6 @@ const IconButton = ({ children, className = '', ...props }) => (
 export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
     isOffline, usingCachedData,
-    aiDisabled, aiGloballyDisabled, aiBannerDismissed, onEnableAi, onDismissAi,
     buildNotes = [], adminNotices = [], onOpenBuildNotes, onOpenCanvasLinks, onOpenAdmin
 }) => {
     const status = isOffline
@@ -234,7 +232,7 @@ export const ModernTopbar = ({
                     className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
                 >
                     <Search size={14} />
-                    <span className="flex-1 text-left">Search or ask Sage</span>
+                    <span className="flex-1 text-left">Search</span>
                     <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
                 </button>
                 <span className="hidden lg:flex items-center gap-1.5 px-2 text-xs text-zinc-400" title={status.label}>
@@ -254,11 +252,6 @@ export const ModernTopbar = ({
                 </div>
 
                 <CanvasLinkNotifications
-                    aiDisabled={aiDisabled}
-                    aiGloballyDisabled={aiGloballyDisabled}
-                    aiBannerDismissed={aiBannerDismissed}
-                    onEnableAi={onEnableAi}
-                    onDismissAi={onDismissAi}
                     buildNotes={buildNotes}
                     adminNotices={adminNotices}
                     onOpenBuildNotes={onOpenBuildNotes}
@@ -333,10 +326,9 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
     );
 };
 
-export const CommandPalette = ({ open, onClose, commands, quickActions = [], onAskSage = null }) => {
+export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
-    const [sage, setSage] = useState({ status: 'idle', question: '', answer: '' });
     const inputRef = useRef(null);
     const listRef = useRef(null);
 
@@ -346,36 +338,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
         return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
     }, [commands, query]);
 
-    // Asking goes through the same endpoint and prompt as the Sage popout, so
-    // the scope rules and privacy wording are identical wherever you ask.
-    const askSage = useCallback(async (question) => {
-        const q = question.trim();
-        if (!q || !onAskSage) return;
-        setSage({ status: 'asking', question: q, answer: '' });
-        try {
-            const answer = await onAskSage(q);
-            setSage({ status: 'done', question: q, answer });
-        } catch {
-            setSage({ status: 'done', question: q, answer: "Couldn't reach Sage. Please try again." });
-        }
-    }, [onAskSage]);
-
-    const sageQuery = query.trim();
-    const sageActive = sage.status !== 'idle';
-    const items = useMemo(() => {
-        if (!onAskSage || !sageQuery || sageActive) return filtered;
-        return [...filtered, {
-            id: 'ask-sage',
-            group: 'Sage',
-            label: 'Ask Sage',
-            labelClassName: 'sage-name',
-            iconClassName: 'sage-accent',
-            icon: Sparkles,
-            hint: sageQuery.length > 48 ? `${sageQuery.slice(0, 48)}…` : sageQuery,
-            keepOpen: true,
-            run: () => askSage(sageQuery)
-        }];
-    }, [filtered, onAskSage, sageQuery, sageActive, askSage]);
+    const items = filtered;
 
     useEffect(() => {
         if (open) {
@@ -386,7 +349,6 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
 
     useEffect(() => {
         setActiveIndex(0);
-        setSage({ status: 'idle', question: '', answer: '' });
     }, [query]);
 
     useEffect(() => {
@@ -404,8 +366,6 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
     };
 
     const handleKeyDown = (e) => {
-        // While an answer is showing the list is hidden — only Esc applies.
-        if (sageActive && e.key !== 'Escape') return;
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
@@ -454,7 +414,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={onAskSage ? "Jump to a page, run a command, or ask Sage…" : "Jump to a page or run a command…"}
+                                placeholder="Jump to a page or run a command…"
                                 className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:outline-none"
                             />
                             <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
@@ -479,30 +439,6 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                             </div>
                         )}
                         <div ref={listRef} className="max-h-[50vh] overflow-y-auto p-1.5">
-                            {sageActive ? (
-                                <div className="px-3 py-4">
-                                    <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                                        <Sparkles size={14} className="sage-accent shrink-0" />
-                                        <span className="sage-name text-sm text-zinc-900 dark:text-white shrink-0">Sage</span>
-                                        <span className="text-xs text-zinc-400 truncate">{sage.question}</span>
-                                    </div>
-                                    {sage.status === 'asking' ? (
-                                        <span className="inline-flex items-center gap-2 text-[13px] text-zinc-400">
-                                            <i className="sage-accent w-2 h-2 rounded-full bg-current animate-pulse" aria-hidden="true" />
-                                            Sage is typing…
-                                        </span>
-                                    ) : (
-                                        <div
-                                            className="palette-sage__md"
-                                            dangerouslySetInnerHTML={{ __html: sageMarkdown(sage.answer) }}
-                                        />
-                                    )}
-                                    {sage.status === 'done' && (
-                                        <p className="mt-2 text-[11px] text-zinc-400">Sage can make mistakes. Check important details against your timetable.</p>
-                                    )}
-                                </div>
-                            ) : (
-                                <>
                             {items.length === 0 && (
                                 <div className="py-10 text-center text-sm text-zinc-400">No results for “{query}”</div>
                             )}
@@ -532,8 +468,6 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
                                     </React.Fragment>
                                 );
                             })}
-                                </>
-                            )}
                         </div>
                     </motion.div>
                 </motion.div>
@@ -543,7 +477,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], onA
 };
 
 // Builds the palette's command list from app-level actions.
-export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSignOut, hiddenPages = [] }) => {
+export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hiddenPages = [] }) => {
     // Quick actions for mobile (awards, calendar, portal, canvas)
     const quickActions = [
         { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
@@ -602,16 +536,6 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onAskAi, onSi
             icon: theme === 'dark' ? Sun : Moon,
             run: toggleTheme
         },
-        ...(onAskAi ? [{ 
-            id: 'ask-ai', 
-            group: 'Actions', 
-            label: 'Ask Sage', 
-            labelClassName: 'sage-name',
-            iconClassName: 'sage-accent',
-            keywords: 'ai sage question', 
-            icon: Sparkles, 
-            run: onAskAi 
-        }] : []),
         {
             id: 'sign-out', 
             group: 'Account', 

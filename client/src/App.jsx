@@ -5,7 +5,6 @@ import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands,
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
 import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
-import { sageMarkdown } from './utils/sageMarkdown';
 
 // Each page's code loads on its first visit, and is also fetched quietly once a signed-in app is idle
 // (see warmPages below) so switching pages never stops on "Loading view".
@@ -109,8 +108,6 @@ import {
     performLogin,
     fetchSystemStatus,
     fetchCompleteTimetable,
-    fetchAiBriefing,
-    fetchTimetableQa,
     fetchUserPreferences,
     saveUserPreferences,
     fetchBuildNotes,
@@ -127,12 +124,10 @@ import { prefetchPages, calendarPage, termsPage, closureLabel } from './services
 import { useCachedLoad } from './utils/pageCache';
 import { registerUser, fetchDeletionRequests, fetchAdminCanvasLinks, fetchAdminFeedback } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, Sparkles, X, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, XCircle, AlertOctagon, AlertCircle } from 'lucide-react';
 import { CanvasLinksProvider } from './context/CanvasLinksContext';
 import { NotificationsContext } from './context/NotificationsContext';
 import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
-import { Hl, useNoteFlowFonts } from './components/study/noteflow';
-import './components/sage.css';
 
 function App() {
     // State
@@ -175,12 +170,6 @@ function App() {
         }
     });
     const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('color_theme') || 'navy');
-    const [aiDisabled, setAiDisabled] = useState(() => localStorage.getItem('ai_opt_in') !== 'true');
-    const [aiGloballyDisabled, setAiGloballyDisabled] = useState(false);
-    // Per-feature admin toggles from /api/system/status; missing keys mean on.
-    const [aiFeatures, setAiFeatures] = useState({});
-    const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
-    const [aiProviderName, setAiProviderName] = useState('an AI provider');
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const [canvasLinksEnabled, setCanvasLinksEnabled] = useState(() => localStorage.getItem('canvas_links_enabled') !== 'false');
@@ -232,8 +221,6 @@ function App() {
     });
     const [authError, setAuthError] = useState(null);
     const [authInProgress, setAuthInProgress] = useState(false);
-    const [aiBriefing, setAiBriefing] = useState(null);
-    const [aiLoading, setAiLoading] = useState(false);
     const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
     const [clipboardSessions, setClipboardSessions] = useState([]);
 
@@ -381,15 +368,6 @@ function App() {
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
-
-    // Timetable AI Modal States
-    const [showAiModal, setShowAiModal] = useState(false);
-    // Sage's serif face loads only when the modal or the palette can show its name.
-    useNoteFlowFonts(showAiModal || paletteOpen || !aiDisabled);
-    const [aiQuestion, setAiQuestion] = useState('');
-    const [aiAnswer, setAiAnswer] = useState('');
-    const [aiShown, setAiShown] = useState('');
-    const [aiQaLoading, setAiQaLoading] = useState(false);
 
     // Date Picker State
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -696,7 +674,6 @@ function App() {
             const preferences = {
                 theme,
                 colorTheme,
-                aiOptIn: !aiDisabled,
                 ambientLight,
                 showClipboardEvents,
                 canvasLinksEnabled,
@@ -715,59 +692,6 @@ function App() {
     };
 
 
-    // One Sage call, shared by the popout and the command palette. The server
-    // prompt (scope rules, timetable + Clipboard session context) is identical
-    // for both, so the guidelines stay the same wherever you ask.
-    const querySage = async (question) => {
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const data = await fetchTimetableQa(question, timetable, currentMinutes, completeTimetable);
-        return data.answer || "I couldn't generate an answer. Please try again.";
-    };
-
-    const askSageInline = async (question) => {
-        if (aiGloballyDisabled || aiFeatures.timetableQa === false) return 'Sage is under maintenance. Please check back later.';
-        try {
-            return await querySage(question);
-        } catch (err) {
-            console.error("AI Q&A failed:", err);
-            return "Couldn't reach Sage. Please check your network and try again.";
-        }
-    };
-
-    const handleAskAiQuestion = async (e) => {
-        e.preventDefault();
-        if (sageBlocked) {
-            setAiAnswer('Sage is under maintenance. Please check back later.');
-            return;
-        }
-        if (!aiQuestion.trim() || aiQaLoading) return;
-
-        setAiQaLoading(true);
-        setAiAnswer('');
-        try {
-            setAiAnswer(await querySage(aiQuestion));
-        } catch (err) {
-            console.error("AI Q&A failed:", err);
-            setAiAnswer("Couldn't reach Sage. Please check your network and try again.");
-        } finally {
-            setAiQaLoading(false);
-        }
-    };
-
-    // Once the answer lands, type it out like a chat reply. Reduced motion gets it whole.
-    useEffect(() => {
-        if (!aiAnswer) { setAiShown(''); return; }
-        if (reduceMotion) { setAiShown(aiAnswer); return; }
-        let i = 0;
-        const id = setInterval(() => {
-            i += 2;
-            setAiShown(aiAnswer.slice(0, i));
-            if (i >= aiAnswer.length) clearInterval(id);
-        }, 24);
-        return () => clearInterval(id);
-    }, [aiAnswer, reduceMotion]);
-
     // Poll System Status (low frequency to minimize performance cost)
     useEffect(() => {
         let lastFetched = 0;
@@ -782,14 +706,7 @@ function App() {
                 if (systemData) {
                     setBroadcast(systemData.broadcast);
                     setMaintenance(systemData.maintenance);
-                    setAiGloballyDisabled(!!systemData.aiDisabled);
                     setFestiveAmbient(!!systemData.festiveAmbient);
-                    if (systemData.aiFeatures) {
-                        setAiFeatures(systemData.aiFeatures);
-                    }
-                    if (systemData.aiProvider) {
-                        setAiProviderName(systemData.aiProvider === 'gemini' ? 'Google Gemini' : systemData.aiProvider === 'hackclub' ? 'Hack Club AI' : systemData.aiProvider);
-                    }
                     if (Array.isArray(systemData.hiddenPages)) {
                         setHiddenPages(systemData.hiddenPages);
                         localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
@@ -821,29 +738,6 @@ function App() {
     }, []);
 
     const isSignedIn = !!user;
-    // Admins can disable AI app-wide; it then shows maintenance to everyone in
-    // the normal UI. Admins still reach Sage through the admin panel's tester.
-    const aiBlocked = aiGloballyDisabled;
-    // Admins can also switch off individual Sage features (Ask Sage vs notice
-    // ranking) without killing all of AI.
-    const sageFeatureOn = aiFeatures.timetableQa !== false;
-    const noticeRankingOn = aiFeatures.noticeRanking !== false;
-    const sageBlocked = aiBlocked || !sageFeatureOn;
-
-    // Drop any briefing already loaded so notices revert to their raw order
-    // the moment AI (or just notice ranking) is switched off.
-    useEffect(() => {
-        if (aiBlocked || !noticeRankingOn) setAiBriefing(null);
-    }, [aiBlocked, noticeRankingOn]);
-
-    // Sage is a timetable companion — on mobile, dismiss it when navigating
-    // to any page other than the timetable.
-    useEffect(() => {
-        if (showAiModal && currentView !== 'home' && window.matchMedia('(max-width: 767px)').matches) {
-            setShowAiModal(false);
-        }
-    }, [currentView, showAiModal]);
-
     // Theme Config
     useEffect(() => {
         localStorage.setItem('theme', theme);
@@ -854,15 +748,6 @@ function App() {
     useEffect(() => {
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
-
-    useEffect(() => {
-        if (aiDisabled) {
-            localStorage.removeItem('ai_opt_in');
-        } else {
-            localStorage.setItem('ai_opt_in', 'true');
-        }
-        savePreferences();
-    }, [aiDisabled]);
 
     useEffect(() => {
         localStorage.setItem('ambient_light', ambientLight ? 'on' : 'off');
@@ -1047,10 +932,6 @@ function App() {
                     setMaintenance(systemData.maintenance);
                     setFestiveAmbient(!!systemData.festiveAmbient);
 
-                    if (systemData.aiFeatures) {
-                        setAiFeatures(systemData.aiFeatures);
-                    }
-
                     if (Array.isArray(systemData.hiddenPages)) {
                         setHiddenPages(systemData.hiddenPages);
                         localStorage.setItem('hidden_pages', JSON.stringify(systemData.hiddenPages));
@@ -1097,14 +978,6 @@ function App() {
                             if (prefs.colorTheme) {
                                 setColorTheme(prefs.colorTheme);
                                 localStorage.setItem('color_theme', prefs.colorTheme);
-                            }
-                            if (prefs.aiOptIn !== undefined) {
-                                setAiDisabled(!prefs.aiOptIn);
-                                if (prefs.aiOptIn) {
-                                    localStorage.setItem('ai_opt_in', 'true');
-                                } else {
-                                    localStorage.removeItem('ai_opt_in');
-                                }
                             }
                             if (prefs.ambientLight !== undefined) {
                                 setAmbientLight(prefs.ambientLight);
@@ -1273,24 +1146,6 @@ function App() {
             .catch(err => console.error("Failed to fetch calendar events", err));
     }, [viewMonthKey, viewDate, user, loadedMonthKey]);
 
-    // Fetch AI Briefing in background once notices are loaded
-    useEffect(() => {
-        if (aiDisabled || aiBlocked || !noticeRankingOn || !user || !notices || !notices.notices || notices.notices.length === 0) return;
-
-        const getAiData = async () => {
-            setAiLoading(true);
-            try {
-                const data = await fetchAiBriefing(notices.notices);
-                setAiBriefing(data);
-            } catch (err) {
-                console.error("Failed to load AI briefing:", err);
-            } finally {
-                setAiLoading(false);
-            }
-        };
-        getAiData();
-    }, [notices, user, aiDisabled, aiBlocked, noticeRankingOn]);
-
     // Once signed in and idle, fetch every page's code so the first visit to each is instant.
     useEffect(() => {
         if (!user) return;
@@ -1383,8 +1238,8 @@ function App() {
     // Arrow keys step through days on the home timetable, and a mostly-horizontal
     // swipe does the same anywhere on the page (the handlers sit on the content
     // container, so they still work over a no-classes day's empty space). Both
-    // stand down while typing or when a layer (palette, date picker, AI modal) is open.
-    const layersOpen = paletteOpen || showDatePicker || showAiModal;
+    // stand down while typing or when a layer (palette, date picker) is open.
+    const layersOpen = paletteOpen || showDatePicker;
     useEffect(() => {
         const onKeyDown = (e) => {
             if (currentView !== 'home' || timetableViewMode !== 'daily' || layersOpen) return;
@@ -1549,11 +1404,6 @@ function App() {
                     onOpenPalette={() => setPaletteOpen(true)}
                     isOffline={isOffline}
                     usingCachedData={usingCachedData}
-                    aiDisabled={aiDisabled}
-                    aiGloballyDisabled={aiGloballyDisabled}
-                    aiBannerDismissed={aiBannerDismissed}
-                    onEnableAi={() => setAiDisabled(false)}
-                    onDismissAi={() => setAiBannerDismissed(true)}
                     buildNotes={hiddenPages.includes('build-notes') ? [] : buildNotes}
                     adminNotices={adminNotices}
                     onOpenBuildNotes={() => setCurrentView('build-notes')}
@@ -1663,16 +1513,6 @@ function App() {
                                                         Today
                                                     </button>
                                                 )}
-                                                {!aiDisabled && (
-                                                    <button
-                                                        onClick={() => setShowAiModal(true)}
-                                                        aria-label="Ask Sage about your timetable"
-                                                        className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[12px] sm:text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] transition-colors flex items-center gap-1.5"
-                                                    >
-                                                        <Sparkles size={13} sm:size={14} className="sage-accent" />
-                                                        <span className="hidden sm:inline">Ask <span className="sage-name">Sage</span></span>
-                                                    </button>
-                                                )}
                                             </div>
                                         </div>
                         
@@ -1770,7 +1610,7 @@ function App() {
 
                             {/* NOTICES VIEW */}
                             {currentView === 'notices' && (
-                                <DailyNotices notices={notices} aiBriefing={aiBlocked || !noticeRankingOn ? null : aiBriefing} user={user} />
+                                <DailyNotices notices={notices} user={user} />
                             )}
 
                             {/* AWARD SCHEME VIEW */}
@@ -1799,11 +1639,11 @@ function App() {
 
                             {/* PRIVACY VIEW */}
                             {currentView === 'privacy' && (
-                                <PrivacyView onBack={() => setCurrentView('profile')} aiProviderName={aiProviderName} isAdmin={user?.role === 'Admin'} />
+                                <PrivacyView onBack={() => setCurrentView('profile')} isAdmin={user?.role === 'Admin'} />
                             )}
 
                             {/* ADMIN VIEW */}
-                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} timetable={timetable} completeTimetable={completeTimetable} initialTab={adminTabRequest} />}
+                            {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} initialTab={adminTabRequest} />}
 
                             {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
@@ -1813,9 +1653,6 @@ function App() {
                                     setTheme={setTheme}
                                     colorTheme={colorTheme}
                                     setColorTheme={setColorTheme}
-                                    aiDisabled={aiDisabled}
-                                    setAiDisabled={setAiDisabled}
-                                    aiProviderName={aiProviderName}
                                     ambientLight={ambientLight}
                                     setAmbientLight={setAmbientLight}
                                     festiveAmbient={festiveAmbient}
@@ -1835,91 +1672,6 @@ function App() {
                         </ErrorBoundary>
                 </div>
 
-                {/* Sage popout — NoteFlow's ink-on-paper, like the Clipboard sheets */}
-                {showAiModal && (
-                    <div className="nf nf-pop-scrim animate-in fade-in duration-200">
-                        <div
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label="Ask Sage"
-                            className="nf nf-sheet nf-pop sage-pop animate-in zoom-in-95 duration-200"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <button
-                                type="button"
-                                className="nf-cb-btn nf-cb-btn--bare nf-pop__close"
-                                onClick={() => {
-                                    setShowAiModal(false);
-                                    setAiQuestion('');
-                                    setAiAnswer('');
-                                }}
-                                aria-label="Close"
-                            >
-                                <X size={16} strokeWidth={1.75} />
-                            </button>
-                            <h3 className="nf-pop__title">
-                                <Hl still={reduceMotion} delay={0.15}><span className="sage-name">Sage</span></Hl>
-                                {aiProviderName === 'Google Gemini' && (
-                                    <sup className="ml-2 inline-flex items-center gap-1.5 text-[11px] text-zinc-400 leading-none font-sans self-end mt-0.5">
-                                        powered by
-                                        <img
-                                            src={theme === 'dark' ? '/gemini%20white%20logo.png' : '/geminii%20coloured%20logo.png'}
-                                            alt="Google Gemini"
-                                            className="h-4 w-auto"
-                                        />
-                                    </sup>
-                                )}
-                            </h3>
-
-                            <div className="sage-body">
-                                {sageBlocked ? (
-                                    <div className="sage-answer animate-in fade-in duration-200">
-                                        <p className="nf-meta sage-hint">Sage is under maintenance. Please check back later.</p>
-                                    </div>
-                                ) : (
-                                <>
-                                <p className="nf-meta sage-hint">Ask about classes, rooms, teachers, times, or Clipboard sessions.</p>
-                                <form onSubmit={handleAskAiQuestion} className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={aiQuestion}
-                                        onChange={(e) => setAiQuestion(e.target.value)}
-                                        disabled={aiQaLoading}
-                                        placeholder={aiQaLoading ? "Sage is typing…" : "e.g. What room is my next class?"}
-                                        className="sage-input"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={aiQaLoading || !aiQuestion.trim()}
-                                        className="nf-btn nf-btn--ink shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                        {aiQaLoading ? "Asking…" : "Ask"}
-                                    </button>
-                                </form>
-                                {(aiQaLoading || aiAnswer) && (
-                                    <div className="sage-answer animate-in fade-in duration-200">
-                                        {aiAnswer ? (
-                                            <div
-                                                className="sage-answer__md"
-                                                dangerouslySetInnerHTML={{
-                                                    __html: sageMarkdown(aiShown) + (aiShown.length < aiAnswer.length ? '<span class="sage-caret" aria-hidden="true"></span>' : '')
-                                                }}
-                                            />
-                                        ) : (
-                                            <span className="sage-typing" role="status"><i aria-hidden="true" />Sage is typing</span>
-                                        )}
-                                    </div>
-                                )}
-                                {aiAnswer && (
-                                    <p className="nf-meta sage-hint mt-2 text-[11px]">Sage can make mistakes. Check important details against your timetable.</p>
-                                )}
-                                </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 </div>
             </main>
 
@@ -1932,13 +1684,11 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
-                onAskSage={aiDisabled || !sageFeatureOn ? null : askSageInline}
                 {...buildCommands({
                     user,
                     setView: setCurrentView,
                     theme,
                     toggleTheme,
-                    onAskAi: aiDisabled || !sageFeatureOn ? null : () => { setCurrentView('home'); setShowAiModal(true); },
                     onSignOut: logout,
                     hiddenPages
                 })}
