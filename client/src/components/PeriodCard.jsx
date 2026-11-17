@@ -3,7 +3,6 @@ import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { subjectInk, isBreakBell, formatTime12Hour } from '../utils/timetable';
 import { isLinklessTitle } from '../utils/canvasLinks';
-import { TeacherTreat } from './TeacherTreat';
 
 // Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
@@ -119,7 +118,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
                         </span>
                     )}
-                    <TeacherTreat name={fullTeacher} />
                 </div>
             </div>
 
@@ -138,7 +136,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}
-                        <TeacherTreat name={fullTeacher} />
                         <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
                 </div>

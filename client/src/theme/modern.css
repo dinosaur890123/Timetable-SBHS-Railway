@@ -244,15 +244,6 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   html[data-ui="modern"] .md\:min-h-\[calc\(100dvh-1rem\)\] { min-height: calc(100dvh / var(--ui-scale) - 1rem); }
 }
 
-/* ---------- Teacher treat: a tiny sparkle beside two favourite teachers ----------
-   Rests dim almost all the time and twinkles briefly every few seconds. */
-.teacher-treat { animation: treat-twinkle 5s ease-in-out infinite; transform-origin: center; }
-@keyframes treat-twinkle {
-  0%, 76%, 100% { opacity: .3; transform: scale(.8) rotate(0deg); }
-  84% { opacity: .85; transform: scale(1) rotate(10deg); }
-  91% { opacity: .45; transform: scale(.9) rotate(4deg); }
-}
-
 /* ---------- Prevent time wrapping ----------
    Keep 12-hour times (e.g., "9:00 am") on a single line to avoid ugly wrapping. */
 .tabular-nums { white-space: nowrap; }

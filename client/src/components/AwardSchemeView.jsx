@@ -485,11 +485,14 @@ const PlanView = ({ summary }) => {
 
         // Include nominations reached by planned points as well as nomination
         // awards added directly to the plan when projecting the next prize.
-        const nextPrize = summary.prizeRows.find(p => p.state !== 'won');
         const projectedNominations = summary.nominationsAllTime
             + plannedAwards.filter(a => a.type === 'nomination').length
             + areaBreakdown.reduce((sum, area) => sum + area.hypotheticalNominations, 0);
-        const projectedPrize = nextPrize && projectedNominations >= nextPrize.nominationsRequired ? nextPrize : null;
+        const projectedPrizeRows = summary.prizeRows.map(prize => ({
+            ...prize,
+            state: prize.won ? 'won' : prize.nominationsRequired > 0 && projectedNominations >= prize.nominationsRequired ? 'reached' : 'progress'
+        }));
+        const projectedPrize = [...projectedPrizeRows].reverse().find(prize => prize.state === 'reached') || null;
 
         return {
             totalPlannedPoints,
