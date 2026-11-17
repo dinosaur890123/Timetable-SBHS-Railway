@@ -604,10 +604,10 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             <div className={`mx-auto ${contentWidth}`}>
             {/* Day swipes are handled on the page container in App, so they work
                 even over the empty space of a no-classes day. */}
-            <div className={showRail ? 'grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
+            <div className={showRail ? 'grid md:gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
                 {/* On phones the countdown sits above the list so it's seen first */}
                 {rail && <div className="lg:hidden">{rail}</div>}
-                <div className="mb-5 md:hidden">
+                <div className="mb-3 md:hidden">
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
                 </div>
                 <section className="min-w-0">
