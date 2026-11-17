@@ -70,8 +70,8 @@ const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]
 // When that fails, say the prompt is the likely cause instead of a generic auth error.
 const authErrorMessage = (err) => {
     const base = err?.message || (typeof err === 'string' ? err : 'Failed to authenticate.');
-    if (/failed to fetch|network|timed out|abort|local network|permission|ERR_LOCAL_NETWORK|ERR_BLOCKED_BY/i.test(base)) {
-        return `${base} If your browser asked for local network access, choose Allow and try again.`;
+    if (/failed to fetch|load failed|network|connection|timed out|abort|local network|permission|ERR_LOCAL_NETWORK|ERR_BLOCKED_BY|ERR_FAILED/i.test(base)) {
+        return `${base} If this site has a Local network access permission, set it to Allow and try again.`;
     }
     return base;
 };
@@ -868,11 +868,19 @@ function App() {
         const init = async () => {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
+            const oauthError = params.get('error');
+            const isAuthCallback = Boolean(code || oauthError);
 
-            if (code) {
+            if (isAuthCallback) {
                 window.history.replaceState({}, document.title, "/");
                 if (!checkAuthState(params.get('state'))) {
                     setAuthError('That sign-in link didn’t come from this app. Please sign in again.');
+                    setLoading(false);
+                    return;
+                }
+                if (oauthError) {
+                    const description = params.get('error_description');
+                    setAuthError(`SBHS sign-in was declined${description ? `: ${description}` : ` (${oauthError})`}. Please try again.`);
                     setLoading(false);
                     return;
                 }
@@ -1026,6 +1034,10 @@ function App() {
 
             } catch (error) {
                 console.error(error);
+                // If the first requests after OAuth fail, the valid callback would
+                // otherwise end here with no user and silently show the landing page.
+                // This also covers a returning student whose profile isn't cached yet.
+                if (isAuthCallback || !user) setAuthError(authErrorMessage(error));
                 // Sign out only once the session can't be renewed; a 401 while the refresh
                 // token is still good (offline, SBHS slow) leaves the student signed in.
                 if (error.message?.includes("401") && !isAuthenticated()) logout();

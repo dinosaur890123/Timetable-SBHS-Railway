@@ -620,6 +620,8 @@ const INDEX = [
 
 const AuthErrorDialog = ({ authError, onDismiss }) => {
   const config = getOauthConfig();
+  const isNetworkFailure = /failed to fetch|load failed|network|connection|timed out|abort|local network|permission|ERR_LOCAL_NETWORK|ERR_BLOCKED_BY|ERR_FAILED/i.test(authError);
+  const isConfigFailure = /invalid_client|unauthorized_client|redirect.?uri|client secret|missing client id/i.test(authError);
 
   return (
     <motion.div
@@ -657,35 +659,50 @@ const AuthErrorDialog = ({ authError, onDismiss }) => {
           {authError}
         </div>
 
-        <ol className="mb-5 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-400 list-decimal pl-5 marker:text-zinc-400 dark:marker:text-zinc-600">
-          <li>
-            <span className="text-zinc-900 dark:text-zinc-100">Redirect URI.</span> The redirect URL in the SBHS developer portal must exactly match{' '}
-            <code className="rounded bg-m-panel px-1.5 py-0.5 font-mono text-xs text-zinc-800 dark:text-zinc-100">{config.redirectUri}</code>.
-          </li>
-          <li>
-            <span className="text-zinc-900 dark:text-zinc-100">Client secret.</span> The developer portal client secret must match the one provided in settings.
-          </li>
-          <li>
-            <span className="text-zinc-900 dark:text-zinc-100">Redeploy the client.</span> Vite reads this config at build time, so after changing environment variables in Railway you must trigger a new frontend deployment.
-          </li>
-        </ol>
+        {isNetworkFailure ? (
+          <div className="mb-5 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] p-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+            <p className="font-medium text-zinc-900 dark:text-zinc-100">Check this site’s network permission</p>
+            <p className="mt-1.5">
+              If you previously blocked a browser prompt for local network access, open this site’s controls beside the address bar, find its permissions, and change <span className="font-medium text-zinc-900 dark:text-zinc-100">Local network access</span> to Allow. The setting name may vary by browser. Then reload this page and sign in again.
+            </p>
+          </div>
+        ) : isConfigFailure ? (
+          <>
+            <ol className="mb-5 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-400 list-decimal pl-5 marker:text-zinc-400 dark:marker:text-zinc-600">
+              <li>
+                <span className="text-zinc-900 dark:text-zinc-100">Redirect URI.</span> The redirect URL in the SBHS developer portal must exactly match{' '}
+                <code className="rounded bg-m-panel px-1.5 py-0.5 font-mono text-xs text-zinc-800 dark:text-zinc-100">{config.redirectUri}</code>.
+              </li>
+              <li>
+                <span className="text-zinc-900 dark:text-zinc-100">Client secret.</span> The developer portal client secret must match the one provided in settings.
+              </li>
+              <li>
+                <span className="text-zinc-900 dark:text-zinc-100">Redeploy the client.</span> Vite reads this config at build time, so after changing environment variables in Railway you must trigger a new frontend deployment.
+              </li>
+            </ol>
 
-        <dl className="rounded-xl border border-m-line bg-m-panel p-3.5 font-mono text-xs space-y-1.5">
-          <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Client ID</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300 truncate">{config.clientId}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Redirect URI</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300 truncate">{config.redirectUri}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Client secret</dt>
-            <dd className="text-zinc-700 dark:text-zinc-300">
-              Kept on the server (<code className="font-mono text-xs">SBHS_CLIENT_SECRET</code>)
-            </dd>
-          </div>
-        </dl>
+            <dl className="rounded-xl border border-m-line bg-m-panel p-3.5 font-mono text-xs space-y-1.5">
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500 dark:text-zinc-400">Client ID</dt>
+                <dd className="text-zinc-700 dark:text-zinc-300 truncate">{config.clientId}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500 dark:text-zinc-400">Redirect URI</dt>
+                <dd className="text-zinc-700 dark:text-zinc-300 truncate">{config.redirectUri}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500 dark:text-zinc-400">Client secret</dt>
+                <dd className="text-zinc-700 dark:text-zinc-300">
+                  Kept on the server (<code className="font-mono text-xs">SBHS_CLIENT_SECRET</code>)
+                </dd>
+              </div>
+            </dl>
+          </>
+        ) : (
+          <p className="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Try signing in again. If it keeps returning here, share this error with the Synchron team.
+          </p>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <button
