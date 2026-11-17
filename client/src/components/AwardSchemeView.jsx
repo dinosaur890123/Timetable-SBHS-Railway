@@ -491,15 +491,12 @@ const PlanView = ({ summary }) => {
             + areaBreakdown.reduce((sum, area) => sum + area.hypotheticalNominations, 0);
         const projectedPrize = nextPrize && projectedNominations >= nextPrize.nominationsRequired ? nextPrize : null;
 
-        // Total nominations = sum of earned nominations across all areas
-        const totalNominations = areaBreakdown.reduce((sum, area) => sum + area.earned, 0);
-
         return {
             totalPlannedPoints,
             currentPoints,
             totalPoints,
             currentNominations: summary.nominationsAllTime,
-            totalNominations,
+            totalNominations: projectedNominations,
             projectedNominations,
             projectedPrize,
             areaBreakdown

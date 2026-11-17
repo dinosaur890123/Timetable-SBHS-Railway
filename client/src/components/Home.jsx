@@ -553,8 +553,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             }
         })();
 
-    const cycleStatus = resolvedCurrentWeek ? `Currently Week ${resolvedCurrentWeek}` : null;
-
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
     const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
     const shownScanIn = afterSchool ? nextDayScanIn : scanIn;
@@ -587,7 +585,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                         <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
-                        {isCycle && cycleStatus && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{cycleStatus}</p>}
                         {showScanPill && (
                             <p className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanPillTone}`}>
                                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanDotTone}`} />
