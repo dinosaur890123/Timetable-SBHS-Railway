@@ -507,13 +507,17 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
     const handleBulkUpdateFeedbackStatus = async (status) => {
         if (selectedFeedback.size === 0) return;
+        const idsArray = Array.from(selectedFeedback);
+        const previous = feedback;
+        const updatedAt = new Date().toISOString();
+        setFeedback(prev => prev.map(item => idsArray.includes(item.id) ? { ...item, status, updatedAt } : item));
+        setSelectedFeedback(new Set());
         setLoading(true);
         try {
-            const idsArray = Array.from(selectedFeedback);
             await bulkUpdateFeedbackStatus(idsArray, status);
-            setFeedback(prev => prev.map(item => idsArray.includes(item.id) ? { ...item, status, updatedAt: new Date().toISOString() } : item));
-            setSelectedFeedback(new Set());
         } catch (err) {
+            setFeedback(previous);
+            setSelectedFeedback(new Set(idsArray));
             alert("Failed to update status for selected feedback");
         } finally {
             setLoading(false);
@@ -536,12 +540,14 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     };
 
     const handleSetFeedbackStatus = async (entry, status) => {
+        const updated = { ...entry, status, updatedAt: new Date().toISOString() };
+        setFeedback(prev => prev.map(item => item.id === entry.id ? updated : item));
+        setViewingFeedback(updated);
         try {
             await updateFeedbackStatus(entry.id, status);
-            const updated = { ...entry, status, updatedAt: new Date().toISOString() };
-            setFeedback(prev => prev.map(item => item.id === entry.id ? updated : item));
-            setViewingFeedback(updated);
         } catch (err) {
+            setFeedback(prev => prev.map(item => item.id === entry.id ? entry : item));
+            setViewingFeedback(entry);
             alert('Failed to update status.');
         }
     };
@@ -1583,7 +1589,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     <div className="flex gap-2">
                         {selectedFeedback.size > 0 && (
                             <>
-                                <button onClick={() => handleBulkUpdateFeedbackStatus('considering')} className="text-xs font-semibold px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg">Under consideration</button>
                                 <button onClick={() => handleBulkUpdateFeedbackStatus('implemented')} className="text-xs font-semibold px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg">Implemented</button>
                                 <button onClick={() => handleBulkUpdateFeedbackStatus('rejected')} className="text-xs font-semibold px-3 py-1.5 bg-red-100 text-red-800 rounded-lg">Rejected</button>
                                 <button onClick={() => handleBulkUpdateFeedbackStatus('archived')} className="text-xs font-semibold px-3 py-1.5 bg-zinc-200 text-zinc-700 rounded-lg">Archive</button>
@@ -2215,7 +2220,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-2 justify-between">
                     <div className="flex gap-2">
                         {[
-                            ['considering', 'Under consideration', 'bg-amber-500 hover:bg-amber-600'],
                             ['implemented', 'Implemented', 'bg-green-600 hover:bg-green-700'],
                             ['rejected', 'Rejected', 'bg-red-600 hover:bg-red-700']
                         ].map(([status, label, colour]) => (
