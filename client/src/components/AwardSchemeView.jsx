@@ -449,7 +449,7 @@ const PlanView = ({ summary }) => {
         .filter(g => category === 'all' || g.name === category)
         .map(g => ({
             ...g,
-            items: term ? g.items.filter(a => a.name.toLowerCase().includes(term) || g.name.toLowerCase().includes(term)) : g.items
+            items: term ? g.items.filter(a => a.name.toLowerCase().includes(term)) : g.items
         }))
         .filter(g => g.items.length > 0);
 
@@ -467,10 +467,6 @@ const PlanView = ({ summary }) => {
         const currentPoints = summary.totalPoints;
         const totalPoints = currentPoints + totalPlannedPoints;
 
-        // Prize projection
-        const nextPrize = summary.prizeRows.find(p => p.state !== 'won');
-        const projectedPrize = nextPrize && summary.nominationsAllTime + plannedAwards.filter(a => a.type === 'nomination').length >= nextPrize.nominationsRequired ? nextPrize : null;
-
         // Area breakdown using actual nomination levels
         const areaBreakdown = summary.areas.map(area => {
             const plannedPoints = plannedAwards
@@ -484,8 +480,16 @@ const PlanView = ({ summary }) => {
             const required = area.levelGap || 30;
             const toward = Math.max(0, projectedPoints - base);
             const earned = area.earned + hypotheticallyReached.length;
-            return { ...area, plannedPoints, earned, toward, required };
+            return { ...area, plannedPoints, earned, toward, required, hypotheticalNominations: hypotheticallyReached.length };
         });
+
+        // Include nominations reached by planned points as well as nomination
+        // awards added directly to the plan when projecting the next prize.
+        const nextPrize = summary.prizeRows.find(p => p.state !== 'won');
+        const projectedNominations = summary.nominationsAllTime
+            + plannedAwards.filter(a => a.type === 'nomination').length
+            + areaBreakdown.reduce((sum, area) => sum + area.hypotheticalNominations, 0);
+        const projectedPrize = nextPrize && projectedNominations >= nextPrize.nominationsRequired ? nextPrize : null;
 
         // Total nominations = sum of earned nominations across all areas
         const totalNominations = areaBreakdown.reduce((sum, area) => sum + area.earned, 0);
@@ -496,6 +500,7 @@ const PlanView = ({ summary }) => {
             totalPoints,
             currentNominations: summary.nominationsAllTime,
             totalNominations,
+            projectedNominations,
             projectedPrize,
             areaBreakdown
         };

@@ -382,7 +382,6 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 // live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
-    const reduceMotion = useReducedMotion();
     const [scanIn, setScanIn] = useState(() => {
         const date = format(new Date(), 'yyyy-MM-dd');
         return readScanStatusCache(user?.studentId, date) || { date: null, state: 'loading' };
@@ -590,18 +589,12 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                         </h1>
                         {isCycle && cycleStatus && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{cycleStatus}</p>}
                         {showScanPill && (
-                            <motion.p
-                                initial={reduceMotion ? false : { width: 24, paddingLeft: 4, paddingRight: 4 }}
-                                animate={{ width: 'auto', paddingLeft: 10, paddingRight: 10 }}
-                                transition={{ duration: 0.35, ease: 'easeOut' }}
-                                style={{ boxSizing: 'border-box', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                                className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full py-1 text-xs font-semibold ${scanPillTone}`}
-                            >
+                            <p className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanPillTone}`}>
                                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanDotTone}`} />
                                 <span>{afterSchool
                                     ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shownScanIn.state === 'scanned' ? `Scanned on at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet'}`
                                     : shownScanIn.state === 'scanned' ? `Scanned on today at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
-                            </motion.p>
+                            </p>
                         )}
                     </div>
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
