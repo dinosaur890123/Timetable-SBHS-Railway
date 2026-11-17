@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Monitor, Smartphone, Share2, PlusCircle, X, Shield, Download } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
@@ -138,43 +138,23 @@ const SettingsView = ({
 
             {/* Installation stays easy to find in Settings until the app is installed. */}
             {!isInstalled && (
-                <section className="relative overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/[0.12] via-white/80 to-sky-500/[0.08] p-5 shadow-sm dark:from-accent/[0.18] dark:via-zinc-900/80 dark:to-sky-500/[0.12] sm:p-6">
-                    <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-                    <div className="relative flex items-start gap-4">
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-white shadow-md shadow-accent/20">
-                            <Download size={19} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Make Synchron yours</div>
-                            <h2 className="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Install the app</h2>
-                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">Open Synchron from your home screen for a faster, full-screen experience, with your timetable ready even when you’re offline.</p>
-                        </div>
-                    </div>
+                <Section label="Install App">
                     {isIOS ? (
-                        <div className="relative mt-5 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
-                            <div className="flex items-center gap-2 text-[13px] font-medium text-zinc-900 dark:text-white"><Smartphone size={15} className="text-accent" /> Add it from Safari</div>
-                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-                                    Tap <span className="inline-flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-100"><Share2 size={12} /> Share</span>, then choose <span className="inline-flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-100"><PlusCircle size={12} /> Add to Home Screen</span>.
-                                </p>
-                        </div>
+                        <Row title="Add Synchron to your Home Screen" description={<>In Safari, tap <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><Share2 size={12} /> Share</span>, then <span className="inline-flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300"><PlusCircle size={12} /> Add to Home Screen</span> for quick access and offline use.</>} />
                     ) : hasPrompt ? (
-                        <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
-                            <p className="text-[13px] text-zinc-600 dark:text-zinc-300">It’s quick to set up and easy to open whenever you need it.</p>
+                        <Row title="Install Synchron" description="Open it from your home screen and use your timetable offline.">
                             <button
                                 onClick={promptToInstall}
-                                className="h-10 px-4 rounded-lg bg-accent text-[13px] font-semibold text-white shadow-sm hover:brightness-110 transition flex items-center gap-2"
+                                className="h-9 px-4 rounded-lg bg-accent text-[13px] font-semibold text-accent-contrast hover:brightness-110 transition flex items-center gap-2"
                             >
-                                <Download size={15} />
-                                <span>Install Synchron</span>
+                                <Download size={14} />
+                                <span>Install</span>
                             </button>
-                        </div>
+                        </Row>
                     ) : (
-                        <div className="relative mt-5 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
-                            <div className="text-[13px] font-medium text-zinc-900 dark:text-white">Add Synchron from your browser</div>
-                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">Open the browser menu or address bar and choose “Install app” or “Add to Home Screen”.</p>
-                        </div>
+                        <Row title="Install Synchron" description="Use your browser’s install option (address bar or menu) to add Synchron to your home screen for quick access and offline use." />
                     )}
-                </section>
+                </Section>
             )}
 
             <Section label="Appearance">
@@ -217,7 +197,7 @@ const SettingsView = ({
                 </Row>
             </Section>
 
-            <Section label="Features">
+            <Section label="Integrations">
                 <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
                     <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard on timetable" />
                 </Row>
@@ -231,15 +211,15 @@ const SettingsView = ({
                 <Row title="Tap to open Canvas" description="Tapping a class opens its Canvas page. Your saved links are kept either way.">
                     <Switch checked={canvasLinksEnabled} onChange={setCanvasLinksEnabled} label="Tap to open Canvas" />
                 </Row>
+            </Section>
+
+            <Section label="About">
                 <LinkRow
                     icon={FileCode}
                     title="Build notes"
-                    description="See the latest updates, bug fixes, and changelog."
+                    description="See the latest updates and fixes."
                     onClick={() => setView('build-notes')}
                 />
-            </Section>
-
-            <Section label="Privacy">
                 <LinkRow
                     icon={Shield}
                     title="Privacy & data"
