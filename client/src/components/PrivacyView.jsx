@@ -213,13 +213,13 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
                 what="Account (ID, name, email, year)"
                 where={<Tag colour="amber">Synchron server</Tag>}
                 when={<Tag colour="zinc">Until deleted</Tag>}
-                canDelete={<Tag colour="green">Request below</Tag>}
+                canDelete={<Tag colour="green">{publicOnly ? 'Privacy settings' : 'Request below'}</Tag>}
             />
             <GlanceRow
                 what="UI preferences"
                 where={<><Tag colour="blue">localStorage</Tag><Tag colour="amber">Synchron server</Tag></>}
                 when={<Tag colour="zinc">Until changed</Tag>}
-                canDelete={<Tag colour="green">Sign out / request below</Tag>}
+                canDelete={<Tag colour="green">{publicOnly ? 'Sign out / Privacy settings' : 'Sign out / request below'}</Tag>}
             />
             <GlanceRow
                 what="Canvas links"
@@ -246,7 +246,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
             <Item label="Full account deletion">
                 {publicOnly
-                    ? 'Sign in to Synchron and open Settings → Privacy to permanently delete your account and associated server-side data.'
+                    ? 'To permanently delete your account and associated server-side data, sign in to Synchron and open Settings → Privacy.'
                     : isAdmin
                         ? 'Admin account deletion requests appear in the admin panel for review. Regular student accounts are deleted immediately after confirmation.'
                         : 'Your account and associated server-side data are deleted immediately after confirmation. You will be signed out; SBHS data stored on this device is cleared separately when you sign out.'}

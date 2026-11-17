@@ -12,46 +12,8 @@ const updateGlobalPrompt = (prompt) => {
     promptListeners.forEach(listener => listener(prompt));
 };
 
-const DISMISS_KEY = 'pwa_install_dismissed';
-const DISMISS_MONTHS = 2;
-
-const readDismissed = () => {
-    try {
-        const saved = localStorage.getItem(DISMISS_KEY);
-        if (!saved) return false;
-
-        // Migrate the old permanent boolean dismissal into a two-month cooldown.
-        const dismissedAt = saved === 'true' ? Date.now() : Number(saved);
-        if (!Number.isFinite(dismissedAt)) {
-            localStorage.removeItem(DISMISS_KEY);
-            return false;
-        }
-        const expiresAt = new Date(dismissedAt);
-        expiresAt.setMonth(expiresAt.getMonth() + DISMISS_MONTHS);
-        if (Date.now() < expiresAt.getTime()) {
-            if (saved === 'true') localStorage.setItem(DISMISS_KEY, String(dismissedAt));
-            return true;
-        }
-        localStorage.removeItem(DISMISS_KEY);
-        return false;
-    } catch {
-        return false;
-    }
-};
-
 if (typeof window !== 'undefined') {
-    // Listen to beforeinstallprompt event (Chromium browsers)
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent default browser banner so the in-app prompt/button controls the install trigger
-        e.preventDefault();
-        updateGlobalPrompt(e);
-    });
-
-    window.addEventListener('appinstalled', () => {
-        updateGlobalPrompt(null);
-        console.log('PWA was installed successfully');
-    });
-
+    // index.html captures install events before React loads and relays them here.
     window.addEventListener('pwa-prompt-ready', () => {
         if (window.__deferredPWAInstallPrompt && !globalDeferredPrompt) {
             updateGlobalPrompt(window.__deferredPWAInstallPrompt);
@@ -75,10 +37,6 @@ export const usePWAInstall = () => {
 
     const [hasPrompt, setHasPrompt] = useState(() => Boolean(globalDeferredPrompt));
     const [platform, setPlatform] = useState('desktop');
-    const [dismissed, setDismissed] = useState(() => {
-        return readDismissed();
-    });
-
     useEffect(() => {
         // Detect platform
         const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
@@ -118,14 +76,13 @@ export const usePWAInstall = () => {
         promptListeners.add(onPromptChange);
 
         // Catch prompt if it became available on window
-        if (globalDeferredPrompt && !hasPrompt) {
+        if (globalDeferredPrompt) {
             setHasPrompt(true);
         }
 
         const handleAppInstalled = () => {
             setIsInstalled(true);
             setHasPrompt(false);
-            console.log('PWA installed successfully');
         };
 
         window.addEventListener('appinstalled', handleAppInstalled);
@@ -135,13 +92,6 @@ export const usePWAInstall = () => {
             displayModeQuery.removeEventListener('change', checkInstalled);
             window.removeEventListener('appinstalled', handleAppInstalled);
         };
-    }, [hasPrompt]);
-
-    const dismiss = useCallback(() => {
-        try {
-            localStorage.setItem(DISMISS_KEY, String(Date.now()));
-        } catch {}
-        setDismissed(true);
     }, []);
 
     // Prompt user to install the PWA (opens native browser prompt)
@@ -158,8 +108,6 @@ export const usePWAInstall = () => {
                     setIsInstalled(true);
                     return { outcome: 'accepted' };
                 } else {
-                    // User canceled the browser dialog - dismiss from topbar to move to settings
-                    dismiss();
                     return { outcome: 'dismissed' };
                 }
             } catch (err) {
@@ -170,26 +118,18 @@ export const usePWAInstall = () => {
             return { outcome: 'ios' };
         }
         return { outcome: 'unavailable' };
-    }, [platform, dismiss]);
+    }, [platform]);
 
     const isIOS = platform === 'ios';
     // App is installable if not currently running standalone and either has prompt or is iOS
     const canInstall = !isInstalled && (hasPrompt || isIOS);
-    // Show in main UI (topbar) if installable and not dismissed
-    const showPrompt = canInstall && !dismissed;
-    // Show instructions in settings on iOS when not installed
-    const showIOSInstructions = isIOS && !isInstalled;
 
     return {
         isInstalled,
         hasPrompt,
         canInstall,
-        showPrompt,
         platform,
         isIOS,
-        dismissed,
-        dismiss,
-        promptToInstall,
-        showIOSInstructions
+        promptToInstall
     };
 };

@@ -6,7 +6,6 @@ import {
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
 import CanvasLinkNotifications from '../CanvasLinkNotifications';
-import PWAInstallButton from '../PWAInstallButton';
 
 export const VIEW_LABELS = {
     home: 'My Synchron',
@@ -246,10 +245,6 @@ export const ModernTopbar = ({
                 <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
                     <Search size={16} />
                 </IconButton>
-
-                <div className="hidden md:block">
-                    <PWAInstallButton />
-                </div>
 
                 <CanvasLinkNotifications
                     buildNotes={buildNotes}

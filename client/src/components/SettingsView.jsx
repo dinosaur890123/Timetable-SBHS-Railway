@@ -136,42 +136,45 @@ const SettingsView = ({
                 </button>
             </div>
 
-            {/* PWA Install — disappears once installed. iOS gets manual instructions;
-                Chromium gets an Install button when the browser prompt is live. */}
+            {/* Installation stays easy to find in Settings until the app is installed. */}
             {!isInstalled && (
-                <Section label="Install App">
+                <section className="relative overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/[0.12] via-white/80 to-sky-500/[0.08] p-5 shadow-sm dark:from-accent/[0.18] dark:via-zinc-900/80 dark:to-sky-500/[0.12] sm:p-6">
+                    <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
+                    <div className="relative flex items-start gap-4">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-white shadow-md shadow-accent/20">
+                            <Download size={19} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Make Synchron yours</div>
+                            <h2 className="mt-1 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Install the app</h2>
+                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">Open Synchron from your home screen for a faster, full-screen experience, with your timetable ready even when you’re offline.</p>
+                        </div>
+                    </div>
                     {isIOS ? (
-                        <div className="px-4 py-3.5 sm:px-5 flex items-start gap-3">
-                            <Smartphone size={16} strokeWidth={1.8} className="shrink-0 mt-0.5 text-zinc-400" />
-                            <div className="min-w-0 flex-1">
-                                <div className="text-[14px] font-medium text-zinc-900 dark:text-white">
-                                    Add to Home Screen
-                                </div>
-                                <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                                    Tap <span className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-medium"><Share2 size={12} /> Share</span> in Safari, then <span className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-300 font-medium"><PlusCircle size={12} /> Add to Home Screen</span>.
+                        <div className="relative mt-5 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
+                            <div className="flex items-center gap-2 text-[13px] font-medium text-zinc-900 dark:text-white"><Smartphone size={15} className="text-accent" /> Add it from Safari</div>
+                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                    Tap <span className="inline-flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-100"><Share2 size={12} /> Share</span>, then choose <span className="inline-flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-100"><PlusCircle size={12} /> Add to Home Screen</span>.
                                 </p>
-                            </div>
                         </div>
                     ) : hasPrompt ? (
-                        <Row
-                            title="Install Synchron"
-                            description="Installing takes up no extra storage and allows faster offline access."
-                        >
+                        <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
+                            <p className="text-[13px] text-zinc-600 dark:text-zinc-300">It’s quick to set up and easy to open whenever you need it.</p>
                             <button
                                 onClick={promptToInstall}
-                                className="h-8 px-3 rounded-lg border border-m-line bg-m-card text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
+                                className="h-10 px-4 rounded-lg bg-accent text-[13px] font-semibold text-white shadow-sm hover:brightness-110 transition flex items-center gap-2"
                             >
-                                <Download size={13} />
-                                <span>Install</span>
+                                <Download size={15} />
+                                <span>Install Synchron</span>
                             </button>
-                        </Row>
+                        </div>
                     ) : (
-                        <Row
-                            title="Install Synchron"
-                            description="Use your browser's install option (address bar or menu) to add Synchron to your home screen."
-                        />
+                        <div className="relative mt-5 rounded-xl border border-accent/15 bg-white/65 px-4 py-3 dark:bg-black/10">
+                            <div className="text-[13px] font-medium text-zinc-900 dark:text-white">Add Synchron from your browser</div>
+                            <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">Open the browser menu or address bar and choose “Install app” or “Add to Home Screen”.</p>
+                        </div>
                     )}
-                </Section>
+                </section>
             )}
 
             <Section label="Appearance">
