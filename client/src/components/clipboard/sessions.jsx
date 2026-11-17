@@ -22,6 +22,8 @@ export const clockTime = (date) => (date ? `${format(date, 'h:mm')} ${format(dat
 
 export const sessionName = (session) => session.title || session.activity;
 
+const isWin = (result) => String(result?.outcome || '').trim().toUpperCase() === 'W';
+
 // The activity's own colour on its dot, through a CSS variable so the cancelled
 // style (a hollow ring) still wins. Falls back to Clipboard violet.
 export const sessionInk = (session) => (session?.colour ? { '--cb-colour': session.colour } : undefined);
@@ -126,7 +128,7 @@ const SheetBody = ({ session, onClose, still }) => {
 
             {/* The red pen marks results only. */}
             {result && (result.us !== null || result.outcome) && (
-                <div className="nf-pop__result">
+                <div className={`nf-pop__result${isWin(result) ? ' nf-pop__result--win' : ''}`}>
                     {result.us !== null && (
                         <span className="nf-score tnum">
                             {result.us}<small>–{result.them ?? 0}</small>

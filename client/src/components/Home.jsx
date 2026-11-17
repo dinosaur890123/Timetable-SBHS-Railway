@@ -172,7 +172,7 @@ const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
     }, [viewMode]);
 
     return (
-        <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-1 md:shrink-0 w-fit md:w-auto">
+        <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-0 md:shrink-0 w-fit md:w-auto">
             {pill && (
                 <span
                     aria-hidden="true"
@@ -408,6 +408,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 // live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
+    const reduceMotion = useReducedMotion();
     const [scanIn, setScanIn] = useState(() => {
         const date = format(new Date(), 'yyyy-MM-dd');
         return readScanStatusCache(user?.studentId, date) || { date: null, state: 'loading' };
@@ -548,9 +549,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const inner = day?.timetable?.timetable || day?.timetable;
     const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = dayKey === todayKey;
-    const isTomorrow = dayKey === format(addDays(now, 1), 'yyyy-MM-dd');
     const classCount = slots.filter(isClass).length;
-    const dayWord = isLive ? 'Today' : isTomorrow ? 'Tomorrow' : format(new Date(`${dayKey}T00:00`), 'EEEE');
 
     const firstClass = slots.find(isClass);
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
@@ -581,13 +580,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             }
         })();
 
-    const dailyStatus = [
-        inner?.dayname ? `${dayWord} is ${inner.dayname}` : null,
-        !showRail && firstClass ? `starts ${formatTime12Hour(firstClass.bell.time)}` : null
-    ].filter(Boolean).join(' · ');
-
     const cycleStatus = resolvedCurrentWeek ? `Currently Week ${resolvedCurrentWeek}` : null;
-    const status = isCycle ? cycleStatus : dailyStatus;
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
     const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
@@ -596,6 +589,16 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const showScanPill = (afterSchool || isSchoolDay)
         && shownScanIn.date === shownScanDate
         && ['scanned', 'not-scanned'].includes(shownScanIn.state);
+    const scanUrgent = !afterSchool && shownScanIn.state === 'not-scanned'
+        && nowMin >= schoolStartMin - 10;
+    const scanPillTone = shownScanIn.state === 'scanned'
+        ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'
+        : scanUrgent
+            ? 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'
+            : 'bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300';
+    const scanDotTone = shownScanIn.state === 'scanned'
+        ? 'bg-emerald-500'
+        : scanUrgent ? 'bg-red-500' : 'bg-amber-500';
 
     // Header and content get their own containers: the greeting/toggle always uses
     // the daily width, while cycle keeps its wider table below.
@@ -605,20 +608,26 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     return (
         <div>
             <div className={`mx-auto ${headerWidth}`}>
-            <header className={showScanPill ? 'mb-1 md:mb-3' : 'mb-4 md:mb-10'}>
-                <div className="md:flex md:items-start md:justify-between md:gap-4">
+            <header className={showScanPill ? 'mb-1 md:mb-3' : 'mb-3 md:mb-8'}>
+                <div className="md:flex md:items-center md:justify-between md:gap-4">
                     <div className="min-w-0">
                         <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
                             {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
                         </h1>
-                        {status && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{status}</p>}
+                        {isCycle && cycleStatus && <p className="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">{cycleStatus}</p>}
                         {showScanPill && (
-                            <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${shownScanIn.state === 'scanned' ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-300'}`}>
-                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${shownScanIn.state === 'scanned' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                            <motion.p
+                                initial={reduceMotion ? false : { width: 24, paddingLeft: 4, paddingRight: 4 }}
+                                animate={{ width: 'auto', paddingLeft: 10, paddingRight: 10 }}
+                                transition={{ duration: 0.35, ease: 'easeOut' }}
+                                style={{ boxSizing: 'border-box', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                                className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full py-1 text-xs font-semibold ${scanPillTone}`}
+                            >
+                                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanDotTone}`} />
                                 <span>{afterSchool
                                     ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shownScanIn.state === 'scanned' ? `Scanned on at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet'}`
                                     : shownScanIn.state === 'scanned' ? `Scanned on today at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
-                            </p>
+                            </motion.p>
                         )}
                     </div>
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
