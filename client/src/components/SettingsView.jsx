@@ -37,7 +37,6 @@ const Row = ({ title, description, children, stack = false, className = '' }) =>
     </div>
 );
 
-// A row that navigates somewhere else in the app.
 const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
     <button onClick={onClick} className="group w-full px-4 py-3.5 sm:px-5 flex items-center gap-3 text-left hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025] transition-colors first:rounded-t-2xl last:rounded-b-2xl">
         <Icon size={16} strokeWidth={1.8} className="shrink-0 text-zinc-400" />
@@ -104,9 +103,6 @@ const SettingsView = ({
     const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
-    // Red dot until every class in the timetable has a link (personal or community).
-    // Links reset each calendar year, so it comes back then too.
-    // Memoized to avoid recomputing on every render.
     const canvasLinksMissing = useMemo(() => {
         if (canvasLinksStatus === 'loading') return false;
         return Array.from(canvasClasses.keys()).some(key => {
@@ -117,7 +113,6 @@ const SettingsView = ({
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
-            {/* Account */}
             <div className="flex items-center gap-4">
                 <span className="w-14 h-14 shrink-0 rounded-full grid place-items-center text-lg font-semibold bg-accent/15 text-accent">
                     {initialsOf(user)}
@@ -136,7 +131,6 @@ const SettingsView = ({
                 </button>
             </div>
 
-            {/* Installation stays easy to find in Settings until the app is installed. */}
             {!isInstalled && (
                 <Section label="Install App">
                     {isIOS ? (

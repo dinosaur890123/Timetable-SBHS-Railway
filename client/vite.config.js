@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-// Identifies this build. The client compares it with /version.json to know when a newer deploy is live.
 const sha = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || 'local'
 const APP_BUILD = { id: `${sha}-${Date.now().toString(36)}`, sha }
 
@@ -15,8 +14,6 @@ const versionFile = () => ({
   }
 })
 
-// A response the service worker serves from its cache (because the network failed) gets this header,
-// so the app can show that it's looking at saved data. Serialised into the generated service worker.
 const offlineMarker = {
   cachedResponseWillBeUsed: async ({ cachedResponse }) => {
     if (!cachedResponse) return cachedResponse;
@@ -26,7 +23,6 @@ const offlineMarker = {
   }
 };
 
-// https://vitejs.dev/config/
 export default defineConfig({
   define: {
     __APP_BUILD__: JSON.stringify(APP_BUILD),
@@ -36,18 +32,12 @@ export default defineConfig({
     versionFile(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Registered from src/utils/autoUpdate.js so reloads are coordinated with the version check
       injectRegister: false,
-      // Run a service worker in `vite dev` too, so beforeinstallprompt fires and the
-      // install prompt can be tested locally (only works on localhost/HTTPS origins)
       devOptions: {
         enabled: true,
       },
-      // public/manifest.json is the app's manifest (linked from index.html), so don't generate a second one
       manifest: false,
       workbox: {
-        // Precache the app itself and the icons the browser actually asks for. The many other icon
-        // sizes (and the dev/staging sets) are fetched only if something requests them.
         globPatterns: [
           '**/*.{js,css,html,woff,woff2}',
           'favicon*.{ico,png}',
@@ -61,10 +51,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        // Pages come from the network so opening the app always gets the latest deploy;
-        // the cached copy is only used offline or on a very slow connection.
         navigateFallback: null,
-        // Without this, '/' resolves to the precached index.html before the network-first route below sees it
         directoryIndex: null,
         runtimeCaching: [
           {
@@ -76,8 +63,6 @@ export default defineConfig({
               precacheFallback: { fallbackURL: 'index.html' }
             }
           },
-          // SBHS data (timetable, notices, calendar, profile): always fresh when online, the last
-          // copy when offline. Cleared on sign-out (see logout in services/api.js).
           {
             urlPattern: ({ url, request }) => url.origin === 'https://student.sbhs.net.au' && url.pathname.startsWith('/api/') && request.method === 'GET',
             handler: 'NetworkFirst',
@@ -89,8 +74,6 @@ export default defineConfig({
               plugins: [offlineMarker]
             }
           },
-          // This app's own read-only data for the student (awards, Clipboard, Canvas links,
-          // preferences, system status). Admin data is never cached.
           {
             urlPattern: ({ url, request, sameOrigin }) => sameOrigin && request.method === 'GET'
               && /^\/api\/(students\/|award-scheme\/|clipboard\/|canvas-links|system\/status|build-notes|users\/[^/]+\/preferences)/.test(url.pathname),
@@ -103,7 +86,6 @@ export default defineConfig({
               plugins: [offlineMarker]
             }
           },
-          // Fonts: the stylesheet refreshes in the background, the font files never change.
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
             handler: 'StaleWhileRevalidate',
@@ -125,7 +107,7 @@ export default defineConfig({
               cacheName: 'image-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+                maxAgeSeconds: 30 * 24 * 60 * 60
               }
             }
           }

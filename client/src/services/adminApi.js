@@ -2,8 +2,6 @@ import { getValidAccessToken, refreshAccessToken } from './api';
 
 const ADMIN_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 
-// Requests that never settle leave the UI stuck on its loading state forever,
-// so every admin call is bounded by a timeout and fails loudly instead.
 const REQUEST_TIMEOUT_MS = 20000;
 
 const apiFetch = async (url, options = {}) => {
@@ -12,7 +10,6 @@ const apiFetch = async (url, options = {}) => {
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
         const response = await fetch(url, { ...init, signal: controller.signal });
-        // A token SBHS revoked early still looks fresh here: renew it once and retry.
         if (response.status === 401 && !retried && init.headers?.Authorization) {
             const fresh = await refreshAccessToken();
             if (fresh) {
@@ -135,7 +132,6 @@ export const setBroadcast = async (message, type = 'info') => {
     }
 };
 
-// Admin: notification broadcasts sent in the last 30 days, with dismissal counts.
 export const fetchBroadcastHistory = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/broadcast/history`, {
@@ -149,7 +145,6 @@ export const fetchBroadcastHistory = async () => {
     }
 };
 
-// Admin: deletes a notification broadcast before its 30-day retention ends.
 export const deleteBroadcastNotification = async (id) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/broadcast/history/${encodeURIComponent(id)}`, {
@@ -186,15 +181,13 @@ export const registerUser = async (user) => {
             headers: await getHeaders(),
             body: JSON.stringify(user)
         });
-        
+
         if (!response.ok) {
-             // Don't throw check - might be silent fail on frontend
              console.warn("Failed to register user to admin panel");
              return null;
         }
         return await response.json();
     } catch (error) {
-        // Silent fail is better than blocking app usage
         console.error("Admin Registration Error (Silent):", error);
     }
 };
@@ -217,7 +210,6 @@ export const promoteUserToAdmin = async (studentId) => {
     }
 };
 
-
 export const pruneOldLogs = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/maintenance/prune-logs`, {
@@ -231,7 +223,6 @@ export const pruneOldLogs = async () => {
         throw error;
     }
 };
-
 
 export const updateHiddenPages = async (hiddenPages) => {
     try {
@@ -248,8 +239,6 @@ export const updateHiddenPages = async (hiddenPages) => {
     }
 };
 
-// Seasonal ambient glow: auto-active Christmas Dec 1–26 and NYE Dec 27–Jan 6;
-// this toggle forces the festive palettes on at any other time.
 export const setFestiveAmbient = async (enabled) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/system/festive-ambient`, {
@@ -337,7 +326,6 @@ export const bulkDeleteFeedback = async (feedbackIds) => {
     }
 };
 
-// Data deletion requests (Privacy page → admin panel)
 export const fetchDeletionRequests = async () => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/deletion-requests`, {
@@ -351,7 +339,6 @@ export const fetchDeletionRequests = async () => {
     }
 };
 
-// status: 'completed' deletes the student's server-side data, 'dismissed' closes the request.
 export const updateDeletionRequest = async (id, status) => {
     try {
         const response = await apiFetch(`${ADMIN_API_URL}/admin/deletion-requests/${id}`, {
@@ -384,8 +371,6 @@ export const toggleUserBlacklist = async (userId, blacklisted) => {
         throw error;
     }
 };
-
-// --- Build Notes Admin APIs ---
 
 export const fetchAdminBuildNotes = async () => {
     try {
@@ -433,8 +418,6 @@ export const deleteAdminBuildNote = async (id) => {
     }
 };
 
-
-// Shared Canvas links (moderation)
 export const fetchAdminCanvasLinks = async () => {
     const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community`, {
         headers: await getHeaders()
@@ -443,8 +426,6 @@ export const fetchAdminCanvasLinks = async () => {
     return response.json();
 };
 
-// lockedStatus: 'verified' pins the link for its class, 'rejected' hides it,
-// null hands it back to students' votes.
 export const setAdminCanvasLinkStatus = async (id, lockedStatus) => {
     const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}`, {
         method: 'PUT',
@@ -455,7 +436,6 @@ export const setAdminCanvasLinkStatus = async (id, lockedStatus) => {
     return response.json();
 };
 
-// Clears every report on a link; backers are kept.
 export const resetAdminCanvasLinkReports = async (id) => {
     const response = await apiFetch(`${ADMIN_API_URL}/admin/canvas-links/community/${encodeURIComponent(id)}/reset-reports`, {
         method: 'POST',

@@ -2,12 +2,8 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import './noteflow.css';
 
-// NoteFlow's brand and gestures, as its DESIGN.md draws them. Everything here
-// animates once and is shown at rest when `still` (reduced motion) is set.
-
 export const NOTEFLOW_URL = 'https://noteflow.study';
 
-// NoteFlow's own faces, loaded only once something drawn in NoteFlow is on screen.
 const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=Instrument+Serif:ital@0;1&display=swap';
 
 export const useNoteFlowFonts = (enabled = true) => {
@@ -24,7 +20,6 @@ export const EASE = [0.2, 0.7, 0.2, 1];
 export const EASE_OUT = [0.16, 1, 0.3, 1];
 
 export const Mark = ({ size = 22 }) => {
-    // Stroke weight rises as size falls, per the logo rules.
     const stroke = size >= 56 ? 2.4 : size >= 32 ? 2.8 : size >= 22 ? 3.3 : 3.7;
     return (
         <svg className="nf-mark" width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
@@ -50,7 +45,6 @@ export const Tick = ({ size = 18 }) => (
     </svg>
 );
 
-// The one highlighter swipe on screen. It draws left to right once.
 export const Hl = ({ children, delay = 0, still, display = false }) => (
     <span className={`nf-hl${display ? ' nf-hl--display' : ''}`}>
         <motion.span
@@ -66,7 +60,6 @@ export const Hl = ({ children, delay = 0, still, display = false }) => (
 
 const RING = 'M178 13C118 2 38 14 17 57C3 91 40 127 122 130.5C196 133.5 250 110 251 70C252 32 214 10 160 7C130 5.4 104 8 85 13';
 
-// The red pen marks results only: one loop that overshoots, inked once it's seen.
 export const Ring = ({ delay = 0, still }) => (
     <svg className="nf-ring" viewBox="0 0 260 140" preserveAspectRatio="none" aria-hidden="true">
         <motion.path
@@ -79,7 +72,6 @@ export const Ring = ({ delay = 0, still }) => (
     </svg>
 );
 
-// Words arrive the way the site's headlines do: lift, unblur, fade.
 export const Words = ({ text, delay = 0, step = 0.05, still }) => text.split(' ').map((word, i, all) => (
     <React.Fragment key={i}>
         <motion.span
@@ -94,7 +86,6 @@ export const Words = ({ text, delay = 0, step = 0.05, still }) => text.split(' '
     </React.Fragment>
 ));
 
-// Rises into place once, either on mount or (inView) the first time it scrolls into view.
 export const Rise = ({ as = 'div', delay = 0, still, inView = false, y = 10, className, style, children }) => {
     const Tag = motion[as];
     const shown = { opacity: 1, y: 0, filter: 'blur(0px)' };

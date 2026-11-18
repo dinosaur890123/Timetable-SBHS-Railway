@@ -1,11 +1,3 @@
-/* ==========================================================================
-   NoteFlow, as drawn on Synchron's Study page.
-   Ink on warm paper, one violet highlighter swipe at a time and a red pen
-   that only marks results. Tokens follow NoteFlow's own DESIGN.md
-   (web/src/styles/tokens.css). Everything is scoped to .nf so Synchron's
-   accent colours never leak in.
-   ========================================================================== */
-
 .nf {
   --paper: #FBFAF7;
   --sheet: #FFFFFF;
@@ -73,12 +65,8 @@
 .nf *, .nf *::before, .nf *::after { box-sizing: border-box; }
 .nf .tnum { font-variant-numeric: tabular-nums; }
 
-/* ---------- Brand ---------- */
-
 .nf-mark { color: var(--violet); flex-shrink: 0; display: block; }
 .nf-lockup { display: inline-flex; align-items: center; font-weight: 600; letter-spacing: -.025em; color: var(--ink); line-height: 1; }
-
-/* ---------- Buttons (beat Synchron's global button radius and focus rules) ---------- */
 
 html[data-ui] .nf .nf-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -95,8 +83,6 @@ html[data-ui] .nf .nf-btn--ink:active { filter: brightness(.9); }
 html[data-ui] .nf .nf-btn--sheet { background: var(--sheet); color: var(--ink); border: 1px solid var(--rule-2); box-shadow: var(--shadow-1); }
 html[data-ui] .nf .nf-btn--sheet:hover { background: var(--wash); }
 html[data-ui] .nf :is(a, button):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: none; }
-
-/* ---------- Gestures ---------- */
 
 .nf-word { display: inline-block; }
 
@@ -118,17 +104,12 @@ html[data-ui] .nf :is(a, button):focus-visible { outline: 2px solid var(--ink); 
 
 .nf-doodle { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-/* ---------- Shared pieces ---------- */
-
 .nf-sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow-1); }
 .nf-meta { font-size: 13px; color: var(--ink-3); }
 .nf-head { margin: 56px 0 0; padding-bottom: 10px; border-bottom: 1px solid var(--rule-ink); font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 
-/* ---------- Page ---------- */
-
 .nf-page { max-width: 1060px; margin: 0 auto; padding: 4px 0 40px; container-type: inline-size; }
 
-/* Hero: the claim on the left, a note becoming a card on the right */
 .nf-hero { display: grid; gap: 40px; padding-top: 12px; }
 @container (min-width: 820px) {
   .nf-hero { grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); align-items: center; gap: 48px; padding-top: 28px; }
@@ -156,7 +137,6 @@ html[data-ui] .nf :is(a, button):focus-visible { outline: 2px solid var(--ink); 
 .nf-hero__due { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; color: var(--ink-3); }
 .nf-hero__due .nf-doodle { color: var(--ok); }
 
-/* The loop, all five steps at once */
 .nf-steps { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 10px; }
 @container (min-width: 560px) { .nf-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (min-width: 900px) { .nf-steps { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
@@ -197,7 +177,6 @@ html[data-ui] .nf :is(a, button):focus-visible { outline: 2px solid var(--ink); 
 .nf-art-week .is-exam i { height: 54px; border: 1.5px solid var(--rule-ink); background: var(--sheet); }
 .nf-art-week .is-exam span { color: var(--ink); font-weight: 600; }
 
-/* Also in NoteFlow, as ruled rows */
 .nf-also { display: grid; grid-template-columns: 1fr; }
 .nf-also > div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
 .nf-also b { display: block; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }

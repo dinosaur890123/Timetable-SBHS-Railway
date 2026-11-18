@@ -4,11 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { subjectInk, isBreakBell, formatTime12Hour } from '../utils/timetable';
 import { isLinklessTitle } from '../utils/canvasLinks';
 
-// Cap the stagger so long days don't take seconds to finish animating in.
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
 
-// Changes are marked by shape (a quiet tag and a struck-through old value) rather than
-// colour, so they read the same whichever accent colour theme is active.
 const ChangeTag = ({ children, className = '' }) => (
     <span className={`shrink-0 px-1.5 py-px rounded-md border border-zinc-900/10 dark:border-white/10 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 ${className}`}>
         {children}
@@ -19,8 +16,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period || {};
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
-    // Applied inside the motion element: framer-motion's inline opacity would override it there.
-    // A finished class fades back slowly, so the change of period reads as a handover.
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
     const [showTooltip, setShowTooltip] = React.useState(false);
     const tooltipTimeoutRef = React.useRef(null);
@@ -82,7 +77,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const content = (
         <div className={`relative flex items-center gap-3 px-2.5 sm:px-3 py-3 ${dim}`}>
-            {/* The subject's colour from the timetable; the accent stands in for an uncoloured current class. */}
             {colour ? (
                 <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
@@ -147,7 +141,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
         <motion.li
             {...(colour ? subjectInk(colour) : {})}
             initial={{ opacity: 0, y: 4 }}
-            // When its bell rings, the class lifts a touch and pulses in its subject colour once.
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
             className={`group rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent

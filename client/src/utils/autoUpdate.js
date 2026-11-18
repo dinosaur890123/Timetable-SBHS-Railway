@@ -1,6 +1,3 @@
-// Keeps every open copy of the app on the latest deploy, with no prompt.
-// Each build writes /version.json; when it no longer matches the build running in
-// this tab, we reload as soon as the user isn't typing into something.
 import { registerSW } from 'virtual:pwa-register';
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
@@ -20,11 +17,10 @@ const readSession = (key) => {
 };
 
 const writeSession = (key, value) => {
-    try { sessionStorage.setItem(key, value); } catch { /* storage unavailable */ }
+    try { sessionStorage.setItem(key, value); } catch {}
 };
 
 const reloadWhenSafe = (targetId) => {
-    // Only try once per target build, so a stale CDN edge can't cause a reload loop
     if (reloadQueued || readSession(RELOADED_FOR_KEY) === targetId) return;
     reloadQueued = true;
 
@@ -34,7 +30,6 @@ const reloadWhenSafe = (targetId) => {
         writeSession(RELOADED_FOR_KEY, targetId);
         window.location.reload();
     };
-    // focusout fires before focus moves, so wait a tick to see where it landed
     const onFocusOut = () => setTimeout(tryReload, 0);
 
     document.addEventListener('focusout', onFocusOut);
@@ -48,12 +43,10 @@ const checkForUpdate = async () => {
         if (!res.ok) return;
         const latest = await res.json();
         if (latest?.id && latest.id !== __APP_BUILD__.id) {
-            // Refresh the offline cache in the background; pages load network-first, so the reload doesn't wait on it
             swRegistration?.update().catch(() => {});
             reloadWhenSafe(latest.id);
         }
     } catch {
-        // Offline or a flaky network: try again on the next check
     }
 };
 
@@ -63,17 +56,12 @@ export const startAutoUpdate = () => {
         onRegisteredSW(_url, registration) {
             swRegistration = registration || null;
         },
-        // A new service worker took over. Our own version check decides whether a reload is needed,
-        // so a tab that already loaded the new build from the network isn't reloaded for nothing.
         onNeedReload: checkForUpdate,
     });
 
-    // Version polling only makes sense against a real deploy; in dev /version.json doesn't exist
     if (!import.meta.env.PROD) return;
 
-    // A lazy view's chunk is missing because a newer deploy replaced it: reload to pick up that deploy
     window.addEventListener('vite:preloadError', (event) => {
-        // If we reloaded for this a moment ago and it's still failing, let the error surface instead of looping
         if (Date.now() - Number(readSession(CHUNK_RELOAD_AT_KEY) || 0) < 30 * 1000) return;
         event.preventDefault();
         writeSession(CHUNK_RELOAD_AT_KEY, String(Date.now()));

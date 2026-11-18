@@ -1,31 +1,3 @@
-// Canvas course links: each student's own links, plus links shared between
-// classmates.
-//
-// A student's own links are private and keyed by the class's short title
-// ("Ma1"), the way the timetable shows it. Only links to a Canvas course on the
-// school's Canvas host are shared, and they are keyed by year and class
-// ("9Ma1") within one school year, because short titles repeat across year
-// groups and courses change every year.
-//
-// The rules that keep shared links honest:
-// - The server reads the student's own SBHS timetable before it accepts a
-//   shared link or a vote, so only students in a class can affect its link.
-// - Only https://sydneyboyshigh.instructure.com/courses/<id> and
-//   https://app.wellioeducation.com/schools/<id> links are shared (Canvas or
-//   Wellio course pages). Nothing else leaves the student's own account.
-// - Each student has one vote per link and backs at most one link per class.
-//   Votes are stored one row per student, and counts are worked out when read,
-//   so they can't drift and concurrent votes can't be lost.
-// - A link is used for the whole class once CANVAS_LINK_CONFIRMATIONS students
-//   back it and they outnumber the students reporting it. It is hidden once
-//   CANVAS_LINK_REJECTIONS students report it and they match or outnumber its
-//   backers.
-// - Blacklisted students can't share or vote, and their past votes and
-//   suggestions stop counting.
-// - Writes are rate-limited per student, and new shared links are capped per
-//   day.
-// - Admins can pin a link as correct or hide it, overriding the votes.
-
 const crypto = require('crypto');
 
 const SBHS_TIMETABLE_URL = 'https://student.sbhs.net.au/api/timetable/timetable.json';
@@ -40,19 +12,13 @@ const hostList = (value) => String(value || '')
     .filter(Boolean);
 
 const CANVAS_HOST = hostList(process.env.CANVAS_HOST)[0] || 'sydneyboyshigh.instructure.com';
-// Other hostnames that serve the same Canvas courses (e.g. the school's
-// canvas.<domain> address). Links on them are rewritten to CANVAS_HOST.
 const CANVAS_HOSTS = new Set([
     CANVAS_HOST,
     'sydneyboyshigh.instructure.com',
     'canvas.sbhs.net.au',
     ...hostList(process.env.CANVAS_ALIAS_HOSTS)
 ]);
-// Wellio hosts some classes instead of Canvas. A Wellio link is stored as
-// "wellio:" + its path so the full address can be rebuilt exactly.
 const WELLIO_HOST = (hostList(process.env.WELLIO_HOST)[0] || 'app.wellioeducation.com').toLowerCase();
-// Earlier versions turned a bare course number into a canvas.instructure.com
-// link. Stored links of exactly that form are read back on CANVAS_HOST.
 const LEGACY_COURSE_URL = /^https?:\/\/canvas\.instructure\.com\/courses\/(\d{1,12})\/?$/i;
 
 const CONFIRMATIONS = intEnv('CANVAS_LINK_CONFIRMATIONS', 2);
@@ -73,15 +39,12 @@ const courseUrl = (courseId) => String(courseId).startsWith('wellio:')
     ? `https://${WELLIO_HOST}/${String(courseId).slice('wellio:'.length)}`
     : `https://${CANVAS_HOST}/courses/${courseId}`;
 
-// The course ID when a URL points at a course on the school's Canvas.
 const canvasCourseId = (url) => {
     if (!CANVAS_HOSTS.has(url.hostname.toLowerCase())) return null;
     const match = url.pathname.match(/^\/courses\/(\d{1,12})(?:\/|$)/);
     return match ? match[1] : null;
 };
 
-// The stored id when a URL points at a Wellio school/class page:
-// "wellio:" + the path after the host (e.g. "wellio:schools/12345").
 const wellioCourseId = (url) => {
     if (url.hostname.toLowerCase() !== WELLIO_HOST) return null;
     const path = url.pathname.replace(/\/+$/, '');
@@ -89,10 +52,6 @@ const wellioCourseId = (url) => {
     return `wellio:${path.slice(1)}`;
 };
 
-// Accepts a full link, a link without "https://", "courses/123",
-// "schools/123" or a bare course number. Returns { url, courseId } (courseId
-// only for school Canvas or Wellio course pages), or null when the input
-// isn't a usable web link.
 const parseLinkInput = (raw) => {
     if (typeof raw !== 'string') return null;
     let value = raw.trim();
@@ -127,7 +86,6 @@ const parseLinkInput = (raw) => {
     return { url: url.toString(), courseId };
 };
 
-// A stored personal link as it should be served now.
 const readStoredUrl = (stored) => {
     const legacy = typeof stored === 'string' && stored.match(LEGACY_COURSE_URL);
     if (legacy) return courseUrl(legacy[1]);
@@ -141,14 +99,9 @@ const cleanClassName = (value) => {
     return name;
 };
 
-// Normalizes a class name to the canonical year+shortTitle form (e.g., "9PDH E").
-// Handles legacy variants like "9 PDHPE E" or "9 2026 PDH G" by extracting the
-// year digit(s) and the shortTitle from the timetable data if available.
 const normalizeClassName = (name, classKey) => {
     if (!name || !classKey) return name;
-    // If it already matches the classKey format (year+shortTitle), use it.
     if (name === classKey) return name;
-    // Otherwise, force the canonical key format.
     return classKey;
 };
 
@@ -157,19 +110,16 @@ const isClassKey = (value) => typeof value === 'string'
     && value.length <= MAX_CLASS_NAME_LENGTH
     && /^[\w .&+()/:-]+$/.test(value);
 
-// "9 Maths 1" -> "Maths 1".
 const withoutYear = (title, year) => {
     const prefix = year ? `${year} ` : null;
     return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
 };
 
-// Sport blocks ("SP9", "Sport 9") and Scripture have no course page.
 const isLinklessTitle = (title) => {
     const t = String(title || '').toLowerCase();
     return t.includes('sport') || /^sp[\s-]?\d/.test(t) || t.includes('scripture');
 };
 
-// The student's classes from SBHS's timetable.json, keyed by year + short title.
 const extractClasses = (data) => {
     const timetable = data?.timetable?.days || data?.timetable?.subjects ? data.timetable : data;
     const classes = new Map();
@@ -195,7 +145,6 @@ const extractClasses = (data) => {
     return classes;
 };
 
-// Sliding-window limiter, per key, kept in memory.
 const makeLimiter = (limit, windowMs) => {
     const hits = new Map();
     return (key) => {
@@ -223,13 +172,10 @@ const statusOf = ({ up, down, lockedStatus }) => {
     return 'pending';
 };
 
-// A pinned link wins, then the one with the most backing net of reports.
 const outranks = (a, b) => (a.pinned !== b.pinned
     ? a.pinned
     : (a.confirmations - a.reports) > (b.confirmations - b.reports));
 
-// Rows (one per shared link, with vote counts) -> what a student sees per class:
-// the link the class uses, if any, and the other suggestions still being voted on.
 const summariseClasses = (rows, classKeys, { studentId = null, duplicateCourseIds = new Set() } = {}) => {
     const classes = {};
     classKeys.forEach(key => { classes[key] = { link: null, suggestions: [] }; });
@@ -267,9 +213,6 @@ const summariseClasses = (rows, classKeys, { studentId = null, duplicateCourseId
     });
     return classes;
 };
-
-// ---------------------------------------------------------------------------
-// Storage. Postgres when configured, otherwise in memory (local development).
 
 const createPgStore = (db) => {
     const voteCounts = `
@@ -337,7 +280,6 @@ const createPgStore = (db) => {
             );
             return result.rowCount || 0;
         },
-        // Adds links for classes that don't have one yet; never replaces.
         async importPersonal(studentId, year, entries) {
             return db.withTransaction(async (client) => {
                 const existing = await client.query(
@@ -409,11 +351,8 @@ const createPgStore = (db) => {
             );
             return result.rows[0] ? toRow(result.rows[0]) : null;
         },
-        // vote: 1 backs the link (and drops the student's backing of the class's
-        // other links), -1 reports it, 0 clears the student's vote.
         async setVote({ linkId, studentId, vote, year, classKey }) {
             await db.withTransaction(async (client) => {
-                // One student's votes on one class are applied one at a time.
                 await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`canvas:${studentId}:${year}:${classKey}`]);
                 if (vote === 0) {
                     await client.query(
@@ -468,8 +407,6 @@ const createPgStore = (db) => {
             );
             return result.rows.map(toRow);
         },
-        // Classes (other than excludeClassKey) where this course is already
-        // shared, ignoring links the votes/admin have rejected.
         async sharedCourseClasses(year, courseId, excludeClassKey) {
             const result = await db.query(
                 `WITH counted AS (
@@ -523,13 +460,11 @@ const createPgStore = (db) => {
             const result = await db.query(`DELETE FROM canvas_class_links WHERE id = $1`, [id]);
             return result.rowCount > 0;
         },
-        // Drops links from earlier school years; votes cascade with their links.
         async pruneBefore(year) {
             const shared = await db.query('DELETE FROM canvas_class_links WHERE school_year < $1', [year]);
             const personal = await db.query('DELETE FROM canvas_links WHERE school_year < $1', [year]);
             return { shared: shared.rowCount || 0, personal: personal.rowCount || 0 };
         },
-        // Clears every report (-1 vote) on a link; backers are kept.
         async clearReports(id) {
             const result = await db.query(
                 `DELETE FROM canvas_class_link_votes WHERE link_id = $1 AND vote = -1`,
@@ -541,9 +476,6 @@ const createPgStore = (db) => {
             );
             return result.rowCount || 0;
         },
-        // Everyone worth telling that a class's link was approved: the student
-        // who shared it plus every student who voted on the class's links.
-        // Blacklisted students are excluded.
         async classParticipants(year, classKey) {
             const result = await db.query(
                 `SELECT DISTINCT p.uid
@@ -568,7 +500,6 @@ const createPgStore = (db) => {
                      VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
                     [crypto.randomUUID(), n.userId, n.type, n.title, n.message, n.actionUrl || null]
                 );
-                // Keep only the latest 100 per student.
                 await db.query(
                     `DELETE FROM notifications WHERE user_id = $1 AND id NOT IN (
                         SELECT id FROM notifications WHERE user_id = $1
@@ -599,7 +530,6 @@ const createPgStore = (db) => {
                 `UPDATE notifications SET read = TRUE WHERE user_id = $1 AND NOT read`,
                 [studentId]
             );
-            // Read notices are only kept for a month.
             await db.query(
                 `DELETE FROM notifications WHERE user_id = $1 AND read AND created_at < NOW() - INTERVAL '30 days'`,
                 [studentId]
@@ -609,10 +539,10 @@ const createPgStore = (db) => {
 };
 
 const createMemoryStore = (getMemoryUsers) => {
-    const personal = []; // { studentId, year, className, canvasUrl, updatedAt }
-    const shared = [];   // { id, classKey, className, courseId, schoolYear, submittedBy, lockedStatus, createdAt }
-    const votes = new Map(); // `${linkId}:${studentId}` -> { linkId, studentId, vote }
-    const notices = [];  // { id, userId, type, title, message, read, createdAt }
+    const personal = [];
+    const shared = [];
+    const votes = new Map();
+    const notices = [];
     const blacklisted = (id) => (getMemoryUsers?.() || []).some(u => String(u.id) === String(id) && u.blacklisted);
     const withCounts = (link, studentId) => {
         let up = 0;
@@ -845,21 +775,16 @@ const createMemoryStore = (getMemoryUsers) => {
     };
 };
 
-// ---------------------------------------------------------------------------
-// Routes.
-
 const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, requireAdminAuth, getUserById, isAdminUser, addLog, getMemoryUsers }) => {
     const store = isDbEnabled ? createPgStore(db) : createMemoryStore(getMemoryUsers);
     const writeLimit = makeLimiter(30, 60 * 1000);
     const voteLimit = makeLimiter(40, 60 * 60 * 1000);
-    const classCache = new Map(); // studentId -> { at, classes }
+    const classCache = new Map();
 
     const log = (action, studentId, details) => {
         Promise.resolve(addLog(action, studentId, details)).catch(() => {});
     };
 
-    // Links are kept per school year; clear earlier years' rows on boot and
-    // daily so the feature resets each calendar year.
     const pruneOldLinks = async () => {
         try {
             const removed = await store.pruneBefore(currentSchoolYear());
@@ -873,8 +798,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     pruneOldLinks();
     setInterval(pruneOldLinks, 24 * 60 * 60 * 1000).unref();
 
-    // The student's classes from their own SBHS timetable, or null when auth is
-    // bypassed for local development (then any class is accepted).
     const studentClasses = async (req) => {
         if (process.env.BYPASS_AUTH === 'true') return null;
         const studentId = String(req.user.studentId);
@@ -903,8 +826,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     };
 
-    // The class (from the student's timetable) a class key names, or null if
-    // they aren't in it.
     const studentClass = async (req, classKey) => {
         const classes = await studentClasses(req);
         if (classes === null) return { key: classKey, name: classKey };
@@ -919,8 +840,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     };
 
-    // Same rule as the admin routes: DB role 'Admin', the ADMIN_IDS bootstrap
-    // list, or everyone while auth is bypassed for local development.
     const isAdmin = async (studentId) => {
         if (process.env.BYPASS_AUTH === 'true') return true;
         try {
@@ -930,8 +849,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     };
 
-    // Checks every write: rate limit, then blacklist. Sends the error and
-    // returns false when the request shouldn't go ahead.
     const allowWrite = async (req, res) => {
         const studentId = String(req.user.studentId);
         if (!writeLimit(studentId)) {
@@ -945,8 +862,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         return true;
     };
 
-    // Duplicate membership is kept fresh by scanDuplicateLinks, which every
-    // mutation awaits; community fetches just read its cache.
     let duplicateIdsCache = { year: null, at: 0, ids: [] };
 
     const communityFor = async (studentId, year, classKeys) => {
@@ -959,16 +874,11 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         return summariseClasses(rows, classKeys, { studentId, duplicateCourseIds: new Set(ids) });
     };
 
-    // A link's effective status ('pending' | 'verified' | 'rejected') from its
-    // live vote counts, or null when the class has no row for it.
     const linkVoteStatus = async (year, classKey, linkId) => {
         const row = (await store.listForClasses(year, [classKey], '')).find(r => r.id === linkId);
         return row ? statusOf(row) : null;
     };
 
-    // Tells the class a link was approved — the student who shared it plus
-    // everyone who voted on the class's links. Fire-and-forget: a failure here
-    // must never break the vote or admin action that triggered it.
     const announceApproval = ({ year, classKey, className, courseId, via }) => {
         (async () => {
             const recipients = await store.classParticipants(year, classKey);
@@ -983,8 +893,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             log('CANVAS_LINK_APPROVED', 'SYSTEM', `Notified ${recipients.length} students that ${classKey} link ${courseId} was approved (${via})`);
         })().catch(e => console.error('[canvas-links] Failed to send approval notifications:', e?.message || e));
     };
-    // Duplicate groups use the admin panel's rule: the same course URL under
-    // two or more class keys, ignoring links the votes/admin have rejected.
     const duplicateGroups = (rows) => {
         const byUrl = new Map();
         rows.forEach(row => {
@@ -999,9 +907,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             .filter(group => new Set(group.links.map(link => link.classKey)).size > 1);
     };
 
-    // Scans at most once a minute so notification fetches stay cheap. Each
-    // setter is told about a duplicated course once per link, tracked on the
-    // link itself rather than by scanning notification text.
     const DUPLICATE_SCAN_MS = 60 * 1000;
     let duplicateScanAt = 0;
     let duplicateScanPromise = null;
@@ -1068,17 +973,13 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
     };
     void scanDuplicateLinks({ force: true });
 
-    // Shares a student's Canvas course link with their class, as their vote for
-    // it. Returns 'shared', or why it wasn't shared.
     const shareLink = async (req, { classKey, title, courseId }) => {
         const studentId = String(req.user.studentId);
         const year = currentSchoolYear();
 
-        // Check if user is admin first - admins can share for any class
         const adminUser = await isAdmin(studentId);
 
         let cls;
-        // Only verify class membership for non-admins
         if (!adminUser) {
             try {
                 cls = await studentClass(req, classKey);
@@ -1086,7 +987,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                 console.error('[canvas-links] Could not read timetable to share link:', e?.message || e);
                 return 'unverified';
             }
-            // Match exactly by classKey - the year+shortTitle combination is the source of truth
             if (!cls) {
                 console.warn('[canvas-links] Student not in class:', { studentId, classKey, title });
                 return 'not_in_class';
@@ -1099,10 +999,8 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
             if (await store.countSharedSince(studentId, since) >= DAILY_SHARED_LIMIT) return 'limit';
 
-            // Auto-approve if user is admin
             const lockedStatus = adminUser ? 'verified' : null;
 
-            // Ensure className includes year for clarity (e.g., "9 Maths 1" not just "Maths 1")
             const className = cls?.name || (title.startsWith(String(year)) ? title : `${year} ${title}`);
 
             linkId = await store.createShared({ year, classKey, className, courseId, studentId, lockedStatus });
@@ -1112,8 +1010,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             }
             log('CANVAS_LINK_SHARED', studentId, `Shared course ${courseId} for ${classKey} (${year})${adminUser ? ' [Auto-approved as Admin]' : ''}`);
         } else if (adminUser) {
-            // An admin backing a link that's still waiting on votes pins it,
-            // unless another admin already hid it.
             const existing = await store.getShared(linkId);
             if (existing && !existing.lockedStatus) {
                 const wasVerified = (await linkVoteStatus(year, classKey, linkId)) === 'verified';
@@ -1127,9 +1023,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         await store.setVote({ linkId, studentId, vote: 1, year, classKey });
         await scanDuplicateLinks({ force: true });
 
-        // A fresh, non-duplicate share replaces the student's earlier shared
-        // links for this class that are still flagged as duplicates — the
-        // mis-share is fixed, so the other class's copy stops being flagged too.
         if (duplicateIdsCache.year === year && !duplicateIdsCache.ids.includes(courseId)) {
             const stale = (await store.listForClasses(year, [classKey], studentId))
                 .filter(row => row.id !== linkId && row.submittedBy === studentId && duplicateIdsCache.ids.includes(row.courseId));
@@ -1142,7 +1035,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         return 'shared';
     };
 
-    // GET /api/canvas-links - the student's own links for this school year.
     app.get('/api/canvas-links', requireStudentAuth, async (req, res) => {
         const base = { success: true, canvasHost: CANVAS_HOST, schoolYear: currentSchoolYear() };
         try {
@@ -1157,8 +1049,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // PUT /api/canvas-links/:className - save one link. With classKey, a Canvas
-    // course link is also shared with the class.
     app.put('/api/canvas-links/:className', requireStudentAuth, async (req, res) => {
         try {
             if (!(await allowWrite(req, res))) return;
@@ -1173,11 +1063,8 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
 
             const year = currentSchoolYear();
             const classKey = req.body?.classKey;
-            // Normalize to canonical year+shortTitle (e.g., "9PDH E") to avoid duplicates.
             const canonicalName = normalizeClassName(className, classKey);
 
-            // Warn before saving when this course is already shared under
-            // another class — the client confirms and retries with the flag.
             if (parsed.courseId && isClassKey(classKey) && req.body?.confirmDuplicate !== true) {
                 const elsewhere = await store.sharedCourseClasses(year, parsed.courseId, classKey);
                 if (elsewhere.length > 0) {
@@ -1197,7 +1084,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             if (parsed.courseId && isClassKey(classKey)) {
                 try {
                     shared = await shareLink(req, { classKey, title: className, courseId: parsed.courseId });
-                    // Provide detailed error messages for specific failure cases
                     if (shared === 'unverified') {
                         console.warn('[canvas-links] Share unverified for student:', { studentId, classKey });
                     } else if (shared === 'not_in_class') {
@@ -1223,8 +1109,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // DELETE /api/canvas-links - remove all of the student's links for this
-    // school year.
     app.delete('/api/canvas-links', requireStudentAuth, async (req, res) => {
         try {
             if (!(await allowWrite(req, res))) return;
@@ -1238,7 +1122,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // DELETE /api/canvas-links/:className - remove one of the student's links.
     app.delete('/api/canvas-links/:className', requireStudentAuth, async (req, res) => {
         try {
             if (!(await allowWrite(req, res))) return;
@@ -1252,8 +1135,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // POST /api/canvas-links/import - adds links saved on this device by older
-    // versions of the app, for classes that don't have one yet. Never replaces.
     app.post('/api/canvas-links/import', requireStudentAuth, async (req, res) => {
         try {
             if (!(await allowWrite(req, res))) return;
@@ -1277,9 +1158,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // GET /api/canvas-links/community - shared links for the student's classes.
-    // Classes come from the student's SBHS timetable; the ?classes= list the
-    // client sends is only used if SBHS can't be reached.
     app.get('/api/canvas-links/community', requireStudentAuth, async (req, res) => {
         try {
             const studentId = String(req.user.studentId);
@@ -1305,7 +1183,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // POST /api/canvas-links/community/:id/vote - { vote: 1 | -1 | 0 }.
     app.post('/api/canvas-links/community/:id/vote', requireStudentAuth, async (req, res) => {
         try {
             if (!(await allowWrite(req, res))) return;
@@ -1328,7 +1205,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
                 return res.status(429).json({ error: 'rate_limited', message: 'You’ve voted a lot recently. Try again later.' });
             }
 
-            // A +1 vote can be the one that verifies the link; tell the class once.
             const wasVerified = vote === 1 && (await linkVoteStatus(year, link.classKey, link.id)) === 'verified';
             await store.setVote({ linkId: link.id, studentId, vote, year, classKey: link.classKey });
             await scanDuplicateLinks({ force: true });
@@ -1349,8 +1225,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // GET /api/canvas-links/notifications - the student's unread notifications
-    // (e.g. a class link that was just approved).
     app.get('/api/canvas-links/notifications', requireStudentAuth, async (req, res) => {
         try {
             await scanDuplicateLinks();
@@ -1362,7 +1236,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // POST /api/canvas-links/notifications/read - marks them all read.
     app.post('/api/canvas-links/notifications/read', requireStudentAuth, async (req, res) => {
         try {
             await store.markNotificationsRead(String(req.user.studentId));
@@ -1373,7 +1246,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // Admin: every shared link this school year, with its votes.
     app.get('/api/admin/canvas-links/community', requireAdminAuth, async (req, res) => {
         try {
             const year = currentSchoolYear();
@@ -1402,8 +1274,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // Admin: { lockedStatus: 'verified' | 'rejected' | null } pins, hides, or
-    // hands the link back to the votes.
     app.put('/api/admin/canvas-links/community/:id', requireAdminAuth, async (req, res) => {
         try {
             const lockedStatus = req.body?.lockedStatus ?? null;
@@ -1411,8 +1281,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
             const id = String(req.params.id);
             const existing = await store.getShared(id);
             if (!existing) return res.status(404).json({ error: 'Not found' });
-            // Only announce when the pin is what approves the link — a link the
-            // class already verified by votes was announced back then.
             const wasVerified = lockedStatus === 'verified'
                 && (await linkVoteStatus(existing.schoolYear, existing.classKey, id)) === 'verified';
             if (!(await store.setLock(id, lockedStatus))) return res.status(404).json({ error: 'Not found' });
@@ -1434,7 +1302,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
         }
     });
 
-    // Admin: clears every report on a link, keeping its backers.
     app.post('/api/admin/canvas-links/community/:id/reset-reports', requireAdminAuth, async (req, res) => {
         try {
             const id = String(req.params.id);
@@ -1470,7 +1337,6 @@ const registerCanvasLinkRoutes = (app, { db, isDbEnabled, requireStudentAuth, re
 
 module.exports = {
     registerCanvasLinkRoutes,
-    // Exported for tests.
     parseLinkInput,
     readStoredUrl,
     extractClasses,

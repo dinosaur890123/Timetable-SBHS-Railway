@@ -6,13 +6,10 @@ import { useCachedLoad } from '../utils/pageCache';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { motion, AnimatePresence, LayoutGroup, MotionConfig } from 'framer-motion';
 
-// Motion follows DESIGN.md: springs for things that move, short fades for things that swap.
 const SPRING = { type: 'spring', stiffness: 500, damping: 40 };
 const PANEL_SPRING = { type: 'spring', stiffness: 380, damping: 38 };
 const EASE = [0.2, 0.8, 0.2, 1];
 
-
-// Months slide in from the side you navigated towards.
 const slide = {
   enter: (dir) => ({ x: dir * 48, opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -37,7 +34,6 @@ const getEventTypeAccent = (type) => {
   }
 };
 
-// Soft tinted chips for the grid; filled badges are kept for the day panel.
 const getEventChipColor = (type) => {
   switch (type) {
     case 'assessment': return 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-950 dark:border-white';
@@ -57,10 +53,8 @@ const getEventDotColor = (type) => {
 };
 
 const CELL_HEIGHT = 'min-h-[56px] sm:min-h-[92px]';
-// Week/term column, then seven day columns.
 const GRID_COLS = 'grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] sm:grid-cols-[4rem_repeat(7,minmax(0,1fr))]';
 
-// One month: a term/week column, then the days. Pure render; the parent animates it in and out.
 const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
   const groupFor = (date) => events.find(e => e.info?.date === format(date, 'yyyy-MM-dd'));
 
@@ -104,7 +98,6 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
                 : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
           }`}
         >
-          {/* The selection ring glides from day to day rather than jumping. */}
           <AnimatePresence>
             {isSelected && (
               <motion.span
@@ -137,7 +130,6 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
           </div>
           {items.length > 0 && (
             <div className="relative mt-auto pt-1">
-              {/* Narrow screens get colour dots; wider ones get named chips. */}
               <div className="flex items-center gap-1 sm:hidden">
                 {items.slice(0, 3).map((event, i) => (
                   <span key={i} className={`h-1.5 w-1.5 rounded-full ${getEventDotColor(event.type)}`} />
@@ -248,15 +240,11 @@ const CalendarView = ({ user }) => {
   const isWide = useMediaQuery('(min-width: 1024px)');
   const panelRef = useRef(null);
 
-  // Months already loaded (this session, saved on the device, or fetched in the background at
-  // start-up) show at once and refresh underneath.
   const monthKey = format(currentDate, 'yyyy-MM');
   const page = user?.studentId ? calendarPage(user.studentId, currentDate) : null;
   const { data: monthEvents, loading } = useCachedLoad(page?.key ?? null, page?.load);
   const events = monthEvents || [];
 
-  // School closures: named holidays, staff development days and days outside every
-  // term, marked with a blue dot on the day.
   const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
   const closureFor = (date) => closureLabel(date, terms, events);
 
@@ -286,14 +274,12 @@ const CalendarView = ({ user }) => {
   const flyoutOpen = showFlyout && selectedDate && isSameMonth(selectedDate, currentDate);
   const selectedClosure = flyoutOpen ? closureFor(selectedDate) : null;
 
-  // On narrow screens the day panel unfolds below the grid, so bring it into view.
   useEffect(() => {
     if (flyoutOpen && !isWide) {
       panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [flyoutOpen, selectedDate, isWide]);
 
-  // Wide screens: the panel grows sideways and the grid narrows with it. Narrow: it unfolds above.
   const panelMotion = isWide
     ? { initial: { width: 0, opacity: 0 }, animate: { width: 408, opacity: 1 }, exit: { width: 0, opacity: 0 } }
     : { initial: { height: 0, opacity: 0 }, animate: { height: 'auto', opacity: 1 }, exit: { height: 0, opacity: 0 } };
@@ -301,7 +287,6 @@ const CalendarView = ({ user }) => {
   return (
     <MotionConfig reducedMotion="user">
       <div className="max-w-7xl mx-auto w-full relative">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -358,10 +343,8 @@ const CalendarView = ({ user }) => {
         </motion.div>
 
         <div className="flex flex-col lg:flex-row">
-          {/* Calendar Grid */}
           <div className="flex-1 min-w-0">
             <div className="bg-m-card rounded-xl border border-m-line overflow-hidden">
-              {/* Day Headers */}
               <div className={`grid ${GRID_COLS} gap-px bg-m-line border-b border-m-line`}>
                 <div className="bg-m-panel py-2"></div>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -372,7 +355,6 @@ const CalendarView = ({ user }) => {
                 ))}
               </div>
 
-              {/* Months slide; the frame eases to the new month's height (5 or 6 weeks). */}
               <motion.div layout transition={PANEL_SPRING} className="relative overflow-hidden">
                 <LayoutGroup id="calendar-days">
                   <AnimatePresence mode="popLayout" initial={false} custom={direction}>
@@ -399,7 +381,6 @@ const CalendarView = ({ user }) => {
             </div>
           </div>
 
-          {/* Day panel */}
           <AnimatePresence initial={false}>
             {flyoutOpen && (
               <motion.aside
@@ -425,7 +406,6 @@ const CalendarView = ({ user }) => {
                         exit="exit"
                         transition={{ duration: 0.2, ease: EASE }}
                       >
-                        {/* Flyout Header */}
                         <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-m-line bg-m-panel">
                           <div className="flex items-center justify-between">
                             <div>
@@ -449,7 +429,6 @@ const CalendarView = ({ user }) => {
                           </div>
                         </div>
 
-                        {/* Events List */}
                         <div className="max-h-[400px] sm:max-h-[600px] overflow-y-auto">
                           <DayEvents date={selectedDate} group={selectedGroup} closure={selectedClosure} />
                         </div>

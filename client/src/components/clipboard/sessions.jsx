@@ -7,9 +7,6 @@ import { EASE_OUT, Ring, useNoteFlowFonts } from '../study/noteflow';
 import '../study/noteflow.css';
 import './clipboard.css';
 
-// Clipboard sessions, drawn in NoteFlow's language. Shared by the Clipboard page's
-// calendar and the single line a session gets on the day's timetable.
-
 export const startOf = (session) => (session?.start ? new Date(session.start) : null);
 export const endOf = (session) => (session?.end ? new Date(session.end) : null);
 export const dayKeyOf = (session) => {
@@ -17,15 +14,12 @@ export const dayKeyOf = (session) => {
     return start ? format(start, 'yyyy-MM-dd') : null;
 };
 
-// "3:30 pm", the way the rest of NoteFlow writes times.
 export const clockTime = (date) => (date ? `${format(date, 'h:mm')} ${format(date, 'a').toLowerCase()}` : '');
 
 export const sessionName = (session) => session.title || session.activity;
 
 const isWin = (result) => String(result?.outcome || '').trim().toUpperCase() === 'W';
 
-// The activity's own colour on its dot, through a CSS variable so the cancelled
-// style (a hollow ring) still wins. Falls back to Clipboard violet.
 export const sessionInk = (session) => (session?.colour ? { '--cb-colour': session.colour } : undefined);
 
 const hasCoords = (location) => Number.isFinite(Number(location?.latitude)) && Number.isFinite(Number(location?.longitude))
@@ -126,7 +120,6 @@ const SheetBody = ({ session, onClose, still }) => {
                 {session.notes && <Row label="Notes"><span className="nf-pop__notes">{session.notes}</span></Row>}
             </dl>
 
-            {/* The red pen marks results only. */}
             {result && (result.us !== null || result.outcome) && (
                 <div className={`nf-pop__result${isWin(result) ? ' nf-pop__result--win' : ''}`}>
                     {result.us !== null && (
@@ -142,7 +135,6 @@ const SheetBody = ({ session, onClose, still }) => {
     );
 };
 
-// A session popped out over the page: when, where (with a map), who against, and notes.
 export const SessionSheet = ({ session, onClose }) => {
     const still = useReducedMotion();
     useNoteFlowFonts(!!session);
@@ -174,7 +166,6 @@ export const SessionSheet = ({ session, onClose }) => {
     );
 };
 
-// One quiet line in the day's timetable, laid out like a break row. Opens the sheet.
 export const SessionLine = ({ session, onOpen }) => (
     <button
         type="button"

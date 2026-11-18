@@ -1,6 +1,3 @@
-// What each page loads, as { key, load } pairs. The pages use them through useCachedLoad, and
-// prefetchPages loads them in the background after start-up, so a page usually opens on data that
-// is already there. Keys include the student, since the cache is saved on the device.
 import { format, getDay, startOfMonth, endOfMonth } from 'date-fns';
 import {
     fetchCalendarEvents,
@@ -23,24 +20,17 @@ import {
 } from './api';
 import { prefetchCached } from '../utils/pageCache';
 
-// --- School calendar ---
-
-// The year's terms, holidays and development days: one public request, shared by the
-// calendar page and the timetable date picker through the page cache.
 export const termsPage = () => ({
     key: 'terms:v1',
     load: () => fetchTerms()
 });
 
-// Pulls a YYYY-MM-DD out of whatever shape the API uses for a date: a plain string,
-// a { date } object, or a top-level startDate/endDate field.
 const ymd = (v) => {
     const s = typeof v === 'string' ? v : v?.date;
     const m = typeof s === 'string' && s.match(/\d{4}-\d{2}-\d{2}/);
     return m ? m[0] : null;
 };
 
-// The terms' start–end spans, straight from the API.
 const termSpans = (termsData) =>
     Object.values(termsData?.terms || {})
         .map(t => ({ start: ymd(t?.start) ?? ymd(t?.startDate), end: ymd(t?.end) ?? ymd(t?.endDate) }))
@@ -65,25 +55,17 @@ const afterCalendarTermEnd = (key, spans, eventsData) =>
         return !nextStart || key < nextStart;
     });
 
-// What a date is closed for, if anything: a named public holiday or staff development
-// day on a weekday, "School holidays" for any weekday outside every term's bounds, or
-// "School holidays" for any weekend outside every term's bounds (holiday weekends earn
-// a dot too). Weekends that fall inside a term are open - only school days can be
-// non-teaching inside term. No terms data means nothing can be called closed.
 export const closureLabel = (date, termsData, eventsData = null) => {
-    const dow = getDay(date); // 0 = Sunday, 6 = Saturday
+    const dow = getDay(date);
     const isWeekend = dow === 0 || dow === 6;
     const key = format(date, 'yyyy-MM-dd');
     const spans = termSpans(termsData);
     const apiInTerm = spans.length > 0 && spans.some(t => key >= t.start && key <= t.end);
     const insideTerm = apiInTerm && !afterCalendarTermEnd(key, spans, eventsData);
-    // Weekends inside a term are never dotted - they're always non-teaching but expected.
     if (isWeekend && insideTerm) return null;
-    // Named holidays and dev days earn a dot on weekdays.
     if (!isWeekend) {
         const named = termsData?.publicHolidays?.[key] || termsData?.developmentDays?.[key];
         if (named) return named;
-        // Check calendar events for development day or public holiday mentions
         if (eventsData) {
             const dayGroup = eventsData.find(e => e.info?.date === key);
             if (dayGroup?.items) {
@@ -102,9 +84,6 @@ export const closureLabel = (date, termsData, eventsData = null) => {
     return insideTerm ? null : 'School holidays';
 };
 
-// --- Calendar ---
-
-// Fetches a month's events and the student's assignments, merged into day groups.
 const loadMonth = async (monthDate) => {
   const start = startOfMonth(monthDate);
   const end = endOfMonth(monthDate);
@@ -172,14 +151,10 @@ export const calendarPage = (studentId, monthDate) => ({
     load: () => loadMonth(monthDate)
 });
 
-// --- Awards ---
-
 const settle = (promise, fallback) => promise.then(value => ({ ok: true, value }), () => ({ ok: false, value: fallback }));
 
 export const awardsPage = (studentId) => ({
     key: `awards:${studentId}`,
-    // `previous` is the saved copy: a section that fails keeps its old data rather
-    // than being stored as empty, so the backup survives an outage.
     load: async (previous) => {
         const results = await Promise.all([
             settle(fetchStudentAwards(studentId), previous?.awards ?? []),
@@ -201,12 +176,8 @@ export const awardsPage = (studentId) => ({
     }
 });
 
-// --- Clipboard ---
-
 export const clipboardPage = (studentId) => ({
     key: `clipboard:${studentId}`,
-    // `previous` is the saved copy: a section that fails keeps its old data rather
-    // than being stored as empty, so the backup survives an outage.
     load: async (previous) => {
         const results = await Promise.all([
             settle(fetchStudentClipboardAttendance(studentId), previous?.attendance ?? []),
@@ -214,16 +185,12 @@ export const clipboardPage = (studentId) => ({
             settle(fetchStudentClipboardSessions(studentId), previous?.sessions ?? []),
             settle(fetchStudentClipboardTeams(studentId), previous?.teams ?? [])
         ]);
-        // Nothing answered at all: keep the saved copy (and the Cached badge) rather
-        // than storing five empty lists over it.
         if (!results.some(r => r.ok)) throw new Error('Clipboard unavailable');
         const [attendance, preExplained, sessions, teams] = results.map(r => r.value);
         return { attendance, preExplained, sessions, teams };
     }
 });
 
-// Loads the other pages' data in the background, one page at a time so it never competes with
-// what's on screen. Skipped offline and when the device asks to save data (Data Saver, 2G).
 export const prefetchPages = async ({ studentId, hiddenPages = [] }) => {
     const connection = navigator.connection;
     const slow = connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '');

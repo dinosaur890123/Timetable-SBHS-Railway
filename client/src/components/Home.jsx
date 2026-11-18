@@ -53,7 +53,7 @@ const saveScanStatusCache = (studentId, status) => {
     if (!['scanned', 'not-scanned'].includes(status.state)) return;
     try {
         localStorage.setItem(SCAN_STATUS_CACHE_KEY, JSON.stringify({ studentId, ...status }));
-    } catch { /* The live status still works when storage is unavailable. */ }
+    } catch {}
 };
 
 const formatCountdown = (mins) => {
@@ -64,7 +64,6 @@ const formatCountdown = (mins) => {
     return hrs > 0 ? `${hrs}:${String(mm).padStart(2, '0')}:${ss}` : `${mm}:${ss}`;
 };
 
-// Flattens the day's routine into ordered slots with variations applied, skipping roll call.
 const buildSlots = (timetableData) => {
     if (!timetableData?.bells) return [];
     const inner = timetableData.timetable?.timetable || timetableData.timetable;
@@ -92,7 +91,6 @@ const buildSlots = (timetableData) => {
         }
 
         if (bellId === 'RC' || (originalTitle && String(originalTitle).toLowerCase().includes('roll call'))) return null;
-        // An empty Period 0 is just a gap before school starts.
         if (isRealBreak && String(bellId) === '0') return null;
 
         const isSportOrScripture = !isRealBreak && isBreak;
@@ -100,8 +98,6 @@ const buildSlots = (timetableData) => {
         const endMin = bell.endTime ? getMinutes(bell.endTime) : startMin + 60;
         return { bellId, bell, period, isBreak, isRealBreak, isSportOrScripture, startMin, endMin };
     }).filter(Boolean).reduce((rows, slot) => {
-        // Fold back-to-back breaks with the same name ("Lunch 1", "Lunch 2") into one.
-        // Do not merge sport/scripture periods.
         const prev = rows[rows.length - 1];
         const label = slot.period.title?.replace(/\s*\d+$/, '');
         if (prev?.isRealBreak && slot.isRealBreak && prev.period.title?.replace(/\s*\d+$/, '') === label) {
@@ -115,7 +111,6 @@ const buildSlots = (timetableData) => {
 
 const isClass = (slot) => !slot.isBreak && slot.period.title && slot.period.title !== 'Free Period';
 
-// Converts clipboard sessions to slot-like objects for the countdown
 const buildClipboardSlots = (sessions, dayKey) => {
     if (!sessions || !dayKey) return [];
     return sessions
@@ -147,9 +142,6 @@ const buildClipboardSlots = (sessions, dayKey) => {
         .sort((a, b) => a.startMin - b.startMin);
 };
 
-// Daily/cycle switch. The active pill is positioned manually rather than with a
-// framer-motion layoutId: a layout animation still in flight when the page swaps
-// inside AnimatePresence can leave the next view blank (same issue as awards).
 const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
     const tabsRef = useRef({});
     const [pill, setPill] = useState(null);
@@ -201,8 +193,6 @@ const RailLabel = ({ children, aside }) => (
     </div>
 );
 
-// The rail's card, washed with the live class's colour. Phase changes update the content
-// directly so the card stays quiet while the timetable moves through the day.
 const RailCard = ({ children, colour, phase }) => {
     return (
         <section
@@ -225,13 +215,10 @@ const RailCard = ({ children, colour, phase }) => {
     );
 };
 
-// The subject's colour from the timetable, as a small dot beside its name.
 const SubjectDot = ({ colour }) => colour
     ? <span aria-hidden className="inline-block w-2 h-2 shrink-0 rounded-full subject-fill" {...subjectInk(colour)} />
     : null;
 
-// Canvas links are keyed by the short class code; the full name is what's shown on desktop,
-// abbreviated on mobile.
 const ClassTitle = ({ period, className }) => {
     const { getLink, linksEnabled } = useCanvasLinks();
     const link = linksEnabled ? getLink(period.title, period.year) : null;
@@ -268,8 +255,6 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     </div>
 );
 
-// Digits roll like an odometer: counting down, each new digit drops in from above while the
-// old one falls away. Keyed from the right so the seconds keep their place as the string shortens.
 const RollingText = ({ text }) => (
     <span className="inline-flex">
         {text.split('').map((ch, i, all) => {
@@ -316,7 +301,6 @@ const Progress = ({ value, colour }) => (
     </div>
 );
 
-// What matters at this moment: the current class with a countdown, or what's first up.
 const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
     const allSlots = [...slots, ...clipboardSlots].sort((a, b) => a.startMin - b.startMin);
@@ -378,8 +362,6 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     );
 };
 
-// My Synchron: a one-line greeting and the day's timetable, with a side rail holding the
-// live countdown while school is on. Changes are marked on their rows.
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
     const [now, setNow] = useState(new Date());
     const [scanIn, setScanIn] = useState(() => {
@@ -394,8 +376,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         return () => clearInterval(timer);
     }, []);
 
-    // Use the real day's bell times for polling bounds, independent of the date
-    // currently selected in the timetable.
     const day = railTimetable || timetableData;
     const slots = buildSlots(day);
     const todayKey = format(now, 'yyyy-MM-dd');
@@ -485,8 +465,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         };
     }, [user?.studentId, todayKey, isSchoolDay, hasTodaySchedule, schoolStartMin, schoolEndMin]);
 
-    // At today's last bell, switch the pill to tomorrow's scan record when tomorrow
-    // has classes. This is a single lookup; polling for today has already stopped.
     useEffect(() => {
         if (!user?.studentId || !afterSchool) return;
         const nextDate = addDays(now, 1);
@@ -516,9 +494,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         return () => { active = false; };
     }, [user?.studentId, todayKey, afterSchool]);
 
-    // The greeting and rail describe the real school day (today, or the next one after
-    // school), not whichever day is being browsed below. Falls back to the viewed day
-    // until that's loaded.
     const inner = day?.timetable?.timetable || day?.timetable;
     const dayKey = day?.date || (viewDate ? format(viewDate, 'yyyy-MM-dd') : todayKey);
     const isLive = dayKey === todayKey;
@@ -527,16 +502,9 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const firstClass = slots.find(isClass);
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
     const hasExtracurriculars = clipboardSlots.length > 0;
-    // The rail's window starts two hours before the earliest thing of the day —
-    // a 7am training session counts, not just the first school bell.
     const dayStart = [slots[0]?.startMin, clipboardSlots[0]?.startMin].filter(n => n != null).reduce((a, b) => Math.min(a, b), Infinity);
     const dayEnd = slots.length ? slots[slots.length - 1].endMin : -Infinity;
-    // Extend dayEnd if extracurriculars go after school
     const extendedDayEnd = hasExtracurriculars ? Math.max(dayEnd, clipboardSlots[clipboardSlots.length - 1].endMin) : dayEnd;
-    // The side rail only earns its place while the day is happening: up to two hours
-    // before the first event until the last one (including extracurriculars). The
-    // header width follows the same rule in cycle view so it doesn't jump when
-    // switching between daily and cycle.
     const railHours = isLive && (classCount > 0 || hasExtracurriculars) && nowMin >= dayStart - 120 && nowMin < extendedDayEnd;
     const showRail = !isCycle && railHours;
 
@@ -571,8 +539,6 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         ? 'bg-emerald-500'
         : scanUrgent ? 'bg-red-500' : 'bg-amber-500';
 
-    // Header and content get their own containers: the greeting/toggle always uses
-    // the daily width, while cycle keeps its wider table below.
     const headerWidth = railHours ? 'max-w-5xl' : 'max-w-3xl';
     const contentWidth = isCycle ? 'max-w-6xl' : headerWidth;
 
@@ -602,10 +568,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             </div>
 
             <div className={`mx-auto ${contentWidth}`}>
-            {/* Day swipes are handled on the page container in App, so they work
-                even over the empty space of a no-classes day. */}
             <div className={showRail ? 'grid md:gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_280px]' : ''}>
-                {/* On phones the countdown sits above the list so it's seen first */}
                 {rail && <div className="lg:hidden">{rail}</div>}
                 <div className="mb-3 md:hidden">
                     <ViewModeToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />

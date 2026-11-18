@@ -24,7 +24,6 @@ const NoteBody = ({ children }) => (
 );
 
 const BuildNotesView = ({ onBack }) => {
-    // Initial state from localStorage cache for instant display
     const [notes, setNotes] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_build_notes');
@@ -45,7 +44,6 @@ const BuildNotesView = ({ onBack }) => {
     const [error, setError] = useState(null);
     const [lastSynced, setLastSynced] = useState(() => new Date());
 
-    // Sync from backend on page reload/mount or upon manual poll (no recurring background polling)
     const loadNotes = async (isManualPoll = false) => {
         if (isManualPoll) {
             setRefreshing(true);
@@ -62,7 +60,6 @@ const BuildNotesView = ({ onBack }) => {
                 try {
                     localStorage.setItem('cached_build_notes', JSON.stringify(fetched));
                 } catch {
-                    // Ignore quota errors
                 }
             }
         } catch (err) {
@@ -76,12 +73,10 @@ const BuildNotesView = ({ onBack }) => {
         }
     };
 
-    // Sync once on reload / mount. Strictly no interval or constant polling.
     useEffect(() => {
         loadNotes(false);
     }, []);
 
-    // Format content nicely (bullet points, bolding, headings)
     const renderContent = (content) => {
         if (!content) return null;
 
@@ -120,7 +115,6 @@ const BuildNotesView = ({ onBack }) => {
         );
     };
 
-    // Helper for bold formatting (**text**)
     const parseInlineFormatting = (text) => {
         const parts = text.split(/(\*\*[^*]+\*\*)/g);
         return parts.map((part, i) => {
@@ -145,7 +139,6 @@ const BuildNotesView = ({ onBack }) => {
                 <ArrowLeft size={14} /> Back to Settings
             </button>
 
-            {/* Hero */}
             <div className="space-y-1">
                 <div className="flex items-center gap-2 text-accent mb-2">
                     <FileCode size={20} strokeWidth={1.6} />
@@ -156,7 +149,6 @@ const BuildNotesView = ({ onBack }) => {
                 </p>
             </div>
 
-            {/* Sync status */}
             <div className="flex items-center justify-between gap-3">
                 <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
                     {lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Never synced'}
@@ -172,7 +164,6 @@ const BuildNotesView = ({ onBack }) => {
                 </button>
             </div>
 
-            {/* Notes */}
             {loading ? (
                 <Section icon={FileCode} title="Build notes">
                     <NoteBody>
@@ -235,7 +226,6 @@ const BuildNotesView = ({ onBack }) => {
                 ))
             )}
 
-            {/* Footer build sha */}
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
                 Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
             </p>

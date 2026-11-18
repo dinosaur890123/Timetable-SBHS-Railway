@@ -1,6 +1,3 @@
-/* Critical styles for the prerendered SEO shell only. #seo-shell is removed
-   after React mounts, so these rules never affect the real app. They keep the
-   no-JS / pre-hydration page readable before the app's CSS bundle loads. */
 html { color-scheme: light dark; }
 body { margin: 0; }
 

@@ -12,8 +12,6 @@ const TABS = [
     { id: 'absences', label: 'Absences' }
 ];
 
-
-// Stands in for Clipboard while it loads: the same tab bar and month sheet that replace it.
 const ClipboardSkeleton = () => (
     <div className="nf nf-cb animate-pulse-subtle" aria-busy="true" aria-label="Loading Clipboard">
         <div className="nf-cb-bar">
@@ -44,14 +42,11 @@ const ClipboardSkeleton = () => (
     </div>
 );
 
-// Clipboard, drawn in NoteFlow's language. The calendar is the main tab; any session
-// pops out with its location, opponent and notes.
 const ClipboardView = ({ user }) => {
     useNoteFlowFonts();
     const [activeTab, setActiveTab] = useState('calendar');
     const [openSession, setOpenSession] = useState(null);
 
-    // Shows the last copy at once (from this session or saved on the device) while it refreshes.
     const page = user?.studentId ? clipboardPage(user.studentId) : null;
     const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
     const { attendance = [], preExplained = [], sessions = [], teams = [] } = data || {};

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// Cache deferred prompt event across component lifecycles so it isn't lost if fired before mount
 let globalDeferredPrompt = typeof window !== 'undefined' ? (window.__deferredPWAInstallPrompt || null) : null;
 const promptListeners = new Set();
 
@@ -13,7 +12,6 @@ const updateGlobalPrompt = (prompt) => {
 };
 
 if (typeof window !== 'undefined') {
-    // index.html captures install events before React loads and relays them here.
     window.addEventListener('pwa-prompt-ready', () => {
         if (window.__deferredPWAInstallPrompt && !globalDeferredPrompt) {
             updateGlobalPrompt(window.__deferredPWAInstallPrompt);
@@ -38,7 +36,6 @@ export const usePWAInstall = () => {
     const [hasPrompt, setHasPrompt] = useState(() => Boolean(globalDeferredPrompt));
     const [platform, setPlatform] = useState('desktop');
     useEffect(() => {
-        // Detect platform
         const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
         let detectedPlatform = 'desktop';
 
@@ -54,7 +51,6 @@ export const usePWAInstall = () => {
 
         setPlatform(detectedPlatform);
 
-        // Check if already installed using display-mode media query
         const checkInstalled = () => {
             const standalone = (
                 window.matchMedia('(display-mode: standalone)').matches ||
@@ -69,13 +65,11 @@ export const usePWAInstall = () => {
         const displayModeQuery = window.matchMedia('(display-mode: standalone)');
         displayModeQuery.addEventListener('change', checkInstalled);
 
-        // Sync with global prompt changes
         const onPromptChange = (prompt) => {
             setHasPrompt(Boolean(prompt));
         };
         promptListeners.add(onPromptChange);
 
-        // Catch prompt if it became available on window
         if (globalDeferredPrompt) {
             setHasPrompt(true);
         }
@@ -94,11 +88,9 @@ export const usePWAInstall = () => {
         };
     }, []);
 
-    // Prompt user to install the PWA (opens native browser prompt)
     const promptToInstall = useCallback(async () => {
         if (globalDeferredPrompt) {
             try {
-                // Show the browser's native install dialog
                 globalDeferredPrompt.prompt();
                 const choiceResult = await globalDeferredPrompt.userChoice;
                 updateGlobalPrompt(null);
@@ -121,7 +113,6 @@ export const usePWAInstall = () => {
     }, [platform]);
 
     const isIOS = platform === 'ios';
-    // App is installable if not currently running standalone and either has prompt or is iOS
     const canInstall = !isInstalled && (hasPrompt || isIOS);
 
     return {

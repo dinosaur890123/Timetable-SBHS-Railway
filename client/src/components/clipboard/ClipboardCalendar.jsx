@@ -13,18 +13,12 @@ import ScheduleView from './ScheduleView';
 
 const WEEK = { weekStartsOn: 1 };
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-// The month grid only works once the sheet is wide enough to show session chips.
 const MONTH_MIN_WIDTH = 768;
 
-// A month of Clipboard sessions on one sheet. Wide screens get the month grid; narrow
-// ones get one week as a ruled agenda where tapping a session opens it straight away.
-// Every session sits in its day square and opens its sheet on tap; Today just returns
-// to the current period — it never opens a card.
 const ClipboardCalendar = ({ sessions, onOpen }) => {
     const still = useReducedMotion();
     const sectionRef = useRef(null);
     const isWideViewport = useMediaQuery('(min-width: 768px)');
-    // Measured, not assumed: the sidebar can leave a wide window too narrow for the grid.
     const [sheetWide, setSheetWide] = useState(true);
     useEffect(() => {
         const el = sectionRef.current;
@@ -46,7 +40,6 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
         const tooltipWidth = 240;
         const tooltipHeight = 80;
         const x = Math.max(8, Math.min(rect.left + (rect.width - tooltipWidth) / 2, window.innerWidth - tooltipWidth - 8));
-        // Keep the popup fully above the event with a small visual gap.
         const y = Math.max(8, Math.min(rect.top - tooltipHeight - 6, window.innerHeight - tooltipHeight - 8));
         setTooltipPosition({ x, y });
         setHoveredSession(session);
@@ -72,7 +65,6 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
         return rows;
     }, [month]);
 
-    // Today just returns to the current period — it never opens the day card.
     const goToday = () => {
         const now = new Date();
         setMonth(startOfMonth(now));

@@ -6,8 +6,6 @@ import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-
 import AmbientLight from './components/modern/AmbientLight';
 import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
 
-// Each page's code loads on its first visit, and is also fetched quietly once a signed-in app is idle
-// (see warmPages below) so switching pages never stops on "Loading view".
 const pageLoaders = {
     timetable: () => import('./components/Timetable'),
     calendar: () => import('./components/CalendarView'),
@@ -23,8 +21,6 @@ const pageLoaders = {
     admin: () => import('./components/AdminPanel')
 };
 
-// React.lazy caches a failed chunk forever, so a lazy page gets a few retries before
-// it gives up and the error boundary shows its retry card.
 const lazyPage = (loader) => {
     const Lazy = React.lazy(async () => {
         for (let attempt = 0; ; attempt++) {
@@ -57,17 +53,12 @@ const SettingsView = lazyPage(pageLoaders.settings);
 
 const ARCHIVED_NOTICE_LIMIT = 100;
 
-// Settings sub-pages that get their own history entry, so Android's universal
-// back button (and browser Back) returns to the previous view instead of
-// closing the app.
 const SUBPAGE_VIEWS = ['feedback', 'canvas-links', 'build-notes', 'privacy'];
 
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
 });
 
-// Token exchange and the first API calls can hit a browser local-network prompt.
-// When that fails, say the prompt is the likely cause instead of a generic auth error.
 const authErrorMessage = (err) => {
     const base = err?.message || (typeof err === 'string' ? err : 'Failed to authenticate.');
     if (/failed to fetch|load failed|network|connection|timed out|abort|local network|permission|ERR_LOCAL_NETWORK|ERR_BLOCKED_BY|ERR_FAILED/i.test(base)) {
@@ -76,9 +67,6 @@ const authErrorMessage = (err) => {
     return base;
 };
 
-// The day the app opens on: the next school day, unless a Clipboard session falls on a
-// weekend day before it (Saturday sport, Sunday rowing) — the earliest such day wins.
-// Sessions already over don't count: a finished Saturday morning shouldn't reopen Saturday.
 const weekendClipboardDay = (schoolDay, sessions = []) => {
     const schoolKey = format(schoolDay, 'yyyy-MM-dd');
     const todayKey = format(new Date(), 'yyyy-MM-dd');
@@ -130,11 +118,8 @@ import { NotificationsContext } from './context/NotificationsContext';
 import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
 
 function App() {
-    // State
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [currentView, setCurrentView] = useState('home');
-    // Open on the school day worked out from the timetable saved on this device (today until its
-    // last bell, then the next school day), so the right day shows before the network answers.
     const [startDay] = useState(() => peekNextSchoolDay());
     const [viewDate, setViewDate] = useState(() => startDay || new Date());
     const [defaultDate, setDefaultDate] = useState(startDay);
@@ -142,7 +127,6 @@ function App() {
     const lastViewRef = useRef('home');
 
     useEffect(() => {
-        // Check if user is navigating exactly to /admin
         if (window.location.pathname === '/admin') {
             setCurrentView('admin');
         }
@@ -157,8 +141,6 @@ function App() {
         }
     });
     const [railTimetable, setRailTimetable] = useState(() => (startDay ? peekDayTimetable(startDay) : null));
-    // Which day `timetable` holds (the cached copy at start-up is today's), and the day on screen,
-    // so a reply for a day already left behind is dropped instead of shown.
     const [timetableKey, setTimetableKey] = useState(() => format(new Date(), 'yyyy-MM-dd'));
     const viewedDayKey = useRef(null);
     const [completeTimetable, setCompleteTimetable] = useState(() => {
@@ -189,11 +171,10 @@ function App() {
     const [paletteOpen, setPaletteOpen] = useState(false);
     useModernShellEffects(setPaletteOpen);
 
-    // Drop settings left behind by the retired Classic interface
     useEffect(() => {
         try {
             ['ui_theme', 'ui_config', 'dark_style'].forEach(key => localStorage.removeItem(key));
-        } catch { /* storage unavailable */ }
+        } catch {}
     }, []);
     const [notices, setNotices] = useState(() => {
         try {
@@ -224,11 +205,9 @@ function App() {
     const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
     const [clipboardSessions, setClipboardSessions] = useState([]);
 
-    // Offline State
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [usingCachedData, setUsingCachedData] = useState(false);
 
-    // Offline detection
     useEffect(() => {
         const handleOnline = () => setIsOffline(false);
 
@@ -245,10 +224,8 @@ function App() {
         };
     }, []);
 
-    // "Cached" in the topbar: the service worker answered from the offline copy.
     useEffect(() => onCachedDataChange(setUsingCachedData), []);
 
-    // System State
     const [broadcast, setBroadcast] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_system');
@@ -265,8 +242,6 @@ function App() {
             return false;
         }
     });
-    // Admin-controlled seasonal glow (Christmas / NYE palettes); the dates
-    // themselves are checked inside AmbientLight.
     const [festiveAmbient, setFestiveAmbient] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_system');
@@ -288,8 +263,6 @@ function App() {
             return [];
         }
     });
-    // Week and week-type ("5A") for the day on screen, from the same calendar data the
-    // Calendar page shows (its day groups carry info.week / info.weekType).
     const calPage = user?.studentId && !hiddenPages.includes('calendar')
         ? calendarPage(user.studentId, viewDate)
         : null;
@@ -309,22 +282,18 @@ function App() {
         return `${week}${weekType}`;
     }, [calMonth, viewDate]);
 
-    // Current cycle week letter ("A", "B", etc.), independent of whatever date is being browsed.
     const currentWeekLetter = useMemo(() => {
         const weekLetter = (name) => (name || '').trim().match(/([A-Z])$/)?.[1] || null;
 
-        // 1. Authoritative active/next school day from SBHS
         const railName = railTimetable?.timetable?.timetable?.dayname || railTimetable?.timetable?.dayname;
         const railLetter = weekLetter(railName);
         if (railLetter) return railLetter;
 
-        // 2. Today's cached timetable if available
         const todayData = peekDayTimetable(new Date());
         const todayName = todayData?.timetable?.timetable?.dayname || todayData?.timetable?.dayname;
         const todayLetter = weekLetter(todayName);
         if (todayLetter) return todayLetter;
 
-        // 3. Calendar month data for today's week
         if (calMonth) {
             const now = new Date();
             const dow = now.getDay();
@@ -338,7 +307,6 @@ function App() {
             if (calType) return calType;
         }
 
-        // 4. Fallback to localStorage cached_timetable
         try {
             const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
             const cachedName = cached?.timetable?.timetable?.dayname || cached?.timetable?.dayname;
@@ -352,7 +320,6 @@ function App() {
     const hasSyncedTimetable = useRef(false);
     const hasAutoAdvanced = useRef(false);
 
-    // Listen for localStorage changes to hidden_pages
     useEffect(() => {
         const handleStorageChange = (e) => {
             if (e.key === 'hidden_pages') {
@@ -369,12 +336,10 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // Date Picker State
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [calendarPopupRef, setCalendarPopupRef] = useState(null);
     const [calendarMonth, setCalendarMonth] = useState(new Date());
 
-    // Close calendar popup when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (calendarPopupRef && !calendarPopupRef.contains(event.target)) {
@@ -391,7 +356,6 @@ function App() {
         };
     }, [showDatePicker, calendarPopupRef]);
 
-    // Generate calendar days for the popup
     const calendarDays = useMemo(() => {
         const year = calendarMonth.getFullYear();
         const month = calendarMonth.getMonth();
@@ -401,26 +365,21 @@ function App() {
         const totalDays = lastDay.getDate();
 
         const days = [];
-        
-        // Add empty cells for days before the first day of the month
+
         for (let i = 0; i < startDay; i++) {
             days.push(null);
         }
-        
-        // Add actual days
+
         for (let day = 1; day <= totalDays; day++) {
             days.push(new Date(year, month, day));
         }
-        
+
         return days;
     }, [calendarMonth]);
 
-    // School closures: a blue dot marks holidays, staff development days and days
-    // outside every term, with the name as a tooltip.
     const { data: pickerTerms } = useCachedLoad(user ? termsPage().key : null, termsPage().load);
     const [pickerCalendarEvents, setPickerCalendarEvents] = useState([]);
 
-    // Fetch calendar events for the date picker's month
     useEffect(() => {
         if (!user || !showDatePicker) return;
 
@@ -441,9 +400,7 @@ function App() {
         setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
     };
 
-    // Archived app notices for the top-bar bell's one-stop shop.
     const [archivedNotices, setArchivedNotices] = useState([]);
-    // Admin-panel alerts mirrored into the top-bar notification popout.
     const [adminNotices, setAdminNotices] = useState([]);
     const [adminTabRequest, setAdminTabRequest] = useState(null);
 
@@ -476,7 +433,7 @@ function App() {
             try {
                 const updates = await fetchFeedbackStatusNotifications();
                 if (active && updates.length) queueFeedbackStatusNotices(updates);
-            } catch { /* Notifications can retry on the next poll. */ }
+            } catch {}
         };
         const initialTimer = setTimeout(pollFeedbackStatus, 15000);
         const interval = setInterval(pollFeedbackStatus, 60000);
@@ -492,8 +449,6 @@ function App() {
 
     const removeNotice = useCallback((id) => {
         setArchivedNotices(prev => prev.filter(n => n.id !== id));
-        // Admin broadcast notices are dismissed server-side too, so the
-        // dismissal sticks on every device. If the call fails, put it back.
         const notice = archivedNotices.find(n => n.id === id);
         if (notice?.broadcastId) {
             dismissBroadcastNotification(notice.broadcastId)
@@ -515,9 +470,6 @@ function App() {
         clear: clearNotices
     }), [archivedNotices, archiveNotice, removeNotice, clearNotices]);
 
-    // Admin "notification" broadcasts live server-side so a dismissal is
-    // permanent per student. Undismissed ones are polled here and mirrored
-    // into the bell panel's archive below.
     const [broadcastNotices, setBroadcastNotices] = useState([]);
 
     useEffect(() => {
@@ -546,12 +498,9 @@ function App() {
     }, [user?.studentId]);
 
     useEffect(() => {
-        // An empty list means the fetch failed or nothing is out — never prune on it.
         if (broadcastNotices.length === 0) return;
         setArchivedNotices(prev => {
             const serverIds = new Set(broadcastNotices.map(n => n.id));
-            // Drop broadcast notices the server no longer returns (dismissed
-            // elsewhere, or past the 30-day retention).
             const kept = prev.filter(n => !n.broadcastId || serverIds.has(n.id));
             const existing = new Set(kept.map(n => n.id));
             const fresh = broadcastNotices
@@ -568,8 +517,6 @@ function App() {
         });
     }, [broadcastNotices]);
 
-    // Keep the same actionable items admins can review in the admin panel
-    // available in the top-bar popout, even while they are elsewhere.
     useEffect(() => {
         if (user?.role !== 'Admin') {
             setAdminNotices([]);
@@ -654,12 +601,10 @@ function App() {
         };
     }, [user?.role]);
 
-    // A tab request only applies to the visit it was made for.
     useEffect(() => {
         if (currentView !== 'admin') setAdminTabRequest(null);
     }, [currentView]);
 
-    // Debounced preference save
     const savePreferencesTimeout = useRef(null);
     const syncPreferencesToServer = useRef(false);
 
@@ -688,16 +633,13 @@ function App() {
             saveUserPreferences(user.studentId, preferences).catch(e => {
                 console.log("Failed to save preferences to server:", e);
             });
-        }, 1000); // Debounce for 1 second
+        }, 1000);
     };
 
-
-    // Poll System Status (low frequency to minimize performance cost)
     useEffect(() => {
         let lastFetched = 0;
 
         const pollStatus = async () => {
-            // Avoid polling if tab is backgrounded
             if (document.hidden && lastFetched !== 0) return;
 
             try {
@@ -717,13 +659,10 @@ function App() {
             }
         };
 
-        // Poll once on mount for all visitors
         pollStatus();
 
-        // Poll infrequently (every 5 minutes) when tab is active
         const interval = setInterval(pollStatus, 5 * 60 * 1000);
 
-        // When user returns to tab after a while, refresh if older than 2 minutes
         const handleVisibilityChange = () => {
             if (!document.hidden && Date.now() - lastFetched > 2 * 60 * 1000) {
                 pollStatus();
@@ -738,13 +677,11 @@ function App() {
     }, []);
 
     const isSignedIn = !!user;
-    // Theme Config
     useEffect(() => {
         localStorage.setItem('theme', theme);
         savePreferences();
     }, [theme]);
 
-    // The signed-out landing page is always dark; the saved preference applies once signed in.
     useEffect(() => {
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
@@ -769,11 +706,6 @@ function App() {
         savePreferences();
     }, [faviconType]);
 
-    // Icon choice: 'default' keeps only the new-logo favicon link active and points
-    // every PWA icon asset (apple/android/maskable/ms/manifest) at the new-logo
-    // set; 'atom' mutes it and points them at the atom-* copies. Installed app
-    // icons are baked at install time, so this affects the tab icon immediately
-    // and the home-screen icon on the next install/add-to-home-screen.
     useEffect(() => {
         const appIcon = document.getElementById('app-favicon');
         if (!appIcon) return;
@@ -815,7 +747,6 @@ function App() {
         setFaviconType(value);
     };
 
-    // Color Theme Config
     useEffect(() => {
         const root = window.document.documentElement;
         root.classList.remove(
@@ -837,7 +768,6 @@ function App() {
         savePreferences();
     }, [colorTheme]);
 
-    // Match the browser/OS chrome to the themed page background
     useEffect(() => {
         const meta = document.querySelector('meta[name="theme-color"]');
         if (!meta) return;
@@ -848,11 +778,9 @@ function App() {
 
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
-    // Check if token scope is outdated (needs relogin to get new scopes)
     useEffect(() => {
         setTokenScopeOutdated(isScopeOutdated());
 
-        // Listen for storage changes (e.g., when another tab updates the token)
         const handleStorageChange = (e) => {
             if (e.key === 'sbhs_token_scope' || e.key === 'sbhs_access_token') {
                 setTokenScopeOutdated(isScopeOutdated());
@@ -863,7 +791,6 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // Auth & Initial Data
     useEffect(() => {
         const init = async () => {
             const params = new URLSearchParams(window.location.search);
@@ -897,7 +824,6 @@ function App() {
                 }
             }
 
-            // Sync build notes on reload of the page (single fetch on load, no constant polling)
             fetchBuildNotes().then(notes => {
                 if (Array.isArray(notes)) {
                     setBuildNotes(notes);
@@ -906,7 +832,6 @@ function App() {
             }).catch(() => {});
 
             if (!isAuthenticated()) {
-                // Drop the cached user so the sign-in screen shows instead of a session with no tokens.
                 localStorage.removeItem('cached_user');
                 setUser(null);
                 setAuthInProgress(false);
@@ -946,12 +871,11 @@ function App() {
                     }
                 }
 
-                // Attempt to register/update user in Admin Panel in background
                 if (userData && userData.studentId) {
                     registerUser({
                         id: userData.studentId,
                         name: `${userData.givenName} ${userData.surname}`,
-                        email: userData.email, // SBHS API usually provides this in ID token, checking availability helps
+                        email: userData.email,
                         year: userData.yearGroup
                     }).then(dbSync => {
                         if (dbSync) {
@@ -973,12 +897,10 @@ function App() {
                         }
                     }).catch(e => console.log("Init sync failed silently", e));
 
-                    // Load user preferences from server
                     fetchUserPreferences(userData.studentId).then(prefData => {
                         if (prefData && prefData.preferences) {
                             const prefs = prefData.preferences;
-                            
-                            // Apply theme preferences
+
                             if (prefs.theme) {
                                 setTheme(prefs.theme);
                                 localStorage.setItem('theme', prefs.theme);
@@ -1004,15 +926,13 @@ function App() {
                                 localStorage.setItem('favicon_type', prefs.faviconType);
                             }
 
-                            // Keep legacy dashboard layouts round-tripping so saving preferences doesn't wipe them
                             if (prefs.dashboardLayoutMobile) {
                                 localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
                             }
                             if (prefs.dashboardLayoutDesktop) {
                                 localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
                             }
-                            
-                            // Apply other widget-specific preferences
+
                             if (prefs.clockWidgetFormat) {
                                 localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
                             }
@@ -1023,23 +943,16 @@ function App() {
                                 localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
                             }
                         }
-                        // Enable server sync after initial load
                         syncPreferencesToServer.current = true;
                     }).catch(e => {
                         console.log("Failed to load user preferences", e);
-                        // Still enable sync even if load failed
                         syncPreferencesToServer.current = true;
                     });
                 }
 
             } catch (error) {
                 console.error(error);
-                // If the first requests after OAuth fail, the valid callback would
-                // otherwise end here with no user and silently show the landing page.
-                // This also covers a returning student whose profile isn't cached yet.
                 if (isAuthCallback || !user) setAuthError(authErrorMessage(error));
-                // Sign out only once the session can't be renewed; a 401 while the refresh
-                // token is still good (offline, SBHS slow) leaves the student signed in.
                 if (error.message?.includes("401") && !isAuthenticated()) logout();
             } finally {
                 setAuthInProgress(false);
@@ -1049,7 +962,6 @@ function App() {
         init();
     }, [queueFeedbackStatusNotices]);
 
-    // Fetch complete timetable in the background once authenticated
     useEffect(() => {
         if (!user) return;
 
@@ -1065,13 +977,9 @@ function App() {
         loadCompleteTimetable();
     }, [user]);
 
-    // Initialize defaultDate to the next/current school day after authentication
     useEffect(() => {
         if (!user || !isAuthenticated()) return;
 
-        // Today until its last bell, then the next school day — or the next weekend day
-        // with a Clipboard session when there is one before it. If that can't be worked
-        // out (offline with nothing saved), the app stays on today.
         const provisionalDay = startDay || new Date();
         (async () => {
             try {
@@ -1079,8 +987,6 @@ function App() {
                 const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
                 const openDay = weekendClipboardDay(date, sessions);
                 setDefaultDate(openDay);
-                // This request can finish after the user has already moved to another day.
-                // Only replace the provisional startup date while it is still selected.
                 setViewDate(current => isSameDay(current, provisionalDay) ? openDay : current);
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
@@ -1088,22 +994,18 @@ function App() {
         })();
     }, [user]);
 
-    // Show the chosen day at once: from the session's cache when it's there (refreshed quietly once it's
-    // five minutes old), otherwise an empty skeleton rather than the previous day's classes under the new date.
     useEffect(() => {
         if (!isAuthenticated()) return;
 
         const dateKey = format(viewDate, 'yyyy-MM-dd');
         viewedDayKey.current = dateKey;
 
-        // Show cached data immediately if available
         const cachedData = peekDayTimetable(viewDate);
         if (cachedData) {
             setTimetable(cachedData);
             setTimetableKey(dateKey);
         }
 
-        // Then fetch fresh data (will use cache if fresh enough, otherwise fetch from API)
         fetchDayTimetable(viewDate)
             .then(data => {
                 if (viewedDayKey.current !== dateKey) return;
@@ -1116,37 +1018,30 @@ function App() {
             .catch(err => console.error("Failed to fetch timetable", err));
     }, [viewDate, user]);
 
-    // Warm the week around the day on screen, so the arrows rarely have to wait. Days already
-    // fetched (or on their way) aren't asked for again. Reduced from 9 to 5 days to avoid API overload.
     useEffect(() => {
         if (!isAuthenticated()) return;
         const timer = setTimeout(() => {
             [1, -1, 2, -2, 3].forEach(offset => {
                 fetchDayTimetable(addDays(viewDate, offset)).catch(() => {});
             });
-        }, 200); // Increased delay to avoid competing with current day fetch
+        }, 200);
         return () => clearTimeout(timer);
     }, [viewDate, user]);
 
-    // Fetch rail timetable for RHS - always shows current school day (if before end) or next school day
     useEffect(() => {
         if (!isAuthenticated()) return;
 
-        // Today until its last bell, then the next school day: the same answer the timetable
-        // opens on, from the same request.
         fetchNextSchoolDay()
             .then(({ date, data }) => data || fetchDayTimetable(date))
             .then(setRailTimetable)
             .catch(err => console.error("Failed to fetch rail timetable", err));
     }, [user]);
 
-    // Fetch calendar events for the current view date to check for development days
     const viewMonthKey = format(viewDate, 'yyyy-MM');
     const [loadedMonthKey, setLoadedMonthKey] = useState(null);
 
     useEffect(() => {
         if (!isAuthenticated()) return;
-        // Only fetch when the month changes, not on every day change
         if (loadedMonthKey === viewMonthKey) return;
 
         const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
@@ -1158,7 +1053,6 @@ function App() {
             .catch(err => console.error("Failed to fetch calendar events", err));
     }, [viewMonthKey, viewDate, user, loadedMonthKey]);
 
-    // Once signed in and idle, fetch every page's code so the first visit to each is instant.
     useEffect(() => {
         if (!user) return;
         const warm = () => warmPages(user.role === 'Admin');
@@ -1170,8 +1064,6 @@ function App() {
         return () => clearTimeout(id);
     }, [user?.role, !!user]);
 
-    // Clipboard sessions for the timetable's one-line markers, fetched quietly in the background.
-    // One request shared by the markers, the weekend open-day exception and "Today".
     const clipboardSessionsRequest = useRef({ id: null, promise: null });
     const loadClipboardSessions = () => {
         const id = user?.studentId;
@@ -1186,7 +1078,6 @@ function App() {
                     })
                     .catch(err => {
                         console.error("Failed to load Clipboard sessions:", err);
-                        // Forget the failed request so the next call tries again.
                         clipboardSessionsRequest.current = { id: null, promise: null };
                         return clipboardSessions;
                     })
@@ -1199,10 +1090,6 @@ function App() {
         loadClipboardSessions();
     }, [user?.studentId, showClipboardEvents]);
 
-    // Weekend Clipboard exception, part two: once the sessions on the weekend day it
-    // opened on have all ended, move on to the next day that has something on — a
-    // Clipboard session if one comes before the next school day, else that school day.
-    // No polling: a single timeout is set for the moment the last session ends.
     useEffect(() => {
         if (!user?.studentId || !showClipboardEvents) return;
         const now = new Date();
@@ -1215,8 +1102,6 @@ function App() {
             const at = new Date();
             const stillToday = clipboardSessions.filter(s => !s.cancelled && s.start && isSameDay(new Date(s.start), at));
             if (stillToday.length === 0 || !stillToday.every(s => new Date(s.end || s.start) < at)) return;
-            // Sessions are sorted by start, so the first future one names the next
-            // Clipboard day.
             const nextSessionDay = clipboardSessions
                 .filter(s => !s.cancelled && s.start && new Date(s.start) > at)
                 .map(s => format(new Date(s.start), 'yyyy-MM-dd'))[0];
@@ -1229,28 +1114,18 @@ function App() {
                 .catch(() => {});
         };
 
-        // Only a session still running earns the auto-advance. A day whose sessions
-        // are already over is somewhere the student can visit freely — going back to
-        // it must not throw them forward again.
         const lastEnd = Math.max(...todays.map(s => new Date(s.end || s.start).getTime()));
         if (lastEnd <= now.getTime()) return;
         const timer = setTimeout(advance, lastEnd - now.getTime() + 1000);
         return () => clearTimeout(timer);
     }, [user?.studentId, showClipboardEvents, clipboardSessions, viewDate]);
 
-    // Date Navigation Helpers
-    // The day on screen, read from the cache during render so the date and its classes always change
-    // together. Null while a day nobody has fetched yet is on its way.
     const viewKey = format(viewDate, 'yyyy-MM-dd');
     const dayTimetable = peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null);
 
     const nextDay = () => setViewDate(d => addDays(d, 1));
     const prevDay = () => setViewDate(d => addDays(d, -1));
 
-    // Arrow keys step through days on the home timetable, and a mostly-horizontal
-    // swipe does the same anywhere on the page (the handlers sit on the content
-    // container, so they still work over a no-classes day's empty space). Both
-    // stand down while typing or when a layer (palette, date picker) is open.
     const layersOpen = paletteOpen || showDatePicker;
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -1290,8 +1165,6 @@ function App() {
         }
     };
 
-    // Once the timetable is on screen and the browser is idle, load the other pages' data in the
-    // background (one page at a time), so switching to them is instant. Once per app start.
     const prefetchStarted = useRef(false);
     useEffect(() => {
         if (!user?.studentId || !dayTimetable || prefetchStarted.current) return;
@@ -1303,7 +1176,6 @@ function App() {
         }, 1500);
     }, [user?.studentId, !!dayTimetable]);
 
-    // Reset date when leaving the home timetable
     useEffect(() => {
         if (lastViewRef.current === 'home' && currentView !== 'home' && defaultDate) {
             setViewDate(defaultDate);
@@ -1311,10 +1183,6 @@ function App() {
         lastViewRef.current = currentView;
     }, [currentView, defaultDate]);
 
-    // Hardware/browser back support for settings sub-pages. Entering one pushes
-    // a history marker; popping it (Android back) returns to the view the user
-    // came from — settings when opened there. Leaving via the on-screen back
-    // button drops the marker so it isn't left behind as a dead history step.
     const currentViewRef = useRef(currentView);
     currentViewRef.current = currentView;
     const prevViewRef = useRef(currentView);
@@ -1465,10 +1333,6 @@ function App() {
                     onTouchEnd={onDayTouchEnd}
                 >
                         <ErrorBoundary resetKey={`${currentView}-${viewKey}`}>
-                        {/* Views cross-fade with a slight lift, so moving between pages feels continuous. Opacity and
-                            transform only (no blur): those stay on the GPU, so big pages don't stutter as they swap.
-                            Suspense sits inside the keyed div: a lazy page suspends on its own, so AnimatePresence
-                            never loses track of the exiting view mid-swap. */}
                         <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                                 key={currentView}
@@ -1483,7 +1347,6 @@ function App() {
                                     <p className="text-zinc-400 text-xs">Loading view...</p>
                                 </div>
                             }>
-                            {/* HOME VIEW: greeting, the day's timetable and a side rail */}
                             {currentView === 'home' && (
                                 <Home
                                     user={user}
@@ -1515,7 +1378,7 @@ function App() {
                                                     <ChevronRight size={15} sm:size={17} />
                                                 </button>
                                             </div>
-                        
+
                                             <div className="flex items-center gap-1.5 shrink-0">
                                                 {!(defaultDate && isSameDay(viewDate, defaultDate)) && (
                                                     <button
@@ -1527,7 +1390,7 @@ function App() {
                                                 )}
                                             </div>
                                         </div>
-                        
+
                                     <AnimatePresence>
                                         {showDatePicker && (
                                             <div className="relative" ref={setCalendarPopupRef}>
@@ -1555,7 +1418,7 @@ function App() {
                                                             <ChevronRight size={14} className="text-zinc-500 dark:text-zinc-400" />
                                                         </button>
                                                     </div>
-                                                
+
                                                     <div className="p-3">
                                                         <div className="grid grid-cols-7 gap-1 mb-2">
                                                             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
@@ -1564,7 +1427,7 @@ function App() {
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    
+
                                                         <div className="grid grid-cols-7 gap-1">
                                                             {calendarDays.map((date, idx) => {
                                                                 if (!date) {
@@ -1617,47 +1480,36 @@ function App() {
                                 </Home>
                             )}
 
-                            {/* CALENDAR VIEW */}
                             {currentView === 'calendar' && <CalendarView user={user} />}
 
-                            {/* NOTICES VIEW */}
                             {currentView === 'notices' && (
                                 <DailyNotices notices={notices} user={user} />
                             )}
 
-                            {/* AWARD SCHEME VIEW */}
                             {currentView === 'awards' && <AwardSchemeView user={user} />}
 
-                            {/* CLIPBOARD VIEW */}
                             {currentView === 'clipboard' && <ClipboardView user={user} />}
 
-                            {/* NOTES VIEW */}
                             {currentView === 'notes' && <StudyView />}
 
-                            {/* FEEDBACK VIEW */}
                             {currentView === 'feedback' && (
                                 <FeedbackView user={user} onBack={() => setCurrentView('profile')} />
                             )}
 
-                            {/* CANVAS LINKS VIEW */}
                             {currentView === 'canvas-links' && (
                                 <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
                             )}
 
-                            {/* BUILD NOTES VIEW */}
                             {currentView === 'build-notes' && (
                                 <BuildNotesView onBack={() => setCurrentView('profile')} />
                             )}
 
-                            {/* PRIVACY VIEW */}
                             {currentView === 'privacy' && (
                                 <PrivacyView onBack={() => setCurrentView('profile')} isAdmin={user?.role === 'Admin'} />
                             )}
 
-                            {/* ADMIN VIEW */}
                             {currentView === 'admin' && <AdminPanel user={user} setView={setCurrentView} hiddenPages={hiddenPages} setHiddenPages={setHiddenPages} initialTab={adminTabRequest} />}
 
-                            {/* PROFILE VIEW (Simple placeholder) */}
                             {currentView === 'profile' && (
                                 <SettingsView
                                     user={user}
@@ -1706,7 +1558,6 @@ function App() {
                 })}
             />
 
-            {/* Canvas Link Suggestions Toast */}
             <CanvasLinkSuggestions disabled={hiddenPages.includes('canvas-links') || currentView === 'canvas-links'} />
         </div>
         </NotificationsContext.Provider>

@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --color-accent: 0 0% 100%; /* white */
-  --color-accent-contrast: 240 5.9% 10%; /* zinc-900 */
+  --color-accent: 0 0% 100%;
+  --color-accent-contrast: 240 5.9% 10%;
 
-  /* Neutral scale (Tailwind zinc) — interface themes retune these */
   --zinc-50: 250 250 250;
   --zinc-100: 244 244 245;
   --zinc-200: 228 228 231;
@@ -26,57 +25,53 @@
   --font-mono: "Geist Mono", ui-monospace;
 }
 
-/* The untinted default keeps a white accent in dark mode, but white on white
-   in light mode — give it a real accent there. Skipped when a theme-* class
-   is present so colour themes keep their own accent. */
 html:not(.dark):not([class*="theme-"]) {
-  --color-accent: 217 91% 60%; /* blue-600 */
+  --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
 }
 
-/* Theme overrides */
 .theme-mint {
-  --color-accent: 150 84% 37%; /* emerald-600 */
+  --color-accent: 150 84% 37%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-amber {
-  --color-accent: 38 92% 50%; /* amber-500 */
+  --color-accent: 38 92% 50%;
   --color-accent-contrast: 0 0% 0%;
 }
 
 .theme-blue {
-  --color-accent: 217 91% 60%; /* blue-600 */
+  --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-navy {
-  --color-accent: 222 70% 32%; /* navy */
+  --color-accent: 222 70% 32%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-violet {
-  --color-accent: 271 91% 65%; /* violet-500 */
+  --color-accent: 271 91% 65%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-rose {
-  --color-accent: 349 86% 60%; /* rose-500 */
+  --color-accent: 349 86% 60%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-teal {
-  --color-accent: 174 84% 41%; /* teal-600 */
+  --color-accent: 174 84% 41%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-orange {
-  --color-accent: 24 95% 53%; /* orange-500 */
+  --color-accent: 24 95% 53%;
   --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-sky {
-  --color-accent: 199 89% 48%; /* sky-500 */
+  --color-accent: 199 89% 48%;
   --color-accent-contrast: 0 0% 100%;
 }
 
@@ -99,8 +94,6 @@ html:not(.dark):not([class*="theme-"]) {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Subject colours, straight from the timetable API (props from subjectInk() in utils/timetable.js).
-   Dark mode colours used everywhere - no light/dark adjustments. */
 [data-tone] { --subject-ink: var(--subject); }
 .subject-fill { background-color: var(--subject-ink); }
 .subject-edge {
@@ -109,7 +102,6 @@ html:not(.dark):not([class*="theme-"]) {
 }
 html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb, var(--subject-ink) 12%, transparent); }
 
-/* Change highlights for room changes and teacher substitutions - vivid and noticeable */
 .change-highlight {
   background-color: hsl(var(--color-accent) / 0.45);
 }
@@ -119,7 +111,6 @@ html:not(.dark) .change-highlight {
 html.dark .change-highlight {
   color: hsl(0 0% 100%);
 }
-/* Plain (black/white) theme gets a warm amber highlight instead of grey */
 html:not([class*="theme-"]) .change-highlight {
   background-color: hsl(35 95% 55% / 0.45);
 }
@@ -127,7 +118,6 @@ html:not([class*="theme-"]).dark .change-highlight {
   background-color: hsl(35 95% 55% / 0.55);
 }
 
-/* Entrance animations are decorative: skip them for reduced-motion users. */
 @media (prefers-reduced-motion: reduce) {
   .animate-in {
     animation: none;
@@ -149,4 +139,3 @@ html:not([class*="theme-"]).dark .change-highlight {
     gap: 0.25rem !important;
   }
 }
-

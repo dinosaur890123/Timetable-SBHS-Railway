@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-// The light through a day, as [hour, name, three colours]. Between keyframes the colours
-// blend, so the glow drifts from one phase to the next rather than switching.
 const SKY = [
     [0, 'night', ['#2f4bd1', '#6d4ef0', '#2aa3c9']],
     [5, 'before dawn', ['#3a4fc4', '#8a5cf0', '#3fa3d6']],
@@ -14,9 +12,6 @@ const SKY = [
     [24, 'night', ['#2f4bd1', '#6d4ef0', '#2aa3c9']]
 ];
 
-// Festive palettes, enabled by admins from December 1: Christmas red & green
-// through the 26th, then a New Year's Eve mix of gold, hot pink, silver and
-// electric blue through January 6. Same [hour, name, three colours] shape.
 const CHRISTMAS_SKY = [
     [0, 'christmas night', ['#7f1d1d', '#991b1b', '#14532d']],
     [5, 'before dawn', ['#9f1239', '#b91c1c', '#166534']],
@@ -41,9 +36,6 @@ const NYE_SKY = [
     [24, 'nye night', ['#1d4ed8', '#db2777', '#92400e']]
 ];
 
-// Which festive palette the calendar calls for right now, if any: Christmas
-// Dec 1–26, New Year's Eve Dec 27–Jan 6. The admin's toggle can force the glow
-// on outside these dates (see skyAt).
 export const festiveThemeAt = (date = new Date()) => {
     const month = date.getMonth();
     const day = date.getDate();
@@ -59,9 +51,6 @@ const mix = (from, to, t) => {
     return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(' ')})`;
 };
 
-// The blended colours and the name of the phase for a time of day. Festive
-// palettes switch on automatically Dec 1–Jan 6; `festive` (the admin toggle)
-// forces them on at any other time, defaulting to the Christmas palette.
 export const skyAt = (date = new Date(), festive = false) => {
     const theme = festiveThemeAt(date) || (festive ? 'christmas' : null);
     const table = theme === 'christmas' ? CHRISTMAS_SKY : theme === 'nye' ? NYE_SKY : SKY;
@@ -73,7 +62,6 @@ export const skyAt = (date = new Date(), festive = false) => {
     return { name, colours: from.map((c, i) => mix(c, to[i], t)) };
 };
 
-// Re-reads the clock each minute; the CSS eases each colour change over a few seconds.
 export const useSky = (festive = false) => {
     const [sky, setSky] = useState(() => skyAt(new Date(), festive));
     useEffect(() => {
@@ -83,10 +71,6 @@ export const useSky = (festive = false) => {
     return sky;
 };
 
-// Three soft, slowly drifting glows in the colours of the current time of day.
-// `variant` is "panel" (top of the main panel, fading downwards) or "page" (behind everything).
-// `festive` is the admin toggle that forces the seasonal palettes on outside
-// their automatic dates (Christmas Dec 1–26, NYE Dec 27–Jan 6).
 const AmbientLight = ({ variant = 'panel', style, festive = false }) => {
     const { colours: [a, b, c] } = useSky(festive);
     return (

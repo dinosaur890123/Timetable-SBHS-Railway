@@ -1,8 +1,6 @@
 import React from 'react';
 import PrivacyView from './PrivacyView';
 
-// Public /privacy page: same privacy copy as Settings → Privacy, without the
-// signed-in deletion request controls.
 const PublicPrivacyPage = () => (
     <div className="min-h-[100dvh] bg-m-page text-zinc-900 dark:text-zinc-100">
         <div className="relative isolate flex min-h-[100dvh] flex-col overflow-hidden bg-m-panel md:p-2 md:rounded-2xl md:border border-m-line">

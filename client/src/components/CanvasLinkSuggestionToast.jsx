@@ -2,13 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, Check, X, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// A prompt left alone doesn't camp on screen — after a while it's treated as
-// "not now" and waits in the notifications panel instead.
 const AUTO_DISMISS_MS = 20000;
 
-// Asks whether a link a classmate shared is the right Canvas course.
 const CanvasLinkSuggestionToast = ({ suggestion, onVote, onDismiss }) => {
-    const [busy, setBusy] = useState(null); // 1 | -1 | null
+    const [busy, setBusy] = useState(null);
     const [error, setError] = useState('');
     const onDismissRef = useRef(onDismiss);
     onDismissRef.current = onDismiss;

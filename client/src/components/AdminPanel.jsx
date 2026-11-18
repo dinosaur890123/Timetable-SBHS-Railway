@@ -91,7 +91,6 @@ const StatCard = ({ label, value, description, icon: Icon, iconClass, ratio }) =
 const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPages, initialTab = null }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Data States
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState(null);
     const [logs, setLogs] = useState([]);
@@ -104,7 +103,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [apiError, setApiError] = useState(null);
     const [sessionExpired, setSessionExpired] = useState(false);
 
-    // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
     const [broadcastHistory, setBroadcastHistory] = useState([]);
@@ -117,13 +115,12 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         try {
             await setMaintenanceMode(targetMode);
             setStats(prev => prev ? { ...prev, systemStatus: targetMode ? 'Maintenance' : 'Operational' } : null);
-            loadData(); // Refresh logs
+            loadData();
         } catch (err) {
             alert("Failed to toggle maintenance mode");
         }
     };
 
-    // UI States
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [logSearchTerm, setLogSearchTerm] = useState('');
@@ -132,23 +129,21 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [deletionStatusFilter, setDeletionStatusFilter] = useState('pending');
     const [resolvingDeletionId, setResolvingDeletionId] = useState(null);
     const [roleFilter, setRoleFilter] = useState('All');
-    const [viewingFeedback, setViewingFeedback] = useState(null); // Feedback object for detail modal
-    const [editingUser, setEditingUser] = useState(null); // User object for edit modal
-    const [selectedUsers, setSelectedUsers] = useState(new Set()); // For bulk actions
-    const [selectedFeedback, setSelectedFeedback] = useState(new Set()); // For bulk feedback actions
+    const [viewingFeedback, setViewingFeedback] = useState(null);
+    const [editingUser, setEditingUser] = useState(null);
+    const [selectedUsers, setSelectedUsers] = useState(new Set());
+    const [selectedFeedback, setSelectedFeedback] = useState(new Set());
     const [promoteId, setPromoteId] = useState('');
     const [promoting, setPromoting] = useState(false);
     const [isPruningLogs, setIsPruningLogs] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(null);
 
-    // Close user menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             const target = event.target;
-            // Check if click is outside all user menu dropdowns
             const menuButton = target.closest('[data-user-menu-button]');
             const menuDropdown = target.closest('[data-user-menu-dropdown]');
-            
+
             if (!menuButton && !menuDropdown) {
                 setUserMenuOpen(null);
             }
@@ -163,7 +158,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         };
     }, [userMenuOpen]);
 
-    // Build Notes State
     const [buildNotes, setBuildNotes] = useState([]);
     const [loadingBuildNotes, setLoadingBuildNotes] = useState(false);
     const [noteForm, setNoteForm] = useState({
@@ -192,8 +186,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         setLoading(true);
         setApiError(null);
 
-        // Settle every request independently: one slow or failing endpoint must
-        // not hold the whole panel on its loading state.
         const results = await Promise.allSettled([
             fetchUsers(),
             fetchAdminStats(),
@@ -225,7 +217,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
         if (failed.length) {
             failed.forEach(({ label, reason }) => console.error(`Admin: failed to load ${label}:`, reason));
-            // A 401 that survives a token refresh means the SBHS sign-in itself has lapsed.
             const signedOut = !isSignedIn() || failed.some(f => /HTTP 401/.test(f.reason?.message || ''));
             setSessionExpired(signedOut);
             const detail = failed[0].reason?.message || 'Unknown error';
@@ -261,7 +252,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         }
     }, [isAuthenticated, activeTab]);
 
-    // Shared class links students have reported, shown on the Deletion Requests tab.
     const loadCanvasReports = async () => {
         try {
             const data = await fetchAdminCanvasLinks();
@@ -374,7 +364,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
         setLoading(true);
         try {
-            // Delete sequentially to avoid overwhelming the server
             for (const userId of selectedUsers) {
                 try {
                     await deleteUser(userId);
@@ -414,7 +403,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         if (!editingUser) return;
 
         try {
-            // Collect form data
             const formData = new FormData(e.target);
             const updates = {
                 role: formData.get('role')
@@ -422,7 +410,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
             await updateUser(editingUser.id, updates);
 
-            // Update local state
             setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...updates } : u));
             setEditingUser(null);
         } catch (err) {
@@ -439,7 +426,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             await promoteUserToAdmin(promoteId.trim());
             alert(`Successfully promoted student ${promoteId.trim()} to Admin!`);
             setPromoteId('');
-            loadData(); // Reload users
+            loadData();
         } catch (err) {
             alert(err.message || "Failed to promote user to Admin");
         } finally {
@@ -448,7 +435,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     };
 
     const handleClearLocalCache = () => {
-        // Clear everything except admin session
         const adminAuth = sessionStorage.getItem('sbhs_auth_state');
         localStorage.clear();
         if (adminAuth) sessionStorage.setItem('sbhs_auth_state', adminAuth);
@@ -566,7 +552,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
     const [updatingConfig, setUpdatingConfig] = useState(false);
 
-    // Hidden pages state (localStorage-based)
     const [availablePages] = useState([
         { id: 'home', label: 'My Synchron' },
         { id: 'timetable', label: 'Timetable' },
@@ -673,7 +658,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             await setBroadcast(broadcastMsg, broadcastType);
             alert("Broadcast updated successfully!");
             setBroadcastMsg('');
-            loadData(); // Refresh logs
+            loadData();
             loadBroadcastHistory();
         } catch (err) {
             alert("Failed to set broadcast");
@@ -726,7 +711,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             || (feedbackStatusFilter === 'resolved' && fb.status === 'implemented');
         return matchesSearch && matchesStatus;
     });
-
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
@@ -854,9 +838,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     />
                 </div>
 
-        {/* System Diagnostics & Year Distribution Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* System Diagnostics & Connection Checks */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 font-mono text-xs rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
                     <PanelHeader
@@ -906,7 +888,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </div>
             </div>
 
-            {/* Year Group Student Distribution */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
                     <PanelHeader
@@ -920,7 +901,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
             </div>
         </div>
 
-        {/* Console Log Terminal */}
     <div className="bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl font-mono text-sm">
         <div className="bg-zinc-900 px-4 py-2 flex items-center justify-between border-b border-zinc-800">
             <div className="flex items-center gap-2">
@@ -978,7 +958,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 
         {activeTab === 'analytics' && (
             <div className="space-y-6">
-                {/* Headline metrics */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         label="Active Today"
@@ -1025,9 +1004,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     />
                 </div>
 
-                {/* Growth and Year Breakdown Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* User Growth Timeline Histogram */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
                         <PanelHeader
                             icon={TrendingUp}
@@ -1069,7 +1046,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         )}
                     </div>
 
-                    {/* Year Group Distribution */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
                         <PanelHeader
                             icon={Users}
@@ -1143,7 +1119,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </div>
                 </div>
 
-
                 <div className="pt-4 flex gap-4">
                     {currentBroadcast && (
                         <button
@@ -1214,7 +1189,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 {
     activeTab === 'users' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
-            {/* Promote User Card */}
             <div className="p-6 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="space-y-1">
                     <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Promote User to Admin</h4>
@@ -1426,7 +1400,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 subtitle="Perform system maintenance tasks."
             />
             <div className="space-y-4">
-                {/* Festive ambient light — seasonal glow for everyone */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div>
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1501,7 +1474,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </button>
                 </div>
 
-                {/* Hidden Pages Configuration */}
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
                     <div className="mb-4">
                         <h4 className="text-sm font-medium text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1531,7 +1503,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         ))}
                     </div>
                 </div>
-
 
             </div>
         </div>
@@ -1627,7 +1598,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </div>
                 </div>
             </div>
-            
+
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 font-medium">
@@ -1925,7 +1896,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 {
     activeTab === 'build-notes' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Header info card */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -1953,7 +1923,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </div>
             )}
 
-            {/* Note Editor Form */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h4 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -2052,7 +2021,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 </form>
             </div>
 
-            {/* Published Notes List */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                     <h4 className="text-base font-bold text-zinc-900 dark:text-white">
@@ -2120,8 +2088,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     )
 }
 
-
-{/* Edit User Modal */ }
 {
     editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2151,7 +2117,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     )
 }
 
-{/* Feedback Detail Modal */}
 {
     viewingFeedback && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -2173,7 +2138,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                     </button>
                 </div>
                 <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
-                    {/* Metadata Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl">
                         <div>
                             <span className="text-zinc-400 dark:text-zinc-500 block mb-1">Status</span>
@@ -2199,7 +2163,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         </div>
                     </div>
 
-                    {/* Submitter details */}
                     <div className="space-y-1.5">
                         <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Submitter Details</span>
                         <div className="p-4 border border-zinc-200 dark:border-zinc-800 bg-zinc-50/20 dark:bg-zinc-950/20 rounded-xl space-y-1 text-sm">
@@ -2209,7 +2172,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         </div>
                     </div>
 
-                    {/* Feedback Details Text */}
                     <div className="space-y-1.5">
                         <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">Details</span>
                         <div className="p-4 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm whitespace-pre-wrap">
@@ -2256,6 +2218,5 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
       </div >
     );
   }
-
 
 export default AdminPanel;

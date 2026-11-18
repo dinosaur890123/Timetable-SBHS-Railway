@@ -1,6 +1,3 @@
--- SBHS Timetable Admin Persistence
--- This schema stores admin-facing users, system state, and logs.
-
 CREATE TABLE IF NOT EXISTS system_state (
   id INTEGER PRIMARY KEY,
   maintenance BOOLEAN NOT NULL DEFAULT FALSE,
@@ -39,17 +36,14 @@ CREATE TABLE IF NOT EXISTS logs (
 
 CREATE INDEX IF NOT EXISTS logs_created_at_idx ON logs (created_at DESC);
 
--- Migrations
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS festive_ambient BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Stripe subscription billing migrations
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS subscription_status TEXT NULL;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS show_supporter BOOLEAN NOT NULL DEFAULT TRUE;
 
--- Study Notes migrations
 CREATE TABLE IF NOT EXISTS app_notes (
   id TEXT PRIMARY KEY,
   student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -77,11 +71,9 @@ CREATE TABLE IF NOT EXISTS app_feedback (
 CREATE INDEX IF NOT EXISTS app_feedback_student_id_idx ON app_feedback (student_id);
 CREATE INDEX IF NOT EXISTS app_feedback_created_at_idx ON app_feedback (created_at DESC);
 
--- Feedback migrations
 ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS resolved_notified BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Homework/Assignments migrations
 CREATE TABLE IF NOT EXISTS app_assignments (
   id TEXT PRIMARY KEY,
   student_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -97,16 +89,12 @@ CREATE TABLE IF NOT EXISTS app_assignments (
 
 CREATE INDEX IF NOT EXISTS app_assignments_student_id_idx ON app_assignments (student_id);
 
--- Version management migration
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '1.0.0';
 
--- User preferences migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS user_preferences JSONB NULL;
 
--- Blacklist migration
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blacklisted BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Canvas Links migration: each student's own links, one per class per school year.
 CREATE TABLE IF NOT EXISTS canvas_links (
   id TEXT PRIMARY KEY,
   class_name TEXT NOT NULL,
@@ -117,7 +105,6 @@ CREATE TABLE IF NOT EXISTS canvas_links (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Links saved before school years were tracked belong to the year they were made in.
 ALTER TABLE canvas_links ADD COLUMN IF NOT EXISTS school_year INTEGER;
 UPDATE canvas_links SET school_year = EXTRACT(YEAR FROM (created_at AT TIME ZONE 'Australia/Sydney'))::int WHERE school_year IS NULL;
 ALTER TABLE canvas_links ALTER COLUMN school_year SET NOT NULL;
@@ -126,8 +113,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS canvas_links_student_year_class_key ON canvas_
 CREATE INDEX IF NOT EXISTS canvas_links_class_name_idx ON canvas_links (class_name);
 CREATE INDEX IF NOT EXISTS canvas_links_student_id_idx ON canvas_links (student_id);
 
--- Shared Canvas links: one row per Canvas course suggested for a class in a school year.
--- class_key is the timetable's year + short title, e.g. "9Ma1".
 CREATE TABLE IF NOT EXISTS canvas_class_links (
   id TEXT PRIMARY KEY,
   class_key TEXT NOT NULL,
@@ -135,21 +120,19 @@ CREATE TABLE IF NOT EXISTS canvas_class_links (
   class_name TEXT NOT NULL,
   course_id TEXT NOT NULL,
   submitted_by TEXT NOT NULL,
-  locked_status TEXT NULL CHECK (locked_status IN ('verified', 'rejected')), -- set by an admin; overrides votes
-  reports_acknowledged INTEGER NOT NULL DEFAULT 0, -- reports an admin has already reviewed
-  duplicate_notified_courses TEXT[] NOT NULL DEFAULT '{}', -- duplicate course ids the setter was told about
+  locked_status TEXT NULL CHECK (locked_status IN ('verified', 'rejected')),
+  reports_acknowledged INTEGER NOT NULL DEFAULT 0,
+  duplicate_notified_courses TEXT[] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (school_year, class_key, course_id)
 );
 
--- Existing databases get the duplicate-notification column without a table rebuild.
 ALTER TABLE canvas_class_links ADD COLUMN IF NOT EXISTS duplicate_notified_courses TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE canvas_class_links ADD COLUMN IF NOT EXISTS reports_acknowledged INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS canvas_class_links_submitted_by_idx ON canvas_class_links (submitted_by, created_at);
 
--- One vote per student per shared link: 1 backs it, -1 reports it as wrong.
 CREATE TABLE IF NOT EXISTS canvas_class_link_votes (
   link_id TEXT NOT NULL REFERENCES canvas_class_links(id) ON DELETE CASCADE,
   student_id TEXT NOT NULL,
@@ -161,20 +144,15 @@ CREATE TABLE IF NOT EXISTS canvas_class_link_votes (
 
 CREATE INDEX IF NOT EXISTS canvas_class_link_votes_student_idx ON canvas_class_link_votes (student_id);
 
--- canvas_courses, canvas_course_reports and canvas_link_suggestions were used by
--- earlier versions of Canvas links and are no longer read. They are left in place
--- so no data is dropped automatically; they can be dropped by hand.
-
--- Shared Resources migration
 CREATE TABLE IF NOT EXISTS shared_resources (
   id TEXT PRIMARY KEY,
   sender_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   recipient_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
-  resource_type TEXT NOT NULL, -- 'note', 'assignment', 'link', 'file'
-  resource_id TEXT NOT NULL, -- Reference to app_notes.id, app_assignments.id, etc.
+  resource_type TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'declined'
+  status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -183,11 +161,10 @@ CREATE INDEX IF NOT EXISTS shared_resources_sender_id_idx ON shared_resources (s
 CREATE INDEX IF NOT EXISTS shared_resources_recipient_id_idx ON shared_resources (recipient_id);
 CREATE INDEX IF NOT EXISTS shared_resources_status_idx ON shared_resources (status);
 
--- Notifications migration
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL, -- 'resource_share', 'system', 'feedback', 'assignment'
+  type TEXT NOT NULL,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   action_url TEXT NULL,
@@ -199,27 +176,20 @@ CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications (user_id);
 CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read);
 CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
 
--- Data deletion requests: students ask from the Privacy page; admins fulfil
--- them from the panel. student_id is deliberately not a foreign key so the
--- request record survives the account deletion it triggers.
 CREATE TABLE IF NOT EXISTS data_deletion_requests (
   id TEXT PRIMARY KEY,
   student_id TEXT NOT NULL,
   name TEXT NULL,
   email TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'completed', 'dismissed'
+  status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- One open request per student; resolved requests don't block a new one.
 CREATE UNIQUE INDEX IF NOT EXISTS data_deletion_requests_pending_key
   ON data_deletion_requests (student_id) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS data_deletion_requests_created_at_idx ON data_deletion_requests (created_at DESC);
 
--- Admin notification broadcasts: "notification"-type broadcasts are pushed to
--- each student's bell panel. Rows auto-purge 30 days after they are sent;
--- dismissals are per student and permanent.
 CREATE TABLE IF NOT EXISTS broadcast_notifications (
   id TEXT PRIMARY KEY,
   message TEXT NOT NULL,
@@ -238,7 +208,6 @@ CREATE TABLE IF NOT EXISTS broadcast_notification_dismissals (
 
 CREATE INDEX IF NOT EXISTS broadcast_notification_dismissals_student_idx ON broadcast_notification_dismissals (student_id);
 
--- Build Notes migration
 CREATE TABLE IF NOT EXISTS app_build_notes (
   id TEXT PRIMARY KEY,
   version TEXT NOT NULL,
@@ -251,8 +220,6 @@ CREATE TABLE IF NOT EXISTS app_build_notes (
 
 CREATE INDEX IF NOT EXISTS app_build_notes_created_at_idx ON app_build_notes (created_at DESC);
 
--- AI features removed: drop their tables and system_state columns.
--- Idempotent on re-runs and a no-op on fresh databases.
 DROP TABLE IF EXISTS ai_usage_logs;
 DROP TABLE IF EXISTS ai_cache;
 ALTER TABLE system_state DROP COLUMN IF EXISTS ai_provider;

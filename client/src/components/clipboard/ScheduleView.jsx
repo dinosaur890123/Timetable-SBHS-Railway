@@ -5,8 +5,6 @@ import { useReducedMotion } from 'framer-motion';
 import { startOf, clockTime, sessionInk, sessionName, endOf } from './sessions';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-// A mobile-friendly schedule view with events grouped by day
-// Shows full day names and dates, with events as time + dot + name rows
 const ScheduleView = ({ sessions, onOpen }) => {
     useNoteFlowFonts();
     const still = useReducedMotion();
@@ -16,7 +14,6 @@ const ScheduleView = ({ sessions, onOpen }) => {
     const isDesktop = useMediaQuery('(min-width: 768px)');
     const hasHover = useMediaQuery('(hover: hover)');
 
-    // Group sessions by day using their actual start date
     const dayGroups = useMemo(() => {
         const map = {};
         [...sessions].sort((a, b) => startOf(a) - startOf(b)).forEach((s) => {
@@ -41,7 +38,6 @@ const ScheduleView = ({ sessions, onOpen }) => {
         let x = rect.left + (rect.width - tooltipWidth) / 2;
         let y = rect.top - tooltipHeight - 8;
 
-        // Keep tooltip within viewport
         x = Math.max(8, Math.min(x, window.innerWidth - tooltipWidth - 8));
         y = Math.max(8, Math.min(y, window.innerHeight - tooltipHeight - 8));
 

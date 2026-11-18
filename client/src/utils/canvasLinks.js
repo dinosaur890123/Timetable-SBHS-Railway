@@ -1,19 +1,9 @@
-// Helpers for Canvas course links. The server has the final say on what a link
-// becomes; these give instant feedback and work out which classes a student has.
-
 export const DEFAULT_CANVAS_HOST = 'sydneyboyshigh.instructure.com';
 export const WELLIO_HOST = 'app.wellioeducation.com';
-// Hostnames that serve the school's Canvas courses; links on them are shared.
 const CANVAS_HOSTS = new Set([DEFAULT_CANVAS_HOST, 'canvas.sbhs.net.au']);
 
-// The key shared links use: year + short title, e.g. "9Ma1". Short titles repeat
-// across year groups, so the year has to be part of it.
 export const classKey = (year, title) => `${year ?? ''}${title ?? ''}`;
 
-// Accepts a full link, a link without "https://", "courses/123",
-// "schools/123" or a bare course number. Returns { url, isCourseLink } or
-// { error }. isCourseLink means the link can be shared with the class: a
-// Canvas course page or a Wellio school page.
 export const parseLinkInput = (raw, canvasHost = DEFAULT_CANVAS_HOST) => {
     let value = String(raw ?? '').trim();
     if (!value) return { error: 'Paste the course’s link from Canvas or Wellio.' };
@@ -45,8 +35,6 @@ export const parseLinkInput = (raw, canvasHost = DEFAULT_CANVAS_HOST) => {
     return { url: url.toString(), isCourseLink: isCanvasCourse || isWellio };
 };
 
-// Sport blocks ("SP9", "Sport 9", "Sports 6") and Scripture have no course
-// page, so they never get a link field.
 export const isLinklessTitle = (title) => {
     if (!title) return false;
     const t = String(title).toLowerCase();
@@ -58,8 +46,6 @@ const isClassPeriod = (period) => period?.title
     && !period.title.toLowerCase().includes('roll call')
     && !isLinklessTitle(period.title);
 
-// Every class in the student's timetable, as a Map of class key -> a period of it.
-// Prefers the full cycle; falls back to the day's timetable.
 export const collectClasses = (completeTimetable, timetableData) => {
     const classes = new Map();
     const add = (period) => {

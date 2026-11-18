@@ -1,42 +1,31 @@
 import { format } from 'date-fns';
 import { rememberSubjectColours } from '../utils/timetable';
 import { clearPageCache, setServingCachedData } from '../utils/pageCache';
-// The "Cached" topbar badge lives in pageCache so failed page refreshes can raise it too.
 export { onCachedDataChange } from '../utils/pageCache';
 import { normaliseList, normaliseIssuedAward, normaliseIssuedPrize, normaliseRollover, normaliseAward, normaliseHouse, normaliseNomination, normalisePrize } from '../utils/awardScheme';
 
-// Environment variables
 const CLIENT_ID = import.meta.env.VITE_SBHS_CLIENT_ID?.trim();
 const REDIRECT_URI = import.meta.env.VITE_SBHS_REDIRECT_URI?.trim();
 
 const AUTH_ENDPOINT = 'https://auth.sbhs.net.au/authorize';
 const API_BASE_URL = 'https://student.sbhs.net.au/api';
-// The app's own server. Sign-in goes through it so the SBHS client secret never
-// reaches the browser.
 const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
 
-// Service worker caches holding the student's own data, emptied whenever the account changes.
 const PRIVATE_CACHES = ['sbhs-data', 'app-data'];
 const clearOfflineData = async () => {
     dayCache.clear();
     clearPageCache();
-    try { localStorage.removeItem(SAVED_DAYS_KEY); } catch { /* storage unavailable */ }
+    try { localStorage.removeItem(SAVED_DAYS_KEY); } catch {}
     try {
         if (!('caches' in window)) return;
         await Promise.all(PRIVATE_CACHES.map(name => caches.delete(name)));
     } catch {
-        // Caches unavailable (private mode): nothing was stored
     }
 };
 
-// fetch with a time limit, so a server that stops answering shows an error
-// instead of a spinner that never ends.
 const timedFetch = async (url, options = {}, timeoutMs) => {
     const limit = timeoutMs ?? 20000;
-    // The service worker falls back to its offline copy when the network is too
-    // slow, which can happen while the device still reports being online. In that
-    // case give the network a couple more chances before settling for the copy.
     const CACHED_RETRIES = 2;
     const RETRY_DELAY = 3000;
     for (let attempt = 0; ; attempt++) {
@@ -59,22 +48,18 @@ const timedFetch = async (url, options = {}, timeoutMs) => {
     }
 };
 
-// Posts to the server's token endpoint, which adds the client secret for SBHS.
 const requestToken = (params) => timedFetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params)
 });
 
-// ns.sbhs.au/r/student_app grants access to the Core API on api.sbhs.net.au (award scheme, clipboard).
 export const SCOPES = 'all-ro openid profile email ns.sbhs.au/r/student_app';
 
 export const getOauthConfig = () => ({
   clientId: CLIENT_ID || '(Not configured)',
   redirectUri: REDIRECT_URI || '(Not configured)',
 });
-
-// --- Authentication ---
 
 export const performLogin = () => {
   if (!CLIENT_ID || !REDIRECT_URI) {
@@ -96,13 +81,9 @@ export const performLogin = () => {
   window.location.href = `${AUTH_ENDPOINT}?${params.toString()}`;
 };
 
-// The sign-in redirect must carry the state this tab sent, or someone else
-// started it (e.g. a link that signs the student into another account).
 export const checkAuthState = (returnedState) => {
   const expected = sessionStorage.getItem('sbhs_auth_state');
   sessionStorage.removeItem('sbhs_auth_state');
-  // Tabs that lost sessionStorage (e.g. the redirect opened elsewhere) have
-  // nothing to compare; only a mismatch is rejected.
   return !expected || expected === returnedState;
 };
 
@@ -121,7 +102,6 @@ export const exchangeToken = async (code) => {
     }
 
     const data = await response.json();
-    // A new sign-in may be a different student on this device: drop the last one's offline copy.
     await clearOfflineData();
     storeTokens(data);
     localStorage.setItem('sbhs_token_scope', SCOPES);
@@ -144,55 +124,37 @@ const clearTokens = () => {
     ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry', 'sbhs_token_scope'].forEach(key => localStorage.removeItem(key));
 };
 
-// Refreshed tokens keep the scopes of the original sign-in, so a session from before
-// SCOPES changed stays missing them until the student signs in again. That no longer
-// signs them out: isScopeOutdated() drives a re-sign-in banner, and the Core API
-// answers 403 for the features the old scopes can't reach.
-
-// Check if scopes are outdated without clearing tokens (for UI banner)
 export const isScopeOutdated = () => {
     const currentScope = localStorage.getItem('sbhs_token_scope');
     const hasSession = !!localStorage.getItem('sbhs_access_token') || !!localStorage.getItem('sbhs_refresh_token');
     return hasSession && currentScope !== SCOPES;
 };
 
-// Treat a token as expired a minute early so it can't lapse mid-request.
 const hasFreshToken = () => {
     const expiry = parseInt(localStorage.getItem('sbhs_token_expiry'), 10);
     return !!getAccessToken() && Date.now() < expiry - 60 * 1000;
 };
 
-// SBHS access tokens last an hour; the 90-day refresh token gets a new pair.
-// Refresh tokens are single-use, so concurrent callers share one refresh — within
-// this tab through refreshInFlight, and across tabs (and the installed app) through
-// a Web Lock. Without the lock, two tabs waking together both spend the same token,
-// and the loser used to clear the winner's fresh pair and sign every tab out.
 let refreshInFlight = null;
 const REFRESH_LOCK = 'sbhs-token-refresh';
 
-// Run `task` while holding the cross-tab refresh lock, where the browser has one.
 const withRefreshLock = (task) => (typeof navigator !== 'undefined' && navigator.locks?.request
     ? navigator.locks.request(REFRESH_LOCK, task)
     : task());
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// One refresh against SBHS. `forced` refreshes even if the stored token looks fresh,
-// for when the API has just turned the stored token away.
 const runRefresh = async (forced) => {
     const refreshToken = localStorage.getItem('sbhs_refresh_token');
     if (!refreshToken || !CLIENT_ID) return null;
     try {
         const response = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
         if (!response.ok) {
-            // A tab without Web Locks may have spent this token first: give it a moment
-            // to store its pair, and use that instead of signing everyone out.
             if (response.status === 400 || response.status === 401) {
                 for (let i = 0; i < 3; i++) {
                     if (localStorage.getItem('sbhs_refresh_token') !== refreshToken) return getAccessToken();
                     await sleep(500);
                 }
-                // Still our token after waiting: SBHS has genuinely rejected it.
                 if (localStorage.getItem('sbhs_refresh_token') === refreshToken) clearTokens();
                 else return getAccessToken();
             }
@@ -202,7 +164,6 @@ const runRefresh = async (forced) => {
         storeTokens(data);
         return data.access_token;
     } catch (error) {
-        // Offline or SBHS unreachable: keep the tokens and try again next time.
         console.error('Token refresh failed:', error);
         return null;
     }
@@ -214,7 +175,6 @@ export const refreshAccessToken = ({ forced = true } = {}) => {
 
     const startingToken = localStorage.getItem('sbhs_access_token');
     refreshInFlight = withRefreshLock(async () => {
-        // While this tab waited for the lock, another may have refreshed already.
         const accessNow = localStorage.getItem('sbhs_access_token');
         if (accessNow && accessNow !== startingToken && hasFreshToken()) return accessNow;
         if (!forced && hasFreshToken()) return accessNow;
@@ -225,15 +185,11 @@ export const refreshAccessToken = ({ forced = true } = {}) => {
     return refreshInFlight;
 };
 
-// Signed out for good: SBHS rejected the refresh token, so there's nothing left to renew with.
-// A failed refresh for any other reason (offline, SBHS slow) keeps the session.
 const sessionLapsed = () => !localStorage.getItem('sbhs_refresh_token');
 
-// The current access token, refreshed first if it has expired. Null when signed out.
 export const getValidAccessToken = async () => {
     if (hasFreshToken()) return getAccessToken();
     const fresh = await refreshAccessToken({ forced: false });
-    // Offline the token can't be renewed, but the expired one still opens the offline copy.
     if (!fresh && !navigator.onLine) return getAccessToken();
     return fresh;
 };
@@ -242,7 +198,6 @@ export const logout = (redirectToLogin = false) => {
     const theme = localStorage.getItem('theme');
     localStorage.clear();
     if (theme) localStorage.setItem('theme', theme);
-    // The offline copy belongs to this student, so it goes too (before leaving the page).
     clearOfflineData().finally(() => {
         if (redirectToLogin === true) {
             performLogin();
@@ -252,11 +207,7 @@ export const logout = (redirectToLogin = false) => {
     });
 };
 
-// Signed in if the access token is still good, or can be renewed with the refresh token.
-// Scope mismatches don't sign the student out; they only raise the re-sign-in banner.
 export const isAuthenticated = () => hasFreshToken() || (!!getAccessToken() && !!localStorage.getItem('sbhs_refresh_token'));
-
-// --- API Client ---
 
 async function fetchWithAuth(endpoint) {
     const token = await getValidAccessToken();
@@ -272,27 +223,18 @@ async function fetchWithAuth(endpoint) {
     }
 
     if (!response.ok) {
-        // Only sign out once SBHS has rejected the refresh token too. A 401 with a
-        // refresh token still in hand (offline, SBHS slow, one endpoint refusing)
-        // just fails this request.
         if (response.status === 401 && sessionLapsed()) logout();
         throw new Error(`API Error ${response.status}: ${endpoint}`);
     }
     return response.json();
 }
 
-// --- Endpoints ---
-
-// 1. Timetable
-// Days fetched this session, and days on their way, so moving between days is instant and no day is
-// asked for twice. A day is trusted for five minutes, after which it's fetched again for late changes.
 const DAY_TTL = 5 * 60 * 1000;
 const DAY_CACHE_LIMIT = 120;
 const dayCache = new Map();
 const dayInFlight = new Map();
 const dayKey = (date) => format(date || new Date(), 'yyyy-MM-dd');
 
-// The day as last fetched, however old, or null. For showing something at once while it refreshes.
 export const peekDayTimetable = (date) => dayCache.get(dayKey(date))?.data ?? null;
 
 export const fetchDayTimetable = (date, { fresh = false } = {}) => {
@@ -317,14 +259,11 @@ const rememberDay = (key, data) => {
     return data;
 };
 
-// Days near today are also saved on the device, so reopening the app shows the timetable at once
-// (the saved copy is refreshed in the background, as any day older than five minutes is).
 const SAVED_DAYS_KEY = 'day_cache:v1';
 const savedDayWindow = () => [dayKey(new Date(Date.now() - 7 * 864e5)), dayKey(new Date(Date.now() + 28 * 864e5))];
 let saveDaysTimer = null;
 const saveDaysSoon = () => {
     clearTimeout(saveDaysTimer);
-    // Days arrive in bursts (the week is fetched at once), so they're written together.
     saveDaysTimer = setTimeout(() => {
         const [from, to] = savedDayWindow();
         const saved = {};
@@ -332,7 +271,6 @@ const saveDaysSoon = () => {
         try {
             localStorage.setItem(SAVED_DAYS_KEY, JSON.stringify(saved));
         } catch {
-            // Storage full or blocked: the days are still kept for this session
         }
     }, 1000);
 };
@@ -344,7 +282,6 @@ const loadSavedDays = () => {
             if (k >= from && k <= to && entry?.data && !dayCache.has(k)) dayCache.set(k, { data: entry.data, at: Number(entry.at) || 0 });
         });
     } catch {
-        // Nothing saved, or storage unavailable
     }
 };
 loadSavedDays();
@@ -354,16 +291,12 @@ const minutesOf = (time) => {
     return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
 };
 
-// The day to open on, worked out from saved days without waiting for the network: today until its
-// last bell, then the next saved school day. Null when nothing suitable is saved.
-// fetchNextSchoolDay gives the authoritative answer once it arrives.
 export const peekNextSchoolDay = () => {
     const now = new Date();
     const today = dayKey(now);
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     for (const key of [...dayCache.keys()].filter(k => k >= today).sort()) {
         const data = dayCache.get(key)?.data;
-        // SBHS answers a day without school with the next school day; that one is saved under its own date.
         if (!data || (data.date && data.date !== key)) continue;
         const inner = data.timetable?.timetable || data.timetable;
         if (!inner?.periods || Object.keys(inner.periods).length === 0 || !Array.isArray(data.bells) || data.bells.length === 0) continue;
@@ -376,10 +309,6 @@ export const peekNextSchoolDay = () => {
     return null;
 };
 
-// The school day the app should open on: today until its last bell, then the next school day.
-// SBHS works this out itself when no date is given, so it's one request however long the holidays
-// are. Resolves with { date, data }; `data` is null when the answer is an offline copy from an
-// earlier day, so the caller fetches today instead. Callers at start-up share one request.
 let nextSchoolDayRequest = null;
 export const fetchNextSchoolDay = () => {
     if (nextSchoolDayRequest) return nextSchoolDayRequest;
@@ -398,16 +327,13 @@ export const fetchCompleteTimetable = async () => {
     return fetchWithAuth('/timetable/timetable.json');
 };
 
-// 2. Daily News
 export const fetchDailyNews = async (date) => {
     const dateStr = date ? `?date=${format(date, 'yyyy-MM-dd')}` : '';
     return fetchWithAuth(`/dailynews/list.json${dateStr}`);
 };
 
-// 3. User Info
 export const fetchUserInfo = async () => fetchWithAuth('/details/userinfo.json');
 
-// 4. Calendar Events (New)
 export const fetchCalendarEvents = async (from, to) => {
     const params = new URLSearchParams();
     if (from) params.append('from', format(from, 'yyyy-MM-dd'));
@@ -415,18 +341,14 @@ export const fetchCalendarEvents = async (from, to) => {
     return fetchWithAuth(`/diarycalendar/events.json?${params.toString()}`);
 };
 
-// 5. School Terms / Days info (New)
 export const fetchDateInfo = async (date) => {
     const dateStr = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
     return fetchWithAuth(`/calendar/days.json?from=${dateStr}&to=${dateStr}`);
 };
 
-// The school year's term boundaries, public holidays and staff development days.
 export const fetchTerms = async (year) => {
     return fetchWithAuth(`/calendar/terms.json${year ? `?year=${year}` : ''}`);
 };
-
-// --- System API (Public) ---
 
 export const fetchSystemStatus = async () => {
     try {
@@ -453,15 +375,8 @@ async function fetchFromBackend(endpoint) {
     return response.json();
 }
 
-// --- New Award Scheme & Clipboard APIs ---
-
-// Student-specific APIs
-// Award scheme. The normalisers in utils/awardScheme.js keep the fields the Awards
-// page needs (dates, categories and groups, nominations, prizes).
 export const fetchStudentAwards = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/awards`).then(data => normaliseList(data, normaliseIssuedAward));
-// Scan-in detail is keyed by the school date (YYYY-MM-DD). A 404 means no scan
-// has been recorded for that date; other failures should stay unknown in the UI.
 export const fetchStudentAttendanceScanIn = async (studentId, date) => {
     try {
         return await fetchFromBackend(`/students/${studentId}/attendance/scan-ins/${encodeURIComponent(date)}`);
@@ -476,15 +391,12 @@ export const fetchStudentDecorations = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/decorations`).then(data => normaliseList(data, normaliseIssuedAward));
 export const fetchStudentPrizes = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/prizes`).then(data => normaliseList(data, normaliseIssuedPrize));
-// Nominations carried over from last year, counting towards a prize.
 export const fetchStudentRollover = (studentId) =>
     fetchFromBackend(`/students/${studentId}/award-scheme/rollover`).then(normaliseRollover);
 
 const formatDay = (iso) => (iso ? format(new Date(iso), 'EEE d MMM yyyy') : '');
 const formatTimeRange = (start, end) => (start ? `${format(new Date(start), 'h:mm a')}${end ? ` – ${format(new Date(end), 'h:mm a')}` : ''}` : '');
 
-// Clipboard staff come back as UserLink objects ({ firstName, lastName, sisId })
-// or plain names; IRIs to user resources carry no display name, so they're skipped.
 const clipboardStaffName = (member) => {
     if (!member) return '';
     if (typeof member === 'string') {
@@ -493,8 +405,6 @@ const clipboardStaffName = (member) => {
     return [member.firstName, member.lastName].filter(Boolean).join(' ')
         || member.name || member.displayName || '';
 };
-// An activity's hexColour, as "#rrggbb". The API may omit the "#", send a short
-// "#rgb", or send null; anything that isn't a hex colour is dropped.
 const clipboardColour = (hex) => {
     const m = typeof hex === 'string' && hex.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
     return m ? `#${m[1].toLowerCase()}` : null;
@@ -551,7 +461,6 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
     const lastYear = options.year ? currentYear : currentYear + 1;
     const params = new URLSearchParams();
     params.set('date[after]', options.startDate || `${currentYear}-01-01`);
-    // Keep next year's sessions available when the timetable is navigated forward.
     params.set('date[before]', options.endDate || `${lastYear}-12-31`);
     params.set('_itemsPerPage', String(options.itemsPerPage || 300));
     if (options.page) params.set('_page', String(options.page));
@@ -567,7 +476,6 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
             time: formatTimeRange(item.startDateTime, item.endDateTime),
             start: item.startDateTime || null,
             end: item.endDateTime || null,
-            // A LocationLink: name, address and coordinates.
             location: item.location ? {
                 name: item.location.name || '',
                 address: item.location.address || '',
@@ -599,8 +507,6 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
         const firstData = await fetchFromBackend(`/students/${studentId}/clipboard/sessions?${params.toString()}`);
         const items = extractItems(firstData);
 
-        // If the first page hit the 300 item ceiling and caller did not request a single specific page,
-        // paginate to retrieve all remaining sessions.
         if (!options.page && items.length >= 300) {
             let pageNum = 1;
             while (pageNum < 10) {
@@ -620,8 +526,6 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
 
         return parseSessions(items);
     } catch (err) {
-        // Throw rather than return []: an empty list is saved as "no sessions" over the
-        // copy on the device, which is how an SBHS hiccup blanked the whole calendar.
         console.error('Failed to fetch clipboard sessions:', err);
         throw err;
     }
@@ -663,11 +567,8 @@ export const fetchClipboardTeamDetails = (teamId) =>
         return { id: team?.id || teamId, name: team?.name || 'Team', members };
     });
 
-// Global APIs
 export const fetchGlobalAwards = () =>
     fetchFromBackend('/award-scheme/awards').then(data => normaliseList(data, normaliseAward));
-// This year's standings (the API's `context` is the year). Without it, SBHS returns every
-// context at once, so that's only the fallback.
 export const fetchGlobalHousePoints = async () => {
     const thisYear = await fetchFromBackend(`/award-scheme/house-points?context=${new Date().getFullYear()}`)
         .then(data => normaliseList(data, normaliseHouse))
@@ -700,7 +601,6 @@ export const fetchGlobalActivities = () =>
 
 export const fetchAssignments = () => fetchFromBackend('/assignments');
 
-// User Preferences API
 export const fetchUserPreferences = async (studentId) => {
     const token = await getValidAccessToken();
     const headers = {};
@@ -731,8 +631,6 @@ export const saveUserPreferences = async (studentId, preferences) => {
     return response.json();
 };
 
-// Data deletion requests (Privacy page). The server notifies admins, who
-// fulfil the request from the admin panel.
 export const fetchDeletionRequest = async () => {
     const token = await getValidAccessToken();
     const headers = {};
@@ -760,10 +658,6 @@ export const requestDataDeletion = async () => {
     return data;
 };
 
-// Canvas Links API
-
-// Sends a request to the Canvas links endpoints. Rejects with an Error whose
-// message is the server's explanation, and whose status is the HTTP status.
 const canvasRequest = async (path, { method = 'GET', body } = {}) => {
     const token = await getValidAccessToken();
     const headers = {};
@@ -784,41 +678,28 @@ const canvasRequest = async (path, { method = 'GET', body } = {}) => {
     return data;
 };
 
-// { links: [{ className, canvasUrl }], canvasHost, schoolYear }
 export const fetchCanvasLinks = () => canvasRequest('');
 
-// Saves one class's link. With classKey, a Canvas course link is also shared with
-// classmates. confirmDuplicate retries past the server's duplicate-course warning.
-// Resolves with { link, shared, community }.
 export const saveCanvasLink = (className, url, classKey, confirmDuplicate = false) =>
     canvasRequest(`/${encodeURIComponent(className)}`, { method: 'PUT', body: { url, classKey, confirmDuplicate } });
 
 export const deleteCanvasLink = (className) =>
     canvasRequest(`/${encodeURIComponent(className)}`, { method: 'DELETE' });
 
-// Removes all of the student's saved links for this school year.
 export const deleteAllCanvasLinks = () => canvasRequest('', { method: 'DELETE' });
 
-// Adds links saved on this device by older versions, without replacing any.
 export const importCanvasLinks = (links) => canvasRequest('/import', { method: 'POST', body: { links } });
 
-// { classes: { [classKey]: { link, suggestions } } } for the student's classes.
 export const fetchCommunityCanvasLinks = (classKeys = []) =>
     canvasRequest(`/community?classes=${encodeURIComponent(classKeys.join(','))}`);
 
-// vote: 1 = correct, -1 = wrong, 0 = clear. Resolves with { classKey, community }.
 export const voteCanvasLink = (id, vote) =>
     canvasRequest(`/community/${encodeURIComponent(id)}/vote`, { method: 'POST', body: { vote } });
 
-// Unread server notifications, e.g. a class link that was just approved:
-// { notifications: [{ id, type, title, message, actionUrl, createdAt }] }
 export const fetchLinkNotifications = () => canvasRequest('/notifications');
 
-// Marks every server notification read.
 export const markLinkNotificationsRead = () => canvasRequest('/notifications/read', { method: 'POST' });
 
-// Admin "notification" broadcasts pushed to the bell panel — only ones this
-// student hasn't dismissed. { notifications: [{ id, message, createdAt }] }
 export const fetchBroadcastNotifications = async () => {
     try {
         const token = await getValidAccessToken();
@@ -833,7 +714,6 @@ export const fetchBroadcastNotifications = async () => {
     }
 };
 
-// Permanently dismisses an admin broadcast notification for this student.
 export const dismissBroadcastNotification = async (id) => {
     const token = await getValidAccessToken();
     const response = await timedFetch(`${SYSTEM_API_URL}/broadcast/notifications/${encodeURIComponent(id)}/dismiss`, {
@@ -845,7 +725,6 @@ export const dismissBroadcastNotification = async (id) => {
     }
 };
 
-// Build Notes API
 export const fetchBuildNotes = async () => {
     try {
         const response = await timedFetch(`${SYSTEM_API_URL}/build-notes`);
@@ -859,6 +738,3 @@ export const fetchBuildNotes = async () => {
         return [];
     }
 };
-
-
-

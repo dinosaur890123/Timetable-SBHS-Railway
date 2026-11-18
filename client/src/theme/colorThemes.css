@@ -1,11 +1,3 @@
-/* ==========================================================================
-   Immersive colour themes (generated)
-   Each colour theme tints the shared neutral scale and modern surfaces toward
-   its accent hue in OKLCH, keeping lightness (and so contrast) unchanged.
-   Selectors are specific enough to beat theme/modern.css overrides.
-   ========================================================================== */
-
-/* mint */
 html.theme-mint {
   --white: 254 255 255;
   --zinc-50: 246 252 247;
@@ -41,7 +33,6 @@ html[data-ui="modern"].dark.theme-mint {
   --m-card: 16 24 18;
 }
 
-/* amber */
 html.theme-amber {
   --white: 255 255 255;
   --zinc-50: 253 249 245;
@@ -77,7 +68,6 @@ html[data-ui="modern"].dark.theme-amber {
   --m-card: 25 21 15;
 }
 
-/* blue */
 html.theme-blue {
   --white: 255 255 255;
   --zinc-50: 247 250 255;
@@ -113,7 +103,6 @@ html[data-ui="modern"].dark.theme-blue {
   --m-card: 17 22 30;
 }
 
-/* violet */
 html.theme-violet {
   --white: 255 255 255;
   --zinc-50: 251 249 255;
@@ -149,7 +138,6 @@ html[data-ui="modern"].dark.theme-violet {
   --m-card: 23 20 28;
 }
 
-/* rose */
 html.theme-rose {
   --white: 255 255 255;
   --zinc-50: 255 248 248;
@@ -185,7 +173,6 @@ html[data-ui="modern"].dark.theme-rose {
   --m-card: 29 18 19;
 }
 
-/* teal */
 html.theme-teal {
   --white: 254 255 255;
   --zinc-50: 244 252 251;
@@ -221,7 +208,6 @@ html[data-ui="modern"].dark.theme-teal {
   --m-card: 13 24 22;
 }
 
-/* orange */
 html.theme-orange {
   --white: 255 255 255;
   --zinc-50: 255 249 245;
@@ -257,7 +243,6 @@ html[data-ui="modern"].dark.theme-orange {
   --m-card: 27 19 16;
 }
 
-/* sky */
 html.theme-sky {
   --white: 255 255 255;
   --zinc-50: 245 251 255;
@@ -293,7 +278,6 @@ html[data-ui="modern"].dark.theme-sky {
   --m-card: 14 23 29;
 }
 
-/* navy */
 html.theme-navy {
   --white: 255 255 255;
   --zinc-50: 246 249 255;
@@ -328,16 +312,11 @@ html[data-ui="modern"].dark.theme-navy {
   --m-panel: 12 17 26;
   --m-card: 18 25 37;
 }
-/* Dark mode lifts the accent a little so it reads on the lighter navy surfaces,
-   but stays deeper and duller than the blue theme's 217 91% 60%. */
 html.dark.theme-navy {
   --color-accent: 222 55% 48%;
   --color-accent-contrast: 0 0% 100%;
 }
 
-/* ---------- Ambient accent (any non-default colour theme) ---------- */
-
-/* Soft glow of the accent washing in from the corners behind the app */
 html[class*="theme-"] .m-ambient {
   background-image:
     radial-gradient(900px circle at 0% 0%, hsl(var(--color-accent) / 0.10), transparent 60%),
@@ -350,14 +329,12 @@ html.dark[class*="theme-"] .m-ambient {
     radial-gradient(800px circle at 100% 100%, hsl(var(--color-accent) / 0.05), transparent 60%);
 }
 
-/* Stronger header glow in the modern main panel */
 html[class*="theme-"] .m-dots {
   background-image:
     radial-gradient(700px circle at 50% -120px, hsl(var(--color-accent) / 0.07), transparent 70%),
     radial-gradient(rgb(var(--m-line) / 0.09) 1px, transparent 1px);
 }
 
-/* Scrollbars pick up the accent */
 html[data-ui="modern"][class*="theme-"] * {
   scrollbar-color: hsl(var(--color-accent) / 0.35) transparent;
 }

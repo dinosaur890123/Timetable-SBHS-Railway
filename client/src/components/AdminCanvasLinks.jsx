@@ -10,7 +10,6 @@ const STATUS_STYLES = {
 
 const STATUS_LABELS = { verified: 'In use', pending: 'Waiting for votes', rejected: 'Hidden' };
 
-// Moderation for Canvas links students share with their classes.
 const AdminCanvasLinks = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -52,9 +51,6 @@ const AdminCanvasLinks = () => {
         return all.filter(l => [l.classKey, l.className, l.canvasUrl, l.submittedBy].some(v => String(v || '').toLowerCase().includes(term)));
     }, [data, query]);
 
-    // The same course link logged under two or more classes usually means it was
-    // shared against the wrong class. Hidden/rejected rows don't count — they've
-    // already been dealt with.
     const duplicates = useMemo(() => {
         const byUrl = new Map();
         (data?.links || []).forEach(link => {
@@ -141,7 +137,6 @@ const AdminCanvasLinks = () => {
                     <tbody>
                         {links.map(link => {
                             const busy = busyId === link.id;
-                            // Extract year from classKey (first digits) for clarity
                             const yearMatch = link.classKey.match(/^(\d+)/);
                             const year = yearMatch ? yearMatch[1] : '';
                             return (

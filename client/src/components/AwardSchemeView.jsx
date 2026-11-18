@@ -40,8 +40,6 @@ const Empty = ({ children }) => (
     <p className="py-8 text-center text-sm text-zinc-400">{children}</p>
 );
 
-// A thin bar. The accent marks progress the student is working towards; other
-// bars stay neutral or take a house's own colour.
 const Bar = ({ value, max, tone = 'neutral', colour }) => {
     const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
     const fill = tone === 'accent' ? 'bg-accent' : 'bg-zinc-900/25 dark:bg-white/25';
@@ -104,8 +102,6 @@ const Segmented = ({ value, onChange }) => {
     );
 };
 
-// --- My progress -----------------------------------------------------------
-
 const Stat = ({ label, value, sub, className = '', valueClass = 'text-2xl sm:text-3xl tracking-[-0.03em]', accent = false }) => (
     <div className={`min-w-0 ${className}`}>
         <Eyebrow>{label}</Eyebrow>
@@ -120,7 +116,6 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-// Prize and nominations banner — no total points shown.
 const PrizeBanner = ({ summary }) => {
     const { nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
@@ -158,7 +153,6 @@ const StatusMark = ({ state }) => (
     </span>
 );
 
-// Points by area: progress toward the next 30-point block.
 const AreasCard = ({ summary }) => {
     const { areas, areasNotStarted } = summary;
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
@@ -169,8 +163,6 @@ const AreasCard = ({ summary }) => {
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => {
-                        // Points past the last processed nomination carry into the next one.
-                        // Until that nomination is officially issued, the overflow shows green.
                         const next = area.next;
                         const base = area.basePoints || 0;
                         const required = area.levelGap || 30;
@@ -327,12 +319,10 @@ const RecordCard = ({ summary }) => {
     const [selectedYear, setSelectedYear] = useState(null);
     const [expanded, setExpanded] = useState(false);
 
-    // Group timeline by year, points-only (ignore prizes, badges, decorations)
     const yearGroups = useMemo(() => {
         const groups = new Map();
         timeline.forEach(entry => {
             if (!entry.date || entry.kind === 'prize' || entry.kind === 'badge' || entry.kind === 'decoration') return;
-            // Filter out nominations and prize tier awards (they surface elsewhere)
             if (entry.kind === 'nomination') return;
             const titleToCheck = String(entry.title || '').toLowerCase();
             const detailToCheck = String(entry.detail || '').toLowerCase();
@@ -408,8 +398,6 @@ const RecordCard = ({ summary }) => {
     );
 };
 
-// --- House standings view ------------------------------------------------------
-
 const HouseView = ({ summary }) => {
     const { houseStandings } = summary;
     const leader = houseStandings[0]?.points || 0;
@@ -437,8 +425,6 @@ const HouseView = ({ summary }) => {
     );
 };
 
-// --- Plan view ----------------------------------------------------------------------
-
 const PlanView = ({ summary }) => {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState('all');
@@ -461,13 +447,11 @@ const PlanView = ({ summary }) => {
         setPlannedAwards(prev => prev.filter(a => a.id !== id));
     };
 
-    // Calculate hypothetical projections
     const projections = useMemo(() => {
         const totalPlannedPoints = plannedAwards.reduce((sum, a) => sum + a.points, 0);
         const currentPoints = summary.totalPoints;
         const totalPoints = currentPoints + totalPlannedPoints;
 
-        // Area breakdown using actual nomination levels
         const areaBreakdown = summary.areas.map(area => {
             const plannedPoints = plannedAwards
                 .filter(a => a.category?.name === area.name)
@@ -483,8 +467,6 @@ const PlanView = ({ summary }) => {
             return { ...area, plannedPoints, earned, toward, required, hypotheticalNominations: hypotheticallyReached.length };
         });
 
-        // Include nominations reached by planned points as well as nomination
-        // awards added directly to the plan when projecting the next prize.
         const projectedNominations = summary.nominationsAllTime
             + plannedAwards.filter(a => a.type === 'nomination').length
             + areaBreakdown.reduce((sum, area) => sum + area.hypotheticalNominations, 0);
@@ -512,7 +494,6 @@ const PlanView = ({ summary }) => {
 
     return (
         <div className="space-y-4">
-            {/* Search Catalog */}
             <Card>
                 <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-3">
                     Search the award scheme to plan hypothetical awards. Click an award to add it to your plan.
@@ -541,7 +522,6 @@ const PlanView = ({ summary }) => {
                 </div>
             </Card>
 
-            {/* Search Results (compact) */}
             {term && (groups.length > 0 || query.trim()) && (
                 <Card>
                     <CardTitle aside={groups.length > 0 ? plural(groups.reduce((sum, g) => sum + g.items.length, 0), 'award') : null}>Search Results</CardTitle>
@@ -575,10 +555,8 @@ const PlanView = ({ summary }) => {
                 </Card>
             )}
 
-            {/* Planned Awards & Projections */}
             {plannedAwards.length > 0 && projections && (
                 <>
-                    {/* Planned Awards List */}
                     <Card>
                         <CardTitle aside={plural(plannedAwards.length, 'planned award')}>Planned</CardTitle>
                         <ul className="divide-y divide-m-line -my-2.5">
@@ -605,7 +583,6 @@ const PlanView = ({ summary }) => {
                         </ul>
                     </Card>
 
-                    {/* Nominations Breakdown */}
                     <Card>
                         <CardTitle>Nominations Breakdown</CardTitle>
                         <div className="space-y-4">
@@ -623,7 +600,6 @@ const PlanView = ({ summary }) => {
                         </div>
                     </Card>
 
-                    {/* Projections */}
                     <Card>
                         <CardTitle>Projections</CardTitle>
                         <div className="grid grid-cols-2 gap-4">
@@ -644,7 +620,6 @@ const PlanView = ({ summary }) => {
                 </>
             )}
 
-            {/* Current Status (no hypothetical) */}
             {plannedAwards.length === 0 && (
                 <>
                     <Card>
@@ -688,7 +663,6 @@ const PlanView = ({ summary }) => {
                 </>
             )}
 
-            {/* Full scheme link */}
             <Card>
                 <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
                     <a href="https://sydneyhigh.school/wellbeing/award-scheme" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
@@ -700,12 +674,9 @@ const PlanView = ({ summary }) => {
     );
 };
 
-// --- Page ----------------------------------------------------------------------
-
 const AwardSchemeView = ({ user }) => {
     const [view, setView] = useState('overview');
 
-    // Shows the last copy at once (from this session or saved on the device) while it refreshes.
     const page = user?.studentId ? awardsPage(user.studentId) : null;
     const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
 

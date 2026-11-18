@@ -4,12 +4,8 @@ import { DEFAULT_CANVAS_HOST, classKey, collectClasses, parseLinkInput } from '.
 
 const CanvasLinksContext = createContext(null);
 
-// Links saved on this device by older versions of the app; imported once.
 const LEGACY_KEY = 'canvas_links';
-// A read-only copy of the student's links, so they still work offline. Never
-// written back to the server.
 const CACHE_KEY = 'canvas_links_cache';
-// Suggestions the student said "not now" to: { [id]: hide until (ms) }.
 const SNOOZE_KEY = 'canvas_link_snoozed';
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -27,7 +23,6 @@ const writeJson = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch {
-        // Storage full or blocked: the cache is only a convenience.
     }
 };
 
@@ -45,20 +40,17 @@ const readSnoozed = () => {
 const errorMessage = (error, fallback) => (error?.status ? error.message : fallback);
 
 export const CanvasLinksProvider = ({ children, completeTimetable, timetableData, linksEnabled = true }) => {
-    const [links, setLinks] = useState(readCache); // short class title -> url
-    const [community, setCommunity] = useState({}); // class key -> { link, suggestions }
+    const [links, setLinks] = useState(readCache);
+    const [community, setCommunity] = useState({});
     const [canvasHost, setCanvasHost] = useState(DEFAULT_CANVAS_HOST);
-    const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'offline'
+    const [status, setStatus] = useState('loading');
     const [snoozed, setSnoozed] = useState(readSnoozed);
-    // Server notifications for this student, e.g. "your class link was approved".
     const [linkNotices, setLinkNotices] = useState([]);
 
     const classes = useMemo(() => collectClasses(completeTimetable, timetableData), [completeTimetable, timetableData]);
     const classKeys = useMemo(() => [...classes.keys()].sort(), [classes]);
     const classKeysParam = classKeys.join(',');
 
-    // Short title -> class key, for callers that don't pass a year. Titles that
-    // appear in two year groups are left out rather than guessed.
     const titleToKey = useMemo(() => {
         const map = new Map();
         classes.forEach((period, key) => {
@@ -82,7 +74,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
                 await importCanvasLinks(legacy);
                 localStorage.removeItem(LEGACY_KEY);
             } catch (error) {
-                // Keep it for next time unless the server says it's unusable.
                 if (error?.status === 400) localStorage.removeItem(LEGACY_KEY);
             }
         }
@@ -127,18 +118,14 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         if (status === 'ready') loadNotices();
     }, [status, loadNotices]);
 
-    // Marks the server notifications read but keeps them in state until the
-    // next fetch, so an actionable notice can still be opened.
     const markLinkNoticesRead = useCallback(() => {
         markLinkNotificationsRead().catch(() => {});
     }, []);
 
     const keyFor = useCallback((title, year) => {
-        // Always use year if provided - this ensures exact matching across years
         if (year != null && year !== '') {
             return classKey(year, title);
         }
-        // Fallback: only use title-only key if it's unique (not ambiguous across years)
         const key = titleToKey.get(title);
         if (key === null) {
             console.warn('[canvasLinks] Class title is ambiguous across years, year is required:', title);
@@ -146,40 +133,30 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         return key;
     }, [titleToKey]);
 
-    // The link for a class: community-verified link by default, else the one
-    // their class agreed on, else a suggestion they backed, else their own.
-    // Users can override by saving their own link, which takes precedence.
     const getLink = useCallback((title, year) => {
         if (!title) return null;
         const key = keyFor(title, year);
-        // Community link takes priority by default.
         const entry = community[key];
         if (entry) {
             if (entry.link && entry.link.myVote !== -1) return entry.link.canvasUrl;
             const backed = entry.suggestions?.find(s => s.myVote === 1)?.canvasUrl;
             if (backed) return backed;
         }
-        // User's own link overrides community if they explicitly saved one.
         if (links[key]) return links[key];
         if (links[title]) return links[title];
         return null;
     }, [links, community, keyFor]);
 
-    // Saves a class's link. Resolves with { ok, shared } or { ok: false, error }.
     const saveLink = useCallback(async (title, input, year) => {
         const parsed = parseLinkInput(input, canvasHost);
         if (parsed.error) return { ok: false, error: parsed.error };
         const key = keyFor(title, year);
-        // Use only the year+shortTitle (e.g., "9PDH E") as the canonical class name,
-        // so personal and shared links are keyed consistently and don't duplicate.
         const canonicalName = key || title;
         try {
             let data;
             try {
                 data = await saveCanvasLink(canonicalName, parsed.url, key || undefined);
             } catch (error) {
-                // The server warns when this course is already shared under
-                // another class; confirm once, then retry past the warning.
                 if (error?.status !== 409 || error?.data?.error !== 'duplicate_course') throw error;
                 const names = (error.data.classes || []).join(', ');
                 if (!window.confirm(`This course is already shared under ${names || 'another class'}. Save it anyway?`)) {
@@ -199,7 +176,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
     const removeLink = useCallback(async (title) => {
         try {
             const key = keyFor(title);
-            // Try canonical key first, then fall back to raw title for legacy entries.
             const canonicalName = key || title;
             await deleteCanvasLink(canonicalName);
             storeLinks(prev => {
@@ -214,7 +190,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         }
     }, [storeLinks]);
 
-    // Wipes every saved link for this school year.
     const removeAllLinks = useCallback(async () => {
         try {
             await deleteAllCanvasLinks();
@@ -225,7 +200,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         }
     }, [storeLinks]);
 
-    // vote: 1 = correct, -1 = wrong, 0 = take back.
     const vote = useCallback(async (id, value) => {
         try {
             const data = await voteCanvasLink(id, value);
@@ -245,8 +219,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         });
     }, []);
 
-    // Classmates' suggestions worth asking this student about: for classes they
-    // have no link for yet, that they haven't voted on or put off.
     const prompts = useMemo(() => {
         const now = Date.now();
         const list = [];
@@ -263,8 +235,6 @@ export const CanvasLinksProvider = ({ children, completeTimetable, timetableData
         return list.sort((a, b) => b.confirmations - a.confirmations);
     }, [classes, links, community, snoozed]);
 
-    // Every unanswered suggestion, including ones the student put off — the
-    // top-bar panel lists these so ignored prompts don't stall verification.
     const pending = useMemo(() => {
         const list = [];
         classes.forEach((period, key) => {

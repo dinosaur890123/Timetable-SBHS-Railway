@@ -5,8 +5,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNotifications } from '../context/NotificationsContext';
 
-// Suggestion ids the student has already seen in the panel; anything else
-// counts as unread and keeps the red dot on the bell.
 const SEEN_KEY = 'canvas_link_seen';
 const NOTICE_SEEN_KEY = 'archived_notice_seen';
 const ADMIN_NOTICE_SEEN_KEY = 'admin_notice_seen';
@@ -30,11 +28,9 @@ const writeSeen = (key, seen) => {
     try {
         localStorage.setItem(key, JSON.stringify([...seen].slice(-SEEN_MAX)));
     } catch {
-        // Storage blocked: the dot just reappears next visit.
     }
 };
 
-// Stable id for a build note so read/dismissed state survives refetches.
 const buildNoteId = (note, index) =>
     note?.id ?? `${note?.version ?? ''}|${note?.title ?? ''}|${note?.createdAt ?? index}`;
 
@@ -47,10 +43,6 @@ const pageHidden = () => {
     }
 };
 
-// Top-bar bell: the one-stop shop for notifications. Archived app notices are
-// listed here, and every unanswered class-link suggestion is listed too —
-// including ones the student dismissed with "Not now" — so ignored prompts
-// still get voted on instead of stalling a link's verification.
 const CanvasLinkNotifications = ({
     buildNotes = [],
     adminNotices = [],
@@ -68,18 +60,12 @@ const CanvasLinkNotifications = ({
     const [dismissedLinkNotices, setDismissedLinkNotices] = useState(() => readSeen(LINK_NOTICE_DISMISSED_KEY));
     const [seenBuildNotes, setSeenBuildNotes] = useState(() => readSeen(BUILD_SEEN_KEY));
     const [dismissedBuildNotes, setDismissedBuildNotes] = useState(() => readSeen(BUILD_DISMISSED_KEY));
-    // First run marks every existing note as dismissed so the drawer only ever
-    // surfaces notes published after this point — no flood of old releases.
     const [buildNotesSeeded, setBuildNotesSeeded] = useState(() => localStorage.getItem(BUILD_DISMISSED_KEY) !== null);
     const [busyId, setBusyId] = useState(null);
     const [hidden, setHidden] = useState(pageHidden);
     const rootRef = useRef(null);
-    // Set when an outside press dismisses the panel; the matching click is
-    // swallowed so the tap can't also activate whatever is underneath.
     const swallowClick = useRef(false);
 
-    // The canvas-links page can be switched off app-wide; archived notices are
-    // still worth listing, so only the suggestions section hides with it.
     const linksVisible = !hidden;
     const shownAdminNotices = adminNotices.filter(n => !dismissedAdminNotices.has(n.id));
     const shownLinkNotices = linksVisible ? linkNotices.filter(n => !dismissedLinkNotices.has(n.id)) : [];
@@ -166,8 +152,6 @@ const CanvasLinkNotifications = ({
         });
     };
 
-    // First run marks every existing note as dismissed so the drawer only ever
-    // surfaces notes published after this point — no flood of old releases.
     useEffect(() => {
         if (!buildNotesSeeded && buildNotes.length > 0) {
             const seeded = new Set(buildNotes.map((n, i) => buildNoteId(n, i)));
@@ -177,8 +161,6 @@ const CanvasLinkNotifications = ({
         }
     }, [buildNotesSeeded, buildNotes]);
 
-    // While the panel is open everything in it counts as seen — including the
-    // server-side link notifications, which the server marks read in one go.
     useEffect(() => {
         if (open) {
             markSeen();
@@ -190,8 +172,6 @@ const CanvasLinkNotifications = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, pending, notices, adminNotices, linkNotices, buildNoteEntries, dismissedBuildNotes]);
 
-    // Stays mounted while the panel is closed: closing re-renders and would
-    // remove a listener scoped to `open` before the click it needs to eat.
     useEffect(() => {
         const onClickCapture = (e) => {
             if (!swallowClick.current) return;
@@ -209,8 +189,6 @@ const CanvasLinkNotifications = ({
             if (rootRef.current && !rootRef.current.contains(e.target)) {
                 setOpen(false);
                 swallowClick.current = true;
-                // If the press turns into a scroll instead of a tap, no click
-                // follows — don't leave the flag armed for a later one.
                 setTimeout(() => { swallowClick.current = false; }, 500);
             } else {
                 swallowClick.current = false;
@@ -235,8 +213,6 @@ const CanvasLinkNotifications = ({
     };
 
     return (
-        // static on mobile so the panel anchors to the full-width header
-        // instead of the bell — otherwise a wide panel slides off-screen left.
         <div className="relative max-md:static" ref={rootRef}>
             <button
                 onClick={() => setOpen(o => !o)}

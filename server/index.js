@@ -15,13 +15,9 @@ guardBypassAuth();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Railway (and Vercel) sit behind one proxy: trust it for the client's IP and https.
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// Middleware
-// Origins allowed to call the API from a browser, besides the app's own origin.
-// Add more with ALLOWED_ORIGINS (comma-separated).
 const allowedOrigins = [
     'https://www.synchron.work',
     'https://synchron.work',
@@ -35,19 +31,18 @@ app.use(compression());
 app.use(cors(corsOptionsDelegate(allowedOrigins)));
 app.use(express.json({ limit: '1mb' }));
 
-// In-memory fallback storage (used only when POSTGRES_URL/DATABASE_URL is not set)
 let users = [];
-let logs = []; // System logs
-let notes = []; // Study notes memory fallback
-let feedbackEntries = []; // Feedback submissions memory fallback
-let assignments = []; // Homework/assignments memory fallback
-let deletionRequests = []; // Data deletion requests memory fallback
+let logs = [];
+let notes = [];
+let feedbackEntries = [];
+let assignments = [];
+let deletionRequests = [];
 let anonymizeCanvasContributions = {
     anonymizeContributor: async () => {},
     anonymizeDeletedContributors: async () => {}
 };
-let broadcastNotificationsMemory = []; // { id, message, createdBy, createdAt } memory fallback
-const broadcastNotificationDismissalsMemory = new Set(); // `${broadcastId}:${studentId}` memory fallback
+let broadcastNotificationsMemory = [];
+const broadcastNotificationDismissalsMemory = new Set();
 let buildNotesMemory = [
     {
         id: 'initial-build-note',
@@ -61,14 +56,11 @@ let buildNotesMemory = [
 ];
 let systemState = {
     maintenance: false,
-    broadcast: null, // { message: "...", type: "info/warning/error" }
+    broadcast: null,
     festiveAmbient: false,
     hiddenPages: []
 };
 
-// System metrics for the admin dashboard, sampled every 10 seconds (last 20 samples).
-// "sessions" is the number of students who made an authenticated request in the
-// last 5 minutes.
 const statsHistory = [];
 const MAX_HISTORY = 20;
 
@@ -86,7 +78,6 @@ const isDbEnabled = db.hasDb();
 if (!isDbEnabled) {
     console.warn('[admin-db] POSTGRES_URL/DATABASE_URL not set; using in-memory admin storage');
 } else {
-    // Ensure app_build_notes table exists
     (async () => {
         try {
             await db.query(`
@@ -180,10 +171,8 @@ const consumeFeedbackStatusUpdates = async (studentId) => {
     return result.rows.map(row => ({ id: row.id, ticketNumber: row.ticket_number, status: row.status }));
 };
 
-// System state is read on every page load (/api/system/status), so it's cached briefly. Writes below clear the cache, so admin changes
-// show immediately on this server.
 const SYSTEM_STATE_TTL_MS = 10 * 1000;
-let systemStateCache = null; // { at, value }
+let systemStateCache = null;
 
 async function getSystemState() {
     if (isDbEnabled && systemStateCache && Date.now() - systemStateCache.at < SYSTEM_STATE_TTL_MS) {
@@ -201,8 +190,6 @@ async function readSystemState() {
         return systemState;
     }
 
-    // SELECT * keeps older databases working: columns added by later migrations
-    // are simply absent and fall back to defaults below.
     const result = await db.query('SELECT * FROM system_state WHERE id = 1', []);
 
     const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, festive_ambient: false, hidden_pages: [], updated_at: null };
@@ -224,9 +211,6 @@ async function readSystemState() {
     };
 }
 
-// Admin override for the seasonal ambient glow. The festive palettes
-// (Christmas Dec 1–26, NYE Dec 27–Jan 6) activate automatically in season;
-// this flag forces them on outside those dates.
 async function setFestiveAmbient(enabled) {
     const value = Boolean(enabled);
     if (!isDbEnabled) {
@@ -241,7 +225,6 @@ async function setFestiveAmbient(enabled) {
             [value]
         );
     } catch (e) {
-        // Self-heal databases that haven't run the schema migration yet.
         if (!/festive_ambient/.test(e?.message || '')) throw e;
         await db.query('ALTER TABLE system_state ADD COLUMN IF NOT EXISTS festive_ambient BOOLEAN NOT NULL DEFAULT FALSE');
         await db.query(
@@ -284,9 +267,6 @@ async function setBroadcast(message, type) {
     return message ? { message, type: type || 'info', id: ts } : null;
 }
 
-// "notification"-type broadcasts are pushed to each student's bell panel
-// instead of the banner. They live for 30 days and each student can dismiss
-// them permanently.
 const BROADCAST_NOTIFICATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const pruneBroadcastNotificationsMemory = () => {
@@ -589,10 +569,6 @@ async function deleteUserById(id) {
     return result.rows.length > 0;
 }
 
-// Removes every row the server holds for a student. The app_users delete
-// cascades to notes, assignments, Canvas links, feedback, notifications and
-// resource shares; the student-keyed tables without a foreign key are cleaned
-// up by hand. Audit logs are kept — they prune after 30 days.
 async function deleteStudentData(studentId) {
     const id = String(studentId);
     await anonymizeCanvasContributions.anonymizeContributor(id);
@@ -626,11 +602,10 @@ async function listLogs(limit = 100) {
     }));
 }
 
-// Purge archived feedback older than 90 days
 async function purgeArchivedFeedback() {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 90);
-    
+
     try {
         if (!isDbEnabled) {
             const initialLength = feedbackEntries.length;
@@ -661,7 +636,6 @@ async function purgeArchivedFeedback() {
     }
 }
 
-// Run archived feedback purge on boot and then every 12 hours
 purgeArchivedFeedback().catch((err) => {
     console.error('[purge-feedback] Initial purge failed:', err);
 });
@@ -671,12 +645,10 @@ setInterval(() => {
     });
 }, 12 * 60 * 60 * 1000).unref();
 
-// Initial log (best-effort)
 addLog('STARTUP', 'SYSTEM', 'Server service started').catch((e) => {
     console.warn('[admin-db] Failed to write startup log:', e?.message || e);
 });
 
-// Get authorized admin IDs from env or default
 const getAdminIds = () => {
     if (process.env.ADMIN_IDS) {
         return process.env.ADMIN_IDS.split(',').map(id => id.trim());
@@ -684,13 +656,9 @@ const getAdminIds = () => {
     return ["449130511", "449596935"];
 };
 
-// Verify SBHS Access Token via SBHS API. Results are cached briefly per token
-// (see security.js), so SBHS is asked once per few minutes, not once per request.
 const tokenVerifier = createTokenVerifier({
     fetchUserInfo: async (token) => {
         try {
-            // Without a timeout an unresponsive SBHS API keeps the request open
-            // indefinitely, and every page load hangs behind it.
             const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
                 headers: { 'Authorization': `Bearer ${token}` },
                 signal: AbortSignal.timeout(8000)
@@ -711,7 +679,6 @@ const verifySbhsToken = async (req) => {
     return tokenVerifier.verify(authHeader.slice('Bearer '.length).trim());
 };
 
-// Require valid student authentication (Any logged-in student)
 const requireStudentAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
@@ -725,7 +692,6 @@ const requireStudentAuth = async (req, res, next) => {
     next();
 };
 
-// Get a user by ID
 async function getUserById(id) {
     if (!isDbEnabled) {
         const u = users.find(u => String(u.id) === String(id));
@@ -763,7 +729,6 @@ async function getUserById(id) {
     };
 }
 
-// Require admin privilege (Only users with Admin role in DB, or bootstrap list if not configured in DB as Student)
 const requireAdminAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
@@ -774,10 +739,9 @@ const requireAdminAuth = async (req, res, next) => {
         return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
     }
     const studentId = String(userData.studentId);
-    
+
     try {
         const dbUser = await getUserById(studentId);
-        // If they exist in DB and are NOT Admin, reject immediately (strict check)
         if (dbUser) {
             if (dbUser.role === 'Admin') {
                 req.user = userData;
@@ -790,7 +754,6 @@ const requireAdminAuth = async (req, res, next) => {
         console.error('[auth] Database admin check failed:', e?.message || e);
     }
 
-    // Fallback: If not registered in DB yet, check bootstrap list
     const adminIds = getAdminIds();
     if (adminIds.includes(studentId)) {
         req.user = userData;
@@ -800,10 +763,8 @@ const requireAdminAuth = async (req, res, next) => {
     return res.status(403).json({ error: 'Forbidden: Admin access required' });
 };
 
-// Enforce admin privileges for general requireAuth routes
 const requireAuth = requireAdminAuth;
 
-// True when the requester is an admin (DB role, or the bootstrap admin list).
 const isAdminUser = async (studentId) => {
     try {
         const dbUser = await getUserById(studentId);
@@ -814,8 +775,6 @@ const isAdminUser = async (studentId) => {
     return getAdminIds().includes(String(studentId));
 };
 
-// Routes
-// POST /api/register - Auto-register users on login (DB-backed)
 app.post('/api/register', requireStudentAuth, async (req, res) => {
     try {
         const { id, email, name, year } = req.body || {};
@@ -839,7 +798,6 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
         const dbUser = await upsertUser(safeUser);
         await addLog('REGISTER', `${safeUser.name} (${userId})`, 'User sync/login');
 
-        // Deliver each admin status change once, on registration or the notification poll.
         const feedbackStatusUpdates = await consumeFeedbackStatusUpdates(userId);
 
         console.log(`User registered/updated: ${safeUser.name} (${userId}). Found ${feedbackStatusUpdates.length} pending feedback status notifications.`);
@@ -850,7 +808,6 @@ app.post('/api/register', requireStudentAuth, async (req, res) => {
     }
 });
 
-// Canvas course links: students' own links and links shared between classmates.
 anonymizeCanvasContributions = registerCanvasLinkRoutes(app, {
     db,
     isDbEnabled,
@@ -865,7 +822,6 @@ anonymizeCanvasContributions.anonymizeDeletedContributors().catch(err => {
     console.warn('[privacy] Could not anonymize links from previously deleted accounts:', err?.message || err);
 });
 
-// GET /api/users/:id/preferences - Get user preferences (dashboard layout, theme, etc.)
 app.get('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     try {
         const requestedId = String(req.params.id);
@@ -898,7 +854,6 @@ app.get('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     }
 });
 
-// PUT /api/users/:id/preferences - Update user preferences
 app.put('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     try {
         const requestedId = String(req.params.id);
@@ -932,9 +887,6 @@ app.put('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     }
 });
 
-// --- Study Notes Endpoints (CRUD) ---
-
-// POST /api/feedback - Submit authenticated feedback
 app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -992,7 +944,6 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     }
 });
 
-// GET /api/feedback - List feedback submitted by the authenticated student only.
 app.get('/api/feedback', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -1015,7 +966,6 @@ app.get('/api/feedback', requireStudentAuth, async (req, res) => {
     }
 });
 
-// GET /api/feedback/notifications - Claim unseen status changes for the signed-in student.
 app.get('/api/feedback/notifications', requireStudentAuth, async (req, res) => {
     try {
         const updates = await consumeFeedbackStatusUpdates(String(req.user.studentId));
@@ -1026,7 +976,6 @@ app.get('/api/feedback/notifications', requireStudentAuth, async (req, res) => {
     }
 });
 
-// GET /api/notes - Retrieve notes for authenticated student
 app.get('/api/notes', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -1034,12 +983,12 @@ app.get('/api/notes', requireStudentAuth, async (req, res) => {
             const studentNotes = notes.filter(n => String(n.studentId) === studentId);
             return res.json({ success: true, notes: studentNotes });
         }
-        
+
         const result = await db.query(
             'SELECT id, subject, title, content, created_at, updated_at FROM app_notes WHERE student_id = $1 ORDER BY updated_at DESC',
             [studentId]
         );
-        
+
         const formattedNotes = result.rows.map(row => ({
             id: row.id,
             subject: row.subject,
@@ -1048,7 +997,7 @@ app.get('/api/notes', requireStudentAuth, async (req, res) => {
             createdAt: toIso(row.created_at),
             updatedAt: toIso(row.updated_at)
         }));
-        
+
         res.json({ success: true, notes: formattedNotes });
     } catch (e) {
         console.error('Fetch notes error:', e);
@@ -1056,22 +1005,21 @@ app.get('/api/notes', requireStudentAuth, async (req, res) => {
     }
 });
 
-// POST /api/notes - Create or update a note
 app.post('/api/notes', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const { id, subject, title, content } = req.body || {};
-        
+
         if (!id || !subject || !title || content === undefined) {
             return res.status(400).json({ error: 'Missing required note fields (id, subject, title, content)' });
         }
-        
+
         const noteId = String(id);
         const noteSubject = String(subject);
         const noteTitle = String(title);
         const noteContent = String(content);
         const now = new Date();
-        
+
         let savedNote;
         if (!isDbEnabled) {
             const existingIndex = notes.findIndex(n => String(n.id) === noteId);
@@ -1100,7 +1048,6 @@ app.post('/api/notes', requireStudentAuth, async (req, res) => {
                 notes.push(savedNote);
             }
         } else {
-            // First check if note exists and who it belongs to
             const existingCheck = await db.query(
                 'SELECT student_id FROM app_notes WHERE id = $1',
                 [noteId]
@@ -1109,12 +1056,12 @@ app.post('/api/notes', requireStudentAuth, async (req, res) => {
                 if (String(existingCheck.rows[0].student_id) !== studentId) {
                     return res.status(403).json({ error: 'Forbidden: Cannot edit another student\'s note' });
                 }
-                
+
                 const result = await db.query(
                     'UPDATE app_notes SET subject = $1, title = $2, content = $3, updated_at = NOW() WHERE id = $4 RETURNING id, subject, title, content, created_at, updated_at',
                     [noteSubject, noteTitle, noteContent, noteId]
                 );
-                
+
                 const row = result.rows[0];
                 savedNote = {
                     id: row.id,
@@ -1129,7 +1076,7 @@ app.post('/api/notes', requireStudentAuth, async (req, res) => {
                     'INSERT INTO app_notes (id, student_id, subject, title, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, subject, title, content, created_at, updated_at',
                     [noteId, studentId, noteSubject, noteTitle, noteContent]
                 );
-                
+
                 const row = result.rows[0];
                 savedNote = {
                     id: row.id,
@@ -1141,7 +1088,7 @@ app.post('/api/notes', requireStudentAuth, async (req, res) => {
                 };
             }
         }
-        
+
         res.json({ success: true, note: savedNote });
     } catch (e) {
         console.error('Save note error:', e);
@@ -1149,16 +1096,15 @@ app.post('/api/notes', requireStudentAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/notes/:id - Delete a note
 app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const { id } = req.params;
-        
+
         if (!id) {
             return res.status(400).json({ error: 'Missing note ID' });
         }
-        
+
         if (!isDbEnabled) {
             const noteIndex = notes.findIndex(n => String(n.id) === String(id));
             if (noteIndex !== -1) {
@@ -1169,23 +1115,23 @@ app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
             }
             return res.json({ success: true });
         }
-        
+
         const checkResult = await db.query(
             'SELECT student_id FROM app_notes WHERE id = $1',
             [String(id)]
         );
-        
+
         if (checkResult.rows.length > 0) {
             if (String(checkResult.rows[0].student_id) !== studentId) {
                 return res.status(403).json({ error: 'Forbidden: Cannot delete another student\'s note' });
             }
-            
+
             await db.query(
                 'DELETE FROM app_notes WHERE id = $1',
                 [String(id)]
             );
         }
-        
+
         res.json({ success: true });
     } catch (e) {
         console.error('Delete note error:', e);
@@ -1193,11 +1139,10 @@ app.delete('/api/notes/:id', requireStudentAuth, async (req, res) => {
     }
 });
 
-// GET /api/assignments - Retrieve homework/assignments for authenticated student
 app.get('/api/assignments', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
-        
+
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
@@ -1232,11 +1177,10 @@ app.get('/api/assignments', requireStudentAuth, async (req, res) => {
     }
 });
 
-// POST /api/assignments - Create or update a homework/assignment task
 app.post('/api/assignments', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
-        
+
         const dbUser = await getUserById(studentId);
         if (!dbUser) {
             return res.status(404).json({ error: 'User not found' });
@@ -1291,7 +1235,6 @@ app.post('/api/assignments', requireStudentAuth, async (req, res) => {
                 assignments.push(savedAssignment);
             }
         } else {
-            // First check if assignment exists and who it belongs to
             const existingCheck = await db.query(
                 'SELECT student_id FROM app_assignments WHERE id = $1',
                 [assignmentId]
@@ -1347,7 +1290,6 @@ app.post('/api/assignments', requireStudentAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/assignments/:id - Delete a homework/assignment task
 app.delete('/api/assignments/:id', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -1396,7 +1338,6 @@ app.delete('/api/assignments/:id', requireStudentAuth, async (req, res) => {
     }
 });
 
-// POST /api/users/promote - Promote user to Admin by student ID
 app.post('/api/users/promote', requireAuth, async (req, res) => {
     try {
         const { studentId } = req.body || {};
@@ -1448,7 +1389,6 @@ app.post('/api/users/promote', requireAuth, async (req, res) => {
     }
 });
 
-// PUT /api/users/:id - Update user details (Role/Status)
 app.put('/api/users/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -1467,7 +1407,6 @@ app.put('/api/users/:id', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/stats
 app.get('/api/stats', requireAuth, async (req, res) => {
     try {
         const allUsers = await listUsers();
@@ -1500,7 +1439,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             }).length;
         }
 
-        // Aggregate year breakdown
         const yearBreakdown = {};
         if (isPostgresDb && dbHealth === 'Online') {
             try {
@@ -1515,22 +1453,19 @@ app.get('/api/stats', requireAuth, async (req, res) => {
                 console.error('Failed to query year groups:', e);
             }
         } else {
-            // Local fallback
             allUsers.forEach(u => {
                 const yr = u.year || 'Unknown';
                 yearBreakdown[yr] = (yearBreakdown[yr] || 0) + 1;
             });
         }
 
-        // Aggregate extended analytics
         const now = new Date();
         let activeToday = 0;
         let activeThisWeek = 0;
-        const growthByDate = {}; // 'YYYY-MM-DD' -> count
-        const classCounts = {}; // subjectTitle -> count
+        const growthByDate = {};
+        const classCounts = {};
 
         allUsers.forEach(u => {
-            // Retention check
             const lastSeenStr = u.lastSeen || u.joined;
             const lastSeen = lastSeenStr ? new Date(lastSeenStr) : null;
             if (lastSeen) {
@@ -1540,7 +1475,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
                 if (diffDays <= 7) activeThisWeek++;
             }
 
-            // Growth registration check
             const joinedStr = u.joined;
             const joined = joinedStr ? new Date(joinedStr) : null;
             if (joined) {
@@ -1548,7 +1482,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
                 growthByDate[dateStr] = (growthByDate[dateStr] || 0) + 1;
             }
 
-            // Parse timetable for popular classes
             if (u.timetable) {
                 const innerTimetable = u.timetable.timetable?.timetable || u.timetable.timetable || u.timetable;
                 const countPeriod = (key, p) => {
@@ -1573,7 +1506,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             }
         });
 
-        // Format growth data for the past 14 days
         const growthData = [];
         for (let i = 13; i >= 0; i--) {
             const d = new Date();
@@ -1585,7 +1517,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             });
         }
 
-        // Format top classes (sorted by student enrollment count)
         const popularClasses = Object.entries(classCounts)
             .map(([title, count]) => ({ title, count }))
             .sort((a, b) => b.count - a.count)
@@ -1601,17 +1532,14 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             hiddenPages: state.hiddenPages || [],
             activeSessions: tokenVerifier.activeCount(),
             history: statsHistory,
-            
-            // Year group analytics
+
             yearDistribution: yearBreakdown,
 
-            // New extended metrics
             activeToday,
             activeThisWeek,
             growthData,
             popularClasses,
 
-            // New diagnostic checks
             databaseConfigured: !!process.env.DATABASE_URL,
             databaseStatus: dbHealth,
             nodeVersion: process.version,
@@ -1625,7 +1553,6 @@ app.get('/api/stats', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/logs
 app.get('/api/logs', requireAuth, async (req, res) => {
     try {
         const out = await listLogs(100);
@@ -1636,13 +1563,10 @@ app.get('/api/logs', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/broadcast
 app.post('/api/broadcast', requireAuth, async (req, res) => {
     try {
         const { message, type } = req.body || {};
 
-        // "notification" broadcasts go straight to each student's bell panel;
-        // they don't occupy the banner slot and live for 30 days.
         if (message && type === 'notification') {
             const notification = await createBroadcastNotification(message, req.user?.studentId);
             await addLog('BROADCAST', 'ADMIN', `Notification broadcast: "${message}"`);
@@ -1661,8 +1585,6 @@ app.post('/api/broadcast', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/broadcast (Publicly accessible usually, but here requires auth for viewing in admin)
-// Real app would have a public endpoint for clients to pull this
 app.get('/api/broadcast', requireAuth, async (req, res) => {
     try {
         const state = await getSystemState();
@@ -1673,8 +1595,6 @@ app.get('/api/broadcast', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/broadcast/notifications — the student's undismissed admin
-// notification broadcasts from the last 30 days.
 app.get('/api/broadcast/notifications', requireStudentAuth, async (req, res) => {
     try {
         const notifications = await listBroadcastNotifications(String(req.user.studentId));
@@ -1685,8 +1605,6 @@ app.get('/api/broadcast/notifications', requireStudentAuth, async (req, res) => 
     }
 });
 
-// POST /api/broadcast/notifications/:id/dismiss — permanently dismisses one
-// notification broadcast for this student.
 app.post('/api/broadcast/notifications/:id/dismiss', requireStudentAuth, async (req, res) => {
     try {
         await dismissBroadcastNotification(req.params.id, String(req.user.studentId));
@@ -1697,8 +1615,6 @@ app.post('/api/broadcast/notifications/:id/dismiss', requireStudentAuth, async (
     }
 });
 
-// GET /api/broadcast/history — admin: notification broadcasts sent in the
-// last 30 days with per-broadcast dismissal counts.
 app.get('/api/broadcast/history', requireAuth, async (req, res) => {
     try {
         const notifications = await listBroadcastNotificationHistory();
@@ -1709,8 +1625,6 @@ app.get('/api/broadcast/history', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/broadcast/history/:id — admin: removes a notification broadcast
-// before its 30-day retention ends, for every student.
 app.delete('/api/broadcast/history/:id', requireAuth, async (req, res) => {
     try {
         const deleted = await deleteBroadcastNotification(req.params.id);
@@ -1723,7 +1637,6 @@ app.delete('/api/broadcast/history/:id', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/system/status (Public endpoint for client app)
 app.get('/api/system/status', (req, res) => {
     (async () => {
         try {
@@ -1741,7 +1654,6 @@ app.get('/api/system/status', (req, res) => {
     })();
 });
 
-// POST /api/maintenance (Toggle Maintenance Mode)
 app.post('/api/maintenance', requireAuth, async (req, res) => {
     try {
         const { maintenance } = req.body || {};
@@ -1756,8 +1668,6 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
     }
 });
 
-
-// POST /api/maintenance/prune-logs (Prune logs older than 30 days)
 app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {
     try {
         let deletedCount = 0;
@@ -1784,7 +1694,6 @@ app.post('/api/maintenance/prune-logs', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/system/festive-ambient (Admin only: seasonal glow toggle)
 app.post('/api/system/festive-ambient', requireAuth, async (req, res) => {
     try {
         const { enabled } = req.body || {};
@@ -1800,7 +1709,6 @@ app.post('/api/system/festive-ambient', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/system/hidden-pages (Public endpoint)
 app.get('/api/system/hidden-pages', async (req, res) => {
     try {
         const state = await getSystemState();
@@ -1811,7 +1719,6 @@ app.get('/api/system/hidden-pages', async (req, res) => {
     }
 });
 
-// POST /api/system/hidden-pages (Admin only)
 app.post('/api/system/hidden-pages', requireAuth, async (req, res) => {
     try {
         const { hiddenPages } = req.body || {};
@@ -1827,9 +1734,6 @@ app.post('/api/system/hidden-pages', requireAuth, async (req, res) => {
     }
 });
 
-// --- Build Notes Endpoints ---
-
-// GET /api/build-notes - Fetch build notes for user view
 app.get('/api/build-notes', async (req, res) => {
     try {
         if (!isDbEnabled) {
@@ -1854,7 +1758,6 @@ app.get('/api/build-notes', async (req, res) => {
     }
 });
 
-// GET /api/admin/build-notes - Fetch build notes for admin panel
 app.get('/api/admin/build-notes', requireAuth, async (req, res) => {
     try {
         if (!isDbEnabled) {
@@ -1879,7 +1782,6 @@ app.get('/api/admin/build-notes', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/admin/build-notes - Save (create/update) a build note
 app.post('/api/admin/build-notes', requireAuth, async (req, res) => {
     try {
         const { id, version, title, content, author } = req.body || {};
@@ -1942,7 +1844,6 @@ app.post('/api/admin/build-notes', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/admin/build-notes/:id - Delete a build note
 app.delete('/api/admin/build-notes/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -1963,7 +1864,6 @@ app.delete('/api/admin/build-notes/:id', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/users
 app.get('/api/users', requireAuth, async (req, res) => {
     try {
         const out = await listUsers();
@@ -1974,7 +1874,6 @@ app.get('/api/users', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/users/:id
 app.delete('/api/users/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -1989,8 +1888,6 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to delete user' });
     }
 });
-
-// --- Data Deletion Requests (Privacy page → admin panel) ---
 
 const DELETION_REQUEST_COLS = 'id, student_id, name, email, status, created_at, updated_at';
 
@@ -2015,7 +1912,6 @@ const findPendingDeletionRequest = async (studentId) => {
     return result.rows.length > 0 ? formatDeletionRequest(result.rows[0]) : null;
 };
 
-// GET /api/privacy/deletion-request - The signed-in student's latest request, if any
 app.get('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -2036,7 +1932,6 @@ app.get('/api/privacy/deletion-request', requireStudentAuth, async (req, res) =>
     }
 });
 
-// POST /api/privacy/deletion-request - Students delete immediately; admin accounts require review.
 app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) => {
     try {
         if (req.body?.confirmation !== 'CONFIRM') {
@@ -2058,7 +1953,6 @@ app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) =
         const name = [req.user.givenName, req.user.surname].filter(Boolean).join(' ').trim() || null;
         const email = req.user.email ? String(req.user.email) : null;
 
-        // One open request per student; a repeat click returns the existing one.
         const existing = await findPendingDeletionRequest(studentId);
         if (existing) {
             return res.status(200).json({ success: true, request: existing, alreadyRequested: true });
@@ -2082,20 +1976,18 @@ app.post('/api/privacy/deletion-request', requireStudentAuth, async (req, res) =
         await addLog('PRIVACY', studentId, 'Requested deletion of all server-side data');
         res.status(201).json({ success: true, request: formatDeletionRequest(request) });
     } catch (e) {
-        // A concurrent request can win the partial unique index; return theirs.
         if (e?.code === '23505') {
             try {
                 const studentId = String(req.user.studentId);
                 const existing = await findPendingDeletionRequest(studentId);
                 if (existing) return res.status(200).json({ success: true, request: existing, alreadyRequested: true });
-            } catch { /* fall through to the 500 */ }
+            } catch {}
         }
         console.error('Deletion request submit error:', e);
         res.status(500).json({ error: 'Failed to submit deletion request' });
     }
 });
 
-// GET /api/admin/deletion-requests - List all deletion requests for the admin panel
 app.get('/api/admin/deletion-requests', requireAuth, async (req, res) => {
     try {
         let requests;
@@ -2129,7 +2021,6 @@ app.get('/api/admin/deletion-requests', requireAuth, async (req, res) => {
     }
 });
 
-// PUT /api/admin/deletion-requests/:id - 'completed' deletes the student's data; 'dismissed' closes the request
 app.put('/api/admin/deletion-requests/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -2138,7 +2029,6 @@ app.put('/api/admin/deletion-requests/:id', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Status must be completed or dismissed' });
         }
 
-        // Resolve the pending request first so a failed deletion leaves it open for a retry.
         let existing = null;
         if (!isDbEnabled) {
             existing = deletionRequests.find(r => String(r.id) === String(id)) || null;
@@ -2179,9 +2069,6 @@ app.put('/api/admin/deletion-requests/:id', requireAuth, async (req, res) => {
     }
 });
 
-// --- Feedback Admin Endpoints ---
-
-// GET /api/admin/feedback - List all feedback entries
 app.get('/api/admin/feedback', requireAuth, async (req, res) => {
     try {
         let entries = [];
@@ -2222,7 +2109,6 @@ app.get('/api/admin/feedback', requireAuth, async (req, res) => {
     }
 });
 
-// PUT /api/admin/feedback/:id - Update feedback status
 app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -2266,7 +2152,6 @@ app.put('/api/admin/feedback/:id', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/admin/feedback/:id - Delete feedback manually
 app.delete('/api/admin/feedback/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -2301,7 +2186,6 @@ app.delete('/api/admin/feedback/:id', requireAuth, async (req, res) => {
     }
 });
 
-// PUT /api/admin/feedback/bulk - Bulk update feedback status
 app.put('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
     try {
         const { ids, status } = req.body || {};
@@ -2341,7 +2225,6 @@ app.put('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
     }
 });
 
-// DELETE /api/admin/feedback/bulk - Bulk delete feedback entries
 app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
     try {
         const { ids } = req.body || {};
@@ -2367,10 +2250,6 @@ app.delete('/api/admin/feedback/bulk', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/users/:id/timetable
-// REMOVED FOR PRIVACY
-
-// POST /api/cache/clear
 app.post('/api/cache/clear', requireAuth, async (req, res) => {
     try {
         console.log('Cache clear requested by admin');
@@ -2381,9 +2260,6 @@ app.post('/api/cache/clear', requireAuth, async (req, res) => {
     }
 });
 
-// --- NEW STUDENT & PORTAL ENDPOINTS ---
-
-// Helper for student access control (Admin or the student themselves)
 const checkStudentAccess = async (req, res) => {
     const requestedStudentId = String(req.params.studentId);
     const loggedInStudentId = String(req.user.studentId);
@@ -2400,12 +2276,8 @@ const checkStudentAccess = async (req, res) => {
     return false;
 };
 
-// SBHS Core API (award scheme, clipboard, attendance, enrolments). Spec: https://api.sbhs.net.au/api/core/#/
-// Asking for plain JSON returns collections as arrays rather than JSON-LD `member` wrappers.
 const SBHS_PORTAL_API = 'https://api.sbhs.net.au/api/core';
 
-// Forwards query string params to upstream URL, preserving bracketed parameter
-// names (e.g. date[after], date[before]) without Express qs nested-object stringification.
 const forwardPortalQueryParams = (targetUrl, req) => {
     const rawUrl = req.originalUrl || req.url || '';
     const queryIdx = rawUrl.indexOf('?');
@@ -2431,21 +2303,14 @@ const forwardPortalQueryParams = (targetUrl, req) => {
     }
 };
 
-// SBHS can be slow on big collections (a year of Clipboard sessions); the browser waits 20s.
 const PORTAL_TIMEOUT_MS = 15000;
 
-// A signed-in student's request that SBHS failed. Sending the mock (an empty list) here
-// used to look like "no data" and overwrite the copy saved on the device, so a slow or
-// failing SBHS blanked pages like Clipboard. An error lets the app keep its saved copy.
-// 404 still gets the mock: it means there's nothing there, not that SBHS failed.
-// 401 becomes 403 so a Core API refusal is never read as the sign-in having lapsed.
 const sendPortalFailure = (res, status, generateMockData, user) => {
     if (status === 404) return res.json(generateMockData(user));
     const code = !status ? 504 : status >= 500 ? 502 : status === 401 ? 403 : status;
     return res.status(code).json({ error: 'sbhs_unavailable', upstreamStatus: status || null });
 };
 
-// Main proxy/mock resolver for student endpoints
 const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     const isAuthorized = await checkStudentAccess(req, res);
     if (!isAuthorized) return;
@@ -2456,9 +2321,6 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
             const url = new URL(`${SBHS_PORTAL_API}/students/${studentId}/${subpath}`);
             forwardPortalQueryParams(url, req);
 
-            // If clipboard/sessions is requested without explicit date filters, default to
-            // the full current school year and 300 items per page so the upstream API
-            // does not default to a rolling 3-week window.
             if (subpath === 'clipboard/sessions') {
                 if (!url.searchParams.has('date[after]') && !url.searchParams.has('date[before]')) {
                     const currentYear = new Date().getFullYear();
@@ -2489,7 +2351,6 @@ const resolveStudentPortalApi = async (req, res, subpath, generateMockData) => {
     res.json(generateMockData(req.user));
 };
 
-// Generic resolver for global endpoints
 const resolveGlobalPortalApi = async (req, res, subpath, generateMockData) => {
     const authHeader = req.headers['authorization'];
     if (process.env.BYPASS_AUTH !== 'true' && authHeader && authHeader.startsWith('Bearer ')) {
@@ -2520,191 +2381,154 @@ const registerRoutePair = (path, middleware, handler) => {
     app.get(`/api${path}`, middleware, handler);
 };
 
-// 1. Attendance Absences
 registerRoutePair('/students/:studentId/attendance/absences', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'attendance/absences', (user) => []);
 });
 
-// 2. Attendance Absence Detail
 registerRoutePair('/students/:studentId/attendance/absences/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveStudentPortalApi(req, res, `attendance/absences/${id}`, (user) => null);
 });
 
-// 3. Scan-ins
 registerRoutePair('/students/:studentId/attendance/scan-ins', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'attendance/scan-ins', (user) => []);
 });
 
-// 4. Scan-in Detail
 registerRoutePair('/students/:studentId/attendance/scan-ins/:dateId', requireStudentAuth, (req, res) => {
     const dateId = req.params.dateId;
     resolveStudentPortalApi(req, res, `attendance/scan-ins/${dateId}`, (user) => null);
 });
 
-// 5. Issued Awards
 registerRoutePair('/students/:studentId/award-scheme/awards', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'award-scheme/awards', (user) => []);
 });
 
-// 6. Badges
 registerRoutePair('/students/:studentId/award-scheme/badges', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'award-scheme/badges', (user) => []);
 });
 
-// 7. Decorations
 registerRoutePair('/students/:studentId/award-scheme/decorations', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'award-scheme/decorations', (user) => []);
 });
 
-// 8. Student Prizes
 registerRoutePair('/students/:studentId/award-scheme/prizes', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'award-scheme/prizes', (user) => []);
 });
 
-// 9. Rollover
 registerRoutePair('/students/:studentId/award-scheme/rollover', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'award-scheme/rollover', (user) => null);
 });
 
-// 10. Clipboard Attendance
 registerRoutePair('/students/:studentId/clipboard/attendance', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'clipboard/attendance', (user) => []);
 });
 
-// 11. Clipboard Pre-explained Absences
 registerRoutePair('/students/:studentId/clipboard/pre-explained-absences', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'clipboard/pre-explained-absences', (user) => []);
 });
 
-// 12. Clipboard Sessions
 registerRoutePair('/students/:studentId/clipboard/sessions', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'clipboard/sessions', (user) => []);
 });
 
-// 13. Clipboard Teams
 registerRoutePair('/students/:studentId/clipboard/teams', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'clipboard/teams', (user) => []);
 });
 
-// 14. Clipboard Team Detail
 registerRoutePair('/students/:studentId/clipboard/teams/:teamId', requireStudentAuth, (req, res) => {
     const teamId = req.params.teamId;
     resolveStudentPortalApi(req, res, `clipboard/teams/${teamId}`, (user) => null);
 });
 
-// 15. Enrolments
 registerRoutePair('/students/:studentId/enrolments', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'enrolments', (user) => []);
 });
 
-// 16. Enrolments Detail
 registerRoutePair('/students/:studentId/enrolments/:schoolYear', requireStudentAuth, (req, res) => {
     const schoolYear = parseInt(req.params.schoolYear) || 2026;
     resolveStudentPortalApi(req, res, `enrolments/${schoolYear}`, (user) => null);
 });
 
-// 17. Timetable Student Resource
 registerRoutePair('/students/:studentId/timetable', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'timetable', (user) => null);
 });
 
-// 18. Timetable Classes
 registerRoutePair('/students/:studentId/timetable/classes', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'timetable/classes', (user) => []);
 });
 
-// 19. Timetable Dates
 registerRoutePair('/students/:studentId/timetable/dates', requireStudentAuth, (req, res) => {
     resolveStudentPortalApi(req, res, 'timetable/dates', (user) => []);
 });
 
-// 20. Timetable Date Detail
 registerRoutePair('/students/:studentId/timetable/dates/:date', requireStudentAuth, (req, res) => {
     const dateParam = req.params.date;
     resolveStudentPortalApi(req, res, `timetable/dates/${dateParam}`, (user) => null);
 });
 
-// Global Award Scheme & Clipboard routes
-
-// 21. Global Awards
 registerRoutePair('/award-scheme/awards', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'award-scheme/awards', () => []);
 });
 
-// 22. Global Award Detail
 registerRoutePair('/award-scheme/awards/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `award-scheme/awards/${id}`, () => null);
 });
 
-// 23. Global Categories
 registerRoutePair('/award-scheme/categories', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'award-scheme/categories', () => []);
 });
 
-// 24. Global Category Detail
 registerRoutePair('/award-scheme/categories/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `award-scheme/categories/${id}`, () => null);
 });
 
-// 25. Global House Points
 registerRoutePair('/award-scheme/house-points', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'award-scheme/house-points', () => []);
 });
 
-// 26. Global Nominations
 registerRoutePair('/award-scheme/nominations', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'award-scheme/nominations', (user) => []);
 });
 
-// 27. Global Nomination Detail
 registerRoutePair('/award-scheme/nominations/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `award-scheme/nominations/${id}`, (user) => null);
 });
 
-// 28. Global Prizes
 registerRoutePair('/award-scheme/prizes', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'award-scheme/prizes', () => []);
 });
 
-// 29. Global Prize Detail
 registerRoutePair('/award-scheme/prizes/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `award-scheme/prizes/${id}`, () => null);
 });
 
-// 30. Global Clipboard Activities
 registerRoutePair('/clipboard/activities', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'clipboard/activities', () => []);
 });
 
-// 31. Global Clipboard Activity Detail
 registerRoutePair('/clipboard/activities/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `clipboard/activities/${id}`, () => null);
 });
 
-// 32. Global Clipboard Departments
 registerRoutePair('/clipboard/departments', requireStudentAuth, (req, res) => {
     resolveGlobalPortalApi(req, res, 'clipboard/departments', () => []);
 });
 
-// 33. Global Clipboard Department Detail
 registerRoutePair('/clipboard/departments/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `clipboard/departments/${id}`, () => null);
 });
 
-// 34. Global Clipboard Team Detail (this is GET /clipboard/teams/{id})
 registerRoutePair('/clipboard/teams/:id', requireStudentAuth, (req, res) => {
     const id = req.params.id;
     resolveGlobalPortalApi(req, res, `clipboard/teams/${id}`, () => null);
 });
 
-// 35. Transit departures API
 registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -2719,8 +2543,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
 
         if (apiKey) {
             console.log(`[transit] Querying TfNSW APIs for: "${stopToQuery}" `);
-            
-            // 1. Resolve stop name to ID using Stop Finder
+
             const stopFinderUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/stop_finder');
             stopFinderUrl.searchParams.append('outputFormat', 'rapidJSON');
             stopFinderUrl.searchParams.append('type_sf', 'any');
@@ -2737,18 +2560,16 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
 
             const stopFinderData = await stopFinderRes.json();
             const points = stopFinderData.stopFinder?.points || [];
-            
-            // Filter to actual stops/stations
+
             const matchedPoint = points.find(p => p.type === 'stop' || p.type === 'station') || points[0];
-            
+
             if (!matchedPoint || !matchedPoint.id) {
-                return res.json([]); // No stops found
+                return res.json([]);
             }
 
             const stopId = matchedPoint.id;
             console.log(`[transit] Resolved stop ID: ${stopId} (${matchedPoint.name})`);
 
-            // 2. Query Departure Monitor API
             const depMonUrl = new URL('https://api.transport.nsw.gov.au/v1/tp/departure_mon');
             depMonUrl.searchParams.append('outputFormat', 'rapidJSON');
             depMonUrl.searchParams.append('coordOutputFormat', 'EPSG:4326');
@@ -2767,7 +2588,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
 
             const depMonData = await depMonRes.json();
             const stopEvents = depMonData.stopEvents || [];
-            
+
             const now = new Date();
             const departures = stopEvents.map(event => {
                 const planned = new Date(event.departureTimePlanned);
@@ -2775,7 +2596,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
                 const actualTime = estimated || planned;
                 const diffMs = actualTime - now;
                 const minutes = Math.max(0, Math.round(diffMs / 60000));
-                
+
                 const route = event.transportation?.number || event.transportation?.name || 'Bus';
                 let type = 'Bus';
                 if (route.startsWith('L') && !isNaN(route.substring(1))) {
@@ -2793,10 +2614,8 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
                 };
             });
 
-            // Free users get 6 (3 visible + 3 blurred), Pro gets 10
             return res.json(departures.slice(0, 10));
         } else {
-            // fallback to dynamic simulated mock data
             const nowMs = Date.now();
             const getMockMinutes = (interval, offset) => {
                 const cycle = interval * 60 * 1000;
@@ -2831,8 +2650,7 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
                 ];
             }
             departures.sort((a, b) => a.minutes - b.minutes);
-            
-            // Free users get 6 (3 visible + 3 blurred), Pro gets all
+
             return res.json(departures);
         }
     } catch (e) {
@@ -2841,11 +2659,6 @@ registerRoutePair('/transit/departures', requireStudentAuth, async (req, res) =>
     }
 });
 
-// --- Sign-in ---
-// The SBHS client secret stays on the server. The browser sends its sign-in code
-// or refresh token here; the server adds the client ID and secret and forwards
-// the request to SBHS. SBHS_CLIENT_* fall back to the VITE_SBHS_CLIENT_* names
-// the client build already uses, so existing deployments need no new settings.
 const SBHS_TOKEN_ENDPOINT = 'https://auth.sbhs.net.au/token';
 const envFirst = (...names) => names.map(n => String(process.env[n] || '').trim()).find(Boolean) || '';
 const tokenLimit = rateLimit(
@@ -2891,13 +2704,10 @@ app.post('/api/auth/token', tokenLimit, async (req, res) => {
     }
 });
 
-// Health check endpoint (public). Liveness only: it doesn't touch the database,
-// so a database blip doesn't get the server restarted.
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Readiness: 200 when the database (if configured) answers, 503 otherwise.
 app.get('/health/ready', async (req, res) => {
     if (!isDbEnabled) return res.json({ status: 'ok', database: 'not configured' });
     try {
@@ -2908,15 +2718,10 @@ app.get('/health/ready', async (req, res) => {
     }
 });
 
-// Unknown API routes get a JSON 404, not the app's HTML page.
 app.all('/api/*', (req, res) => {
     res.status(404).json({ error: 'Not found' });
 });
 
-// Serve static assets from Vite build in client/dist.
-// Files under /assets have content hashes in their names, so browsers can keep
-// them for a year. Everything else (index.html, the service worker,
-// version.json) is revalidated on every load so new deploys show up at once.
 const path = require('path');
 const clientDist = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDist, {
@@ -2931,8 +2736,6 @@ app.use(express.static(clientDist, {
     }
 }));
 
-// Fallback unmatched routes to the SPA shell. The public privacy page is a
-// separate prerendered document so crawlers and no-JS visitors can read it.
 app.get('*', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     if (req.path === '/privacy' || req.path === '/privacy/') {
@@ -2941,7 +2744,6 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-// Last-resort error handler: log it, and never send a stack trace to the browser.
 app.use((err, req, res, next) => {
     if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Request too large' });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON' });
@@ -2950,7 +2752,6 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong' });
 });
 
-// A stray rejected promise shouldn't take the whole server down.
 process.on('unhandledRejection', (reason) => {
     console.error('[server] Unhandled promise rejection:', reason);
 });
@@ -2959,13 +2760,9 @@ if (require.main === module) {
     const server = app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
-    // Railway can keep connections open between requests; keep ours open a bit
-    // longer than its proxy so it never reuses a socket we just closed.
     server.keepAliveTimeout = 65 * 1000;
     server.headersTimeout = 66 * 1000;
 
-    // On redeploy Railway sends SIGTERM: finish in-flight requests, then close
-    // the database pool, instead of dropping requests mid-way.
     let shuttingDown = false;
     const shutdown = (signal) => {
         if (shuttingDown) return;
@@ -2981,5 +2778,4 @@ if (require.main === module) {
     process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-// Export the app for Vercel
 module.exports = app;

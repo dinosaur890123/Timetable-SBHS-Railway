@@ -10,8 +10,6 @@ const ExternalLink = ({ href = NOTEFLOW_URL, className, children }) => (
     </a>
 );
 
-/* ---------- Small product glimpses, one per step ---------- */
-
 const NoteArt = () => (
     <div className="nf-art-note">
         <b>Cellular respiration</b>
@@ -44,7 +42,6 @@ const TestArt = ({ still }) => (
     </div>
 );
 
-// Revision blocks fill the days before Friday's exam.
 const PlanArt = () => (
     <div className="nf-art-plan">
         <div className="nf-art-week">
@@ -76,7 +73,6 @@ const ALSO = [
     ['Your data', 'Export to Markdown, Word or plain text in one click.']
 ];
 
-// Study lives in NoteFlow, a separate app. One screen says what it does and links out.
 const StudyView = () => {
     useNoteFlowFonts();
     const still = useReducedMotion();

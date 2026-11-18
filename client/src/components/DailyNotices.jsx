@@ -32,7 +32,6 @@ const NoticeItem = ({ notice, index }) => {
   const [overflows, setOverflows] = useState(false);
   const contentRef = useRef(null);
 
-  // Only offer "Show more" when the clamp is actually hiding text.
   useLayoutEffect(() => {
     const el = contentRef.current;
     if (!el || expanded) return;
@@ -90,7 +89,6 @@ const NoticeItem = ({ notice, index }) => {
 const DailyNotices = ({ notices, user }) => {
   useNoteFlowFonts();
   const baseNotices = notices?.notices || [];
-  // Meetings first; otherwise keep SBHS's order.
   const allNotices = useMemo(
     () => [...baseNotices].sort((a, b) => (b.isMeeting || 0) - (a.isMeeting || 0)),
     [baseNotices]

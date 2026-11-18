@@ -22,8 +22,6 @@ export const VIEW_LABELS = {
     admin: 'Admin'
 };
 
-// Canvas mark swaps between the mono and LMS variants on row hover. The mono
-// mark is masked so it inherits the row's icon colour like the lucide icons.
 const monoMask = {
     WebkitMaskImage: "url('/canvas-mono.svg')",
     maskImage: "url('/canvas-mono.svg')",
@@ -42,7 +40,6 @@ const CanvasIcon = ({ size = 16, className = '' }) => (
     </span>
 );
 
-// External school sites shown alongside the School pages.
 const QUICK_LINKS = [
     { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
     { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' }
@@ -96,7 +93,6 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
 
-    // Check if nav item is active
     const isItemActive = (itemId) => {
         if (itemId === 'home') {
             return currentView === 'home';
@@ -276,7 +272,6 @@ export const ModernTopbar = ({
     );
 };
 
-// Floating dock for small screens (Aceternity-style), with "More" opening the command palette.
 export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = [] }) => {
     const items = [
         { id: 'home', icon: Home, label: 'Home' },
@@ -471,24 +466,18 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
     );
 };
 
-// Builds the palette's command list from app-level actions.
 export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hiddenPages = [] }) => {
-    // Quick actions for mobile (awards, calendar, portal, canvas)
     const quickActions = [
         { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
         { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
         { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
     ].filter(action => {
-        // Filter out if the corresponding page is hidden
         if (action.id === 'quick-awards') return !hiddenPages.includes('awards');
         if (action.id === 'quick-calendar') return !hiddenPages.includes('calendar');
-        return true; // portal and canvas are external links, not pages
+        return true;
     });
 
-    // Navigation commands
-    // Pages first, then external links, so each group heading appears once
-    // Filter out portal and canvas from the regular list since they're in quick actions
     const navCommands = buildNavGroups(user?.role === 'Admin', hiddenPages)
         .flatMap(g => g.items)
         .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas')
@@ -521,7 +510,6 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
         });
     }
 
-    // Action commands
     const actionCommands = [
         {
             id: 'toggle-theme',
@@ -543,7 +531,6 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
     return { commands: [...navCommands, ...actionCommands], quickActions };
 };
 
-// Shell-level behaviour: Ctrl/Cmd+K shortcut and pointer-tracked spotlight on dashboard tiles.
 export const useModernShellEffects = (setPaletteOpen) => {
     useEffect(() => {
         const handleKeyboardShortcut = (e) => {
@@ -563,7 +550,7 @@ export const useModernShellEffects = (setPaletteOpen) => {
 
         window.addEventListener('keydown', handleKeyboardShortcut);
         document.addEventListener('pointermove', handlePointerMove, { passive: true });
-        
+
         return () => {
             window.removeEventListener('keydown', handleKeyboardShortcut);
             document.removeEventListener('pointermove', handlePointerMove);

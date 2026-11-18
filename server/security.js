@@ -1,13 +1,9 @@
-// Security and performance helpers shared by the routes in index.js.
-
 const crypto = require('crypto');
 
 const isProduction = () => process.env.NODE_ENV === 'production'
     || Boolean(process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT)
     || process.env.VERCEL === '1';
 
-// BYPASS_AUTH signs every request in as an admin. It is for local development
-// only, so it is switched off (loudly) when the server runs in production.
 const guardBypassAuth = () => {
     if (process.env.BYPASS_AUTH === 'true' && isProduction()) {
         console.error('[security] BYPASS_AUTH=true is ignored in production. Remove it from the environment.');
@@ -15,8 +11,6 @@ const guardBypassAuth = () => {
     }
 };
 
-// Headers that cost nothing and close off clickjacking, MIME sniffing and
-// referrer leaks. (No CSP: the app loads scripts and styles from several hosts.)
 const securityHeaders = (req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -26,9 +20,6 @@ const securityHeaders = (req, res, next) => {
     next();
 };
 
-// CORS: the app's own origin, the configured origins, and requests with no
-// Origin (same-origin GETs, curl, mobile). Anything else gets no CORS headers,
-// so browsers won't let other sites read responses.
 const corsOptionsDelegate = (configuredOrigins) => (req, callback) => {
     const origin = req.headers.origin;
     let allowed = !origin || configuredOrigins.includes(origin);
@@ -47,7 +38,6 @@ const corsOptionsDelegate = (configuredOrigins) => (req, callback) => {
     });
 };
 
-// Sliding-window limiter kept in memory, per key.
 const makeLimiter = (limit, windowMs) => {
     const hits = new Map();
     return (key) => {
@@ -68,20 +58,16 @@ const makeLimiter = (limit, windowMs) => {
     };
 };
 
-// Express middleware: 429 once `keyFn(req)` has used up any of the limiters.
 const rateLimit = (limiters, keyFn, message) => (req, res, next) => {
     const key = keyFn(req);
     if (limiters.every(limit => limit(key))) return next();
     res.status(429).json({ error: 'rate_limited', message });
 };
 
-// Verifying a token means a round trip to SBHS. Results are cached for a few
-// minutes per token (by hash), and concurrent checks of the same token share
-// one request, so a page load that fires ten API calls verifies once.
 const createTokenVerifier = ({ fetchUserInfo, ttlMs = 5 * 60 * 1000, maxEntries = 10000 }) => {
-    const cache = new Map(); // token hash -> { user, at }
-    const inFlight = new Map(); // token hash -> Promise
-    const lastSeen = new Map(); // studentId -> ms
+    const cache = new Map();
+    const inFlight = new Map();
+    const lastSeen = new Map();
 
     const verify = async (token) => {
         if (!token) return null;
@@ -112,7 +98,6 @@ const createTokenVerifier = ({ fetchUserInfo, ttlMs = 5 * 60 * 1000, maxEntries 
         return pending;
     };
 
-    // Students who made an authenticated request in the last `windowMs`.
     const activeCount = (windowMs = 5 * 60 * 1000) => {
         const now = Date.now();
         let count = 0;

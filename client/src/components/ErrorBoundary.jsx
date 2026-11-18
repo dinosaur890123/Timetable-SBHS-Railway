@@ -1,9 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 
-// Last line of defence for a page that throws while rendering (a failed chunk
-// fetch, bad data, a component bug): shows a retry card instead of blanking the app.
-// `resetKey` should identify the page, so switching views starts with a clean slate.
 class ErrorBoundary extends React.Component {
     state = { error: null };
 

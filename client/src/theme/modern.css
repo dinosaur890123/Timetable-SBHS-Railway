@@ -1,13 +1,4 @@
-/* ==========================================================================
-   Modern interface (Synchron's only design language; see DESIGN.md)
-   <html data-ui="modern"> is set statically in index.html. Retunes the shared neutral scale,
-   typography, radii and surfaces so existing views pick up the look without
-   per-component forks. Shell-specific pieces (sidebar, dock, command palette)
-   live in components/modern/.
-   ========================================================================== */
-
 html[data-ui="modern"] {
-  /* Light: warm paper neutrals */
   --zinc-50: 249 249 247;
   --zinc-100: 243 243 240;
   --zinc-200: 233 233 229;
@@ -24,12 +15,10 @@ html[data-ui="modern"] {
   font-size: 16px;
   color-scheme: light;
 
-  /* Everything is drawn a little larger than its CSS sizes, for a softer, roomier feel. See "Scale" below. */
   --ui-scale: 1;
 }
 
 html[data-ui="modern"].dark {
-  /* Dark: layered graphite, never pure black */
   --black: 15 15 18;
   --zinc-950: 21 21 25;
   --zinc-900: 28 28 33;
@@ -54,7 +43,6 @@ html[data-ui="modern"] body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- Typography: calmer weights and tighter display type ---------- */
 html[data-ui="modern"] .font-black { font-weight: 650; }
 html[data-ui="modern"] .font-extrabold { font-weight: 600; }
 html[data-ui="modern"] :is(h1, h2, h3).font-bold { font-weight: 600; }
@@ -63,7 +51,6 @@ html[data-ui="modern"] :is(.text-xl, .text-2xl) { letter-spacing: -0.02em; }
 html[data-ui="modern"] .tracking-widest { letter-spacing: 0.08em; }
 html[data-ui="modern"] h1 .underline.decoration-accent\/40 { text-decoration: none; }
 
-/* ---------- Radii ---------- */
 html[data-ui="modern"] :is(.border, .border-2):not([class*="rounded"]) {
   border-radius: 10px;
 }
@@ -77,7 +64,6 @@ html[data-ui="modern"] :is(.border, .border-2):is([class*="bg-white"], [class*="
   box-shadow: var(--m-shadow);
 }
 
-/* ---------- Form controls ---------- */
 html[data-ui="modern"] :is(input, textarea, select):not([data-bare]):focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px hsl(var(--color-accent) / 0.18);
@@ -88,7 +74,6 @@ html[data-ui="modern"] button:focus-visible {
   outline-offset: 2px;
 }
 
-/* ---------- Scrollbars ---------- */
 html[data-ui="modern"] * {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--m-line) / 0.14) transparent;
@@ -102,7 +87,6 @@ html[data-ui="modern"] .custom-scrollbar::-webkit-scrollbar-thumb {
   border-radius: 999px;
 }
 
-/* ---------- Dashboard tiles: spotlight + glowing edge on hover ---------- */
 html[data-ui="modern"] .relative-tile-wrapper > :first-child {
   transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 300ms;
 }
@@ -133,7 +117,6 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
   opacity: 1;
 }
 
-/* ---------- Shell helpers ---------- */
 .m-shadow {
   box-shadow: var(--m-shadow);
 }
@@ -141,7 +124,6 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
   box-shadow: var(--m-shadow-lg);
 }
 
-/* Dot grid + soft accent glow behind the page header, faded out with a mask */
 .m-dots {
   background-image:
     radial-gradient(600px circle at 50% -120px, hsl(var(--color-accent) / 0.07), transparent 70%),
@@ -151,8 +133,6 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
   mask-image: radial-gradient(ellipse 70% 100% at 50% 0%, #000 10%, transparent 70%);
 }
 
-/* ---------- Ambient light: the time of day, as a glow behind the app ---------- */
-/* Colours come from components/modern/AmbientLight.jsx and ease between keyframes of the day. */
 @property --ambient-a { syntax: '<color>'; inherits: false; initial-value: transparent; }
 @property --ambient-b { syntax: '<color>'; inherits: false; initial-value: transparent; }
 @property --ambient-c { syntax: '<color>'; inherits: false; initial-value: transparent; }
@@ -187,16 +167,12 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
 @keyframes ambient-drift-b { to { transform: translate3d(-12%, 10%, 0) scale(1.06); } }
 @keyframes ambient-drift-c { to { transform: translate3d(6%, 14%, 0) scale(1.14); } }
 
-/* ---------- Press physics ---------- */
-/* Anything you can press dips under your finger, then springs back slightly past rest.
-   Uses the individual `scale` property, so it composes with framer-motion's transforms. */
 html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):not(:disabled):not([data-no-press]) {
   --press-scale: .96;
   transition-property: scale, transform, translate, color, background-color, border-color, opacity, box-shadow, fill, stroke, text-decoration-color;
   transition-duration: 520ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms, 150ms;
   transition-timing-function: cubic-bezier(.34, 1.56, .64, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1), cubic-bezier(.4, 0, .2, 1);
 }
-/* Wide targets travel further for the same scale, so they dip less. */
 html[data-ui="modern"] :is(a[href], aside button, nav button, .press-soft) { --press-scale: .98; }
 html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):not(:disabled):not([data-no-press]):active {
   scale: var(--press-scale);
@@ -207,7 +183,6 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
 .period-stripe { animation: period-stripe 1.1s cubic-bezier(.34, 1.56, .64, 1) 1; transform-origin: left center; }
 @keyframes period-stripe { 0% { scale: 1 1; } 35% { scale: 2.2 1.06; } 100% { scale: 1 1; } }
 
-/* ---------- Subject-tinted card: the live class's colour, washed across its card ---------- */
 .subject-wash[data-tone] {
   background-image: linear-gradient(150deg, color-mix(in srgb, var(--subject) 14%, transparent), color-mix(in srgb, var(--subject) 4%, transparent) 70%);
   border-color: color-mix(in srgb, var(--subject-ink) 30%, rgb(var(--m-line) / var(--m-line-a)));
@@ -221,15 +196,10 @@ html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):no
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
-  /* Infinite loops at 0.001ms would strobe: hold the light still instead. */
   html[data-ui="modern"] .ambient__blob { animation: none !important; }
   html[data-ui="modern"] .period-stripe { animation: none !important; }
 }
 
-/* ---------- Scale ----------
-   One factor grows type, spacing and radii together, stepping up with the window so small laptops and phones
-   keep their room and big monitors don't look tiny. Each step needs the height as well as the width, so a wide
-   but short window stays compact. Full-height frames divide by it so they still exactly fill the window. */
 @media (min-width: 1280px) and (min-height: 760px) { html[data-ui="modern"] { --ui-scale: 1.04; } }
 @media (min-width: 1440px) and (min-height: 820px) { html[data-ui="modern"] { --ui-scale: 1.08; } }
 @media (min-width: 1680px) and (min-height: 940px) { html[data-ui="modern"] { --ui-scale: 1.14; } }
@@ -244,14 +214,8 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   html[data-ui="modern"] .md\:min-h-\[calc\(100dvh-1rem\)\] { min-height: calc(100dvh / var(--ui-scale) - 1rem); }
 }
 
-/* ---------- Prevent time wrapping ----------
-   Keep 12-hour times (e.g., "9:00 am") on a single line to avoid ugly wrapping. */
 .tabular-nums { white-space: nowrap; }
 
-/* ---------- Ambient light on phones ----------
-   Below md the main panel fills the whole screen, so the page glow is hidden and
-   the panel glow's blobs sit mostly above the viewport behind the blurred topbar.
-   Drop the blobs into view, stretch the wash down the screen and lift it a touch. */
 @media (max-width: 767px) {
   .ambient { opacity: .5; }
   .dark .ambient { opacity: .32; }

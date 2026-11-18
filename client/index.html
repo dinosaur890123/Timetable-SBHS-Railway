@@ -37,10 +37,8 @@
       "description": "Synchron is an offline-enabled, installable all-in-one app for SBHS. It is a hub to access your timetable, calendar, Clipboard and awards as well as Canvas links."
     }
     </script>
-    <!-- Production -->
     <link href="https://pub-cea38733e1c8419caa7f81d6a2b2ec08.r2.dev/c5854aac-eb00-4f89-9fdc-bcb33ebfae1f/generated/favicon-32x32.png" rel="shortcut icon" type="image/x-icon">
     <link href="https://pub-cea38733e1c8419caa7f81d6a2b2ec08.r2.dev/c5854aac-eb00-4f89-9fdc-bcb33ebfae1f/generated/apple-touch-icon.png" rel="apple-touch-icon">
-    <!-- Full kit (keep these files too) -->
     <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
     <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
@@ -59,15 +57,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16-light.png" media="(prefers-color-scheme: light)">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16-dark.png" media="(prefers-color-scheme: dark)">
-    <!-- New logo; App.jsx disables it in atom mode so the PNG icon set takes over.
-         Single off-white variant — the mark carries its own background, so it
-         reads on light and dark browser chrome alike. -->
     <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-ring-warm-icon.png">
     <script>
-      // Apply the saved favicon/icon choice before first paint. 'default' keeps only
-      // the app icon link active and points every icon asset at the new-logo set;
-      // 'atom' mutes it and points them at the atom-* set instead. Original media
-      // attributes are preserved in dataset.favMedia for restore.
       try {
         var atom = localStorage.getItem('favicon_type') === 'atom';
         var ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'favicon', 'icon-', 'manifest.json'];
@@ -102,7 +93,6 @@
       } catch (e) {}
     </script>
     <script>
-      // Capture beforeinstallprompt as early as possible so it is not missed before React mounts
       window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault();
         window.__deferredPWAInstallPrompt = e;
@@ -117,27 +107,15 @@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#F1F1EE">
-    <!-- iOS PWA meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Synchron">
-    <!-- Windows/Edge PWA -->
     <meta name="msapplication-config" content="/browserconfig.xml">
-    <!-- Staging (Use server-side logic to switch) -->
-    <!-- <link rel="icon" href="/staging-favicon.ico"> -->
-    <!-- <link rel="icon" type="image/png" sizes="32x32" href="/staging-favicon.png"> -->
-    <!-- <link rel="manifest" href="/staging-manifest.json"> -->
-    <!-- Development (Use server-side logic to switch) -->
-    <!-- <link rel="icon" href="/dev-favicon.ico"> -->
-    <!-- <link rel="icon" type="image/png" sizes="32x32" href="/dev-favicon.png"> -->
-    <!-- <link rel="manifest" href="/dev-manifest.json"> -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/seo-shell.css">
     <script>
-      // Signed-out visitors always get the dark landing page; signed-in visitors keep
-      // their saved colour mode preference.
       try {
         var hasSession = !!(localStorage.getItem('sbhs_access_token') || localStorage.getItem('sbhs_refresh_token') || localStorage.getItem('cached_user'));
         if (!hasSession || (localStorage.getItem('theme') || 'light') === 'dark') document.documentElement.classList.add('dark');
@@ -145,18 +123,15 @@
     </script>
   </head>
   <body class="bg-m-page text-zinc-900 dark:text-zinc-100">
-    <!-- Prerendered signed-out landing shell. Mirrors LandingPage.jsx so crawlers and
-         no-JS visitors get real content; SeoShellCleanup removes it after React mounts.
-         Keep this copy in sync with the component. -->
     <div id="seo-shell" class="min-h-[100dvh] bg-m-page md:p-2 text-zinc-900 dark:text-zinc-100">
-      <div class="relative isolate flex h-[100dvh] md:h-[calc(100dvh-1rem)] flex-col [overflow:clip] bg-m-panel md:rounded-2xl md:border border-m-line">
+      <div class="relative isolate flex min-h-[100dvh] md:min-h-[calc(100dvh-1rem)] flex-col overflow-hidden bg-m-panel md:rounded-2xl md:border border-m-line">
         <div aria-hidden="true" class="ambient ambient--panel" style="position: fixed; --ambient-a:#7cc8ff; --ambient-b:#8fe8c8; --ambient-c:#ffe08a;">
           <span class="ambient__blob ambient__blob--a"></span>
           <span class="ambient__blob ambient__blob--b"></span>
           <span class="ambient__blob ambient__blob--c"></span>
         </div>
         <header class="relative z-30 border-b border-m-line bg-m-panel/75 backdrop-blur-xl">
-          <div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
+          <div class="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5 sm:px-8">
             <a href="/" class="flex min-w-0 items-center gap-2.5" aria-label="Synchron home">
               <span class="relative w-7 h-7 shrink-0">
                 <img src="/synchron-ring-warm-vector.svg" alt="" class="block w-full h-full rounded-lg" />
@@ -164,276 +139,65 @@
               </span>
               <span class="whitespace-nowrap text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
             </a>
-            <nav class="hidden items-center gap-4 sm:flex sm:gap-5" aria-label="Landing">
-              <a href="#whats-inside" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+            <nav class="flex items-center gap-4" aria-label="Landing">
               <a href="/privacy" class="text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
             </nav>
           </div>
         </header>
 
-        <div aria-hidden="true" class="pointer-events-none absolute -z-10 inset-x-0 top-14 h-[28rem] m-dots"></div>
-
-        <main class="flex-1 min-h-0 overflow-y-auto">
-          <section class="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 pt-14 pb-16 sm:px-8 md:pt-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 lg:pb-24">
-            <div>
-              <h1 class="text-[2.2rem] sm:text-6xl font-semibold leading-[1.02] tracking-[-0.035em] text-zinc-900 dark:text-white">
-                Your timetable,<br />
-                <span class="text-accent">live.</span>
-              </h1>
-              <p class="mt-6 max-w-md text-base sm:text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                A quick, one-stop app for your day. By students, for students at Sydney Boys High School.
-              </p>
-              <div class="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
-                <a href="/" class="group inline-flex h-11 items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-5 text-sm font-medium text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
-                  Sign in with SBHS
-                </a>
-              </div>
-              <p class="mt-6 max-w-sm text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Your browser may ask for local network access when you sign in. Choose Allow so Synchron can sync.
-              </p>
+        <main class="flex-1 flex items-center">
+          <div class="mx-auto w-full max-w-xl px-5 py-12 sm:px-8">
+            <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+              Sydney Boys High School
             </div>
-
-            <div class="relative rounded-2xl border border-m-line bg-m-panel m-shadow-lg overflow-hidden" aria-label="Preview of the Synchron home page">
-              <div class="flex items-center justify-between gap-3 h-11 px-4 border-b border-m-line">
-                <div class="flex items-center gap-3 min-w-0">
-                  <span class="text-[15px] font-medium tracking-tight text-zinc-900 dark:text-white truncate">My Synchron</span>
-                  <span class="hidden sm:flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
-                    <span class="px-2 py-0.5 text-[11px] font-medium rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm">Daily</span>
-                    <span class="px-2 py-0.5 text-[11px] font-medium rounded-md text-zinc-500 dark:text-zinc-400">Cycle</span>
-                  </span>
-                </div>
-                <span class="flex items-center gap-1.5 text-[11px] text-zinc-400 shrink-0">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Synced
-                </span>
-              </div>
-
-              <div class="relative isolate p-4 sm:p-5">
-                <div aria-hidden="true" class="ambient ambient--panel" style="--ambient-a:#7cc8ff; --ambient-b:#8fe8c8; --ambient-c:#ffe08a;">
-                  <span class="ambient__blob ambient__blob--a"></span>
-                  <span class="ambient__blob ambient__blob--b"></span>
-                  <span class="ambient__blob ambient__blob--c"></span>
-                </div>
-                <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0 h-40 m-dots"></div>
-
-                <header class="relative mb-6">
-                  <h1 class="text-[26px] sm:text-[30px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
-                    Good Morning, <span class="text-accent">Sam</span>
-                  </h1>
-                  <p class="mt-1.5 text-[15px] text-zinc-500 dark:text-zinc-400">Today is TueA · 4 classes</p>
-                </header>
-
-                <div class="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
-                  <div class="sm:order-2">
-                    <section class="rounded-2xl border border-m-line bg-m-card m-shadow p-3 sm:p-4">
-                      <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-                        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Now · P2</span>
-                        <span class="text-[12px] text-zinc-400 tabular-nums">5h 48m left today</span>
-                      </div>
-                      <div class="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white truncate">Physics</div>
-                      <div class="mt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
-                        <span class="tabular-nums shrink-0">10:05–11:05</span>
-                        <span class="inline-flex items-center gap-1 shrink-0">307</span>
-                        <span class="inline-flex items-center gap-1 min-w-0"><span class="truncate">Mr Hall</span></span>
-                      </div>
-                      <div class="mt-2 sm:mt-4">
-                        <div class="flex items-baseline gap-1.5 sm:gap-2">
-                          <span class="text-[26px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">24:13</span>
-                          <span class="text-xs sm:text-[13px] text-zinc-500">left</span>
-                        </div>
-                      </div>
-                      <div class="mt-2 sm:mt-4 h-1 rounded-full bg-zinc-900/[0.06] dark:bg-white/[0.07] overflow-hidden">
-                        <div class="h-full rounded-full bg-accent" style="width: 60%"></div>
-                      </div>
-                      <div class="mt-3 pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
-                        <span class="shrink-0">→</span>
-                        <span class="shrink-0">Next</span>
-                        <span class="font-medium text-zinc-800 dark:text-zinc-200 truncate">Recess</span>
-                        <span class="ml-auto shrink-0 tabular-nums">11:05</span>
-                      </div>
-                    </section>
-                  </div>
-
-                  <ol class="sm:order-1 -mx-3 space-y-0.5" aria-label="Example timetable">
-                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
-                      <div class="relative flex items-center gap-4 px-3 py-3 opacity-50">
-                        <div class="w-11 shrink-0 text-right leading-tight">
-                          <div class="text-[13px] tabular-nums text-zinc-500 dark:text-zinc-400">9:00</div>
-                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P1</div>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">English</div>
-                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            <span class="truncate">Ms Reid</span>
-                          </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                          <div class="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">203</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] bg-zinc-900/[0.035] dark:bg-white/[0.045]">
-                      <div class="relative flex items-center gap-4 px-3 py-3">
-                        <span class="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-accent"></span>
-                        <div class="w-11 shrink-0 text-right leading-tight">
-                          <div class="text-[13px] tabular-nums font-medium text-zinc-900 dark:text-white">10:05</div>
-                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P2</div>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Physics</div>
-                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            <span class="shrink-0 font-medium text-accent">Now</span>
-                            <span class="truncate rounded-md px-1.5 py-0.5 change-highlight">Mr Hall</span>
-                          </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                          <div class="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">307</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li class="px-3 py-1.5">
-                      <div class="flex items-center gap-4">
-                        <span class="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">11:05</span>
-                        <span class="text-[12px] text-zinc-400 dark:text-zinc-500">Recess</span>
-                        <span class="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]"></span>
-                        <span class="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-600">17 min</span>
-                      </div>
-                    </li>
-                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
-                      <div class="relative flex items-center gap-4 px-3 py-3">
-                        <div class="w-11 shrink-0 text-right leading-tight">
-                          <div class="text-[13px] tabular-nums text-zinc-500 dark:text-zinc-400">11:25</div>
-                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P3</div>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Design &amp; Technology</div>
-                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            <span class="truncate">Mr Gray</span>
-                          </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                          <div class="text-[15px] font-medium tabular-nums rounded-md px-1.5 py-0.5 change-highlight">502</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
-                      <div class="relative flex items-center gap-4 px-3 py-3">
-                        <div class="w-11 shrink-0 text-right leading-tight">
-                          <div class="text-[13px] tabular-nums text-zinc-500 dark:text-zinc-400">12:30</div>
-                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P4</div>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Mathematics Ext. 2</div>
-                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            <span class="truncate">Mr Jones</span>
-                          </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                          <div class="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">105</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li class="px-3 py-1.5">
-                      <div class="flex items-center gap-4">
-                        <span class="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">13:30</span>
-                        <span class="text-[12px] text-zinc-400 dark:text-zinc-500">Lunch</span>
-                        <span class="flex-1 h-px bg-zinc-900/[0.06] dark:bg-white/[0.06]"></span>
-                        <span class="text-[12px] tabular-nums text-zinc-400 dark:text-zinc-600">37 min</span>
-                      </div>
-                    </li>
-                    <li class="rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06]">
-                      <div class="relative flex items-center gap-4 px-3 py-3">
-                        <div class="w-11 shrink-0 text-right leading-tight">
-                          <div class="text-[13px] tabular-nums text-zinc-500 dark:text-zinc-400">14:10</div>
-                          <div class="mt-0.5 font-mono text-[11px] text-zinc-400 dark:text-zinc-500">P5</div>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">History</div>
-                          <div class="mt-0.5 flex items-center gap-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
-                            <span class="truncate">Mr Smith</span>
-                          </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                          <div class="text-[15px] font-medium tabular-nums text-zinc-900 dark:text-zinc-50">105</div>
-                        </div>
-                      </div>
-                    </li>
-                    <li class="flex items-center gap-4 px-3 pt-3">
-                      <span class="w-11 shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">15:10</span>
-                      <span class="text-[12px] text-zinc-400 dark:text-zinc-500">End of day</span>
-                    </li>
-                  </ol>
-                </div>
-              </div>
+            <h1 class="mt-3 text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-zinc-900 dark:text-white">
+              Synchron
+            </h1>
+            <p class="mt-3 text-sm sm:text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Your timetable, daily notices, calendar, Clipboard sessions, awards, and Canvas links in one place.
+            </p>
+            <div class="mt-7 flex flex-wrap items-center gap-4">
+              <a href="/" class="inline-flex h-10 items-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-4 text-sm font-medium text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
+                Sign in with SBHS
+              </a>
             </div>
-          </section>
+            <p class="mt-3 text-xs leading-relaxed text-zinc-500">
+              If your browser prompts for local network access on sign-in, allow it so Synchron can sync.
+            </p>
 
-          <section id="whats-inside" class="border-t border-m-line scroll-mt-16">
-            <div class="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 md:py-20">
-              <div class="grid gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] md:gap-16">
-                <div>
-                  <h2 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">What’s inside</h2>
-                  <p class="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                    The same pages you’ll see in the sidebar once you sign in.
-                  </p>
-                </div>
-                <div class="grid gap-10 sm:grid-cols-2">
-                  <div>
-                    <h3 class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">Workspace</h3>
-                    <ul class="divide-y divide-black/[0.06] dark:divide-white/[0.06] border-y border-m-line">
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">My Synchron</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Today’s timetable with substitutes and room moves already applied, and a countdown to the bell.</p>
-                      </li>
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Calendar</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Term dates, events and which week of the cycle you’re in.</p>
-                      </li>
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Notices</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">The daily notices, readable on a phone.</p>
-                      </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-400">School</h3>
-                    <ul class="divide-y divide-black/[0.06] dark:divide-white/[0.06] border-y border-m-line">
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Awards</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Your award scheme points and badges.</p>
-                      </li>
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Clipboard</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Sport and training sessions from Clipboard.</p>
-                      </li>
-                      <li class="py-3.5">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white">Study</div>
-                        <p class="mt-0.5 text-base sm:text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">NoteFlow, the all-in-one study app with an AI tutor.</p>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+            <ul class="mt-10 grid gap-x-8 gap-y-5 border-t border-m-line pt-7 sm:grid-cols-2">
+              <li>
+                <div class="text-[13px] font-medium text-zinc-900 dark:text-zinc-200">Timetable</div>
+                <p class="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-500">Daily periods, bell countdown, room moves, and substitute teachers.</p>
+              </li>
+              <li>
+                <div class="text-[13px] font-medium text-zinc-900 dark:text-zinc-200">Notices &amp; Calendar</div>
+                <p class="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-500">Daily notices filtered by year group, term dates, and cycle weeks.</p>
+              </li>
+              <li>
+                <div class="text-[13px] font-medium text-zinc-900 dark:text-zinc-200">Clipboard &amp; Awards</div>
+                <p class="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-500">Sport sessions, venues, and award scheme progress.</p>
+              </li>
+              <li>
+                <div class="text-[13px] font-medium text-zinc-900 dark:text-zinc-200">Offline support</div>
+                <p class="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-500">Caches your schedule on this device and installs as an app.</p>
+              </li>
+            </ul>
+          </div>
+        </main>
 
         <footer class="border-t border-m-line">
-          <div class="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <div class="mx-auto flex w-full max-w-3xl flex-col gap-2 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <span class="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">© Synchron 2026</span>
-            <nav class="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
-              <a href="#whats-inside" class="hover:text-zinc-900 dark:hover:text-white transition-colors">What’s inside</a>
+            <nav class="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400" aria-label="Footer">
               <a href="/privacy" class="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</a>
               <a href="https://student.sbhs.net.au" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-white transition-colors">SBHS portal</a>
             </nav>
           </div>
         </footer>
-        </main>
       </div>
     </div>
     <script>
-      // Signed-in reloads and OAuth returns shouldn't flash the public landing shell.
-      // Drop it before first paint when a session exists or we're mid-sign-in; React
-      // mounts into #root straight away. Signed-out visitors keep the shell for crawlers.
       try {
         var hasSession = !!(localStorage.getItem('sbhs_access_token') || localStorage.getItem('sbhs_refresh_token') || localStorage.getItem('cached_user'));
         var isAuthReturn = !!new URLSearchParams(window.location.search).get('code');

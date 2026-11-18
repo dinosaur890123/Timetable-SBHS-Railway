@@ -3,10 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import CanvasLinkSuggestionToast from './CanvasLinkSuggestionToast';
 
-// Waits a moment after the app loads, and between questions, so the prompt
-// doesn't pop up mid-glance.
 const SHOW_DELAY_MS = 2500;
-// At most this many questions per visit.
 const MAX_PER_SESSION = 3;
 
 const CanvasLinkSuggestions = ({ disabled = false }) => {

@@ -145,7 +145,6 @@ const FeedbackView = ({ onBack }) => {
         </button>
         {tabs}
 
-        {/* Hero */}
         <div className="space-y-1">
             <div className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400 mb-2">
                 <CheckCircle2 size={20} strokeWidth={1.6} />
@@ -199,7 +198,6 @@ const FeedbackView = ({ onBack }) => {
       </button>
       {tabs}
 
-      {/* Hero */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-accent mb-2">
             <MessageSquare size={20} strokeWidth={1.6} />

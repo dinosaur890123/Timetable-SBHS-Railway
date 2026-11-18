@@ -91,10 +91,10 @@ const LinkForm = ({ initial, canvasHost, saving, error, onSave, onCancel, submit
 
 const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
   const { links, community, classes, canvasHost, status, saveLink, removeLink, removeAllLinks, vote } = useCanvasLinks();
-  const [editing, setEditing] = useState(null); // class key being edited
-  const [fix, setFix] = useState(null); // { key, url } — duplicated link being corrected
-  const [busy, setBusy] = useState(null); // class key with a request in flight
-  const [errors, setErrors] = useState({}); // class key -> message
+  const [editing, setEditing] = useState(null);
+  const [fix, setFix] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [errors, setErrors] = useState({});
   const [toast, setToast] = useState('');
   const toastTimer = useRef(null);
 
@@ -148,8 +148,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
     showToast(message);
   });
 
-  // Opens the link form seeded with the duplicated link's URL; saving it
-  // shares the corrected course and the server drops the faulty duplicate.
   const handleFix = (row, item) => {
     setFix({ key: row.key, url: item.canvasUrl });
     setEditing(null);
@@ -165,7 +163,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         <ArrowLeft size={14} /> Back to Settings
       </button>
 
-      {/* Hero */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-accent mb-2">
             <LinkIcon size={20} strokeWidth={1.6} />
@@ -202,7 +199,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         <Section icon={LinkIcon} title="Your classes">
           <ul className="divide-y divide-zinc-900/[0.16] dark:divide-white/[0.16] -mx-5 -my-4">
             {rows.map((row) => {
-              // Use the canonical key (year+shortTitle) for all lookups and display.
               const canonicalKey = row.key;
               const personal = links[canonicalKey];
               const entry = community[canonicalKey];
@@ -214,7 +210,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
               const isFixing = fix?.key === canonicalKey;
               const isBusy = busy === canonicalKey;
               const error = errors[canonicalKey];
-              // Track which link is active: 'community' or 'personal'
               const [activeSource, setActiveSource] = useState(shared ? 'community' : personal ? 'personal' : null);
 
               return (
@@ -284,7 +279,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {/* Source toggle when both exist */}
                       {personal && shared && (
                         <div className="flex gap-2">
                           <button
@@ -312,7 +306,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                         </div>
                       )}
 
-                      {/* Community link */}
                       {shared && (activeSource === 'community' || !personal) && (
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2 text-[12px] text-violet-600 dark:text-violet-400 font-semibold">
@@ -353,7 +346,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
                         </div>
                       )}
 
-                      {/* Personal link */}
                       {personal && (activeSource === 'personal' || !shared) && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-[12px] text-blue-600 dark:text-blue-400 font-semibold">
@@ -398,7 +390,6 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
       )}
       {errors['clear-all'] && <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{errors['clear-all']}</p>}
 
-      {/* Footer */}
       <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
         Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
       </p>

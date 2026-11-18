@@ -35,14 +35,11 @@ function getPool() {
     connectionString,
     ssl,
     max: Number.isFinite(max) ? max : 5,
-    // pg waits forever by default, so an unreachable database or an exhausted
-    // pool turns into a request that never responds.
     connectionTimeoutMillis: Number.parseInt(process.env.PG_CONNECT_TIMEOUT_MS || '10000', 10),
     idleTimeoutMillis: 30000,
     statement_timeout: Number.parseInt(process.env.PG_STATEMENT_TIMEOUT_MS || '15000', 10),
   });
 
-  // An unhandled pool error event crashes the process; log it instead.
   pool.on('error', (err) => {
     console.error('[db] Idle client error:', err?.message || err);
   });
@@ -66,8 +63,6 @@ async function ensureSchema() {
     try {
       await activePool.query(sql);
     } catch (err) {
-      // Drop the cached promise so a transient failure doesn't poison every
-      // later query for the lifetime of the process.
       schemaEnsurePromise = undefined;
       throw err;
     }
@@ -87,8 +82,6 @@ async function query(text, params) {
   return activePool.query(text, params);
 }
 
-// Runs fn(client) inside a transaction: committed if it resolves, rolled back if
-// it throws.
 async function withTransaction(fn) {
   const activePool = getPool();
   if (!activePool) {
@@ -109,7 +102,6 @@ async function withTransaction(fn) {
   }
 }
 
-// Closes the pool (used on shutdown).
 async function close() {
   if (!pool) return;
   const closing = pool;

@@ -52,7 +52,7 @@ const GlanceRow = ({ what, where, when, canDelete }) => (
 
 const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
     const [deletionRequest, setDeletionRequest] = useState(null);
-    const [requestState, setRequestState] = useState('idle'); // idle | sending | error
+    const [requestState, setRequestState] = useState('idle');
     const [requestError, setRequestError] = useState('');
 
     useEffect(() => {
@@ -60,7 +60,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
         let cancelled = false;
         fetchDeletionRequest()
             .then(data => { if (!cancelled) setDeletionRequest(data?.request || null); })
-            .catch(() => { /* privacy page still works if the request can't be loaded */ });
+            .catch(() => {});
         return () => { cancelled = true; };
     }, [publicOnly]);
 
@@ -92,7 +92,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
     return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-        {/* Back */}
         {publicOnly ? (
             <a
                 href="/"
@@ -109,7 +108,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </button>
         )}
 
-        {/* Hero */}
         <div className="space-y-1">
             <div className="flex items-center gap-2 text-accent mb-2">
                 <Shield size={20} strokeWidth={1.6} />
@@ -120,7 +118,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </p>
         </div>
 
-        {/* SBHS API data */}
         <Section icon={Server} title="SBHS API data — timetable, notices, awards &amp; attendance">
             <Item label="Who fetches it">
                 Your browser fetches timetable, notice, award, and attendance data directly from{' '}
@@ -142,7 +139,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
         </Section>
 
-        {/* Auth tokens */}
         <Section icon={Lock} title="Authentication tokens">
             <Item label="Access token">
                 Your SBHS access token is stored only in <strong className="font-medium text-zinc-800 dark:text-zinc-200">localStorage</strong>.
@@ -159,7 +155,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
         </Section>
 
-        {/* What the server stores */}
         <Section icon={Database} title="What the Synchron server stores">
             <Item label="Your account record">
                 When you first sign in, Synchron creates an account row containing your{' '}
@@ -185,7 +180,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
         </Section>
 
-        {/* Data-at-a-glance table */}
         <Section icon={Eye} title="Data at a glance">
             <div className="overflow-x-auto">
                 <table className="w-full text-left min-w-[620px]">
@@ -238,7 +232,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </div>
         </Section>
 
-        {/* Deleting your data */}
         <Section icon={Trash2} title="Deleting your data">
             <Item label="Signing out">
                 Signs you out and immediately wipes your tokens, timetable cache, and all offline data from this device.
@@ -253,7 +246,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
         </Section>
 
-        {/* Request deletion */}
         {!publicOnly && (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] dark:bg-red-500/[0.06] p-5 sm:p-6">
             <div className="flex items-start gap-3">
@@ -292,7 +284,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
         </div>
         )}
 
-        {/* Offline / PWA */}
         <Section icon={Smartphone} title="Offline &amp; PWA usage">
             <Item>
                 If you install Synchron as a PWA, your timetable and other SBHS data are cached on your device so the app
@@ -301,7 +292,6 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             </Item>
         </Section>
 
-        {/* Footer */}
         <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
             © Synchron {new Date().getFullYear()} · BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
         </p>
