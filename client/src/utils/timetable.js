@@ -23,14 +23,14 @@ const variationMatchesPeriod = (variation, periodInfo) => {
 export const isBreakBell = (bellId, periodInfo = null) => {
     if (!bellId) return false;
     const id = String(bellId).toUpperCase().trim();
-    if (id === 'RC') return true;
-    if (periodInfo && periodInfo.title) {
-        const title = String(periodInfo.title).toLowerCase();
-        if (title.includes('lunch') || title.includes('recess') || title.includes('roll call')) return true;
-        if (id === "0" && title === "period 0") return true;
-        return false;
-    }
-    return id === 'R' || id === 'L';
+    if (['RC', 'R', 'L', 'RL'].includes(id)) return true;
+
+    const titles = [periodInfo?.title, periodInfo?.bellDisplay]
+        .filter(Boolean)
+        .map(title => String(title).toLowerCase());
+    if (titles.some(title => title.includes('lunch') || title.includes('recess') || title.includes('roll call'))) return true;
+    if (id === '0' && titles.includes('period 0')) return true;
+    return false;
 };
 
 export const isSportOrScripturePeriod = (periodInfo) => {

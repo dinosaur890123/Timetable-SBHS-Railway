@@ -79,8 +79,9 @@ const buildSlots = (timetableData) => {
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };
         const originalTitle = period.title;
-        const isRealBreak = isBreakBell(bellId, period);
-        const isBreak = isBreakStylePeriod(bellId, period);
+        const breakInfo = { ...period, bellDisplay: bell.bellDisplay };
+        const isRealBreak = isBreakBell(bellId, breakInfo);
+        const isBreak = isBreakStylePeriod(bellId, breakInfo);
 
         if (isRealBreak) {
             period = { ...period, title: period.title || bell.bellDisplay };

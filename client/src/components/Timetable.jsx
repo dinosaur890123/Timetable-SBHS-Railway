@@ -224,7 +224,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
 
             let periodInfo = periods?.[bellId] || { title: bell.bellDisplay };
             const originalTitle = periodInfo.title;
-            const isRealBreak = isBreakBell(bellId, periodInfo);
+            const breakInfo = { ...periodInfo, bellDisplay: bell.bellDisplay };
+            const isRealBreak = isBreakBell(bellId, breakInfo);
 
             if (isRealBreak) {
                 periodInfo = { ...periodInfo, title: periodInfo.title || bell.bellDisplay };
@@ -247,7 +248,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
             const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells?.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
 
-            const isBreak = isBreakStylePeriod(bellId, periodInfo);
+            const isBreak = isBreakStylePeriod(bellId, breakInfo);
             if (isRealBreak && String(bellId) === '0') return null;
 
             const isSportOrScripture = !isRealBreak && isBreak;
@@ -360,7 +361,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
         const classPeriod = (dayNum, bellId) => {
             const periodInfo = cycleDays[dayNum]?.periods?.[bellId];
             if (!periodInfo) return null;
-            if (isBreakBell(bellId, periodInfo)) return null;
+            const bellDisplay = bells.find(bell => bell.bell === bellId)?.bellDisplay;
+            if (isBreakBell(bellId, { ...periodInfo, bellDisplay })) return null;
             if (bellId === "RC" || (periodInfo.title && String(periodInfo.title).toLowerCase().includes("roll call"))) return null;
             if (!periodInfo.title || periodInfo.title === 'Free Period' || periodInfo.title === '') return null;
             return periodInfo;
