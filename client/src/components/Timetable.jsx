@@ -37,19 +37,19 @@ const CycleCell = ({ classInfo, onSelect }) => {
             onClick={onSelect}
             title={name}
             {...(colour ? subjectInk(colour) : {})}
-            className={`press press-soft relative flex min-h-[3rem] items-center rounded-xl border py-2 ${colour ? 'pl-3.5 pr-2.5 sm:pr-3' : 'px-2.5 sm:px-3'} text-left cursor-pointer transition-all duration-200 ${
+            className={`press press-soft relative flex min-h-[3rem] flex-col items-start justify-center rounded-xl border px-1.5 py-1 md:flex-row md:items-center md:py-2 ${colour ? 'md:pl-3.5 md:pr-2.5' : 'md:px-2.5'} text-left cursor-pointer transition-all duration-200 ${
                 isSelected
                     ? 'bg-accent/10 border-accent/40 shadow-sm'
                     : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
-            {colour && <span aria-hidden className="absolute left-[-1px] top-2 bottom-2 w-[3px] rounded-full subject-fill" />}
-            <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-tight text-zinc-900 dark:text-white">
+            {colour && <span aria-hidden className="absolute left-px top-1 bottom-1 w-[3px] rounded-full subject-fill md:left-[-1px] md:top-2 md:bottom-2" />}
+            <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
                 <span className="lg:hidden">{title}</span>
                 <span className="hidden lg:inline">{name || title}</span>
             </span>
             {room && (
-                <span className="ml-2 shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">{room}</span>
+                <span className="max-w-full truncate text-[9px] font-medium leading-tight tabular-nums text-zinc-500 dark:text-zinc-400 md:ml-2 md:shrink-0 md:text-[11px]">{room}</span>
             )}
         </div>
     );
@@ -445,11 +445,11 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                             )}
                             <div className={`rounded-2xl border bg-m-card overflow-hidden ${isCurrentWeek ? 'border-accent/40' : 'border-m-line'}`}>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full">
+                                    <table className="w-full table-fixed">
                                         <thead>
                                             <tr className="bg-m-panel border-b border-m-line">
                                                 {days.map(day => (
-                                                    <th key={day} className="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.1em]">
+                                                    <th key={day} className="px-0.5 py-2 sm:px-4 sm:py-3 text-center sm:text-left text-[10px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.06em] sm:tracking-[0.1em]">
                                                         {day.slice(0, 3)}
                                                     </th>
                                                 ))}
@@ -463,14 +463,14 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
 
                                                         if (!classInfo) {
                                                             return (
-                                                                <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                                <td key={dayNum} className="px-0.5 py-1 sm:px-2 sm:py-2">
                                                                     <div className={`min-h-[3rem] h-full rounded-xl border border-dashed border-zinc-900/[0.05] dark:border-white/[0.05] bg-zinc-900/[0.012] dark:bg-white/[0.012] transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
                                                                 </td>
                                                             );
                                                         }
 
                                                         return (
-                                                            <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
+                                                            <td key={dayNum} className="px-0.5 py-1 sm:px-2 sm:py-2">
                                                                 <CycleCell classInfo={classInfo} onSelect={() => setSelectedClass(prev => prev === classInfo.title ? null : classInfo.title)} />
                                                             </td>
                                                         );
