@@ -76,7 +76,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     };
 
     const content = (
-        <div className={`relative flex items-center gap-3 px-2.5 sm:px-3 py-2 ${dim}`}>
+        <div className={`relative flex items-center gap-3 px-2.5 sm:px-3 py-2 sm:py-3 ${dim}`}>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50" title={name || undefined}>
@@ -134,7 +134,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
             className={`group relative ml-[4rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent
                 ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045] hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.07]'
-                : 'hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025]'}`}
+                : 'bg-zinc-900/[0.018] dark:bg-white/[0.018] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035]'}`}
         >
             <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
             {colour ? (

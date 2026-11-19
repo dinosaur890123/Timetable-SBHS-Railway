@@ -277,7 +277,11 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
-        { id: 'notes', icon: GraduationCap, label: 'Study' }
+        ...(!hiddenPages.includes('notes')
+            ? [{ id: 'notes', icon: GraduationCap, label: 'Study' }]
+            : !hiddenPages.includes('awards')
+                ? [{ id: 'awards', icon: Award, label: 'Awards' }]
+                : [])
     ].filter(item => !hiddenPages.includes(item.id));
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
@@ -473,7 +477,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
         { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
     ].filter(action => {
-        if (action.id === 'quick-awards') return !hiddenPages.includes('awards');
+        if (action.id === 'quick-awards') return !hiddenPages.includes('awards') && hiddenPages.includes('notes');
         if (action.id === 'quick-calendar') return !hiddenPages.includes('calendar');
         return true;
     });
