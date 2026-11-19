@@ -26,7 +26,7 @@ const Eyebrow = ({ children, className = '' }) => (
 );
 
 const Card = ({ children, className = '' }) => (
-    <section className={`min-w-0 rounded-2xl border border-m-line bg-m-card p-5 ${className}`}>{children}</section>
+    <section className={`min-w-0 rounded-2xl border border-m-line bg-m-card p-3 sm:p-5 ${className}`}>{children}</section>
 );
 
 const CardTitle = ({ children, aside }) => (
@@ -116,10 +116,10 @@ const prizeProgress = (prize, nominations) => {
     return `${prize.name} at ${plural(prize.nominationsRequired, 'nomination')}`;
 };
 
-const PrizeBanner = ({ summary }) => {
+const PrizeBanner = ({ summary, className = '' }) => {
     const { nominationsAllTime, latestPrize, nextPrize, rollover } = summary;
     return (
-        <Card>
+        <Card className={className}>
             <CardTitle>Overview</CardTitle>
             <div className="flex flex-wrap gap-6">
                 <Stat
@@ -153,12 +153,12 @@ const StatusMark = ({ state }) => (
     </span>
 );
 
-const AreasCard = ({ summary }) => {
+const AreasCard = ({ summary, className = '' }) => {
     const { areas, areasNotStarted } = summary;
     if (areas.length === 0 && areasNotStarted.length === 0) return null;
 
     return (
-        <Card>
+        <Card className={className}>
             <CardTitle aside={areas.length > 0 ? `${areas.length} ${areas.length === 1 ? 'area' : 'areas'}` : null}>Progress</CardTitle>
             {areas.length > 0 ? (
                 <ul className="divide-y divide-m-line -my-1">
@@ -203,11 +203,11 @@ const AreasCard = ({ summary }) => {
     );
 };
 
-const PrizesCard = ({ summary }) => {
+const PrizesCard = ({ summary, className = '' }) => {
     const { prizeRows, nominationsAllTime, rollover } = summary;
     if (prizeRows.length === 0) return null;
     return (
-        <Card>
+        <Card className={className}>
             <CardTitle>Prizes</CardTitle>
             <ul className="space-y-0.5">
                 {prizeRows.map(p => (
@@ -231,12 +231,13 @@ const PrizesCard = ({ summary }) => {
     );
 };
 
-const NominationsCard = ({ summary }) => {
+const NominationsCard = ({ summary, className = '' }) => {
     const { nominationsByYear } = summary;
+    const currentYear = new Date().getFullYear();
     if (nominationsByYear.length === 0) return null;
     const total = nominationsByYear.reduce((sum, g) => sum + g.names.length, 0);
     return (
-        <Card>
+        <Card className={className}>
             <CardTitle aside={plural(total, 'nomination')}>Nominations</CardTitle>
             <ul className="divide-y divide-m-line">
                 {nominationsByYear.map(g => (
@@ -244,7 +245,7 @@ const NominationsCard = ({ summary }) => {
                         <span className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 pt-0.5">{g.year}</span>
                         <div className="flex-1 min-w-0 flex flex-wrap gap-1.5">
                             {g.names.map(name => (
-                                <span key={name} className="px-2 py-0.5 rounded-md bg-accent/20 text-[13px] text-zinc-900 dark:text-white">
+                                <span key={name} className={`px-2 py-0.5 rounded-md text-[13px] text-zinc-900 dark:text-white ${g.year === currentYear ? 'change-highlight' : 'bg-accent/20'}`}>
                                     {name}
                                 </span>
                             ))}
@@ -314,7 +315,7 @@ const YearTabs = ({ yearFilters, activeYear, onSelectYear }) => {
     );
 };
 
-const RecordCard = ({ summary }) => {
+const RecordCard = ({ summary, className = '' }) => {
     const { timeline } = summary;
     const [selectedYear, setSelectedYear] = useState(null);
     const [expanded, setExpanded] = useState(false);
@@ -348,7 +349,7 @@ const RecordCard = ({ summary }) => {
     }));
 
     return (
-        <Card>
+        <Card className={className}>
             <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>My record</CardTitle>
 
             {yearFilters.length > 1 && (
@@ -728,15 +729,15 @@ const AwardSchemeView = ({ user }) => {
             )}
 
             {view === 'overview' ? (
-                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]">
-                    <div className="space-y-4">
-                        <PrizeBanner summary={summary} />
-                        <NominationsCard summary={summary} />
-                        <RecordCard summary={summary} />
+                <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-4">
+                    <div className="contents lg:block lg:space-y-4">
+                        <PrizeBanner summary={summary} className="order-1 lg:order-none" />
+                        <NominationsCard summary={summary} className="order-4 lg:order-none" />
+                        <RecordCard summary={summary} className="order-3 lg:order-none" />
                     </div>
-                    <div className="space-y-4">
-                        <AreasCard summary={summary} />
-                        <PrizesCard summary={summary} />
+                    <div className="contents lg:block lg:space-y-4">
+                        <AreasCard summary={summary} className="order-2 lg:order-none" />
+                        <PrizesCard summary={summary} className="hidden lg:block" />
                     </div>
                 </div>
             ) : view === 'house' ? (

@@ -188,7 +188,7 @@ const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
 
 const RailLabel = ({ children, aside }) => (
     <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">{children}</span>
+        <span className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400">{children}</span>
         {aside}
     </div>
 );
@@ -197,7 +197,7 @@ const RailCard = ({ children, colour, phase }) => {
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
-            className={`relative overflow-hidden rounded-2xl border border-m-line bg-m-card m-shadow p-3 sm:p-4 transition-[border-color] duration-700 ${colour ? 'subject-wash' : ''}`}
+            className="relative rounded-xl border border-zinc-900/[0.07] dark:border-white/[0.08] bg-zinc-900/[0.015] dark:bg-white/[0.02] p-3 sm:p-4"
         >
             <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -283,7 +283,7 @@ const RollingText = ({ text }) => (
 
 const Countdown = ({ mins, caption }) => (
     <div className="flex items-baseline gap-1.5 sm:gap-2">
-        <span className="text-[26px] sm:text-[34px] leading-none font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-white">
+        <span className="text-[24px] sm:text-[30px] leading-none font-medium tracking-tight tabular-nums text-zinc-900 dark:text-white">
             <span className="sr-only">{formatCountdown(mins)}</span>
             <span aria-hidden><RollingText text={formatCountdown(mins)} /></span>
         </span>
