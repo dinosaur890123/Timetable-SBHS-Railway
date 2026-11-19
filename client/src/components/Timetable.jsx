@@ -558,7 +558,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             )}
             {viewMode === 'daily' ? (
                 <>
-                <ol className="-mx-3 space-y-[3px]">
+                <ol className="-mx-3 space-y-1">
                     {dayRows.map(({ kind, row: data, session, isPast }, i) => kind === 'session' ? (
                         <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={i} onOpen={setOpenSession} />
                     ) : (
