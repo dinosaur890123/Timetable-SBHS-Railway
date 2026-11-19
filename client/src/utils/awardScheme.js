@@ -228,9 +228,10 @@ export const summariseAwards = ({
             complete: !next
         };
     });
-    const started = (a) => a.points > 0 || a.earned > 0;
-    const areas = allAreas.filter(started).sort((a, b) => b.points - a.points || b.earned - a.earned);
-    const areasNotStarted = allAreas.filter(a => !started(a)).map(a => a.name);
+    const areas = allAreas
+        .filter(area => area.name !== 'Presentation Night & Co-Curricular Awards & Rollover Points')
+        .sort((a, b) => b.points - a.points || b.earned - a.earned || a.name.localeCompare(b.name));
+    const areasNotStarted = [];
 
     const nominationsAllTime = issued.filter(item => item.kind === 'nomination').length;
 

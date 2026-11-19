@@ -154,14 +154,13 @@ const StatusMark = ({ state }) => (
 );
 
 const AreasCard = ({ summary, className = '' }) => {
-    const { areas, areasNotStarted } = summary;
-    if (areas.length === 0 && areasNotStarted.length === 0) return null;
+    const { areas } = summary;
+    if (areas.length === 0) return null;
 
     return (
         <Card className={className}>
-            <CardTitle aside={areas.length > 0 ? `${areas.length} ${areas.length === 1 ? 'area' : 'areas'}` : null}>Progress</CardTitle>
-            {areas.length > 0 ? (
-                <ul className="divide-y divide-m-line -my-1">
+            <CardTitle>Progress</CardTitle>
+            <ul className="divide-y divide-m-line -my-1">
                     {areas.map(area => {
                         const next = area.next;
                         const base = area.basePoints || 0;
@@ -190,15 +189,7 @@ const AreasCard = ({ summary, className = '' }) => {
                             </li>
                         );
                     })}
-                </ul>
-            ) : (
-                <Empty>Points you earn will count towards nominations here.</Empty>
-            )}
-            {areasNotStarted.length > 0 && (
-                <p className="mt-3 pt-3 border-t border-m-line text-[12px] text-zinc-400 dark:text-zinc-500">
-                    Not started: {areasNotStarted.join(' · ')}
-                </p>
-            )}
+            </ul>
         </Card>
     );
 };
@@ -244,7 +235,7 @@ const NominationsCard = ({ summary, className = '' }) => {
                         <span className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500 pt-0.5">{g.year}</span>
                         <div className="flex-1 min-w-0 flex flex-wrap gap-1.5">
                             {g.names.map(name => (
-                                <span key={name} className={`px-2 py-0.5 rounded-md text-[13px] text-zinc-900 dark:text-white ${g.year === currentYear ? 'change-highlight' : 'bg-accent/20'}`}>
+                                <span key={name} className={`px-1 py-0.5 rounded-md text-[12px] text-zinc-900 dark:text-white ${g.year === currentYear ? 'change-highlight' : 'bg-accent/20'}`}>
                                     {name}
                                 </span>
                             ))}
@@ -349,7 +340,7 @@ const RecordCard = ({ summary, className = '' }) => {
 
     return (
         <Card className={className}>
-            <CardTitle aside={timeline.length > 0 ? plural(timeline.length, 'item') : null}>My record</CardTitle>
+            <CardTitle>My record</CardTitle>
 
             {yearFilters.length > 1 && (
                 <YearTabs
@@ -729,8 +720,8 @@ const AwardSchemeView = ({ user }) => {
                 <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-4">
                     <div className="contents lg:block lg:space-y-4">
                         <PrizeBanner summary={summary} className="order-1 lg:order-none" />
-                        <NominationsCard summary={summary} className="order-4 lg:order-none" />
-                        <RecordCard summary={summary} className="order-3 lg:order-none" />
+                        <NominationsCard summary={summary} className="order-3 lg:order-none" />
+                        <RecordCard summary={summary} className="order-4 lg:order-none" />
                     </div>
                     <div className="contents lg:block lg:space-y-4">
                         <AreasCard summary={summary} className="order-2 lg:order-none" />

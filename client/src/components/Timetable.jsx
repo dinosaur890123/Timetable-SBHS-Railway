@@ -125,11 +125,11 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-3 py-3 bg-zinc-900/[0.015] dark:bg-white/[0.02] border border-zinc-900/[0.07] dark:border-white/[0.08] rounded-xl"
+                    className="flex items-start gap-3 px-3 py-3 bg-blue-500/[0.06] dark:bg-blue-400/[0.08] border border-blue-500/[0.14] dark:border-blue-400/[0.16] rounded-xl"
                 >
-                    <Calendar size={17} className="text-zinc-400 shrink-0 mt-0.5" />
+                    <Calendar size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{publicHolidayEvent.title}</p>
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{publicHolidayEvent.title}</p>
                     </div>
                 </motion.div>
             );
@@ -138,11 +138,11 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 px-3 py-3 bg-zinc-900/[0.015] dark:bg-white/[0.02] border border-zinc-900/[0.07] dark:border-white/[0.08] rounded-xl"
+                    className="flex items-start gap-3 px-3 py-3 bg-blue-500/[0.06] dark:bg-blue-400/[0.08] border border-blue-500/[0.14] dark:border-blue-400/[0.16] rounded-xl"
                 >
-                    <AlertCircle size={17} className="text-zinc-400 shrink-0 mt-0.5" />
+                    <AlertCircle size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{devDayEvent.title}</p>
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{devDayEvent.title}</p>
                     </div>
                 </motion.div>
             );
@@ -510,11 +510,11 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="flex items-start gap-3 px-3 py-3 bg-zinc-900/[0.015] dark:bg-white/[0.02] border border-zinc-900/[0.07] dark:border-white/[0.08] rounded-xl"
+                            className="flex items-start gap-3 px-3 py-3 bg-blue-500/[0.06] dark:bg-blue-400/[0.08] border border-blue-500/[0.14] dark:border-blue-400/[0.16] rounded-xl"
                         >
-                            <Calendar size={17} className="text-zinc-400 shrink-0 mt-0.5" />
+                            <Calendar size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{publicHolidayEvent.title}</p>
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{publicHolidayEvent.title}</p>
                             </div>
                         </motion.div>
                     )}
@@ -522,11 +522,11 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="flex items-start gap-3 px-3 py-3 bg-zinc-900/[0.015] dark:bg-white/[0.02] border border-zinc-900/[0.07] dark:border-white/[0.08] rounded-xl"
+                            className="flex items-start gap-3 px-3 py-3 bg-blue-500/[0.06] dark:bg-blue-400/[0.08] border border-blue-500/[0.14] dark:border-blue-400/[0.16] rounded-xl"
                         >
-                            <AlertCircle size={17} className="text-zinc-400 shrink-0 mt-0.5" />
+                            <AlertCircle size={17} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{devDayEvent.title}</p>
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{devDayEvent.title}</p>
                             </div>
                         </motion.div>
                     )}
