@@ -559,7 +559,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         { id: 'notices', label: 'Notices' },
         { id: 'awards', label: 'Awards' },
         { id: 'clipboard', label: 'Clipboard' },
-        { id: 'notes', label: 'Noteflow' },
+        { id: 'notes', label: 'Study' },
         { id: 'feedback', label: 'Feedback' },
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
@@ -567,9 +567,9 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         if (Array.isArray(propHiddenPages) && propHiddenPages.length > 0) return propHiddenPages;
         try {
             const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : [];
+            return stored ? JSON.parse(stored) : ['notes'];
         } catch {
-            return [];
+            return ['notes'];
         }
     });
 

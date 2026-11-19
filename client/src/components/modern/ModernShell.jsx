@@ -14,7 +14,7 @@ export const VIEW_LABELS = {
     notices: 'Notices',
     awards: 'Awards',
     clipboard: 'Clipboard',
-    notes: 'NoteFlow',
+    notes: 'Study',
     profile: 'Settings',
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
@@ -277,7 +277,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
-        { id: 'notes', icon: GraduationCap, label: 'NoteFlow' }
+        { id: 'notes', icon: GraduationCap, label: 'Study' }
     ].filter(item => !hiddenPages.includes(item.id));
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';

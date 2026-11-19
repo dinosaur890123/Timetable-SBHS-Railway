@@ -258,9 +258,9 @@ function App() {
                 if (Array.isArray(parsed.hiddenPages)) return parsed.hiddenPages;
             }
             const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : [];
+            return stored ? JSON.parse(stored) : ['notes'];
         } catch {
-            return [];
+            return ['notes'];
         }
     });
     const calPage = user?.studentId && !hiddenPages.includes('calendar')

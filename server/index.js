@@ -58,7 +58,7 @@ let systemState = {
     maintenance: false,
     broadcast: null,
     festiveAmbient: false,
-    hiddenPages: []
+    hiddenPages: ['notes']
 };
 
 const statsHistory = [];
@@ -186,13 +186,13 @@ async function getSystemState() {
 async function readSystemState() {
     if (!isDbEnabled) {
         if (systemState.festiveAmbient === undefined) systemState.festiveAmbient = false;
-        if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = [];
+        if (!Array.isArray(systemState.hiddenPages)) systemState.hiddenPages = ['notes'];
         return systemState;
     }
 
     const result = await db.query('SELECT * FROM system_state WHERE id = 1', []);
 
-    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, festive_ambient: false, hidden_pages: [], updated_at: null };
+    const row = result.rows[0] || { maintenance: false, broadcast_message: null, broadcast_type: null, festive_ambient: false, hidden_pages: ['notes'], updated_at: null };
     let hiddenPages = [];
     if (Array.isArray(row.hidden_pages)) {
         hiddenPages = row.hidden_pages;

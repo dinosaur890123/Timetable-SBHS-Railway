@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   broadcast_type TEXT NULL,
   festive_ambient BOOLEAN NOT NULL DEFAULT FALSE,
   version TEXT NOT NULL DEFAULT '1.0.0',
-  hidden_pages JSONB NOT NULL DEFAULT '[]',
+  hidden_pages JSONB NOT NULL DEFAULT '["notes"]',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS logs (
 
 CREATE INDEX IF NOT EXISTS logs_created_at_idx ON logs (created_at DESC);
 
-ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE system_state ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '["notes"]';
 ALTER TABLE system_state ADD COLUMN IF NOT EXISTS festive_ambient BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT NULL;
