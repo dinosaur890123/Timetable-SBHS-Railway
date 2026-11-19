@@ -32,24 +32,24 @@ const SessionRow = ({ session, isPast, index, onOpen }) => {
 
 const CycleCell = ({ classInfo, onSelect }) => {
     const { name, title, room, colour, isSelected, isDimmed } = classInfo;
-    const tinted = colour && !isSelected;
     return (
         <div
             onClick={onSelect}
             title={name}
-            {...(tinted ? subjectInk(colour) : {})}
-            className={`press press-soft min-h-[2.75rem] sm:min-h-[3.25rem] px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-center ${
+            {...(colour ? subjectInk(colour) : {})}
+            className={`press press-soft relative flex min-h-[3rem] items-center rounded-xl border py-2 ${colour ? 'pl-3.5 pr-2.5 sm:pr-3' : 'px-2.5 sm:px-3'} text-left cursor-pointer transition-all duration-200 ${
                 isSelected
-                    ? 'bg-accent/10 border-accent/50 shadow-md'
-                    : `${tinted ? 'subject-edge' : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'} border-zinc-200 dark:border-zinc-800 ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
+                    ? 'bg-accent/10 border-accent/40 shadow-sm'
+                    : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
-            <span className="text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 text-zinc-900 dark:text-white">
+            {colour && <span aria-hidden className="absolute left-[-1px] top-2 bottom-2 w-[3px] rounded-full subject-fill" />}
+            <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-tight text-zinc-900 dark:text-white">
                 <span className="lg:hidden">{title}</span>
-                <span className="hidden lg:inline">{name}</span>
+                <span className="hidden lg:inline">{name || title}</span>
             </span>
             {room && (
-                <span className="mt-0.5 text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{room}</span>
+                <span className="ml-2 shrink-0 text-[11px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">{room}</span>
             )}
         </div>
     );
@@ -449,7 +449,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                                         <thead>
                                             <tr className="bg-m-panel border-b border-m-line">
                                                 {days.map(day => (
-                                                    <th key={day} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.12em]">
+                                                    <th key={day} className="px-2 sm:px-4 py-2.5 sm:py-3 text-left text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.1em]">
                                                         {day.slice(0, 3)}
                                                     </th>
                                                 ))}
@@ -464,7 +464,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                                                         if (!classInfo) {
                                                             return (
                                                                 <td key={dayNum} className="px-1 sm:px-2 py-1 sm:py-2">
-                                                                    <div className={`min-h-[2.75rem] sm:min-h-[3.25rem] h-full bg-zinc-900/[0.03] dark:bg-white/[0.03] rounded-lg transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
+                                                                    <div className={`min-h-[3rem] h-full rounded-xl border border-dashed border-zinc-900/[0.05] dark:border-white/[0.05] bg-zinc-900/[0.012] dark:bg-white/[0.012] transition-all duration-200 ${selectedClass ? 'opacity-40' : ''}`}></div>
                                                                 </td>
                                                             );
                                                         }
