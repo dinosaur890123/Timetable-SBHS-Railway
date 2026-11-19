@@ -539,8 +539,8 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         ? 'bg-emerald-500'
         : scanUrgent ? 'bg-red-500' : 'bg-amber-500';
 
-    const headerWidth = 'max-w-6xl';
-    const contentWidth = 'max-w-6xl';
+    const headerWidth = railHours ? 'max-w-5xl' : 'max-w-3xl';
+    const contentWidth = isCycle ? 'max-w-6xl' : headerWidth;
 
     return (
         <div>

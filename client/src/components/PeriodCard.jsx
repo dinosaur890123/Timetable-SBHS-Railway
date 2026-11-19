@@ -97,14 +97,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     ) : null}
                     {isCurrent && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
                     {fullTeacher && (
-                        <span className={`truncate hidden sm:inline lg:max-w-[15rem] ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
+                        <span className={`truncate hidden sm:inline ${room ? 'lg:hidden' : 'lg:inline'} lg:max-w-[15rem] ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
                         </span>
                     )}
                 </div>
             </div>
 
-            {hasCanvasLink && (
+            {hasCanvasLink && !room && (
                 <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
                     <ArrowUpRight size={13} className="shrink-0" />
@@ -115,8 +115,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <div className="shrink-0 text-right leading-tight">
                     <div className="flex items-center gap-1.5 justify-end">
                         {fullTeacher && (
-                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
+                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden lg:inline ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
+                            </span>
+                        )}
+                        {hasCanvasLink && (
+                            <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
+                                <ArrowUpRight size={13} className="shrink-0" />
                             </span>
                         )}
                         <div className={`text-[15px] font-medium tabular-nums lg:min-w-[4.5rem] ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
