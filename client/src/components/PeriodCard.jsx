@@ -104,7 +104,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 </div>
             </div>
 
-            {hasCanvasLink && !room && (
+            {hasCanvasLink && (
                 <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
                     <ArrowUpRight size={13} className="shrink-0" />
@@ -117,12 +117,6 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                         {fullTeacher && (
                             <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden lg:inline ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
-                            </span>
-                        )}
-                        {hasCanvasLink && (
-                            <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
-                                <ArrowUpRight size={13} className="shrink-0" />
                             </span>
                         )}
                         <div className={`text-[15px] font-medium tabular-nums lg:min-w-[4.5rem] ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
