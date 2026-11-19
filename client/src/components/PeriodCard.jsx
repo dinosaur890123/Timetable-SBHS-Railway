@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { subjectInk, isBreakBell, formatTime12Hour } from '../utils/timetable';
-import { isLinklessTitle } from '../utils/canvasLinks';
+import { isLinklessTitle, isWellioUrl } from '../utils/canvasLinks';
 
 const enterDelay = (index) => Math.min(index, 8) * 0.03;
 
@@ -60,6 +60,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     }
 
     const hasCanvasLink = linksEnabled && canvasLink && title && title !== 'Free Period';
+    const linkProvider = isWellioUrl(canvasLink) ? 'Wellio' : 'Canvas';
     const movedFrom = hasRoomChange && oldRoom && oldRoom !== room ? oldRoom : null;
     const shouldShowCanvasTooltip = linksEnabled && !hasCanvasLink && title && title !== 'Free Period' && !isLinklessTitle(title);
 
@@ -106,7 +107,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
             {hasCanvasLink && (
                 <span className="inline-flex shrink-0 items-center gap-1 text-accent/80 group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
+                    <img src={linkProvider === 'Wellio' ? '/Wellio%20logo.png' : '/canvas-lms.svg'} alt={linkProvider} className="h-3.5 w-auto shrink-0" />
                     <ArrowUpRight size={13} className="shrink-0" />
                 </span>
             )}
@@ -149,7 +150,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    aria-label={`${name}, open in Canvas`}
+                    aria-label={`${name}, open in ${linkProvider}`}
                 >
                     {content}
                 </a>

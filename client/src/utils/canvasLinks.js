@@ -35,6 +35,14 @@ export const parseLinkInput = (raw, canvasHost = DEFAULT_CANVAS_HOST) => {
     return { url: url.toString(), isCourseLink: isCanvasCourse || isWellio };
 };
 
+export const isWellioUrl = (raw) => {
+    try {
+        return new URL(String(raw ?? '')).hostname.toLowerCase() === WELLIO_HOST;
+    } catch {
+        return false;
+    }
+};
+
 export const isLinklessTitle = (title) => {
     if (!title) return false;
     const t = String(title).toLowerCase();
