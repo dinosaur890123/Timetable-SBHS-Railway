@@ -96,7 +96,6 @@ html:not(.dark):not([class*="theme-"]) {
 
 [data-tone] { --subject-ink: var(--subject); }
 .subject-fill { background-color: var(--subject-ink); }
-.period-subject-outline { border: 2px solid var(--subject-ink); }
 .subject-edge {
   box-shadow: inset 3px 0 0 var(--subject-ink);
   background-color: color-mix(in srgb, var(--subject) 10%, transparent);

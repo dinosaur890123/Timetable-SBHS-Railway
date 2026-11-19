@@ -77,17 +77,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
 
     const content = (
         <div className={`relative flex items-center gap-3 px-2.5 sm:px-3 py-2 sm:py-3 ${dim}`}>
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                <h3 className="min-w-0 truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50" title={name || undefined}>
-                    <span className="lg:hidden">{title || 'Free Period'}</span>
-                    <span className="hidden lg:inline">{name || 'Free Period'}</span>
-                </h3>
-                {fullTeacher && fullTeacher !== 'No teacher' && (
-                    <span className={`min-w-0 truncate text-[12px] sm:text-[13px] text-zinc-500 dark:text-zinc-400 ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
-                        {fullTeacher}
-                    </span>
-                )}
-                <div className="flex shrink-0 items-center gap-1.5 text-[12px] sm:text-[15px] text-zinc-500 dark:text-zinc-400">
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50" title={name || undefined}>
+                        <span className="lg:hidden">{title || 'Free Period'}</span>
+                        <span className="hidden lg:inline">{name || 'Free Period'}</span>
+                    </h3>
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                     {isCurrent ? (
                         <motion.span
                             className="shrink-0 font-medium text-accent"
@@ -98,7 +95,12 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                             Now
                         </motion.span>
                     ) : null}
-                    {room && <span className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</span>}
+                    {isCurrent && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
+                    {fullTeacher && (
+                        <span className={`truncate hidden sm:inline ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
+                            {fullTeacher === 'No teacher' ? null : fullTeacher}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -107,6 +109,19 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                     <img src="/canvas-lms.svg" alt="Canvas" className="h-3.5 w-auto shrink-0" />
                     <ArrowUpRight size={13} className="shrink-0" />
                 </span>
+            )}
+
+            {room && (
+                <div className="shrink-0 text-right leading-tight">
+                    <div className="flex items-center gap-1.5 justify-end">
+                        {fullTeacher && (
+                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
+                                {fullTeacher === 'No teacher' ? null : fullTeacher}
+                            </span>
+                        )}
+                        <div className={`text-[15px] font-medium tabular-nums ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                    </div>
+                </div>
             )}
 
         </div>
@@ -118,10 +133,14 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             initial={{ opacity: 0, y: 4 }}
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
-            className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${colour ? 'period-subject-outline' : ''} ${justStarted ? 'period-start' : ''}`}
+            className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent
+                ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045] hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.07]'
+                : 'bg-zinc-900/[0.018] dark:bg-white/[0.018] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035]'}`}
         >
             <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
-            {isCurrent && (
+            {colour ? (
+                <span aria-hidden className={`absolute -left-1 top-2 bottom-2 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
+            ) : isCurrent && (
                 <span aria-hidden className="absolute -left-1 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
             )}
             {hasCanvasLink ? (
