@@ -140,9 +140,9 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
         >
             <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
             {colour ? (
-                <span aria-hidden className={`absolute left-2 top-2 bottom-2 w-[2px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
+                <span aria-hidden className={`absolute left-[-1px] top-1 bottom-1 w-[3px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
-                <span aria-hidden className="absolute left-2 top-2 bottom-2 w-[2px] rounded-full bg-accent" />
+                <span aria-hidden className="absolute -left-1 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
             )}
             {hasCanvasLink ? (
                 <a
