@@ -203,6 +203,7 @@ function App() {
     const [authError, setAuthError] = useState(null);
     const [authInProgress, setAuthInProgress] = useState(false);
     const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
+    const [reauthRequired, setReauthRequired] = useState(false);
     const [clipboardSessions, setClipboardSessions] = useState([]);
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -225,6 +226,12 @@ function App() {
     }, []);
 
     useEffect(() => onCachedDataChange(setUsingCachedData), []);
+
+    useEffect(() => {
+        const handleReauthRequired = () => setReauthRequired(true);
+        window.addEventListener('synchron:reauth-required', handleReauthRequired);
+        return () => window.removeEventListener('synchron:reauth-required', handleReauthRequired);
+    }, []);
 
     const [broadcast, setBroadcast] = useState(() => {
         try {
@@ -815,6 +822,7 @@ function App() {
                 try {
                     await exchangeToken(code);
                     setTokenScopeOutdated(false);
+                    setReauthRequired(false);
                 } catch (err) {
                     console.error(err);
                     setAuthError(authErrorMessage(err));
@@ -953,7 +961,6 @@ function App() {
             } catch (error) {
                 console.error(error);
                 if (isAuthCallback || !user) setAuthError(authErrorMessage(error));
-                if (error.message?.includes("401") && !isAuthenticated()) logout();
             } finally {
                 setAuthInProgress(false);
                 setLoading(false);
@@ -1318,6 +1325,19 @@ function App() {
                     <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
                         <AlertCircle size={18} className="shrink-0" />
                         <span className="flex-1">Your SBHS sign-in needs to be updated to access new features. Sign in again to continue.</span>
+                        <button
+                            onClick={() => performLogin()}
+                            className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"
+                        >
+                            Sign in again
+                        </button>
+                    </div>
+                )}
+
+                {reauthRequired && (
+                    <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+                        <AlertCircle size={18} className="shrink-0" />
+                        <span className="flex-1">Your SBHS session has expired. Sign in again to load fresh data.</span>
                         <button
                             onClick={() => performLogin()}
                             className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"

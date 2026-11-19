@@ -223,7 +223,9 @@ async function fetchWithAuth(endpoint) {
     }
 
     if (!response.ok) {
-        if (response.status === 401 && sessionLapsed()) logout();
+        if (response.status === 401 && sessionLapsed()) {
+            window.dispatchEvent(new CustomEvent('synchron:reauth-required'));
+        }
         throw new Error(`API Error ${response.status}: ${endpoint}`);
     }
     return response.json();
