@@ -119,7 +119,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}
-                        <div className={`text-[15px] font-medium tabular-nums lg:min-w-[4.5rem] ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
+                        <div className={`text-[15px] font-medium tabular-nums lg:min-w-[2.5rem] ${hasRoomChange ? 'px-1.5 py-0.5 rounded-md change-highlight' : 'text-zinc-900 dark:text-zinc-50'}`}>{room}</div>
                     </div>
                 </div>
             )}
