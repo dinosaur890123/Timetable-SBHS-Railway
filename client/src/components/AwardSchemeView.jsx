@@ -125,7 +125,7 @@ const PrizeBanner = ({ summary, className = '' }) => {
                 <Stat
                     label="Nominations"
                     value={nominationsAllTime}
-                    sub={rollover?.nominationCount > 0 ? `all time, +${rollover.nominationCount} carried over` : 'all time'}
+                    sub={rollover?.nominationCount > 0 ? `+${rollover.nominationCount} carried over` : undefined}
                 />
                 <div className="min-w-0 flex-1">
                     <Stat
@@ -235,10 +235,9 @@ const NominationsCard = ({ summary, className = '' }) => {
     const { nominationsByYear } = summary;
     const currentYear = new Date().getFullYear();
     if (nominationsByYear.length === 0) return null;
-    const total = nominationsByYear.reduce((sum, g) => sum + g.names.length, 0);
     return (
         <Card className={className}>
-            <CardTitle aside={plural(total, 'nomination')}>Nominations</CardTitle>
+            <CardTitle>Nominations</CardTitle>
             <ul className="divide-y divide-m-line">
                 {nominationsByYear.map(g => (
                     <li key={g.year} className="py-2.5 flex gap-3">
@@ -614,7 +613,7 @@ const PlanView = ({ summary }) => {
                                 label="Projected Prize"
                                 value={projections.projectedPrize ? projections.projectedPrize.name : 'None yet'}
                                 valueClass="text-lg"
-                                sub={projections.projectedPrize ? `Tier ${projections.projectedPrize.tier || '?'}` : 'Keep earning!'}
+                                sub={projections.projectedPrize ? `Tier ${projections.projectedPrize.tier || '?'}` : undefined}
                             />
                         </div>
                     </Card>
@@ -651,13 +650,12 @@ const PlanView = ({ summary }) => {
                             <Stat
                                 label="Total Nominations"
                                 value={summary.nominationsAllTime}
-                                sub="All time"
                             />
                             <Stat
                                 label="Current Prize"
                                 value={summary.latestPrize ? summary.latestPrize.name : 'None yet'}
                                 valueClass="text-lg"
-                                sub={summary.nextPrize ? `Next: ${summary.nextPrize.name} at ${summary.nextPrize.nominationsRequired} noms` : 'Keep earning!'}
+                                sub={summary.nextPrize ? `Next: ${summary.nextPrize.name} at ${summary.nextPrize.nominationsRequired} noms` : undefined}
                             />
                         </div>
                     </Card>
@@ -715,7 +713,6 @@ const AwardSchemeView = ({ user }) => {
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <Eyebrow>Award scheme · {new Date().getFullYear()}</Eyebrow>
                     <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-zinc-900 dark:text-white">Awards</h1>
                 </div>
                 <Segmented value={view} onChange={setView} />

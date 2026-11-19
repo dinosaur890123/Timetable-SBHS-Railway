@@ -87,7 +87,7 @@ const FeedbackView = ({ onBack }) => {
       <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><ArrowLeft size={14} /> Back to Settings</button>
         {tabs}
-        <div className="space-y-1"><h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">My feedback</h1><p className="text-[13px] text-zinc-500 dark:text-zinc-400">Track the status of feedback you have submitted.</p></div>
+        <div className="space-y-1"><h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">My feedback</h1></div>
         {feedbackError && <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-[13px] text-red-700 dark:text-red-300">{feedbackError}</div>}
         {feedbackLoading ? <p className="text-sm text-zinc-500">Loading your feedback...</p> : myFeedback.length ? (
           <div className="space-y-4">{myFeedback.map(entry => {

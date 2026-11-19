@@ -294,7 +294,6 @@ const CalendarView = ({ user }) => {
         >
           <div>
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight dark:text-white text-zinc-900">Calendar</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Events and important dates</p>
           </div>
 
           <div className="flex items-center gap-1">

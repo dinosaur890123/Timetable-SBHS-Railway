@@ -130,7 +130,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                     <Calendar size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{publicHolidayEvent.title}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
                     </div>
                 </motion.div>
             );
@@ -144,7 +143,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                     <AlertCircle size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{devDayEvent.title}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
                     </div>
                 </motion.div>
             );
@@ -158,7 +156,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                     <Umbrella size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">School holidays</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Enjoy your holidays!</p>
                     </div>
                 </motion.div>
             );
@@ -172,7 +169,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                     <Coffee size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Weekend</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Enjoy your weekend!</p>
                     </div>
                 </motion.div>
             );
@@ -519,7 +515,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                             <Calendar size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{publicHolidayEvent.title}</p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
                             </div>
                         </motion.div>
                     )}
@@ -532,7 +527,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                             <AlertCircle size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{devDayEvent.title}</p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">No classes on {format(viewedDate, 'd MMMM')}</p>
                             </div>
                         </motion.div>
                     )}
@@ -545,7 +539,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                             <Umbrella size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">School holidays</p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Enjoy your holidays!</p>
                             </div>
                         </motion.div>
                     )}
@@ -558,7 +551,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                             <Coffee size={17} className="text-zinc-400 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Weekend</p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Enjoy your weekend!</p>
                             </div>
                         </motion.div>
                     )}

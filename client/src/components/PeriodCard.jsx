@@ -136,7 +136,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045] hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.07]'
                 : 'bg-zinc-900/[0.018] dark:bg-white/[0.018] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035]'}`}
         >
-            <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
+            <span className={`absolute -left-[3.25rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
             {colour ? (
                 <span aria-hidden className={`absolute -left-1 top-2 bottom-2 w-[4px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
