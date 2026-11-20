@@ -37,13 +37,12 @@ const CycleCell = ({ classInfo, onSelect }) => {
             onClick={onSelect}
             title={name}
             {...(colour ? subjectInk(colour) : {})}
-            className={`press press-soft relative flex min-h-[3rem] flex-col items-start justify-center rounded-xl border px-1.5 py-1 md:flex-row md:items-center md:py-2 ${colour ? 'md:pl-3.5 md:pr-2.5' : 'md:px-2.5'} text-left cursor-pointer transition-all duration-200 ${
+            className={`press press-soft relative flex min-h-[3rem] flex-col items-start justify-center rounded-xl border px-1.5 py-1 md:flex-row md:items-center md:py-2 ${colour ? 'subject-bar md:pl-3.5 md:pr-2.5' : 'md:px-2.5'} text-left cursor-pointer transition-all duration-200 ${
                 isSelected
                     ? 'bg-accent/10 border-accent/40 shadow-sm'
-                    : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
+                : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
-            {colour && <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl subject-fill" />}
             <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
                 <span className="lg:hidden">{title}</span>
                 <span className="hidden lg:inline">{name || title}</span>
@@ -561,7 +560,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             )}
             {viewMode === 'daily' ? (
                 <>
-                <ol className="-mx-3 space-y-1">
+                <ol className="-mx-3 space-y-1 rounded-2xl border border-zinc-900/[0.06] bg-zinc-900/[0.02] px-2 py-2 dark:border-white/[0.06] dark:bg-white/[0.025]">
                     {dayRows.map(({ kind, row: data, session, isPast }, i) => kind === 'session' ? (
                         <SessionRow key={`cb-${session.id}`} session={session} isPast={isPast} index={i} onOpen={setOpenSession} />
                     ) : (
