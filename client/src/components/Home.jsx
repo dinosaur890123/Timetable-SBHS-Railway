@@ -199,7 +199,7 @@ const RailCard = ({ children, colour, phase }) => {
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
-            className="relative rounded-xl border border-zinc-900/[0.07] dark:border-white/[0.08] bg-zinc-900/[0.015] dark:bg-white/[0.02] p-3 sm:p-4"
+            className="period-card-surface relative rounded-xl border border-zinc-900/[0.07] dark:border-white/[0.08] p-3 sm:p-4"
         >
             <AnimatePresence mode="wait" initial={false}>
                 <motion.div

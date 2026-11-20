@@ -104,6 +104,30 @@ html:not(.dark):not([class*="theme-"]) {
   border-radius: inherit;
   pointer-events: none;
 }
+.period-card-surface {
+  background-color: rgb(var(--m-card, 255 255 255));
+}
+.period-card-surface:hover {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 255 255 255)) 97%, black);
+}
+.period-card-current {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 255 255 255)) 94%, black);
+}
+.period-card-current:hover {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 255 255 255)) 91%, black);
+}
+html.dark .period-card-surface {
+  background-color: rgb(var(--m-card, 21 21 25));
+}
+html.dark .period-card-surface:hover {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 21 21 25)) 97%, black);
+}
+html.dark .period-card-current {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 21 21 25)) 94%, black);
+}
+html.dark .period-card-current:hover {
+  background-color: color-mix(in srgb, rgb(var(--m-card, 21 21 25)) 91%, black);
+}
 .subject-edge {
   box-shadow: inset 3px 0 0 var(--subject-ink);
   background-color: color-mix(in srgb, var(--subject) 10%, transparent);

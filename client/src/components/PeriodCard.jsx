@@ -134,9 +134,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             initial={{ opacity: 0, y: 4 }}
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
-            className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${colour ? 'subject-bar' : ''} ${justStarted ? 'period-start' : ''} ${justStarted && colour ? 'period-stripe' : ''} ${isCurrent
-                ? 'bg-zinc-900/[0.05] dark:bg-black/[0.06] hover:bg-zinc-900/[0.07] dark:hover:bg-black/[0.09]'
-                : 'bg-zinc-900/[0.018] dark:bg-white/[0.018] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035]'}`}
+            className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${colour ? 'subject-bar' : ''} ${justStarted ? 'period-start' : ''} ${justStarted && colour ? 'period-stripe' : ''} ${isCurrent ? 'period-card-current' : 'period-card-surface'}`}
         >
             <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
             {!colour && isCurrent && (
