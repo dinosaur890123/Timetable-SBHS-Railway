@@ -3,7 +3,7 @@ import { CalendarDays, AlertCircle, Coffee, Umbrella, Calendar } from 'lucide-re
 import PeriodCard from './PeriodCard';
 import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
-import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
@@ -195,6 +195,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
 
     const { periods } = innerTimetable || {};
     const routine = innerTimetable?.routine ? innerTimetable.routine.split(',') : [];
+    const routineBells = resolveRoutineBells(routine, bells);
     const classVariations = timetableData?.classVariations || {};
     const roomVariations = timetableData?.roomVariations || {};
     const daySubjects = timetable?.subjects;
@@ -219,7 +220,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
 
     if (viewMode === 'daily') {
         routineData = routine.map((bellId, index) => {
-            const bell = bells?.find(b => b.bell === bellId);
+            const bell = routineBells[index];
             if (!bell) return null;
 
             let periodInfo = periods?.[bellId] || { title: bell.bellDisplay };
@@ -246,7 +247,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             if (endMin > lastMin) lastMin = endMin;
 
             const isCurrent = currentMinutes >= startMin && currentMinutes < endMin;
-            const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routine[index - 1] ? bells?.find(b => b.bell === routine[index - 1])?.time || "00:00" : "00:00"));
+            const isNext = !isCurrent && currentMinutes !== -1 && currentMinutes < startMin && (index === 0 || currentMinutes >= getMinutes(routineBells[index - 1]?.time || "00:00"));
 
             const isBreak = isBreakStylePeriod(bellId, breakInfo);
             if (isRealBreak && String(bellId) === '0') return null;

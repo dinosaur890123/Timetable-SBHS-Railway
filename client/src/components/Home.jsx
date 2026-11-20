@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { format, addDays, parseISO, getDay } from 'date-fns';
-import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
 
@@ -70,11 +70,12 @@ const buildSlots = (timetableData) => {
     if (!inner?.periods) return [];
 
     const routine = inner.routine ? inner.routine.split(',') : [];
+    const routineBells = resolveRoutineBells(routine, timetableData.bells);
     const classVariations = timetableData.classVariations || {};
     const roomVariations = timetableData.roomVariations || {};
 
-    return routine.map((bellId) => {
-        const bell = timetableData.bells.find(b => b.bell === bellId);
+    return routine.map((bellId, index) => {
+        const bell = routineBells[index];
         if (!bell) return null;
 
         let period = inner.periods[bellId] || { title: bell.bellDisplay };

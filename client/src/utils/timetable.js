@@ -33,6 +33,39 @@ export const isBreakBell = (bellId, periodInfo = null) => {
     return false;
 };
 
+// A one-day bell change can assign a new ID to a bell while the timetable
+// routine keeps its usual period IDs. Match known IDs first, then align any
+// changed bells with their position in the day's routine.
+export const resolveRoutineBells = (routine, bells = []) => {
+    if (!Array.isArray(routine) || !Array.isArray(bells)) return [];
+
+    const resolved = new Array(routine.length).fill(null);
+    const used = new Set();
+
+    routine.forEach((bellId, index) => {
+        const match = bells.findIndex((bell, bellIndex) =>
+            !used.has(bellIndex) && String(bell?.bell ?? '').trim() === String(bellId).trim()
+        );
+        if (match >= 0) {
+            resolved[index] = bells[match];
+            used.add(match);
+        }
+    });
+
+    routine.forEach((_, index) => {
+        if (resolved[index]) return;
+        const positionMatch = index < bells.length && !used.has(index)
+            ? index
+            : bells.findIndex((_, bellIndex) => !used.has(bellIndex));
+        if (positionMatch >= 0) {
+            resolved[index] = bells[positionMatch];
+            used.add(positionMatch);
+        }
+    });
+
+    return resolved;
+};
+
 export const isSportOrScripturePeriod = (periodInfo) => {
     if (!periodInfo) return false;
     const title = typeof periodInfo === 'string' ? periodInfo : periodInfo.title;
