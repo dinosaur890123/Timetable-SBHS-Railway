@@ -155,9 +155,11 @@ export const indexSubjects = (completeTimetable) => {
     return index;
 };
 
-const withoutYear = (title, year) => {
-    const prefix = year != null ? `${year} ` : null;
-    return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
+const withYear = (title, year, separator) => {
+    if (!title || year == null) return title || '';
+    const yearPrefix = String(year);
+    if (new RegExp(`^${yearPrefix}(?=\\D|$)`).test(title)) return title;
+    return `${yearPrefix}${separator}${title}`;
 };
 
 const luminance = (colour) => {
@@ -180,7 +182,9 @@ export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
     const key = subjectKey(periodInfo.year, periodInfo.title);
     const subject = daySubjects?.[key] || subjectIndex?.[key];
     return {
-        name: subject?.title ? withoutYear(subject.title, subject.year ?? periodInfo.year) : periodInfo.title,
+        name: subject?.title
+            ? withYear(subject.title, subject.year ?? periodInfo.year, ' ')
+            : withYear(periodInfo.title, periodInfo.year, ''),
         colour: normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
     };
 };

@@ -18,7 +18,7 @@ import {
     fetchStudentClipboardSessions,
     fetchStudentClipboardTeams
 } from './api';
-import { prefetchCached } from '../utils/pageCache';
+import { loadCached, peekCached, prefetchCached } from '../utils/pageCache';
 
 export const termsPage = () => ({
     key: 'terms:v1',
@@ -176,13 +176,34 @@ export const awardsPage = (studentId) => ({
     }
 });
 
+export const clipboardSessionsKey = (studentId) => `clipboard-sessions:${studentId}`;
+
+export const peekClipboardSessions = (studentId) =>
+    studentId
+        ? peekCached(clipboardSessionsKey(studentId)) ?? peekCached(`clipboard:${studentId}`)?.sessions
+        : undefined;
+
+export const loadClipboardSessions = (studentId) => {
+    if (!studentId) return Promise.resolve([]);
+    const key = clipboardSessionsKey(studentId);
+    return loadCached(key, async (previous) => {
+        try {
+            return await fetchStudentClipboardSessions(studentId);
+        } catch (error) {
+            const cached = previous ?? peekClipboardSessions(studentId);
+            if (cached !== undefined) return cached;
+            throw error;
+        }
+    });
+};
+
 export const clipboardPage = (studentId) => ({
     key: `clipboard:${studentId}`,
     load: async (previous) => {
         const results = await Promise.all([
             settle(fetchStudentClipboardAttendance(studentId), previous?.attendance ?? []),
             settle(fetchStudentPreExplainedAbsences(studentId), previous?.preExplained ?? []),
-            settle(fetchStudentClipboardSessions(studentId), previous?.sessions ?? []),
+            settle(loadClipboardSessions(studentId), previous?.sessions ?? peekClipboardSessions(studentId) ?? []),
             settle(fetchStudentClipboardTeams(studentId), previous?.teams ?? [])
         ]);
         if (!results.some(r => r.ok)) throw new Error('Clipboard unavailable');

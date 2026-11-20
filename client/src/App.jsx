@@ -102,13 +102,12 @@ import {
     fetchBroadcastNotifications,
     dismissBroadcastNotification,
     isScopeOutdated,
-    fetchStudentClipboardSessions,
     fetchNextSchoolDay,
     peekNextSchoolDay,
     onCachedDataChange,
     fetchCalendarEvents
 } from './services/api';
-import { prefetchPages, calendarPage, termsPage, closureLabel } from './services/pageData';
+import { prefetchPages, calendarPage, termsPage, closureLabel, loadClipboardSessions as loadCachedClipboardSessions, peekClipboardSessions } from './services/pageData';
 import { useCachedLoad } from './utils/pageCache';
 import { registerUser, fetchDeletionRequests, fetchAdminCanvasLinks, fetchAdminFeedback } from './services/adminApi';
 import { format, addDays, isSameDay } from 'date-fns';
@@ -204,7 +203,7 @@ function App() {
     const [authInProgress, setAuthInProgress] = useState(false);
     const [tokenScopeOutdated, setTokenScopeOutdated] = useState(false);
     const [reauthRequired, setReauthRequired] = useState(false);
-    const [clipboardSessions, setClipboardSessions] = useState([]);
+    const [clipboardSessions, setClipboardSessions] = useState(() => peekClipboardSessions(user?.studentId) || []);
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [usingCachedData, setUsingCachedData] = useState(false);
@@ -1078,7 +1077,7 @@ function App() {
         if (clipboardSessionsRequest.current.id !== id) {
             clipboardSessionsRequest.current = {
                 id,
-                promise: fetchStudentClipboardSessions(id)
+                promise: loadCachedClipboardSessions(id)
                     .then(sessions => {
                         setClipboardSessions(sessions || []);
                         return sessions || [];
@@ -1094,6 +1093,8 @@ function App() {
     };
     useEffect(() => {
         if (!user?.studentId || !showClipboardEvents) return;
+        const cached = peekClipboardSessions(user.studentId);
+        if (cached) setClipboardSessions(cached);
         loadClipboardSessions();
     }, [user?.studentId, showClipboardEvents]);
 
