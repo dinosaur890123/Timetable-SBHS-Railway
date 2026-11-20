@@ -44,7 +44,8 @@ const CycleCell = ({ classInfo, onSelect }) => {
             }`}
         >
             <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
-                {name || title}
+                <span className="lg:hidden">{classInfo.shortName || title}</span>
+                <span className="hidden lg:inline">{name || title}</span>
             </span>
             {room && (
                 <span className="max-w-full truncate text-[9px] font-medium leading-tight tabular-nums text-zinc-500 dark:text-zinc-400 md:ml-2 md:shrink-0 md:text-[11px]">{room}</span>
@@ -230,8 +231,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                 periodInfo = { ...periodInfo, title: periodInfo.title || bell.bellDisplay };
             } else {
                 periodInfo = applyPeriodVariations(periodInfo, bellId, classVariations, roomVariations);
-                const { name, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
-                periodInfo = { ...periodInfo, fullTitle: name, colour };
+                const { name, shortName, colour } = describeClass(periodInfo, daySubjects, subjectIndex);
+                periodInfo = { ...periodInfo, fullTitle: name, shortName, colour };
             }
 
             if (bellId === "RC" || (originalTitle && String(originalTitle).toLowerCase().includes("roll call"))) {

@@ -13,7 +13,7 @@ const ChangeTag = ({ children, className = '' }) => (
 );
 
 const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routineIndex, currentMinutes, startMinutes, endMinutes, isBreak, isRealBreak, canvasLink, linksEnabled = true }) => {
-    const { title, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period || {};
+    const { title, shortName, fullTitle, colour, room, oldRoom, fullTeacher, oldTeacher, isSubstituted, hasRoomChange } = period || {};
     const name = fullTitle || title;
     const isPast = currentMinutes !== -1 && currentMinutes >= endMinutes;
     const dim = isPast ? 'opacity-50 group-hover:opacity-100 transition-opacity duration-700' : 'transition-opacity duration-700';
@@ -81,7 +81,8 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             <div className="min-w-0 flex-1 lg:flex lg:items-center lg:gap-4">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50 lg:flex-1" title={name || undefined}>
-                        {name || title || 'Free Period'}
+                        <span className="lg:hidden">{shortName || title || 'Free Period'}</span>
+                        <span className="hidden lg:inline">{name || title || 'Free Period'}</span>
                     </h3>
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400 lg:mt-0 lg:shrink-0">

@@ -178,7 +178,7 @@ export const subjectInk = (colour) => {
 };
 
 export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
-    if (!periodInfo?.title) return { name: periodInfo?.title || '', colour: null };
+    if (!periodInfo?.title) return { name: periodInfo?.title || '', shortName: periodInfo?.title || '', colour: null };
     const key = subjectKey(periodInfo.year, periodInfo.title);
     const subject = daySubjects?.[key] || subjectIndex?.[key];
     // The API's period and matching subject records carry the class year;
@@ -188,6 +188,7 @@ export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
         name: subject?.title
             ? withYear(subject.title, classYear, ' ')
             : withYear(periodInfo.title, classYear, ''),
+        shortName: withYear(periodInfo.title, classYear, ''),
         colour: normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
     };
 };

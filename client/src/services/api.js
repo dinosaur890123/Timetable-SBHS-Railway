@@ -462,9 +462,10 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
     const currentYear = options.year || new Date().getFullYear();
     const lastYear = options.year ? currentYear : currentYear + 1;
     const params = new URLSearchParams();
-    params.set('date[after]', options.startDate || `${currentYear}-01-01`);
+    if (options.startDate) params.set('date[after]', options.startDate);
     params.set('date[before]', options.endDate || `${lastYear}-12-31`);
-    params.set('_itemsPerPage', String(options.itemsPerPage || 300));
+    const pageSize = Number(options.itemsPerPage) || 300;
+    params.set('_itemsPerPage', String(pageSize));
     if (options.page) params.set('_page', String(options.page));
     if (options.context) params.set('context', String(options.context));
 
@@ -509,17 +510,22 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
         const firstData = await fetchFromBackend(`/students/${studentId}/clipboard/sessions?${params.toString()}`);
         const items = extractItems(firstData);
 
-        if (!options.page && items.length >= 300) {
+        if (!options.page && items.length >= pageSize) {
+            const seenIds = new Set(items.map(item => item?.id).filter(id => id != null).map(String));
             let pageNum = 1;
-            while (pageNum < 10) {
+            while (true) {
                 pageNum++;
                 params.set('_page', String(pageNum));
                 try {
                     const nextPageData = await fetchFromBackend(`/students/${studentId}/clipboard/sessions?${params.toString()}`);
                     const nextItems = extractItems(nextPageData);
                     if (!nextItems.length) break;
+                    if (nextItems.every(item => item?.id != null && seenIds.has(String(item.id)))) break;
                     items.push(...nextItems);
-                    if (nextItems.length < 300) break;
+                    nextItems.forEach(item => {
+                        if (item?.id != null) seenIds.add(String(item.id));
+                    });
+                    if (nextItems.length < pageSize) break;
                 } catch {
                     break;
                 }
