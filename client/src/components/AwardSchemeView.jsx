@@ -13,6 +13,15 @@ const VIEWS = [
 const RECORD_PREVIEW = 8;
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const isRolloverCategory = (name) => /rollover\s+points/i.test(String(name || ''));
+
+const houseColourForTheme = (colour, isDark) => {
+    if (!colour) return null;
+    const value = String(colour).trim().toLowerCase();
+    if (['white', '#fff', '#ffffff'].includes(value)) return isDark ? '#ffffff' : '#111827';
+    if (['black', '#000', '#000000'].includes(value)) return isDark ? '#ffffff' : '#111827';
+    return colour;
+};
 
 const formatDate = (iso, withYear = false) => {
     if (!iso) return '';
@@ -362,7 +371,7 @@ const RecordCard = ({ summary, className = '' }) => {
                                     <Icon size={15} strokeWidth={1.8} className="shrink-0 text-zinc-400" aria-hidden />
                                     <div className="flex-1 min-w-0 sm:flex sm:items-baseline sm:gap-2">
                                         <div className="text-[13.5px] text-zinc-900 dark:text-white truncate sm:shrink-0 sm:max-w-[60%]">{entry.title}</div>
-                                        {entry.detail && <div className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{entry.detail}</div>}
+                                        {entry.detail && !isRolloverCategory(entry.detail) && <div className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">{entry.detail}</div>}
                                     </div>
                                     {entry.points > 0 ? (
                                         <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">+{entry.points}</span>
@@ -389,7 +398,7 @@ const RecordCard = ({ summary, className = '' }) => {
     );
 };
 
-const HouseView = ({ summary }) => {
+const HouseView = ({ summary, isDark }) => {
     const { houseStandings } = summary;
     const leader = houseStandings[0]?.points || 0;
     return (
@@ -399,17 +408,20 @@ const HouseView = ({ summary }) => {
                 <Empty>No house points yet.</Empty>
             ) : (
                 <ol className="space-y-2.5">
-                    {houseStandings.map((house, index) => (
-                        <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
-                            <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
-                            <span className="flex items-center gap-2 min-w-0">
-                                <span aria-hidden className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" style={house.colour ? { backgroundColor: house.colour } : undefined} />
-                                <span className="truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
-                            </span>
-                            <Bar value={house.points} max={leader} colour={house.colour} />
-                            <span className="font-mono text-[12px] tabular-nums text-zinc-500 text-right">{house.points.toLocaleString('en-AU')}</span>
-                        </li>
-                    ))}
+                    {houseStandings.map((house, index) => {
+                        const colour = houseColourForTheme(house.colour, isDark);
+                        return (
+                            <li key={house.id || house.name} className="grid grid-cols-[1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto] items-center gap-x-3">
+                                <span className="font-mono text-[12px] tabular-nums text-zinc-400">{index + 1}</span>
+                                <span className="flex items-center gap-2 min-w-0">
+                                    <span aria-hidden className="w-2 h-2 rounded-full shrink-0 bg-zinc-400" style={colour ? { backgroundColor: colour } : undefined} />
+                                    <span className="truncate text-[13.5px] text-zinc-900 dark:text-white">{house.name}</span>
+                                </span>
+                                <Bar value={house.points} max={leader} colour={colour} />
+                                <span className="font-mono text-[12px] tabular-nums text-zinc-500 text-right">{house.points.toLocaleString('en-AU')}</span>
+                            </li>
+                        );
+                    })}
                 </ol>
             )}
         </Card>
@@ -508,7 +520,7 @@ const PlanView = ({ summary }) => {
                         className="h-9 px-3 rounded-lg border border-m-line bg-m-card text-[13px] text-zinc-900 dark:text-white sm:w-56"
                     >
                         <option value="all">All categories</option>
-                        {summary.catalogByCategory.map(g => <option key={g.name} value={g.name}>{g.name}</option>)}
+                        {summary.catalogByCategory.filter(g => !isRolloverCategory(g.name)).map(g => <option key={g.name} value={g.name}>{g.name}</option>)}
                     </select>
                 </div>
             </Card>
@@ -521,9 +533,11 @@ const PlanView = ({ summary }) => {
                             <li key={a.id} className="py-2.5 flex items-center gap-3 rounded-lg px-2 -mx-2 transition-colors hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]">
                                 <div className="flex-1 min-w-0">
                                     <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
-                                    <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                                        {a.category?.name || 'Other'}
-                                    </div>
+                                    {!isRolloverCategory(a.category?.name) && (
+                                        <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                            {a.category?.name || 'Other'}
+                                        </div>
+                                    )}
                                 </div>
                                 <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
                                     {a.points} {a.points === 1 ? 'pt' : 'pts'}
@@ -555,9 +569,11 @@ const PlanView = ({ summary }) => {
                                 <li key={a.id} className="py-2.5 flex items-center gap-3">
                                     <div className="flex-1 min-w-0">
                                         <div className="text-[13.5px] text-zinc-900 dark:text-white">{a.name}</div>
-                                        <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                                            {a.category?.name || 'Other'}
-                                        </div>
+                                        {!isRolloverCategory(a.category?.name) && (
+                                            <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                                                {a.category?.name || 'Other'}
+                                            </div>
+                                        )}
                                     </div>
                                     <span className="shrink-0 inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 font-mono text-[12px] tabular-nums text-accent">
                                         +{a.points}
@@ -664,7 +680,7 @@ const PlanView = ({ summary }) => {
     );
 };
 
-const AwardSchemeView = ({ user }) => {
+const AwardSchemeView = ({ user, theme = 'light' }) => {
     const [view, setView] = useState('overview');
 
     const page = user?.studentId ? awardsPage(user.studentId) : null;
@@ -702,10 +718,7 @@ const AwardSchemeView = ({ user }) => {
 
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-zinc-900 dark:text-white">Awards</h1>
-                </div>
+            <div className="flex flex-wrap items-center justify-end gap-3">
                 <Segmented value={view} onChange={setView} />
             </div>
 
@@ -729,7 +742,7 @@ const AwardSchemeView = ({ user }) => {
                     </div>
                 </div>
             ) : view === 'house' ? (
-                <HouseView summary={summary} />
+                <HouseView summary={summary} isDark={theme === 'dark'} />
             ) : (
                 <PlanView summary={summary} />
             )}

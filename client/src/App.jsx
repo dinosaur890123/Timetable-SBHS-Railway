@@ -1517,7 +1517,7 @@ function App() {
                                 <DailyNotices notices={notices} user={user} />
                             )}
 
-                            {currentView === 'awards' && <AwardSchemeView user={user} />}
+                            {currentView === 'awards' && <AwardSchemeView user={user} theme={theme} />}
 
                             {currentView === 'clipboard' && <ClipboardView user={user} />}
 

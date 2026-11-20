@@ -290,12 +290,8 @@ const CalendarView = ({ user }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4 mb-8"
         >
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight dark:text-white text-zinc-900">Calendar</h2>
-          </div>
-
           <div className="flex items-center gap-1">
             <motion.button
               onClick={() => goToMonth(addMonths(currentDate, -1))}
