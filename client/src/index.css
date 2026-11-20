@@ -99,9 +99,13 @@ html:not(.dark):not([class*="theme-"]) {
 .subject-bar::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-left: 3px solid var(--subject-ink);
-  border-radius: inherit;
+  left: 11px;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background-color: var(--subject-ink);
+  transform: translateY(-50%);
   pointer-events: none;
 }
 .period-card-surface {
