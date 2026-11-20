@@ -84,6 +84,14 @@ const weekendClipboardDay = (schoolDay, sessions = []) => {
     return best ? new Date(`${best}T00:00`) : schoolDay;
 };
 
+const cachedStudentId = () => {
+    try {
+        return JSON.parse(localStorage.getItem('cached_user') || 'null')?.studentId || null;
+    } catch {
+        return null;
+    }
+};
+
 import {
     fetchDayTimetable,
     peekDayTimetable,
@@ -120,8 +128,10 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
-    const [viewDate, setViewDate] = useState(() => startDay || new Date());
-    const [defaultDate, setDefaultDate] = useState(startDay);
+    const [initialClipboardSessions] = useState(() => peekClipboardSessions(cachedStudentId()) || []);
+    const [initialDay] = useState(() => weekendClipboardDay(startDay || new Date(), initialClipboardSessions));
+    const [viewDate, setViewDate] = useState(initialDay);
+    const [defaultDate, setDefaultDate] = useState(initialDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
     const lastViewRef = useRef('home');
 

@@ -181,10 +181,13 @@ export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
     if (!periodInfo?.title) return { name: periodInfo?.title || '', colour: null };
     const key = subjectKey(periodInfo.year, periodInfo.title);
     const subject = daySubjects?.[key] || subjectIndex?.[key];
+    // The API's period and matching subject records carry the class year;
+    // the student's profile year is not used to label individual classes.
+    const classYear = subject?.year ?? periodInfo.year;
     return {
         name: subject?.title
-            ? withYear(subject.title, subject.year ?? periodInfo.year, ' ')
-            : withYear(periodInfo.title, periodInfo.year, ''),
+            ? withYear(subject.title, classYear, ' ')
+            : withYear(periodInfo.title, classYear, ''),
         colour: normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
     };
 };

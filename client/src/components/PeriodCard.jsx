@@ -81,8 +81,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             <div className="min-w-0 flex-1 lg:flex lg:items-center lg:gap-4">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50 lg:flex-1" title={name || undefined}>
-                        <span className="lg:hidden">{title || 'Free Period'}</span>
-                        <span className="hidden lg:inline">{name || 'Free Period'}</span>
+                        {name || title || 'Free Period'}
                     </h3>
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400 lg:mt-0 lg:shrink-0">

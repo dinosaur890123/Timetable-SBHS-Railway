@@ -44,8 +44,7 @@ const CycleCell = ({ classInfo, onSelect }) => {
             }`}
         >
             <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
-                <span className="lg:hidden">{title}</span>
-                <span className="hidden lg:inline">{name || title}</span>
+                {name || title}
             </span>
             {room && (
                 <span className="max-w-full truncate text-[9px] font-medium leading-tight tabular-nums text-zinc-500 dark:text-zinc-400 md:ml-2 md:shrink-0 md:text-[11px]">{room}</span>
