@@ -167,6 +167,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
         <div className="flex items-center gap-2 text-accent mb-2">
             <LinkIcon size={20} strokeWidth={1.6} />
         </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Canvas links</h1>
         <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             Link each class to its Canvas course, and its name opens Canvas from anywhere in the app.
         </p>

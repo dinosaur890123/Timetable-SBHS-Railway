@@ -112,6 +112,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
             <div className="flex items-center gap-2 text-accent mb-2">
                 <Shield size={20} strokeWidth={1.6} />
             </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Privacy</h1>
             <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                 Synchron is a third-party app that connects to the SBHS student portal. This page explains exactly what data is used, where it lives, and how to delete it.
             </p>

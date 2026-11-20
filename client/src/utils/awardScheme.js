@@ -229,7 +229,7 @@ export const summariseAwards = ({
         };
     });
     const areas = allAreas
-        .filter(area => area.name !== 'Presentation Night & Co-Curricular Awards & Rollover Points')
+        .filter(area => !/rollover\s+points/i.test(area.name))
         .sort((a, b) => b.points - a.points || b.earned - a.earned || a.name.localeCompare(b.name));
     const areasNotStarted = [];
 

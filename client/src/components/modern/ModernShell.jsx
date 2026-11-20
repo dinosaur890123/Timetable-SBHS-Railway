@@ -19,7 +19,6 @@ export const VIEW_LABELS = {
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
     'build-notes': 'Build Notes',
-    privacy: 'Privacy',
     admin: 'Admin'
 };
 

@@ -718,7 +718,10 @@ const AwardSchemeView = ({ user, theme = 'light' }) => {
 
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-zinc-900 dark:text-white">Awards</h1>
+                </div>
                 <Segmented value={view} onChange={setView} />
             </div>
 

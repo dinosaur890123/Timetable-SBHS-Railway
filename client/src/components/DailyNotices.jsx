@@ -129,6 +129,7 @@ const DailyNotices = ({ notices, user }) => {
               <Megaphone size={16} />
             </div>
             <div className="min-w-0">
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-white leading-tight">Daily notices</h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {displayNotices.length === allNotices.length
                   ? `${allNotices.length} notice${allNotices.length !== 1 ? 's' : ''}`
