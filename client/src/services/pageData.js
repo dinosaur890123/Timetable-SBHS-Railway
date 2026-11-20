@@ -176,7 +176,7 @@ export const awardsPage = (studentId) => ({
     }
 });
 
-export const clipboardSessionsKey = (studentId) => `clipboard-sessions:${studentId}`;
+export const clipboardSessionsKey = (studentId) => `clipboard-sessions:v2:${studentId}`;
 
 export const peekClipboardSessions = (studentId) =>
     studentId
@@ -198,7 +198,7 @@ export const loadClipboardSessions = (studentId) => {
 };
 
 export const clipboardPage = (studentId) => ({
-    key: `clipboard:${studentId}`,
+    key: `clipboard:v2:${studentId}`,
     load: async (previous) => {
         const results = await Promise.all([
             settle(fetchStudentClipboardAttendance(studentId), previous?.attendance ?? []),

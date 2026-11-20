@@ -462,7 +462,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
     const currentYear = options.year || new Date().getFullYear();
     const lastYear = options.year ? currentYear : currentYear + 1;
     const params = new URLSearchParams();
-    if (options.startDate) params.set('date[after]', options.startDate);
+    params.set('date[after]', options.startDate || `${options.year ? currentYear : 2000}-01-01`);
     params.set('date[before]', options.endDate || `${lastYear}-12-31`);
     const pageSize = Number(options.itemsPerPage) || 300;
     params.set('_itemsPerPage', String(pageSize));

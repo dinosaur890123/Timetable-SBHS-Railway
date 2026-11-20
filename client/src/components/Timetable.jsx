@@ -5,7 +5,7 @@ import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import { useNoteFlowFonts } from './study/noteflow';
+import { Hl, useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
 import { termsPage, closureLabel } from '../services/pageData';
 import { useCachedLoad } from '../utils/pageCache';
@@ -62,7 +62,7 @@ const DaySkeleton = () => (
     </ol>
 );
 
-const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [], currentWeek }) => {
+const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [] }) => {
     const { getLink, linksEnabled } = useCanvasLinks();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [selectedClass, setSelectedClass] = useState(null);
@@ -344,17 +344,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             return { label, dayNums };
         });
 
-        const currentWeekLabel = currentWeek
-            || weekLetter(railTimetable?.timetable?.timetable?.dayname || railTimetable?.timetable?.dayname)
-            || weekLetter(innerTimetable?.dayname)
-            || (() => {
-                try {
-                    const cached = JSON.parse(localStorage.getItem('cached_timetable') || '{}');
-                    return weekLetter(cached?.timetable?.timetable?.dayname || cached?.timetable?.dayname);
-                } catch {
-                    return null;
-                }
-            })();
+        const todayDow = getDay(new Date());
+        const currentDayIndex = todayDow >= 1 && todayDow <= 5 ? todayDow - 1 : -1;
 
         const allDayNums = weeks.flatMap(w => w.dayNums);
 
@@ -434,25 +425,23 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
         return (
             <div className="flex flex-col gap-6">
                 {weeks.map(week => {
-                    const isCurrentWeek = weeks.length > 1 && currentWeekLabel === week.label;
                     return (
                         <section key={week.label} aria-label={`Week ${week.label}`}>
                             {weeks.length > 1 && (
                                 <div className="flex items-center gap-2 mb-2 px-1">
                                     <h3 className="text-[13px] font-semibold text-zinc-900 dark:text-white">Week {week.label}</h3>
-                                    {isCurrentWeek && (
-                                        <span className="text-[10px] font-medium uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md bg-accent/10 text-accent">This week</span>
-                                    )}
                                 </div>
                             )}
-                            <div className={`rounded-2xl border bg-m-card overflow-hidden ${isCurrentWeek ? 'border-accent/40' : 'border-m-line'}`}>
+                            <div className="rounded-2xl border border-m-line bg-m-card overflow-hidden">
                                 <div className="overflow-x-auto">
                                     <table className="w-full table-fixed">
                                         <thead>
                                             <tr className="bg-m-panel border-b border-m-line">
-                                                {days.map(day => (
+                                                {days.map((day, dayIndex) => (
                                                     <th key={day} className="px-0.5 py-2 sm:px-4 sm:py-3 text-center sm:text-left text-[10px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.06em] sm:tracking-[0.1em]">
-                                                        {day.slice(0, 3)}
+                                                        {currentDayIndex === dayIndex
+                                                            ? <Hl>{day.slice(0, 3)}</Hl>
+                                                            : day.slice(0, 3)}
                                                     </th>
                                                 ))}
                                             </tr>
