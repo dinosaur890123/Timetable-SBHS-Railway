@@ -199,7 +199,7 @@ const RailCard = ({ children, colour, phase }) => {
     return (
         <section
             {...(colour ? subjectInk(colour) : {})}
-            className="period-card-surface relative rounded-xl border border-zinc-900/[0.07] dark:border-white/[0.08] p-3 sm:p-4"
+            className="now-card-surface relative rounded-xl border border-zinc-900/[0.07] dark:border-white/[0.08] p-3 sm:p-4"
         >
             <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -345,7 +345,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         return (
             <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
                 <RailLabel aside={schoolLeft}>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
-                <Countdown mins={end - nowMin} caption="left" />
+                <Countdown mins={end - nowMin} caption="until transition" />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />
             </RailCard>
@@ -357,7 +357,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
             <ClassTitle period={current.period} className="min-w-0 whitespace-normal break-words text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white" />
-            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
+            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="until transition" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
         </RailCard>

@@ -116,6 +116,10 @@ html:not(.dark):not([class*="theme-"]) {
 .period-card-current:hover {
   background-color: color-mix(in srgb, rgb(var(--m-card, 255 255 255)) 91%, black);
 }
+.now-card-surface,
+.now-card-surface:hover {
+  background-color: rgb(var(--m-card, 255 255 255));
+}
 html.dark .period-card-surface {
   background-color: rgb(var(--m-card, 21 21 25));
 }
@@ -127,6 +131,10 @@ html.dark .period-card-current {
 }
 html.dark .period-card-current:hover {
   background-color: color-mix(in srgb, rgb(var(--m-card, 21 21 25)) 91%, black);
+}
+html.dark .now-card-surface,
+html.dark .now-card-surface:hover {
+  background-color: rgb(var(--m-card, 21 21 25));
 }
 .subject-edge {
   box-shadow: inset 3px 0 0 var(--subject-ink);
