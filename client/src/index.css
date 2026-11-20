@@ -100,7 +100,7 @@ html:not(.dark):not([class*="theme-"]) {
   content: "";
   position: absolute;
   left: 8px;
-  top: 50%;
+  top: calc(50% + 1px);
   width: 3px;
   height: 24px;
   border-radius: 999px;
