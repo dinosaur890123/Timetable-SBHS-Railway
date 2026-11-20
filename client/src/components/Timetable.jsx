@@ -43,7 +43,7 @@ const CycleCell = ({ classInfo, onSelect }) => {
                     : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
-            {colour && <span aria-hidden className="absolute left-px top-1 bottom-1 w-[3px] rounded-full subject-fill md:left-[-1px] md:top-2 md:bottom-2" />}
+            {colour && <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl subject-fill" />}
             <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
                 <span className="lg:hidden">{title}</span>
                 <span className="hidden lg:inline">{name || title}</span>

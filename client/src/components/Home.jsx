@@ -249,7 +249,7 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
         <SubjectDot colour={slot.period.colour} />
-        <span className={`font-medium text-zinc-800 dark:text-zinc-200 ${slot.isExtracurricular ? 'min-w-0 flex-1 whitespace-normal break-words' : 'truncate'}`}>
+        <span className="min-w-0 flex-1 whitespace-normal break-words font-medium text-zinc-800 dark:text-zinc-200">
             <span className="lg:hidden">{slot.period.title}</span>
             <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
         </span>
@@ -356,7 +356,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
-            <ClassTitle period={current.period} className={`text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white ${isExtracurricular ? 'whitespace-normal break-words' : 'truncate'}`} />
+            <ClassTitle period={current.period} className="min-w-0 whitespace-normal break-words text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white" />
             <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="left" /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />

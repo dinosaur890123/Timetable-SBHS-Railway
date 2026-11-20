@@ -88,7 +88,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0 text-[13px] text-zinc-500 dark:text-zinc-400 lg:mt-0 lg:shrink-0">
                     {isCurrent ? (
                         <motion.span
-                            className="shrink-0 font-medium text-accent"
+                            className="hidden shrink-0 font-medium text-accent sm:inline"
                             initial={justStarted ? { opacity: 0, x: -6 } : false}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
@@ -96,7 +96,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                             Now
                         </motion.span>
                     ) : null}
-                    {isCurrent && fullTeacher && <span aria-hidden className="text-zinc-300 dark:text-zinc-600">·</span>}
+                    {isCurrent && fullTeacher && <span aria-hidden className="hidden text-zinc-300 dark:text-zinc-600 sm:inline">·</span>}
                     {fullTeacher && (
                         <span className={`truncate hidden sm:inline ${room ? 'lg:hidden' : 'lg:inline'} lg:max-w-[15rem] ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
@@ -135,12 +135,12 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
             className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] transition-colors duration-500 ${justStarted ? 'period-start' : ''} ${isCurrent
-                ? 'bg-zinc-900/[0.035] dark:bg-white/[0.045] hover:bg-zinc-900/[0.06] dark:hover:bg-white/[0.07]'
+                ? 'bg-zinc-900/[0.05] dark:bg-black/[0.06] hover:bg-zinc-900/[0.07] dark:hover:bg-black/[0.09]'
                 : 'bg-zinc-900/[0.018] dark:bg-white/[0.018] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035]'}`}
         >
             <span className={`absolute -left-[4rem] top-1/2 -translate-y-1/2 w-[3.25rem] text-right text-[12px] tabular-nums ${isCurrent ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>{formatTime12Hour(bell.time)}</span>
             {colour ? (
-                <span aria-hidden className={`absolute left-[-1px] top-1 bottom-1 w-[3px] rounded-full subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
+                <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl subject-fill ${justStarted ? 'period-stripe' : ''}`} {...subjectInk(colour)} />
             ) : isCurrent && (
                 <span aria-hidden className="absolute -left-1 top-2 bottom-2 w-[3px] rounded-full bg-accent" />
             )}
