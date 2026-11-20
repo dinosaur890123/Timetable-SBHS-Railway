@@ -77,7 +77,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
     };
 
     const content = (
-        <div className={`relative flex items-center gap-3 ${colour ? 'pl-6 lg:pl-6' : 'pl-[13px] lg:pl-3'} pr-2.5 sm:pr-3 py-2 sm:py-3 ${dim}`}>
+        <div className={`relative flex items-center gap-3 ${colour ? 'pl-[18px] lg:pl-[18px]' : 'pl-[13px] lg:pl-3'} pr-2.5 sm:pr-3 py-2 sm:py-3 ${dim}`}>
             <div className="min-w-0 flex-1 lg:flex lg:items-center lg:gap-4">
                 <div className="flex items-center gap-2 min-w-0">
                     <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50 lg:flex-1" title={name || undefined}>
