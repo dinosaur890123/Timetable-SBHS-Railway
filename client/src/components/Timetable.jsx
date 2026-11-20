@@ -37,7 +37,7 @@ const CycleCell = ({ classInfo, onSelect }) => {
             onClick={onSelect}
             title={name}
             {...(colour ? subjectInk(colour) : {})}
-            className={`press press-soft relative flex min-h-[3rem] flex-col items-start justify-center rounded-xl border px-1.5 py-1 md:flex-row md:items-center md:py-2 ${colour ? 'subject-bar pl-[18px] md:pl-5 md:pr-2.5' : 'md:px-2.5'} text-left cursor-pointer transition-all duration-200 ${
+            className={`press press-soft relative flex min-h-[3rem] flex-col items-start justify-center rounded-xl border px-1.5 py-1 md:flex-row md:items-center md:py-2 ${colour ? 'subject-bar pl-6 md:pl-7 md:pr-2.5' : 'md:px-2.5'} text-left cursor-pointer transition-all duration-200 ${
                 isSelected
                     ? 'bg-accent/10 border-accent/40 shadow-sm'
                 : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
