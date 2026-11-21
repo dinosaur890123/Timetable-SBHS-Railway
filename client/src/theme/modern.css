@@ -218,6 +218,8 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
 @media (max-width: 767px) {
   .ambient { opacity: .5; }
   .dark .ambient { opacity: .32; }
+  .ambient--festive { opacity: .42; }
+  .dark .ambient--festive { opacity: .28; }
   .ambient--panel {
     height: 100%;
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 92%);
@@ -226,7 +228,7 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   .ambient__blob--a { width: 85%; top: -14%; left: -22%; }
   .ambient__blob--b { width: 80%; top: -20%; right: -24%; }
   .ambient__blob--c { width: 65%; top: -4%; left: 24%; }
-  .ambient--festive .ambient__blob--a { top: 4%; }
-  .ambient--festive .ambient__blob--b { top: 4%; }
-  .ambient--festive .ambient__blob--c { top: 9%; }
+  .ambient--festive .ambient__blob--a { width: 66%; top: 4%; }
+  .ambient--festive .ambient__blob--b { width: 66%; top: 4%; }
+  .ambient--festive .ambient__blob--c { width: 54%; top: 9%; }
 }
