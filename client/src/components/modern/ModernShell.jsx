@@ -78,8 +78,8 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
 const IS_STAGING_HOST = typeof window !== 'undefined' && window.location.hostname === 'staging.synchron.work';
-export const StagingBadge = () => IS_STAGING_HOST ? (
-    <span className="inline-flex shrink-0 items-center rounded-full border border-amber-500/20 bg-amber-500/[0.08] px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300">
+export const StagingBadge = ({ className = '' }) => IS_STAGING_HOST ? (
+    <span className={`inline-flex shrink-0 items-center rounded-full border border-amber-500/20 bg-amber-500/[0.08] px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300 ${className}`}>
         Staging
     </span>
 ) : null;
@@ -112,6 +112,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
             <button onClick={() => setView('home')} className="flex items-center gap-2.5 px-2.5 py-1.5 mb-5 text-left">
                 <BrandMark />
                 <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+                <StagingBadge className="hidden md:inline-flex" />
             </button>
 
             <nav className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
@@ -226,7 +227,7 @@ export const ModernTopbar = ({
                         </motion.span>
                     </AnimatePresence>
                 </h1>
-                <StagingBadge />
+                <StagingBadge className="md:hidden" />
             </div>
 
             <div className="flex items-center gap-1.5">
