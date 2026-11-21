@@ -80,7 +80,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
         <div className={`relative flex items-center gap-3 ${colour ? 'pl-[18px] lg:pl-[18px]' : 'pl-[13px] lg:pl-3'} pr-2.5 sm:pr-3 py-2 sm:py-3 ${dim}`}>
             <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
                 <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="truncate text-[15px] leading-none font-medium text-zinc-900 dark:text-zinc-50 sm:flex-1" title={name || undefined}>
+                    <h3 className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50 sm:flex-1" title={name || undefined}>
                         <span className="lg:hidden">{shortName || title || 'Free Period'}</span>
                         <span className="hidden lg:inline">{name || title || 'Free Period'}</span>
                     </h3>
