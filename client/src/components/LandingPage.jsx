@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { ArrowRight, AlertOctagon, X } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
-import { BrandMark } from './modern/ModernShell';
+import { BrandMark, StagingBadge } from './modern/ModernShell';
 import AmbientLight from './modern/AmbientLight';
 
 const FEATURES = [
@@ -158,6 +158,7 @@ const LandingPage = ({ authError, clearAuthError, festiveAmbient = false }) => {
                   <BrandMark />
                 )}
                 <span className="whitespace-nowrap text-[15px] font-semibold tracking-tight text-white">Synchron</span>
+                <StagingBadge />
               </button>
               <a
                 href="/privacy"
