@@ -52,6 +52,7 @@ const PrivacyView = lazyPage(pageLoaders.privacy);
 const SettingsView = lazyPage(pageLoaders.settings);
 
 const ARCHIVED_NOTICE_LIMIT = 100;
+const STAGING_ACCESS_RESTRICTED_MESSAGE = 'Access restricted to authorized staging testers.';
 
 const SUBPAGE_VIEWS = ['feedback', 'canvas-links', 'build-notes', 'privacy'];
 
@@ -65,6 +66,12 @@ const authErrorMessage = (err) => {
         return `${base} If this site has a Local network access permission, set it to Allow and try again.`;
     }
     return base;
+};
+
+const isStagingAccessDenied = (error) => error?.status === 403 && error?.message === STAGING_ACCESS_RESTRICTED_MESSAGE;
+const clearStagingAuthSession = () => {
+    ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry', 'sbhs_token_scope', 'cached_user']
+        .forEach(key => localStorage.removeItem(key));
 };
 
 const weekendClipboardDay = (schoolDay, sessions = []) => {
@@ -99,6 +106,7 @@ import {
     fetchUserInfo,
     isAuthenticated,
     exchangeToken,
+    validateServerSession,
     checkAuthState,
     logout,
     performLogin,
@@ -842,6 +850,10 @@ function App() {
                     setReauthRequired(false);
                 } catch (err) {
                     console.error(err);
+                    if (isStagingAccessDenied(err)) {
+                        clearStagingAuthSession();
+                        setUser(null);
+                    }
                     setAuthError(authErrorMessage(err));
                     setAuthInProgress(false);
                     setLoading(false);
@@ -865,6 +877,7 @@ function App() {
             }
 
             try {
+                await validateServerSession();
                 const [noticesData, userData, systemData] = await Promise.all([
                     fetchDailyNews(),
                     fetchUserInfo(),
@@ -977,7 +990,13 @@ function App() {
 
             } catch (error) {
                 console.error(error);
-                if (isAuthCallback || !user) setAuthError(authErrorMessage(error));
+                if (isStagingAccessDenied(error)) {
+                    clearStagingAuthSession();
+                    setUser(null);
+                    setAuthError(authErrorMessage(error));
+                } else if (isAuthCallback || !user) {
+                    setAuthError(authErrorMessage(error));
+                }
             } finally {
                 setAuthInProgress(false);
                 setLoading(false);

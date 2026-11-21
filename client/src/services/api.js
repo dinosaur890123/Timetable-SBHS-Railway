@@ -11,6 +11,7 @@ const AUTH_ENDPOINT = 'https://auth.sbhs.net.au/authorize';
 const API_BASE_URL = 'https://student.sbhs.net.au/api';
 const SYSTEM_API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api';
 const TOKEN_ENDPOINT = `${SYSTEM_API_URL}/auth/token`;
+const STAGING_ACCESS_RESTRICTED_MESSAGE = 'Access restricted to authorized staging testers.';
 
 const PRIVATE_CACHES = ['sbhs-data', 'app-data'];
 const clearOfflineData = async () => {
@@ -98,7 +99,13 @@ export const exchangeToken = async (code) => {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Token exchange error:", errorData);
-        throw new Error(errorData.error_description || `Token exchange failed: ${response.statusText}`);
+        const error = new Error(errorData.error_description || errorData.error || `Token exchange failed: ${response.statusText}`);
+        error.status = response.status;
+        if (response.status === 403 && error.message === STAGING_ACCESS_RESTRICTED_MESSAGE) {
+            clearTokens();
+            localStorage.removeItem('cached_user');
+        }
+        throw error;
     }
 
     const data = await response.json();
@@ -150,6 +157,16 @@ const runRefresh = async (forced) => {
     try {
         const response = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
         if (!response.ok) {
+            if (response.status === 403) {
+                const errorData = await response.json().catch(() => ({}));
+                const error = new Error(errorData.error_description || errorData.error || 'Token refresh was forbidden.');
+                error.status = response.status;
+                if (error.message === STAGING_ACCESS_RESTRICTED_MESSAGE) {
+                    clearTokens();
+                    localStorage.removeItem('cached_user');
+                }
+                throw error;
+            }
             if (response.status === 400 || response.status === 401) {
                 for (let i = 0; i < 3; i++) {
                     if (localStorage.getItem('sbhs_refresh_token') !== refreshToken) return getAccessToken();
@@ -165,8 +182,25 @@ const runRefresh = async (forced) => {
         return data.access_token;
     } catch (error) {
         console.error('Token refresh failed:', error);
+        if (error?.status === 403) throw error;
         return null;
     }
+};
+
+export const validateServerSession = async () => {
+    const token = await getValidAccessToken();
+    if (!token) throw new Error('No access token');
+
+    const response = await timedFetch(`${SYSTEM_API_URL}/auth/session`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.error_description || errorData.error || `Session validation failed: ${response.statusText}`);
+        error.status = response.status;
+        throw error;
+    }
+    return true;
 };
 
 export const refreshAccessToken = ({ forced = true } = {}) => {
@@ -226,7 +260,10 @@ async function fetchWithAuth(endpoint) {
         if (response.status === 401 && sessionLapsed()) {
             window.dispatchEvent(new CustomEvent('synchron:reauth-required'));
         }
-        throw new Error(`API Error ${response.status}: ${endpoint}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.error_description || errorData.error || `API Error ${response.status}: ${endpoint}`);
+        error.status = response.status;
+        throw error;
     }
     return response.json();
 }

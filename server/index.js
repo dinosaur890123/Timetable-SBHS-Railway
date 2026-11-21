@@ -656,21 +656,36 @@ const getAdminIds = () => {
     return ["449130511", "449596935"];
 };
 
-const tokenVerifier = createTokenVerifier({
-    fetchUserInfo: async (token) => {
-        try {
-            const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
-                headers: { 'Authorization': `Bearer ${token}` },
-                signal: AbortSignal.timeout(8000)
-            });
-            if (!response.ok) return null;
-            const user = await response.json();
-            return user || null;
-        } catch (e) {
-            console.error('[auth] SBHS Token validation failed:', e?.message || e);
-            return null;
-        }
+const STAGING_ACCESS_RESTRICTED_MESSAGE = 'Access restricted to authorized staging testers.';
+const getAllowedStagingUsers = () => String(process.env.ALLOWED_STAGING_USERS || '')
+    .split(',')
+    .map(userId => userId.trim().toLowerCase())
+    .filter(Boolean);
+const isAllowedStagingUser = (userData) => {
+    const allowedUsers = getAllowedStagingUsers();
+    if (allowedUsers.length === 0) return true;
+    const studentId = String(userData?.studentId || '').trim().toLowerCase();
+    return Boolean(studentId) && allowedUsers.includes(studentId);
+};
+const rejectRestrictedStagingUser = (res) => res.status(403).json({ error: STAGING_ACCESS_RESTRICTED_MESSAGE });
+
+const fetchSbhsUserInfo = async (token) => {
+    try {
+        const response = await fetch('https://student.sbhs.net.au/api/details/userinfo.json', {
+            headers: { 'Authorization': `Bearer ${token}` },
+            signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) return null;
+        const user = await response.json();
+        return user || null;
+    } catch (e) {
+        console.error('[auth] SBHS Token validation failed:', e?.message || e);
+        return null;
     }
+};
+
+const tokenVerifier = createTokenVerifier({
+    fetchUserInfo: fetchSbhsUserInfo
 });
 
 const verifySbhsToken = async (req) => {
@@ -682,12 +697,14 @@ const verifySbhsToken = async (req) => {
 const requireStudentAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
+        if (!isAllowedStagingUser(req.user)) return rejectRestrictedStagingUser(res);
         return next();
     }
     const userData = await verifySbhsToken(req);
     if (!userData) {
         return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
     }
+    if (!isAllowedStagingUser(userData)) return rejectRestrictedStagingUser(res);
     req.user = userData;
     next();
 };
@@ -732,12 +749,14 @@ async function getUserById(id) {
 const requireAdminAuth = async (req, res, next) => {
     if (process.env.BYPASS_AUTH === 'true') {
         req.user = { studentId: '449130511', givenName: 'Local', surname: 'Admin', email: 'admin@sbhs.nsw.edu.au', yearGroup: '12' };
+        if (!isAllowedStagingUser(req.user)) return rejectRestrictedStagingUser(res);
         return next();
     }
     const userData = await verifySbhsToken(req);
     if (!userData) {
         return res.status(401).json({ error: 'Unauthorized: Invalid or missing SBHS token' });
     }
+    if (!isAllowedStagingUser(userData)) return rejectRestrictedStagingUser(res);
     const studentId = String(userData.studentId);
 
     try {
@@ -764,6 +783,11 @@ const requireAdminAuth = async (req, res, next) => {
 };
 
 const requireAuth = requireAdminAuth;
+
+app.get('/api/auth/session', requireStudentAuth, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(204).end();
+});
 
 const isAdminUser = async (studentId) => {
     try {
@@ -2697,6 +2721,21 @@ app.post('/api/auth/token', tokenLimit, async (req, res) => {
             signal: AbortSignal.timeout(10000)
         });
         const body = await response.text();
+        if (response.ok && getAllowedStagingUsers().length > 0) {
+            let tokenData = null;
+            try {
+                tokenData = JSON.parse(body);
+            } catch {
+                tokenData = null;
+            }
+            const userData = tokenData?.access_token ? await fetchSbhsUserInfo(tokenData.access_token) : null;
+            if (!isAllowedStagingUser(userData)) {
+                return res.status(403).json({
+                    error: STAGING_ACCESS_RESTRICTED_MESSAGE,
+                    error_description: STAGING_ACCESS_RESTRICTED_MESSAGE
+                });
+            }
+        }
         res.status(response.status).type(response.headers.get('content-type') || 'application/json').send(body);
     } catch (e) {
         console.error('[auth] SBHS token request failed:', e?.message || e);
