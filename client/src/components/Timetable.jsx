@@ -577,7 +577,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                         />
                     ))}
                     {routineData.length > 0 && (
-                        <li className="flex items-center gap-3 px-2.5 sm:px-3 pt-3">
+                        <li className="flex items-center gap-3 px-2.5 sm:px-3 py-1.5">
                             <span className="w-[3.25rem] shrink-0 text-right text-[12px] tabular-nums text-zinc-400 dark:text-zinc-500">
                                 {formatTime12Hour(routineData[routineData.length - 1].bell.endTime)}
                             </span>
