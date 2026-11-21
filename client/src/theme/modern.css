@@ -163,9 +163,9 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
 .ambient__blob--a { width: 62%; top: -38%; left: -14%; background: radial-gradient(closest-side, var(--ambient-a), transparent); animation: ambient-drift-a 34s ease-in-out infinite alternate; }
 .ambient__blob--b { width: 58%; top: -44%; right: -16%; background: radial-gradient(closest-side, var(--ambient-b), transparent); animation: ambient-drift-b 42s ease-in-out infinite alternate; }
 .ambient__blob--c { width: 46%; top: -22%; left: 30%; background: radial-gradient(closest-side, var(--ambient-c), transparent); animation: ambient-drift-c 50s ease-in-out infinite alternate; }
-.ambient--festive .ambient__blob--a { width: 48%; top: -16%; left: -17%; }
-.ambient--festive .ambient__blob--b { width: 48%; top: -16%; right: -17%; }
-.ambient--festive .ambient__blob--c { width: 38%; top: 16%; left: 31%; }
+.ambient--festive .ambient__blob--a { width: 56%; top: -18%; left: -7%; }
+.ambient--festive .ambient__blob--b { width: 56%; top: -18%; right: -7%; }
+.ambient--festive .ambient__blob--c { width: 44%; top: 0; left: 28%; }
 @keyframes ambient-drift-a { to { transform: translate3d(10%, 8%, 0) scale(1.1); } }
 @keyframes ambient-drift-b { to { transform: translate3d(-12%, 10%, 0) scale(1.06); } }
 @keyframes ambient-drift-c { to { transform: translate3d(6%, 14%, 0) scale(1.14); } }
@@ -226,4 +226,7 @@ html[data-ui="modern"] .min-h-screen { min-height: calc(100vh / var(--ui-scale))
   .ambient__blob--a { width: 85%; top: -14%; left: -22%; }
   .ambient__blob--b { width: 80%; top: -20%; right: -24%; }
   .ambient__blob--c { width: 65%; top: -4%; left: 24%; }
+  .ambient--festive .ambient__blob--a { top: 4%; }
+  .ambient--festive .ambient__blob--b { top: 4%; }
+  .ambient--festive .ambient__blob--c { top: 9%; }
 }
