@@ -133,6 +133,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
             {...(colour ? subjectInk(colour) : {})}
             initial={{ opacity: 0, y: 4 }}
             animate={justStarted ? { opacity: 1, y: 0, scale: [1, 1.025, 1] } : { opacity: 1, y: 0, scale: 1 }}
+            whileTap={{ scale: 0.985 }}
             transition={{ delay: enterDelay(routineIndex), scale: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] } }}
             className={`group relative ml-[4.75rem] rounded-xl border border-zinc-900/[0.06] dark:border-white/[0.06] ${colour ? 'subject-bar' : ''} ${justStarted ? 'period-start' : ''} ${isCurrent ? 'period-card-current' : 'period-card-surface'}`}
         >
