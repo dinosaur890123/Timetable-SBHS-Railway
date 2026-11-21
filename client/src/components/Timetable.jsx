@@ -32,6 +32,10 @@ const SessionRow = ({ session, isPast, index, onOpen }) => {
 
 const CycleCell = ({ classInfo, onSelect }) => {
     const { name, title, room, colour, isSelected, isDimmed } = classInfo;
+    const removeYearPrefix = (value) => {
+        const year = classInfo.year;
+        return year == null ? value : (value || '').replace(new RegExp(`^${String(year)}(?=\\D|$)\\s*`), '');
+    };
     return (
         <div
             onClick={onSelect}
@@ -43,9 +47,9 @@ const CycleCell = ({ classInfo, onSelect }) => {
                 : `bg-zinc-900/[0.018] dark:bg-white/[0.018] border-zinc-900/[0.06] dark:border-white/[0.06] hover:bg-zinc-900/[0.035] dark:hover:bg-white/[0.035] ${isDimmed ? 'opacity-35 grayscale hover:opacity-90 hover:grayscale-0' : ''}`
             }`}
         >
-            <span className="min-w-0 w-full truncate text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
-                <span className="lg:hidden">{classInfo.shortName || title}</span>
-                <span className="hidden lg:inline">{name || title}</span>
+            <span className="min-w-0 w-full whitespace-normal break-words text-[10px] font-medium leading-tight text-zinc-900 dark:text-white md:w-auto md:flex-1 md:text-[12px]">
+                <span className="lg:hidden">{removeYearPrefix(classInfo.shortName || title)}</span>
+                <span className="hidden lg:inline">{removeYearPrefix(name || title)}</span>
             </span>
             {room && (
                 <span className="max-w-full truncate text-[9px] font-medium leading-tight tabular-nums text-zinc-500 dark:text-zinc-400 md:ml-2 md:shrink-0 md:text-[11px]">{room}</span>
@@ -402,6 +406,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             return {
                 ...describeClass(periodInfo, null, subjectIndex),
                 title: periodInfo.title,
+                year: periodInfo.year,
                 room: periodInfo.room,
                 teacher: periodInfo.fullTeacher || periodInfo.teacher,
                 bell: bell?.bellDisplay || `Period ${bellId}`,
