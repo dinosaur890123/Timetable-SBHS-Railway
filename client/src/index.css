@@ -106,7 +106,12 @@ html:not(.dark):not([class*="theme-"]) {
   border-radius: 999px;
   background-color: var(--subject-ink);
   transform: translateY(-50%);
+  transform-origin: center;
+  transition: transform 120ms ease-out;
   pointer-events: none;
+}
+.subject-bar:active::before {
+  transform: translateY(-50%) scaleY(0.82);
 }
 .period-card-surface {
   background-color: rgb(var(--m-card, 255 255 255));
