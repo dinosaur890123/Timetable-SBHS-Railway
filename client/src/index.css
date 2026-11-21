@@ -102,6 +102,7 @@ html:not(.dark):not([class*="theme-"]) {
   left: 8px;
   top: 50%;
   width: 3px;
+  min-width: 3px;
   height: 24px;
   border-radius: 999px;
   background-color: var(--subject-ink);

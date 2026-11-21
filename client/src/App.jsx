@@ -133,7 +133,6 @@ function App() {
     const [viewDate, setViewDate] = useState(initialDay);
     const [defaultDate, setDefaultDate] = useState(initialDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
-    const lastViewRef = useRef('home');
 
     useEffect(() => {
         if (window.location.pathname === '/admin') {
@@ -241,6 +240,10 @@ function App() {
         window.addEventListener('synchron:reauth-required', handleReauthRequired);
         return () => window.removeEventListener('synchron:reauth-required', handleReauthRequired);
     }, []);
+
+    useEffect(() => {
+        if (usingCachedData && !isOffline) setReauthRequired(true);
+    }, [usingCachedData, isOffline]);
 
     const [broadcast, setBroadcast] = useState(() => {
         try {
@@ -1194,13 +1197,6 @@ function App() {
         }, 1500);
     }, [user?.studentId, !!dayTimetable]);
 
-    useEffect(() => {
-        if (lastViewRef.current === 'home' && currentView !== 'home' && defaultDate) {
-            setViewDate(defaultDate);
-        }
-        lastViewRef.current = currentView;
-    }, [currentView, defaultDate]);
-
     const currentViewRef = useRef(currentView);
     currentViewRef.current = currentView;
     const prevViewRef = useRef(currentView);
@@ -1348,7 +1344,7 @@ function App() {
                 {reauthRequired && (
                     <div className="mx-4 md:mx-8 mt-6 -mb-2 px-4 py-3 shrink-0 rounded-xl flex flex-wrap items-center gap-3 text-sm font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300">
                         <AlertCircle size={18} className="shrink-0" />
-                        <span className="flex-1">Your SBHS session has expired. Sign in again to load fresh data.</span>
+                        <span className="flex-1">Your session has expired. Log in for latest data.</span>
                         <button
                             onClick={() => performLogin()}
                             className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity"
