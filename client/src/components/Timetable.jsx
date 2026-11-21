@@ -57,7 +57,9 @@ const CycleCell = ({ classInfo, onSelect }) => {
 const DaySkeleton = () => (
     <ol className="-mx-3 space-y-1.5" aria-busy="true" aria-label="Loading timetable">
         {Array.from({ length: 6 }, (_, i) => (
-            <li key={i} className="h-[62px] rounded-xl bg-zinc-900/[0.04] dark:bg-white/[0.05] animate-pulse-subtle" />
+            <li key={i} className="relative ml-[4.75rem] h-[62px] rounded-xl border border-zinc-900/[0.06] bg-zinc-900/[0.025] dark:border-white/[0.06] dark:bg-white/[0.035] animate-pulse-subtle">
+                <span aria-hidden="true" className="absolute left-2 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-zinc-400/70 dark:bg-zinc-500/70" />
+            </li>
         ))}
     </ol>
 );
