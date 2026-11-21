@@ -73,8 +73,9 @@ export const useSky = (festive = false) => {
 
 const AmbientLight = ({ variant = 'panel', style, festive = false }) => {
     const { colours: [a, b, c] } = useSky(festive);
+    const festiveActive = Boolean(festiveThemeAt() || festive);
     return (
-        <div aria-hidden className={`ambient ambient--${variant}`} style={style}>
+        <div aria-hidden className={`ambient ambient--${variant}${festiveActive ? ' ambient--festive' : ''}`} style={style}>
             <span className="ambient__blob ambient__blob--a" style={{ '--ambient-a': a }} />
             <span className="ambient__blob ambient__blob--b" style={{ '--ambient-b': b }} />
             <span className="ambient__blob ambient__blob--c" style={{ '--ambient-c': c }} />
