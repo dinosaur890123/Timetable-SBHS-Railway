@@ -131,6 +131,11 @@ function App() {
     const [initialClipboardSessions] = useState(() => peekClipboardSessions(cachedStudentId()) || []);
     const [initialDay] = useState(() => weekendClipboardDay(startDay || new Date(), initialClipboardSessions));
     const [viewDate, setViewDate] = useState(initialDay);
+    const userSelectedViewDate = useRef(false);
+    const setViewDateFromUser = (nextDate) => {
+        userSelectedViewDate.current = true;
+        setViewDate(nextDate);
+    };
     const [defaultDate, setDefaultDate] = useState(initialDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
 
@@ -411,7 +416,7 @@ function App() {
     }, [calendarMonth, showDatePicker, user]);
 
     const handleDateSelect = (date) => {
-        setViewDate(date);
+        setViewDateFromUser(date);
         setShowDatePicker(false);
     };
 
@@ -1006,7 +1011,11 @@ function App() {
                 const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
                 const openDay = weekendClipboardDay(date, sessions);
                 setDefaultDate(openDay);
-                setViewDate(current => isSameDay(current, provisionalDay) ? openDay : current);
+                setViewDate(current => (
+                    !userSelectedViewDate.current && isSameDay(current, provisionalDay)
+                        ? openDay
+                        : current
+                ));
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
             }
@@ -1144,8 +1153,8 @@ function App() {
     const viewKey = format(viewDate, 'yyyy-MM-dd');
     const dayTimetable = peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null);
 
-    const nextDay = () => setViewDate(d => addDays(d, 1));
-    const prevDay = () => setViewDate(d => addDays(d, -1));
+    const nextDay = () => setViewDateFromUser(d => addDays(d, 1));
+    const prevDay = () => setViewDateFromUser(d => addDays(d, -1));
 
     const layersOpen = paletteOpen || showDatePicker;
     useEffect(() => {
@@ -1155,7 +1164,7 @@ function App() {
             if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
             if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
             e.preventDefault();
-            setViewDate(d => addDays(d, e.key === 'ArrowRight' ? 1 : -1));
+            setViewDateFromUser(d => addDays(d, e.key === 'ArrowRight' ? 1 : -1));
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
@@ -1174,15 +1183,15 @@ function App() {
         const dx = t.clientX - start.x;
         const dy = t.clientY - start.y;
         if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-        setViewDate(d => addDays(d, dx < 0 ? 1 : -1));
+        setViewDateFromUser(d => addDays(d, dx < 0 ? 1 : -1));
     };
     const resetToday = async () => {
         try {
             const { date } = await fetchNextSchoolDay();
             const sessions = showClipboardEvents && user?.studentId ? await loadClipboardSessions() : [];
-            setViewDate(weekendClipboardDay(date, sessions));
+            setViewDateFromUser(weekendClipboardDay(date, sessions));
         } catch {
-            setViewDate(defaultDate || new Date());
+            setViewDateFromUser(defaultDate || new Date());
         }
     };
 
