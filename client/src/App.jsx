@@ -254,10 +254,6 @@ function App() {
         return () => window.removeEventListener('synchron:reauth-required', handleReauthRequired);
     }, []);
 
-    useEffect(() => {
-        if (usingCachedData && !isOffline) setReauthRequired(true);
-    }, [usingCachedData, isOffline]);
-
     const [broadcast, setBroadcast] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_system');
@@ -1326,6 +1322,8 @@ function App() {
                     onOpenPalette={() => setPaletteOpen(true)}
                     isOffline={isOffline}
                     usingCachedData={usingCachedData}
+                    reauthRequired={reauthRequired}
+                    onLogin={() => performLogin()}
                     buildNotes={hiddenPages.includes('build-notes') ? [] : buildNotes}
                     adminNotices={adminNotices}
                     onOpenBuildNotes={() => setCurrentView('build-notes')}

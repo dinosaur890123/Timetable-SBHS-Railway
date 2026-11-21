@@ -77,6 +77,13 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
 
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
+const IS_STAGING_HOST = typeof window !== 'undefined' && window.location.hostname === 'staging.synchron.work';
+export const StagingBadge = ({ className = '' }) => IS_STAGING_HOST ? (
+    <span className={`inline-flex shrink-0 items-center rounded-full border border-amber-500/20 bg-amber-500/[0.08] px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300 ${className}`}>
+        Staging
+    </span>
+) : null;
+
 export const BrandMark = ({ className = '' }) => (
     <div className={`relative w-7 h-7 ${className}`}>
         <img
@@ -105,6 +112,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
             <button onClick={() => setView('home')} className="flex items-center gap-2.5 px-2.5 py-1.5 mb-5 text-left">
                 <BrandMark />
                 <span className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">Synchron</span>
+                <StagingBadge className="hidden md:inline-flex" />
             </button>
 
             <nav className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
@@ -190,7 +198,7 @@ const IconButton = ({ children, className = '', ...props }) => (
 
 export const ModernTopbar = ({
     currentView, setView, theme, toggleTheme, onOpenPalette,
-    isOffline, usingCachedData,
+    isOffline, usingCachedData, reauthRequired, onLogin,
     buildNotes = [], adminNotices = [], onOpenBuildNotes, onOpenCanvasLinks, onOpenAdmin
 }) => {
     const status = isOffline
@@ -219,6 +227,7 @@ export const ModernTopbar = ({
                         </motion.span>
                     </AnimatePresence>
                 </h1>
+                <StagingBadge className="md:hidden" />
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -230,12 +239,27 @@ export const ModernTopbar = ({
                     <span className="flex-1 text-left">Search</span>
                     <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
                 </button>
-                <span className="hidden lg:flex items-center gap-1.5 px-2 text-xs text-zinc-400" title={status.label}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                    {status.label}
-                </span>
-                {status.icon && (
-                    <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
+                {!isOffline && reauthRequired ? (
+                    <button
+                        type="button"
+                        onClick={onLogin}
+                        aria-label="Sign in again for the latest data"
+                        title="Your session has expired. Sign in again for the latest data."
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 transition-colors"
+                    >
+                        <Database size={15} />
+                        <span className="hidden sm:inline text-xs font-medium">Log in for latest info</span>
+                    </button>
+                ) : (
+                    <>
+                        <span className="hidden lg:flex items-center gap-1.5 px-2 text-xs text-zinc-400" title={status.label}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                            {status.label}
+                        </span>
+                        {status.icon && (
+                            <span className="lg:hidden text-amber-500 px-1" title={status.label}><status.icon size={14} /></span>
+                        )}
+                    </>
                 )}
 
                 <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
