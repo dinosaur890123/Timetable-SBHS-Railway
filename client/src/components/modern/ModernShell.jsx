@@ -197,7 +197,7 @@ const IconButton = ({ children, className = '', ...props }) => (
 );
 
 export const ModernTopbar = ({
-    currentView, setView, theme, toggleTheme, onOpenPalette,
+    currentView, setView, theme, toggleTheme, onOpenPalette, onOpenPaletteFocus,
     isOffline, usingCachedData, reauthRequired, onLogin,
     buildNotes = [], adminNotices = [], onOpenBuildNotes, onOpenCanvasLinks, onOpenAdmin
 }) => {
@@ -232,7 +232,7 @@ export const ModernTopbar = ({
 
             <div className="flex items-center gap-1.5">
                 <button
-                    onClick={onOpenPalette}
+                    onClick={onOpenPaletteFocus || onOpenPalette}
                     className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
                 >
                     <Search size={14} />
@@ -261,10 +261,6 @@ export const ModernTopbar = ({
                         )}
                     </>
                 )}
-
-                <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
-                    <Search size={16} />
-                </IconButton>
 
                 <CanvasLinkNotifications
                     buildNotes={buildNotes}
@@ -433,6 +429,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
                             <Search size={16} className="text-zinc-400 shrink-0" />
                             <input
                                 ref={inputRef}
+                                data-bare
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}

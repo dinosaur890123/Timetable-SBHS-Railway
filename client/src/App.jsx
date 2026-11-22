@@ -1324,6 +1324,10 @@ function App() {
                     theme={theme}
                     toggleTheme={toggleTheme}
                     onOpenPalette={() => setPaletteOpen(true)}
+                    onOpenPaletteFocus={() => {
+                        setPaletteFocusOnOpen(true);
+                        setPaletteOpen(true);
+                    }}
                     isOffline={isOffline}
                     usingCachedData={usingCachedData}
                     reauthRequired={reauthRequired}
