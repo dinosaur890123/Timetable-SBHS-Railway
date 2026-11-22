@@ -344,7 +344,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
     );
 };
 
-export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) => {
+export const CommandPalette = ({ open, onClose, commands, quickActions = [], focusOnOpen = false, onFocusHandled }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const inputRef = useRef(null);
@@ -362,8 +362,12 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
         if (open) {
             setQuery('');
             setActiveIndex(0);
+            if (focusOnOpen) {
+                requestAnimationFrame(() => inputRef.current?.focus());
+                onFocusHandled?.();
+            }
         }
-    }, [open]);
+    }, [open, focusOnOpen]);
 
     useEffect(() => {
         setActiveIndex(0);
@@ -559,12 +563,17 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
     return { commands: [...navCommands, ...actionCommands], quickActions };
 };
 
-export const useModernShellEffects = (setPaletteOpen) => {
+export const useModernShellEffects = (setPaletteOpen, setPaletteFocusOnOpen) => {
     useEffect(() => {
         const handleKeyboardShortcut = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
-                setPaletteOpen(prev => !prev);
+                const isMobile = window.matchMedia('(max-width: 639px), (pointer: coarse)').matches;
+                setPaletteOpen(prev => {
+                    const willOpen = !prev;
+                    setPaletteFocusOnOpen?.(willOpen && !isMobile);
+                    return willOpen;
+                });
             }
         };
 
@@ -583,5 +592,5 @@ export const useModernShellEffects = (setPaletteOpen) => {
             window.removeEventListener('keydown', handleKeyboardShortcut);
             document.removeEventListener('pointermove', handlePointerMove);
         };
-    }, [setPaletteOpen]);
+    }, [setPaletteOpen, setPaletteFocusOnOpen]);
 };

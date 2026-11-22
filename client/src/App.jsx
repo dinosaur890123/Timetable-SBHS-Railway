@@ -190,7 +190,8 @@ function App() {
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
-    useModernShellEffects(setPaletteOpen);
+    const [paletteFocusOnOpen, setPaletteFocusOnOpen] = useState(false);
+    useModernShellEffects(setPaletteOpen, setPaletteFocusOnOpen);
 
     useEffect(() => {
         try {
@@ -1604,6 +1605,8 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
+                focusOnOpen={paletteFocusOnOpen}
+                onFocusHandled={() => setPaletteFocusOnOpen(false)}
                 {...buildCommands({
                     user,
                     setView: setCurrentView,
