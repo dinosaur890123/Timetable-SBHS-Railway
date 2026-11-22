@@ -62,6 +62,9 @@
   --shadow-3: 0 2px 6px rgba(0, 0, 0, .35), 0 28px 56px -28px rgba(0, 0, 0, .6);
 }
 
+.nf-hl-context { --hl: #D6C2FF; --hl-ink: #161615; }
+.dark .nf-hl-context { --hl: #4A3778; --hl-ink: #F4F0FF; }
+
 .nf *, .nf *::before, .nf *::after { box-sizing: border-box; }
 .nf .tnum { font-variant-numeric: tabular-nums; }
 

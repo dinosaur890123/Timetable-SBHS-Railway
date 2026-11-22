@@ -289,7 +289,7 @@ const Countdown = ({ mins, caption }) => (
             <span className="sr-only">{formatCountdown(mins)}</span>
             <span aria-hidden><RollingText text={formatCountdown(mins)} /></span>
         </span>
-        <span className="text-xs sm:text-[13px] text-zinc-500">{caption}</span>
+        {caption && <span className="text-xs sm:text-[13px] text-zinc-500">{caption}</span>}
     </div>
 );
 
@@ -318,6 +318,10 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         const raw = p?.fullTitle || p?.title || '';
         return /^sp[\s-]?\d*$/i.test(raw.trim()) ? 'Sport' : raw.replace(/\s*\d+$/, '');
     };
+    const countdownCaption = (slot) => {
+        if (!slot) return null;
+        return isClass(slot) ? 'until transition' : `until ${slotTitle(slot.period)}`;
+    };
 
     if (nowMin < dayStart) {
         const first = allSlots[0];
@@ -345,7 +349,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         return (
             <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
                 <RailLabel aside={schoolLeft}>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
-                <Countdown mins={end - nowMin} caption="until transition" />
+                <Countdown mins={end - nowMin} caption={countdownCaption(next)} />
                 <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
                 <ThenLine slot={next} prefix="Next" />
             </RailCard>
@@ -357,7 +361,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     return (
         <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
             <ClassTitle period={current.period} className="min-w-0 whitespace-normal break-words text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white" />
-            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption="until transition" /></div>
+            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption={countdownCaption(next)} /></div>
             <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
             <ThenLine slot={next} prefix="Next" />
         </RailCard>

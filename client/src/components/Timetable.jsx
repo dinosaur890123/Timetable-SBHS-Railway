@@ -8,6 +8,7 @@ import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { Hl, useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
 import { termsPage, closureLabel } from '../services/pageData';
+import { fetchDateInfo } from '../services/api';
 import { useCachedLoad } from '../utils/pageCache';
 
 const SessionRow = ({ session, isPast, index, onOpen }) => {
@@ -80,6 +81,9 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
     }, []);
 
     const { data: terms } = useCachedLoad(termsPage().key, termsPage().load);
+    const todayKey = format(currentTime, 'yyyy-MM-dd');
+    const todayDateInfoKey = viewMode === 'cycle' ? `school-day:${todayKey}` : null;
+    const { data: todayDateInfo } = useCachedLoad(todayDateInfoKey, () => fetchDateInfo(currentTime));
 
     const resolvedCompleteTimetable = completeTimetable || (() => {
         try {
@@ -92,7 +96,6 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
     if (viewMode === 'cycle' && !resolvedCompleteTimetable) return <DaySkeleton />;
     if (viewMode === 'daily' && !timetableData) return <DaySkeleton />;
 
-    const todayKey = format(currentTime, 'yyyy-MM-dd');
     const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData?.date || todayKey);
     const viewedDate = date || new Date(`${viewedKey}T00:00`);
 
@@ -348,8 +351,10 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
             return { label, dayNums };
         });
 
-        const todayDow = getDay(new Date());
-        const currentDayIndex = todayDow >= 1 && todayDow <= 5 ? todayDow - 1 : -1;
+        const cycleDayNumber = Number(todayDateInfo?.[todayKey]?.dayNumber);
+        const currentCycleDayNumber = Number.isInteger(cycleDayNumber) && cycleDayNumber > 0
+            ? cycleDayNumber
+            : null;
 
         const allDayNums = weeks.flatMap(w => w.dayNums);
 
@@ -444,8 +449,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                                             <tr className="bg-m-panel border-b border-m-line">
                                                 {days.map((day, dayIndex) => (
                                                     <th key={day} className="px-0.5 py-2 sm:px-4 sm:py-3 text-center sm:text-left text-[10px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.06em] sm:tracking-[0.1em]">
-                                                        {currentDayIndex === dayIndex
-                                                            ? <Hl>{day.slice(0, 3)}</Hl>
+                                                        {currentCycleDayNumber === week.dayNums[dayIndex]
+                                                            ? <span className="nf-hl-context"><Hl>{day.slice(0, 3)}</Hl></span>
                                                             : day.slice(0, 3)}
                                                     </th>
                                                 ))}
