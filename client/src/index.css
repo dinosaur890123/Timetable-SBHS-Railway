@@ -111,6 +111,11 @@ html:not(.dark):not([class*="theme-"]) {
   transition: transform 120ms ease-out;
   pointer-events: none;
 }
+.cycle-cell-subject-bar::before {
+  width: 4px;
+  min-width: 4px;
+  max-width: 4px;
+}
 .subject-bar:active::before {
   transform: translateY(-50%) scaleY(0.82);
 }
