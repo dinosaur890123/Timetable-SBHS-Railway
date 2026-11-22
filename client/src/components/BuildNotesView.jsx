@@ -227,7 +227,7 @@ const BuildNotesView = ({ onBack }) => {
             )}
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-                Synchron BETA · build {typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__.sha : 'latest'}
+                © Synchron {new Date().getFullYear()} · BETA
             </p>
         </div>
     );
