@@ -190,7 +190,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
 const IconButton = ({ children, className = '', ...props }) => (
     <button
         {...props}
-        className={`w-8 h-8 grid place-items-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors ${className}`}
+        className={`w-8 h-8 inline-flex items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors ${className}`}
     >
         {children}
     </button>
@@ -284,7 +284,7 @@ export const ModernTopbar = ({
                         </motion.span>
                     </AnimatePresence>
                 </IconButton>
-                <IconButton onClick={() => setView('profile')} className="md:hidden" aria-label="Settings">
+                <IconButton onClick={() => setView(currentView === 'profile' ? 'home' : 'profile')} className="md:hidden" aria-label="Settings">
                     <Settings size={16} />
                 </IconButton>
             </div>
