@@ -190,7 +190,8 @@ function App() {
     const reduceMotion = useReducedMotion();
 
     const [paletteOpen, setPaletteOpen] = useState(false);
-    useModernShellEffects(setPaletteOpen);
+    const [paletteFocusOnOpen, setPaletteFocusOnOpen] = useState(false);
+    useModernShellEffects(setPaletteOpen, setPaletteFocusOnOpen);
 
     useEffect(() => {
         try {
@@ -438,6 +439,7 @@ function App() {
 
     const queueFeedbackStatusNotices = useCallback((updates = []) => {
         updates.forEach(fb => {
+            const isImplemented = ['implemented', 'resolved'].includes(fb.status);
             const statusLabel = ({
                 considering: 'under consideration',
                 implemented: 'implemented',
@@ -447,8 +449,10 @@ function App() {
             archiveNotice({
                 id: `feedback-status-${fb.id}-${fb.status}`,
                 title: 'Feedback status updated',
-                message: `Your feedback ticket (${fb.ticketNumber}) is now ${statusLabel}.`,
-                type: ['implemented', 'resolved'].includes(fb.status) ? 'resolved' : 'feedback-status',
+                message: isImplemented
+                    ? `Your feedback ticket (${fb.ticketNumber}) has been resolved and will be implemented in the next release of Synchron.`
+                    : `Your feedback ticket (${fb.ticketNumber}) is now ${statusLabel}.`,
+                type: isImplemented ? 'resolved' : 'feedback-status',
                 at: Date.now()
             });
         });
@@ -1320,6 +1324,10 @@ function App() {
                     theme={theme}
                     toggleTheme={toggleTheme}
                     onOpenPalette={() => setPaletteOpen(true)}
+                    onOpenPaletteFocus={() => {
+                        setPaletteFocusOnOpen(true);
+                        setPaletteOpen(true);
+                    }}
                     isOffline={isOffline}
                     usingCachedData={usingCachedData}
                     reauthRequired={reauthRequired}
@@ -1601,6 +1609,8 @@ function App() {
             <CommandPalette
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
+                focusOnOpen={paletteFocusOnOpen}
+                onFocusHandled={() => setPaletteFocusOnOpen(false)}
                 {...buildCommands({
                     user,
                     setView: setCurrentView,

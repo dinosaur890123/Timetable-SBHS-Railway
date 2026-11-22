@@ -190,14 +190,14 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
 const IconButton = ({ children, className = '', ...props }) => (
     <button
         {...props}
-        className={`w-8 h-8 grid place-items-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors ${className}`}
+        className={`w-8 h-8 inline-flex items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors ${className}`}
     >
         {children}
     </button>
 );
 
 export const ModernTopbar = ({
-    currentView, setView, theme, toggleTheme, onOpenPalette,
+    currentView, setView, theme, toggleTheme, onOpenPalette, onOpenPaletteFocus,
     isOffline, usingCachedData, reauthRequired, onLogin,
     buildNotes = [], adminNotices = [], onOpenBuildNotes, onOpenCanvasLinks, onOpenAdmin
 }) => {
@@ -232,7 +232,7 @@ export const ModernTopbar = ({
 
             <div className="flex items-center gap-1.5">
                 <button
-                    onClick={onOpenPalette}
+                    onClick={onOpenPaletteFocus || onOpenPalette}
                     className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
                 >
                     <Search size={14} />
@@ -262,10 +262,6 @@ export const ModernTopbar = ({
                     </>
                 )}
 
-                <IconButton onClick={onOpenPalette} className="sm:hidden" aria-label="Search">
-                    <Search size={16} />
-                </IconButton>
-
                 <CanvasLinkNotifications
                     buildNotes={buildNotes}
                     adminNotices={adminNotices}
@@ -288,7 +284,7 @@ export const ModernTopbar = ({
                         </motion.span>
                     </AnimatePresence>
                 </IconButton>
-                <IconButton onClick={() => setView('profile')} className="md:hidden" aria-label="Settings">
+                <IconButton onClick={() => setView(currentView === 'profile' ? 'home' : 'profile')} className="md:hidden" aria-label="Settings">
                     <Settings size={16} />
                 </IconButton>
             </div>
@@ -344,7 +340,7 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
     );
 };
 
-export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) => {
+export const CommandPalette = ({ open, onClose, commands, quickActions = [], focusOnOpen = false, onFocusHandled }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const inputRef = useRef(null);
@@ -362,8 +358,12 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
         if (open) {
             setQuery('');
             setActiveIndex(0);
+            if (focusOnOpen) {
+                requestAnimationFrame(() => inputRef.current?.focus());
+                onFocusHandled?.();
+            }
         }
-    }, [open]);
+    }, [open, focusOnOpen]);
 
     useEffect(() => {
         setActiveIndex(0);
@@ -429,6 +429,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [] }) =
                             <Search size={16} className="text-zinc-400 shrink-0" />
                             <input
                                 ref={inputRef}
+                                data-bare
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -559,12 +560,17 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
     return { commands: [...navCommands, ...actionCommands], quickActions };
 };
 
-export const useModernShellEffects = (setPaletteOpen) => {
+export const useModernShellEffects = (setPaletteOpen, setPaletteFocusOnOpen) => {
     useEffect(() => {
         const handleKeyboardShortcut = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
-                setPaletteOpen(prev => !prev);
+                const isMobile = window.matchMedia('(max-width: 639px), (pointer: coarse)').matches;
+                setPaletteOpen(prev => {
+                    const willOpen = !prev;
+                    setPaletteFocusOnOpen?.(willOpen && !isMobile);
+                    return willOpen;
+                });
             }
         };
 
@@ -583,5 +589,5 @@ export const useModernShellEffects = (setPaletteOpen) => {
             window.removeEventListener('keydown', handleKeyboardShortcut);
             document.removeEventListener('pointermove', handlePointerMove);
         };
-    }, [setPaletteOpen]);
+    }, [setPaletteOpen, setPaletteFocusOnOpen]);
 };

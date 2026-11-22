@@ -750,6 +750,10 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         );
     }
 
+    const onStaging = window.location.hostname === 'staging.synchron.work';
+    const otherSiteUrl = onStaging ? 'https://synchron.work' : 'https://staging.synchron.work';
+    const otherSiteLabel = onStaging ? 'Open Main Site' : 'Open Staging';
+
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="flex items-center justify-between gap-4">
@@ -762,14 +766,24 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                         Manage users and system settings
                     </p>
                 </div>
-                <button
-                    onClick={loadData}
-                    disabled={loading}
-                    className="shrink-0 flex items-center gap-2 h-9 px-3 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors disabled:opacity-50"
-                >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                    <span className="hidden sm:inline">Refresh</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <a
+                        href={otherSiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-2 h-9 px-3 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors"
+                    >
+                        <span>{otherSiteLabel}</span>
+                    </a>
+                    <button
+                        onClick={loadData}
+                        disabled={loading}
+                        className="shrink-0 flex items-center gap-2 h-9 px-3 rounded-lg border border-zinc-900/10 dark:border-white/10 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.05] dark:hover:bg-white/[0.06] transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                </div>
             </header>
 
             <nav className="admin-tabs-container flex flex-wrap gap-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 p-1.5">
