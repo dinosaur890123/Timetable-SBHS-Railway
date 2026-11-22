@@ -96,9 +96,9 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                             Now
                         </motion.span>
                     ) : null}
-                    {isCurrent && fullTeacher && <span aria-hidden className="hidden text-zinc-300 dark:text-zinc-600 sm:inline">·</span>}
+                    {isCurrent && fullTeacher && <span aria-hidden className={`hidden text-zinc-300 dark:text-zinc-600 sm:inline ${room ? 'period-card-inline-teacher-separator' : ''}`}>·</span>}
                     {fullTeacher && (
-                        <span className={`truncate hidden sm:inline ${room ? 'lg:hidden' : 'lg:inline'} lg:max-w-[15rem] ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
+                        <span className={`truncate hidden sm:inline ${room ? 'lg:hidden period-card-inline-teacher' : 'lg:inline'} lg:max-w-[15rem] ${isSubstituted ? 'px-1.5 py-0.5 rounded-md change-highlight' : ''}`}>
                             {fullTeacher === 'No teacher' ? null : fullTeacher}
                         </span>
                     )}
@@ -116,7 +116,7 @@ const PeriodCard = ({ period, bell, label, isCurrent, justStarted, isNext, routi
                 <div className="shrink-0 text-right leading-tight">
                     <div className="flex items-center gap-[10px] justify-end sm:gap-3">
                         {fullTeacher && (
-                            <span className={`text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden lg:inline ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
+                            <span className={`period-card-room-teacher text-[12px] text-zinc-500 dark:text-zinc-400 sm:hidden lg:inline ${isSubstituted ? 'px-1 py-0.5 rounded-md change-highlight' : ''}`}>
                                 {fullTeacher === 'No teacher' ? null : fullTeacher}
                             </span>
                         )}

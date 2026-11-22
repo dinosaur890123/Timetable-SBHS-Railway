@@ -189,3 +189,14 @@ html:not([class*="theme-"]).dark .change-highlight {
     gap: 0.25rem !important;
   }
 }
+
+@media (orientation: landscape) and (min-width: 640px) and (max-width: 1023px) {
+  .period-card-inline-teacher,
+  .period-card-inline-teacher-separator {
+    display: none;
+  }
+
+  .period-card-room-teacher {
+    display: inline;
+  }
+}
