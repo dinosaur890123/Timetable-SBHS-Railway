@@ -559,7 +559,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         { id: 'notices', label: 'Notices' },
         { id: 'awards', label: 'Awards' },
         { id: 'clipboard', label: 'Clipboard' },
-        { id: 'notes', label: 'Study' },
         { id: 'feedback', label: 'Feedback' },
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
@@ -796,7 +795,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
                 <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
                 <TabButton id="settings" label="Settings" icon={Settings} />
-                {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
             </nav>
 
             {apiError && (sessionExpired ? (
@@ -1524,41 +1522,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 }
 
 {activeTab === 'canvas-links' && <AdminCanvasLinks />}
-
-{
-    activeTab === 'hidden-pages' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-            <PanelHeader
-                icon={EyeOff}
-                tone="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
-                title="Access Hidden Pages"
-                subtitle="These pages are hidden from navigation but can still be accessed here."
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availablePages.filter(page => hiddenPages.includes(page.id)).map(page => (
-                    <button
-                        key={page.id}
-                        onClick={() => setView(page.id)}
-                        className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
-                            <Eye size={20} className="text-zinc-600 dark:text-zinc-400" />
-                        </div>
-                        <div>
-                            <div className="font-medium text-zinc-900 dark:text-white">{page.label}</div>
-                            <div className="text-xs text-zinc-500">Click to access</div>
-                        </div>
-                    </button>
-                ))}
-            </div>
-            {hiddenPages.length === 0 && (
-                <div className="text-center py-8 text-zinc-500">
-                    No pages are currently hidden. Go to Settings to hide pages.
-                </div>
-            )}
-        </div>
-    )
-}
 
 {
     activeTab === 'feedback' && (
