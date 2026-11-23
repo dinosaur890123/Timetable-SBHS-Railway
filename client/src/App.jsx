@@ -12,7 +12,6 @@ const pageLoaders = {
     notices: () => import('./components/DailyNotices'),
     awards: () => import('./components/AwardSchemeView'),
     clipboard: () => import('./components/ClipboardView'),
-    study: () => import('./components/StudyView'),
     feedback: () => import('./components/FeedbackView'),
     canvasLinks: () => import('./components/CanvasLinksView'),
     buildNotes: () => import('./components/BuildNotesView'),
@@ -44,7 +43,6 @@ const AdminPanel = lazyPage(pageLoaders.admin);
 const LandingPage = lazyPage(() => import('./components/LandingPage'));
 const AwardSchemeView = lazyPage(pageLoaders.awards);
 const ClipboardView = lazyPage(pageLoaders.clipboard);
-const StudyView = lazyPage(pageLoaders.study);
 const FeedbackView = lazyPage(pageLoaders.feedback);
 const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
 const BuildNotesView = lazyPage(pageLoaders.buildNotes);
@@ -282,9 +280,9 @@ function App() {
                 if (Array.isArray(parsed.hiddenPages)) return parsed.hiddenPages;
             }
             const stored = localStorage.getItem('hidden_pages');
-            return stored ? JSON.parse(stored) : ['notes'];
+            return stored ? JSON.parse(stored) : [];
         } catch {
-            return ['notes'];
+            return [];
         }
     });
     const calPage = user?.studentId && !hiddenPages.includes('calendar')
@@ -1526,7 +1524,6 @@ function App() {
 
                             {currentView === 'clipboard' && <ClipboardView user={user} />}
 
-                            {currentView === 'notes' && <StudyView />}
 
                             {currentView === 'feedback' && (
                                 <FeedbackView user={user} onBack={() => setCurrentView('profile')} />

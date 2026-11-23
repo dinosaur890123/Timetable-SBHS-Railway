@@ -559,7 +559,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         { id: 'notices', label: 'Notices' },
         { id: 'awards', label: 'Awards' },
         { id: 'clipboard', label: 'Clipboard' },
-        { id: 'notes', label: 'Study' },
         { id: 'feedback', label: 'Feedback' },
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
