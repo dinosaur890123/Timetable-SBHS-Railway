@@ -248,10 +248,12 @@ const ThenLine = ({ slot, prefix = 'Then' }) => slot && (
     <div className="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-zinc-900/[0.06] dark:border-white/[0.06] flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400 min-w-0">
         <ArrowRight size={12} className="shrink-0" />
         <span className="shrink-0">{prefix}</span>
-        <SubjectDot colour={slot.period.colour} />
+        {!slot.isEndOfDay && <SubjectDot colour={slot.period.colour} />}
         <span className="min-w-0 flex-1 whitespace-normal break-words font-medium text-zinc-800 dark:text-zinc-200">
-            <span className="lg:hidden">{slot.period.title}</span>
-            <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
+            {slot.isEndOfDay ? 'End of day' : <>
+                <span className="lg:hidden">{slot.period.title}</span>
+                <span className="hidden lg:inline">{slot.period.fullTitle || slot.period.title}</span>
+            </>}
         </span>
         <span className="ml-auto shrink-0 tabular-nums">{formatTime12Hour(slot.bell.time)}</span>
     </div>
@@ -320,6 +322,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     };
     const countdownCaption = (slot) => {
         if (!slot) return null;
+        if (slot.isEndOfDay) return 'until end of day';
         return isClass(slot) ? 'until transition' : `until ${slotTitle(slot.period)}`;
     };
 
@@ -340,7 +343,15 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
     }
 
     const current = allSlots.find(s => nowMin >= s.startMin && nowMin < s.endMin);
-    const next = allSlots.find(s => s.startMin >= (current ? current.endMin : nowMin));
+    const lastSlot = allSlots[allSlots.length - 1];
+    const endOfDayTime = lastSlot.bell.endTime || `${String(Math.floor(dayEnd / 60)).padStart(2, '0')}:${String(dayEnd % 60).padStart(2, '0')}`;
+    const next = allSlots.find(s => s.startMin >= (current ? current.endMin : nowMin)) || {
+        isEndOfDay: true,
+        startMin: dayEnd,
+        endMin: dayEnd,
+        bell: { time: endOfDayTime },
+        period: { title: 'End of day', fullTitle: 'End of day' }
+    };
     const schoolLeft = <span className="text-[12px] text-zinc-400 tabular-nums">{formatDuration(dayEnd - nowMin)} left today</span>;
 
     if (!current || (!isClass(current) && !current.isExtracurricular)) {
