@@ -127,6 +127,8 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
     const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
     const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('open');
     const [deletionStatusFilter, setDeletionStatusFilter] = useState('pending');
+    const [analyticsFrom, setAnalyticsFrom] = useState('');
+    const [analyticsTo, setAnalyticsTo] = useState('');
     const [resolvingDeletionId, setResolvingDeletionId] = useState(null);
     const [roleFilter, setRoleFilter] = useState('All');
     const [viewingFeedback, setViewingFeedback] = useState(null);
@@ -559,7 +561,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         { id: 'notices', label: 'Notices' },
         { id: 'awards', label: 'Awards' },
         { id: 'clipboard', label: 'Clipboard' },
-        { id: 'notes', label: 'Study' },
         { id: 'feedback', label: 'Feedback' },
         { id: 'canvas-links', label: 'Canvas Links' }
     ]);
@@ -691,9 +692,42 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         log.details?.toLowerCase().includes(logSearchTerm.toLowerCase())
     );
 
-    const growthData = stats?.growthData || [];
+    const allGrowthData = stats?.growthData || [];
+    const growthData = allGrowthData.filter(d => {
+        if (analyticsFrom && d.date < analyticsFrom) return false;
+        if (analyticsTo && d.date > analyticsTo) return false;
+        return true;
+    });
     const totalSignups = growthData.reduce((sum, d) => sum + (d.count || 0), 0);
     const avgSignupsPerDay = growthData.length ? (totalSignups / growthData.length).toFixed(1) : '0';
+
+    const handleExportAnalytics = () => {
+        const rows = [
+            ['Date', 'New Registrations'],
+            ...growthData.map(d => [d.date, d.count || 0]),
+            [],
+            ['Summary', ''],
+            ['Total Signups (period)', totalSignups],
+            ['Avg Signups / Day (period)', avgSignupsPerDay],
+            ['Active Today', stats?.activeToday || 0],
+            ['Active This Week', weekActive],
+            ['Inactive Users', inactiveCount],
+            ['Accounts Deleted (past 30d)', stats?.accountsDeletedPastMonth || 0],
+            ['Total Users', stats?.totalUsers || 0],
+        ];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        const rangeTag = analyticsFrom || analyticsTo
+            ? `_${analyticsFrom || 'start'}_to_${analyticsTo || 'end'}`
+            : `_${new Date().toISOString().split('T')[0]}`;
+        link.download = `analytics_summary${rangeTag}.csv`;
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
     const weekActive = stats?.activeThisWeek || 0;
     const inactiveCount = stats?.totalUsers ? Math.max(0, stats.totalUsers - weekActive) : 0;
 
@@ -796,7 +830,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                 <TabButton id="build-notes" label="Build Notes" icon={FileCode} />
                 <TabButton id="canvas-links" label="Canvas Links" icon={LinkIcon} />
                 <TabButton id="settings" label="Settings" icon={Settings} />
-                {hiddenPages.length > 0 && <TabButton id="hidden-pages" label="Hidden Pages" icon={EyeOff} />}
             </nav>
 
             {apiError && (sessionExpired ? (
@@ -1024,15 +1057,47 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                             icon={TrendingUp}
                             tone="bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/30"
                             title="Registration Growth"
-                            subtitle="New signups over the last 14 days"
-                        />
+                            subtitle={analyticsFrom || analyticsTo ? `${analyticsFrom || '…'} → ${analyticsTo || '…'}` : 'New signups over the last 14 days'}
+                        >
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <input
+                                    type="date"
+                                    value={analyticsFrom}
+                                    onChange={e => setAnalyticsFrom(e.target.value)}
+                                    className="h-8 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    title="From date"
+                                />
+                                <span className="text-xs text-zinc-400">→</span>
+                                <input
+                                    type="date"
+                                    value={analyticsTo}
+                                    onChange={e => setAnalyticsTo(e.target.value)}
+                                    className="h-8 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    title="To date"
+                                />
+                                {(analyticsFrom || analyticsTo) && (
+                                    <button
+                                        onClick={() => { setAnalyticsFrom(''); setAnalyticsTo(''); }}
+                                        className="h-8 px-2 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        title="Clear date filter"
+                                    >✕</button>
+                                )}
+                                <button
+                                    onClick={handleExportAnalytics}
+                                    className="h-8 px-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5"
+                                    title="Export analytics summary as CSV"
+                                >
+                                    ↓ Export CSV
+                                </button>
+                            </div>
+                        </PanelHeader>
                         {growthData.length === 0 ? (
                             <div className="h-48 flex items-center justify-center text-xs text-zinc-400 font-mono">
-                                No registration data yet
+                                {allGrowthData.length > 0 ? 'No data in selected date range' : 'No registration data yet'}
                             </div>
                         ) : (
                             <>
-                                <div className="h-48 flex items-end gap-1 sm:gap-2">
+                                <div className="h-48 pb-6 flex items-end gap-1 sm:gap-2">
                                     {growthData.map((item, idx) => {
                                         const maxVal = Math.max(1, ...growthData.map(g => g.count || 0));
                                         const pctHeight = ((item.count || 0) / maxVal) * 100;
@@ -1045,7 +1110,10 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                                     className="w-full max-w-[26px] bg-zinc-200 dark:bg-zinc-700 group-hover:bg-zinc-900 dark:group-hover:bg-zinc-200 transition-colors rounded-t-md"
                                                     style={{ height: `${Math.max((item.count || 0) > 0 ? 4 : 0, pctHeight)}%` }}
                                                 ></div>
-                                                <span className="text-[10px] text-zinc-400 mt-2 font-mono whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+                                                <span
+                                                    className="text-[10px] text-zinc-400 mt-1 font-mono whitespace-nowrap"
+                                                    style={{ transform: 'rotate(-45deg)', transformOrigin: 'top right', display: 'block', marginTop: '4px' }}
+                                                >
                                                     {item.date}
                                                 </span>
                                             </div>
@@ -1524,41 +1592,6 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
 }
 
 {activeTab === 'canvas-links' && <AdminCanvasLinks />}
-
-{
-    activeTab === 'hidden-pages' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm">
-            <PanelHeader
-                icon={EyeOff}
-                tone="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
-                title="Access Hidden Pages"
-                subtitle="These pages are hidden from navigation but can still be accessed here."
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availablePages.filter(page => hiddenPages.includes(page.id)).map(page => (
-                    <button
-                        key={page.id}
-                        onClick={() => setView(page.id)}
-                        className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
-                            <Eye size={20} className="text-zinc-600 dark:text-zinc-400" />
-                        </div>
-                        <div>
-                            <div className="font-medium text-zinc-900 dark:text-white">{page.label}</div>
-                            <div className="text-xs text-zinc-500">Click to access</div>
-                        </div>
-                    </button>
-                ))}
-            </div>
-            {hiddenPages.length === 0 && (
-                <div className="text-center py-8 text-zinc-500">
-                    No pages are currently hidden. Go to Settings to hide pages.
-                </div>
-            )}
-        </div>
-    )
-}
 
 {
     activeTab === 'feedback' && (

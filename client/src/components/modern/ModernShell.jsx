@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Home, CalendarDays, Newspaper, Award, Clipboard, GraduationCap, Settings,
+    Home, CalendarDays, Newspaper, Award, Clipboard, Settings,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
@@ -14,7 +14,6 @@ export const VIEW_LABELS = {
     notices: 'Notices',
     awards: 'Awards',
     clipboard: 'Clipboard',
-    notes: 'Study',
     profile: 'Settings',
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
@@ -60,7 +59,6 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
             items: [
                 { id: 'awards', icon: Award },
                 { id: 'clipboard', icon: Clipboard },
-                { id: 'notes', icon: GraduationCap },
                 ...QUICK_LINKS
             ].filter(item => !hiddenPages.includes(item.id))
         },
@@ -297,11 +295,9 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'clipboard', icon: Clipboard, label: 'Clipboard' },
         { id: 'notices', icon: Newspaper, label: 'Notices' },
-        ...(!hiddenPages.includes('notes')
-            ? [{ id: 'notes', icon: GraduationCap, label: 'Study' }]
-            : !hiddenPages.includes('awards')
-                ? [{ id: 'awards', icon: Award, label: 'Awards' }]
-                : [])
+        ...(!hiddenPages.includes('awards')
+            ? [{ id: 'awards', icon: Award, label: 'Awards' }]
+            : [])
     ].filter(item => !hiddenPages.includes(item.id));
 
     const itemClass = 'relative flex-1 min-w-0 h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors';
