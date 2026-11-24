@@ -373,3 +373,21 @@ Classic was removed in full. For reference, here is what went and what stayed:
   created; existing databases still have them and can drop them whenever convenient.
 - **Still to do over time:** replace class names that `modern.css` retunes (`font-black`, bare `border` boxes that
   rely on auto-radius) with the explicit Modern classes above, so components describe what they look like.
+
+---
+
+## Paper look (experiment)
+
+An opt-in mix of Synchron's Modern shell with NoteFlow v2's language (`client/src/theme/paper.css`). It applies only
+when `<html data-look="paper">`: on by default at `staging.synchron.work`, `?look=paper` / `?look=synchron` anywhere
+else (remembered in `localStorage`). Production is unchanged until this is promoted.
+
+- **Surfaces:** the desk (`--m-page`), a sheet (`--m-panel`) and cards (`--m-card`) on warm paper; neutrals are
+  NoteFlow's inks via the `zinc` scale, so existing `text-zinc-*` classes follow. Dark is warm graphite.
+- **Type:** Instrument Sans everywhere; `font-mono` maps to the sans with tabular numerals; uppercase mono eyebrows
+  become sentence-case labels. The Home greeting is the one serif moment, with one highlighter swipe on the name.
+- **Colour:** the accent is ink (colour themes are ignored here); colour belongs to the highlighter and pens. The
+  primary button is an ink key (2px edge, 2px travel). Selection is the highlighter.
+- **Depth:** paper on paper. Ambient light, header dots, tile spotlight and the live card's gradient are off. Radii
+  are NoteFlow's (10 / 14 / 18, squircle where supported).
+- **Motion:** press is 1px with no overshoot. The swipe draws once. Everything else is unchanged.

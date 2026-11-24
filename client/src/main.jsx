@@ -6,6 +6,7 @@ import SeoShellCleanup from './components/SeoShellCleanup.jsx'
 import './index.css'
 import './theme/modern.css'
 import './theme/colorThemes.css'
+import './theme/paper.css'
 import { startAutoUpdate } from './utils/autoUpdate'
 
 startAutoUpdate()

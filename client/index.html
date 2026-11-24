@@ -7,6 +7,24 @@
     <script>
       if (window.location.hostname === 'staging.synchron.work') document.title = 'S-Staging';
     </script>
+    <script>
+      // "Paper" look (NoteFlow x Synchron), opt-in. On by default at staging; ?look=paper / ?look=synchron
+      // anywhere else, remembered per browser. See client/src/theme/paper.css.
+      (function () {
+        try {
+          var q = new URLSearchParams(window.location.search).get('look');
+          if (q === 'paper' || q === 'synchron') localStorage.setItem('look', q);
+          var look = localStorage.getItem('look');
+          if (!look && window.location.hostname === 'staging.synchron.work') look = 'paper';
+          if (look !== 'paper') return;
+          document.documentElement.setAttribute('data-look', 'paper');
+          var link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap';
+          document.head.appendChild(link);
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="Synchron is an offline-enabled, installable all-in-one app for SBHS. It is a hub to access your timetable, calendar, Clipboard and awards as well as Canvas links." />
     <link rel="canonical" href="https://synchron.work/" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
