@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
@@ -19,10 +19,9 @@ const ACCENTS = [
 ];
 
 // The Paper look (client/src/theme/paper.css) keeps a short list of papers, each a tinted desk with its own pen.
-const IS_PAPER_LOOK = typeof document !== 'undefined' && document.documentElement.dataset.look === 'paper';
 const PAPERS = [
     { id: 'zinc', name: 'Paper', ground: '#F3F1EC', pen: '#D6C2FF' },
-    { id: 'navy', name: 'Harbour', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'navy', name: 'Harbour', ground: '#F0EFEC', pen: '#A8D8FF' },
     { id: 'mint', name: 'Sage', ground: '#EDF2EA', pen: '#B4EFA0' },
     { id: 'violet', name: 'Twilight', ground: '#F1EAF6', pen: '#D6C2FF' },
     { id: 'rose', name: 'Blossom', ground: '#F6ECF0', pen: '#FFB8DC' },
@@ -110,8 +109,12 @@ const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
     ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
 }) => {
+    const [uiLook, setUiLook] = useState(() => (
+        typeof document !== 'undefined' && document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron'
+    ));
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
+    const isPaperLook = uiLook === 'paper';
     const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
     const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
@@ -123,6 +126,26 @@ const SettingsView = ({
             return !getCanvasLink(period.title, period.year);
         });
     }, [canvasClasses, getCanvasLink, canvasLinksStatus]);
+
+    const handleUiLookChange = (look) => {
+        const root = document.documentElement;
+        if (look === 'paper') {
+            root.dataset.look = 'paper';
+            if (!document.getElementById('paper-fonts')) {
+                const link = document.createElement('link');
+                link.id = 'paper-fonts';
+                link.rel = 'stylesheet';
+                link.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap';
+                document.head.appendChild(link);
+            }
+        } else {
+            root.removeAttribute('data-look');
+        }
+        try {
+            localStorage.setItem('look', look);
+        } catch {}
+        setUiLook(look);
+    };
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -165,6 +188,14 @@ const SettingsView = ({
             )}
 
             <Section label="Appearance">
+                <Row title="Interface" description="Paper is the new staging look. Synchron keeps the original appearance.">
+                    <Segmented
+                        id="interface"
+                        value={uiLook}
+                        onChange={handleUiLookChange}
+                        options={[{ value: 'paper', label: 'Paper' }, { value: 'synchron', label: 'Synchron' }]}
+                    />
+                </Row>
                 <Row title="Mode">
                     <Segmented
                         id="mode"
@@ -173,7 +204,7 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                {IS_PAPER_LOOK && (
+                {isPaperLook && (
                     <Row title="Paper" description={PAPERS.find(p => p.id === (PAPER_FOR[colorTheme] || colorTheme))?.name || 'Paper'} stack>
                         <div className="flex flex-wrap gap-2.5">
                             {PAPERS.map(p => {
@@ -199,7 +230,7 @@ const SettingsView = ({
                         </div>
                     </Row>
                 )}
-                <Row title="Accent colour" description={accentName} stack className={IS_PAPER_LOOK ? 'hidden' : ''}>
+                <Row title="Accent colour" description={accentName} stack className={isPaperLook ? 'hidden' : ''}>
                     <div className="flex flex-wrap gap-2.5">
                         {ACCENTS.map(a => (
                             <button
@@ -225,7 +256,7 @@ const SettingsView = ({
                         options={[{ value: 'default', label: 'Default' }, { value: 'atom', label: 'Atom' }]}
                     />
                 </Row>
-                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`} className={IS_PAPER_LOOK ? 'hidden' : ''}>
+                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`} className={isPaperLook ? 'hidden' : ''}>
                     <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />
                 </Row>
             </Section>

@@ -2,9 +2,9 @@
  * "Paper" look: Synchron's Modern shell drawn in NoteFlow's v2 language
  * (ink on warm paper, Instrument Sans/Serif, one highlighter swipe, depth from height, no glows).
  *
- * Opt-in. Active only when <html data-look="paper"> (set by the inline script in index.html:
- * on by default at staging.synchron.work, `?look=paper` / `?look=synchron` anywhere else, remembered in
- * localStorage). With the attribute absent nothing in this file applies, so production is untouched.
+ * Active only when <html data-look="paper"> (default at staging.synchron.work; Settings and `?look=paper` /
+ * `?look=synchron` select and remember the look in localStorage). With the attribute absent nothing in this file
+ * applies, so the original Synchron look is restored.
  *
  * Structure: Synchron keeps its layout, shell, command palette and the m-* surface tokens; this file only
  * retunes tokens and the handful of rules that carry the old look (mono eyebrows, glows, press overshoot).
@@ -266,7 +266,7 @@ html[data-ui="modern"][data-look="paper"].dark:is(.theme-mint,.theme-teal):not(.
 
 /* harbour */
 html[data-ui="modern"][data-look="paper"]:is(.theme-navy,.theme-blue):not(.x) {
-  --m-page: 237 241 246; --m-panel: 246 248 251; --m-card: 255 255 255;
+  --m-page: 240 239 236; --m-panel: 246 248 251; --m-card: 255 255 255;
   --hl: #A8D8FF; --hl-ink: #161615;
   --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(150 190 235 / .42), transparent 62%);
 }

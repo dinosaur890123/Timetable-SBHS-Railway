@@ -8,8 +8,8 @@
       if (window.location.hostname === 'staging.synchron.work') document.title = 'S-Staging';
     </script>
     <script>
-      // "Paper" look (NoteFlow x Synchron), opt-in. On by default at staging; ?look=paper / ?look=synchron
-      // anywhere else, remembered per browser. See client/src/theme/paper.css.
+      // "Paper" look (NoteFlow x Synchron), default at staging. Settings can switch looks; ?look=paper /
+      // ?look=synchron also selects one anywhere else. Choices are remembered per browser.
       (function () {
         try {
           var q = new URLSearchParams(window.location.search).get('look');
@@ -19,6 +19,7 @@
           if (look !== 'paper') return;
           document.documentElement.setAttribute('data-look', 'paper');
           var link = document.createElement('link');
+          link.id = 'paper-fonts';
           link.rel = 'stylesheet';
           link.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap';
           document.head.appendChild(link);

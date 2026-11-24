@@ -1,8 +1,8 @@
 # Synchron Design Language
 
-Synchron has **one** interface: Modern. The Classic (brutalist, square-edged) interface has been removed. There is
-no interface picker, so don't add per-interface branches or `html:not([data-ui="modern"])` selectors. See
-[Classic removal](#classic-removal) for what changed.
+Synchron has one shell: Modern. The Classic (brutalist, square-edged) interface has been removed. The staging Paper
+look is an optional appearance experiment within that shell; the original Synchron look remains available in
+Settings. See [Classic removal](#classic-removal) for what changed.
 
 Modern is calm, soft and quick. It should feel like a well-made desktop tool, not a poster: neutral surfaces in
 layers, one accent colour used sparingly, small exact type, and motion that confirms what happened without
@@ -378,9 +378,10 @@ Classic was removed in full. For reference, here is what went and what stayed:
 
 ## Paper look (experiment)
 
-An opt-in mix of Synchron's Modern shell with NoteFlow v2's language (`client/src/theme/paper.css`). It applies only
-when `<html data-look="paper">`: on by default at `staging.synchron.work`, `?look=paper` / `?look=synchron` anywhere
-else (remembered in `localStorage`). Production is unchanged until this is promoted.
+An optional mix of Synchron's Modern shell with NoteFlow v2's language (`client/src/theme/paper.css`). It applies only
+when `<html data-look="paper">`: Paper is the default on `staging.synchron.work`; Settings can switch between Paper
+and the original Synchron look, with the choice remembered in `localStorage`. `?look=paper` / `?look=synchron` also
+sets the choice anywhere else.
 
 - **Surfaces:** the desk (`--m-page`), a sheet (`--m-panel`) and cards (`--m-card`) on warm paper; neutrals are
   NoteFlow's inks via the `zinc` scale, so existing `text-zinc-*` classes follow. Dark is warm graphite.
