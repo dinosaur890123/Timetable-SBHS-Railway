@@ -5,7 +5,6 @@
 :root {
   --color-accent: 0 0% 100%;
   --color-accent-contrast: 240 5.9% 10%;
-  --color-accent-contrast-text: 0 0% 0%;
 
   --zinc-50: 250 250 250;
   --zinc-100: 244 244 245;
@@ -29,66 +28,51 @@
 html:not(.dark):not([class*="theme-"]) {
   --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
-}
-html.dark:not([class*="theme-"]) {
-  --color-accent: 35 95% 55%;
-  --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 0%;
 }
 
 .theme-mint {
   --color-accent: 150 84% 37%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-amber {
   --color-accent: 38 92% 50%;
   --color-accent-contrast: 0 0% 0%;
-  --color-accent-contrast-text: 0 0% 0%;
 }
 
 .theme-blue {
   --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-navy {
   --color-accent: 222 70% 32%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-violet {
   --color-accent: 271 91% 65%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-rose {
   --color-accent: 349 86% 60%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-teal {
   --color-accent: 174 84% 41%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 .theme-orange {
   --color-accent: 24 95% 53%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 0%;
 }
 
 .theme-sky {
   --color-accent: 199 89% 48%;
   --color-accent-contrast: 0 0% 100%;
-  --color-accent-contrast-text: 0 0% 100%;
 }
 
 @layer base {
@@ -175,10 +159,18 @@ html.dark .subject-edge[data-tone="deep"] { background-color: color-mix(in srgb,
 
 .change-highlight {
   background-color: hsl(var(--color-accent) / 0.45);
-  color: hsl(var(--color-accent-contrast-text));
+}
+html:not(.dark) .change-highlight {
+  color: hsl(0 0% 0%);
+}
+html.dark .change-highlight {
+  color: hsl(0 0% 100%);
 }
 html:not([class*="theme-"]) .change-highlight {
   background-color: hsl(35 95% 55% / 0.45);
+}
+html:not([class*="theme-"]).dark .change-highlight {
+  background-color: hsl(35 95% 55% / 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {

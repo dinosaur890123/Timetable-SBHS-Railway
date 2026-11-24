@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download, Image, Video, X, Upload } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
@@ -105,162 +105,9 @@ const Switch = ({ checked, onChange, label }) => (
 
 const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] || ''}`.toUpperCase() || 'S';
 
-// ---------------------------------------------------------------------------
-// Background picker
-// ---------------------------------------------------------------------------
-
-const BG_ACCEPT_IMAGE = 'image/*';
-const BG_ACCEPT_VIDEO = 'video/mp4,video/webm,video/ogg';
-
-const readFileAsDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-
-const BackgroundPicker = ({ customBg, setCustomBg }) => {
-    const imageInputRef = useRef(null);
-    const videoInputRef = useRef(null);
-    const [urlInput, setUrlInput] = useState('');
-    const [urlMode, setUrlMode] = useState(false);
-
-    const handleFileChange = async (e, type) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-            const src = await readFileAsDataUrl(file);
-            setCustomBg({ type, src });
-        } catch {
-            // ignore
-        }
-        e.target.value = '';
-    };
-
-    const handleUrlSubmit = (e) => {
-        e.preventDefault();
-        if (!urlInput.trim()) return;
-        // Guess type from URL extension
-        const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(urlInput.trim());
-        setCustomBg({ type: isVideo ? 'video' : 'image', src: urlInput.trim() });
-        setUrlInput('');
-        setUrlMode(false);
-    };
-
-    return (
-        <div className="space-y-3">
-            {/* Current preview */}
-            {customBg?.src && (
-                <div className="relative w-full h-24 rounded-xl overflow-hidden border border-zinc-900/[0.07] dark:border-white/[0.07] bg-zinc-100 dark:bg-zinc-800">
-                    {customBg.type === 'image' ? (
-                        <img src={customBg.src} alt="Background preview" className="w-full h-full object-cover" />
-                    ) : (
-                        <video
-                            src={customBg.src}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                    )}
-                    <div className="absolute inset-0 flex items-end p-2 bg-gradient-to-t from-black/50">
-                        <span className="text-[11px] font-mono uppercase tracking-wide text-white/80">
-                            {customBg.type === 'video' ? 'Looping video' : 'Photo'}
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => setCustomBg(null)}
-                        aria-label="Remove background"
-                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                    >
-                        <X size={12} />
-                    </button>
-                </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex flex-wrap gap-2">
-                <button
-                    onClick={() => imageInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-900/[0.08] dark:border-white/[0.08] bg-zinc-900/[0.03] dark:bg-white/[0.03] text-[13px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-900/[0.07] dark:hover:bg-white/[0.07] transition-colors"
-                >
-                    <Image size={13} />
-                    Upload photo
-                </button>
-                <button
-                    onClick={() => videoInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-900/[0.08] dark:border-white/[0.08] bg-zinc-900/[0.03] dark:bg-white/[0.03] text-[13px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-900/[0.07] dark:hover:bg-white/[0.07] transition-colors"
-                >
-                    <Video size={13} />
-                    Upload video
-                </button>
-                <button
-                    onClick={() => setUrlMode(v => !v)}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-900/[0.08] dark:border-white/[0.08] bg-zinc-900/[0.03] dark:bg-white/[0.03] text-[13px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-900/[0.07] dark:hover:bg-white/[0.07] transition-colors"
-                >
-                    <Upload size={13} />
-                    Use URL
-                </button>
-                {customBg && (
-                    <button
-                        onClick={() => setCustomBg(null)}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-900/[0.08] dark:border-white/[0.08] bg-zinc-900/[0.03] dark:bg-white/[0.03] text-[13px] font-medium text-red-500 hover:bg-red-500/[0.06] transition-colors"
-                    >
-                        <X size={13} />
-                        Remove
-                    </button>
-                )}
-            </div>
-
-            {/* URL input */}
-            {urlMode && (
-                <form onSubmit={handleUrlSubmit} className="flex gap-2">
-                    <input
-                        type="url"
-                        value={urlInput}
-                        onChange={e => setUrlInput(e.target.value)}
-                        placeholder="https://example.com/background.jpg"
-                        className="flex-1 h-9 px-3 text-[13px] rounded-lg border border-zinc-900/[0.1] dark:border-white/[0.1] bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    />
-                    <button
-                        type="submit"
-                        className="h-9 px-3 rounded-lg bg-accent text-[13px] font-medium text-accent-contrast hover:brightness-110 transition shrink-0"
-                    >
-                        Set
-                    </button>
-                </form>
-            )}
-
-            {/* Hidden file inputs */}
-            <input
-                ref={imageInputRef}
-                type="file"
-                accept={BG_ACCEPT_IMAGE}
-                className="hidden"
-                onChange={e => handleFileChange(e, 'image')}
-            />
-            <input
-                ref={videoInputRef}
-                type="file"
-                accept={BG_ACCEPT_VIDEO}
-                className="hidden"
-                onChange={e => handleFileChange(e, 'video')}
-            />
-
-            <p className="text-[12px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
-                Uploaded files are stored locally in your browser. For large files, use a URL instead.
-            </p>
-        </div>
-    );
-};
-
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
-    showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook,
-    customBg, setCustomBg,
-    onSignOut, setView
+    showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
@@ -357,9 +204,6 @@ const SettingsView = ({
                             </button>
                         ))}
                     </div>
-                </Row>
-                <Row title="Background" stack>
-                    <BackgroundPicker customBg={customBg} setCustomBg={setCustomBg} />
                 </Row>
             </Section>
 
