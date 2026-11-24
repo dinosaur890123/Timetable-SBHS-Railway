@@ -219,15 +219,10 @@ html[data-ui="modern"][data-look="paper"] :is(button, [role="button"], a[href], 
   translate: 0 1px;
 }
 
-/* The primary button is an ink key: 2px proud, 2px of travel. */
+/* Primary buttons keep the Paper type treatment without a raised key edge. */
 html[data-ui="modern"][data-look="paper"] button.bg-accent:not([data-bare]) {
   font-weight: 600;
   letter-spacing: -0.012em;
-  box-shadow: 0 2px 0 rgb(var(--key-edge)), 0 4px 8px -2px rgb(var(--shade) / calc(.18 * var(--shade-k)));
-}
-html[data-ui="modern"][data-look="paper"] button.bg-accent:not([data-bare]):active {
-  translate: 0 2px;
-  box-shadow: 0 0 0 rgb(var(--key-edge));
 }
 
 /* Segmented-control tracks and hovers read on the desk and on a sheet alike. */
@@ -235,6 +230,18 @@ html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-c
 
 @media (prefers-reduced-motion: reduce) {
   html[data-ui="modern"][data-look="paper"] .look-swipe::before { animation: none; }
+}
+
+/* Paper uses borders and surface tints for depth, not drop or inset shadows. */
+html[data-ui="modern"][data-look="paper"] *,
+html[data-ui="modern"][data-look="paper"] *::before,
+html[data-ui="modern"][data-look="paper"] *::after {
+  box-shadow: none !important;
+}
+
+html[data-ui="modern"][data-look="paper"] :is(input, textarea, select):not([data-bare]):focus-visible {
+  outline: 2px solid hsl(var(--color-accent));
+  outline-offset: 2px;
 }
 
 /* ---- Paper surface tints -----------------------------------------------------------------------

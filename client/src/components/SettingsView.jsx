@@ -18,10 +18,18 @@ const ACCENTS = [
     { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' }
 ];
 
-// Paper keeps its neutral surface option and exposes all nine existing accent hues.
+// Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
 const PAPER_THEMES = [
-    { id: 'zinc', name: 'Paper', swatch: 'bg-violet-700 dark:bg-violet-300' },
-    ...ACCENTS
+    { id: 'zinc', name: 'Paper', ground: '#F3F1EC', pen: '#D6C2FF' },
+    { id: 'navy', name: 'Harbour', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'mint', name: 'Sage', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'violet', name: 'Twilight', ground: '#F1EAF6', pen: '#D6C2FF' },
+    { id: 'rose', name: 'Blossom', ground: '#F6ECF0', pen: '#FFB8DC' },
+    { id: 'amber', name: 'Manila', ground: '#F3EDE0', pen: '#FFE94A' },
+    { id: 'sky', name: 'Cumulus', ground: '#EAF0F8', pen: '#FFC685' },
+    { id: 'teal', name: 'Teal', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'blue', name: 'Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'orange', name: 'Orange', ground: '#F3EDE0', pen: '#FFE94A' }
 ];
 
 const Section = ({ label, children }) => (
@@ -106,7 +114,7 @@ const SettingsView = ({
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
     const isPaperLook = uiLook === 'paper';
-    const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
+    const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
     const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
@@ -175,7 +183,7 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                <Row title={isPaperLook ? 'Highlight colour' : 'Accent colour'} description={accentName} stack>
+                <Row title={isPaperLook ? 'Paper' : 'Accent colour'} description={accentName} stack>
                     <div className="flex flex-wrap gap-2.5">
                         {(isPaperLook ? PAPER_THEMES : ACCENTS).map(a => (
                             <button
@@ -188,7 +196,14 @@ const SettingsView = ({
                                     ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
                                     : 'hover:scale-110'}`}
                             >
-                                <span className={`w-6 h-6 rounded-full ${a.swatch} ${isPaperLook ? 'border border-zinc-900/10 dark:border-white/10' : ''}`} />
+                                {isPaperLook ? (
+                                    <span
+                                        className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
+                                        style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
+                                    />
+                                ) : (
+                                    <span className={`w-6 h-6 rounded-full ${a.swatch}`} />
+                                )}
                             </button>
                         ))}
                     </div>
