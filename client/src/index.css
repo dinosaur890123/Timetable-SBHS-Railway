@@ -37,7 +37,7 @@ html:not(.dark):not([class*="theme-"]) {
 
 .theme-amber {
   --color-accent: 38 92% 50%;
-  --color-accent-contrast: 0 0% 0%;
+  --color-accent-contrast: 0 0% 100%;
 }
 
 .theme-blue {

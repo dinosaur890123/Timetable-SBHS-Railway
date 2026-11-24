@@ -6,29 +6,29 @@ import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
-    { id: 'navy', name: 'Navy', color: 'hsl(222 70% 32%)' },
-    { id: 'mint', name: 'Mint', color: 'hsl(150 84% 37%)' },
-    { id: 'teal', name: 'Teal', color: 'hsl(174 84% 41%)' },
-    { id: 'sky', name: 'Sky', color: 'hsl(199 89% 48%)' },
-    { id: 'blue', name: 'Blue', color: 'hsl(217 91% 60%)' },
-    { id: 'violet', name: 'Violet', color: 'hsl(271 91% 65%)' },
-    { id: 'rose', name: 'Rose', color: 'hsl(349 86% 60%)' },
-    { id: 'orange', name: 'Orange', color: 'hsl(24 95% 53%)' },
-    { id: 'amber', name: 'Amber', color: 'hsl(38 92% 50%)' }
+    { id: 'navy', name: 'Navy Blue', color: 'hsl(222 70% 32%)' },
+    { id: 'mint', name: 'Mint Green', color: 'hsl(150 84% 37%)' },
+    { id: 'teal', name: 'Teal Green', color: 'hsl(174 84% 41%)' },
+    { id: 'sky', name: 'Sky Blue', color: 'hsl(199 89% 48%)' },
+    { id: 'blue', name: 'Royal Blue', color: 'hsl(217 91% 60%)' },
+    { id: 'violet', name: 'Violet Purple', color: 'hsl(271 91% 65%)' },
+    { id: 'rose', name: 'Rose Pink', color: 'hsl(349 86% 60%)' },
+    { id: 'orange', name: 'Bright Orange', color: 'hsl(24 95% 53%)' },
+    { id: 'amber', name: 'Golden Amber', color: 'hsl(38 92% 50%)' }
 ];
 
 // Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
 const PAPER_THEMES = [
-    { id: 'zinc', name: 'Paper', ground: '#F3F1EC', pen: '#D6C2FF' },
-    { id: 'navy', name: 'Harbour', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'mint', name: 'Sage', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'violet', name: 'Twilight', ground: '#F1EAF6', pen: '#D6C2FF' },
-    { id: 'rose', name: 'Blossom', ground: '#F6ECF0', pen: '#FFB8DC' },
-    { id: 'amber', name: 'Manila', ground: '#F3EDE0', pen: '#FFE94A' },
-    { id: 'sky', name: 'Cumulus', ground: '#EAF0F8', pen: '#FFC685' },
-    { id: 'teal', name: 'Teal', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'blue', name: 'Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'orange', name: 'Orange', ground: '#F3EDE0', pen: '#FFE94A' }
+    { id: 'zinc', name: 'Paper Violet', ground: '#F3F1EC', pen: '#D6C2FF', accent: 'hsl(271 91% 65%)' },
+    { id: 'navy', name: 'Harbour Navy', ground: '#EDF1F6', pen: '#A8D8FF', accent: 'hsl(222 70% 32%)' },
+    { id: 'mint', name: 'Sage Mint', ground: '#EDF2EA', pen: '#B4EFA0', accent: 'hsl(150 84% 37%)' },
+    { id: 'violet', name: 'Twilight Violet', ground: '#F1EAF6', pen: '#D6C2FF', accent: 'hsl(271 91% 65%)' },
+    { id: 'rose', name: 'Blossom Rose', ground: '#F6ECF0', pen: '#FFB8DC', accent: 'hsl(349 86% 60%)' },
+    { id: 'amber', name: 'Manila Amber', ground: '#F3EDE0', pen: '#FFE94A', accent: 'hsl(38 92% 50%)' },
+    { id: 'sky', name: 'Cumulus Sky', ground: '#EAF0F8', pen: '#FFC685', accent: 'hsl(199 89% 48%)' },
+    { id: 'teal', name: 'Teal Green', ground: '#EDF2EA', pen: '#B4EFA0', accent: 'hsl(174 84% 41%)' },
+    { id: 'blue', name: 'Royal Blue', ground: '#EDF1F6', pen: '#A8D8FF', accent: 'hsl(217 91% 60%)' },
+    { id: 'orange', name: 'Bright Orange', ground: '#F3EDE0', pen: '#FFE94A', accent: 'hsl(24 95% 53%)' }
 ];
 
 const Section = ({ label, children }) => (
@@ -194,10 +194,16 @@ const SettingsView = ({
                                     : 'hover:scale-110'}`}
                             >
                                 {isPaperLook ? (
-                                    <span
-                                        className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
-                                        style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
-                                    />
+                                    <div className="relative w-6 h-6">
+                                        <span
+                                            className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
+                                            style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
+                                        />
+                                        <span
+                                            className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-zinc-800"
+                                            style={{ backgroundColor: a.accent }}
+                                        />
+                                    </div>
                                 ) : (
                                     <span className="w-6 h-6 rounded-full" style={{ backgroundColor: a.color }} />
                                 )}
