@@ -111,15 +111,14 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
           </AnimatePresence>
           <div className="relative flex items-center gap-1.5">
             <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[13px] sm:text-sm font-medium ${
-              isSelected
-                ? 'text-accent'
-                : 'text-zinc-800 dark:text-zinc-200'
+              isTodayDate
+                ? 'bg-accent text-accent-contrast'
+                : isSelected
+                  ? 'text-accent'
+                  : 'text-zinc-800 dark:text-zinc-200'
             }`}>
               {day}
             </span>
-            {isTodayDate && (
-              <span className="h-1 w-1 rounded-full bg-accent shrink-0" />
-            )}
             {closure && (
               <span
                 title={closure}
