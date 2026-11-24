@@ -13,34 +13,35 @@
 
 html[data-ui="modern"][data-look="paper"]:not(.x) {
   /* NoteFlow ink/paper, expressed through Synchron's zinc scale so every text-zinc-* follows. */
-  --zinc-50: 247 245 240;
-  --zinc-100: 243 241 236;
-  --zinc-200: 234 231 224;
-  --zinc-300: 222 218 209;
-  --zinc-400: 141 137 128;   /* decoration and placeholders */
-  --zinc-500: 103 100 93;    /* ink-3: meta */
-  --zinc-600: 85 83 77;      /* ink-2: secondary */
+  --zinc-50: 250 245 237;
+  --zinc-100: 246 240 230;
+  --zinc-200: 238 231 219;
+  --zinc-300: 226 218 203;
+  --zinc-400: 146 138 124;   /* decoration and placeholders */
+  --zinc-500: 108 100 88;    /* ink-3: meta */
+  --zinc-600: 90 84 74;      /* ink-2: secondary */
   --zinc-700: 63 61 57;
   --zinc-800: 39 38 36;
-  --zinc-900: 22 22 21;      /* ink */
+  --zinc-900: 24 21 18;      /* ink */
   --zinc-950: 14 14 13;
   --white: 255 254 251;
 
   /* The desk, the main sheet, the cards on it. */
-  --m-page: 243 241 236;
-  --m-panel: 250 248 243;
-  --m-card: 255 254 251;
+  --m-page: 245 238 226;
+  --m-panel: 251 246 237;
+  --m-card: 255 252 246;
   --m-line: 22 22 21;
   --m-line-a: 0.085;
-  --shade: 22 22 21;
+  --shade: 40 28 12;
   --shade-k: 1;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(255 205 135 / .34), transparent 62%);
   --key-edge: 0 0 0;
 
   --hl: #D6C2FF;
   --hl-ink: #161615;
   --pen: #D23A2C;
-  --paper-wash: #F4F2EC;
-  --rail-on: #EAE7E0;
+  --paper-wash: #F7F0E4;
+  --rail-on: #EDE4D4;
   --rule-2: #DEDAD1;
 
   --m-shadow: 0 1px 2px rgb(var(--shade) / .07), 0 1px 3px rgb(var(--shade) / .04);
@@ -58,8 +59,8 @@ html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
   --zinc-100: 237 235 229;
   --zinc-200: 224 221 214;
   --zinc-300: 205 201 193;
-  --zinc-400: 181 177 168;   /* ink-2 */
-  --zinc-500: 142 138 130;   /* ink-3 */
+  --zinc-400: 186 178 165;   /* ink-2 */
+  --zinc-500: 148 140 126;   /* ink-3 */
   --zinc-600: 100 97 91;
   --zinc-700: 58 57 54;
   --zinc-800: 44 43 41;
@@ -68,9 +69,9 @@ html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
   --black: 21 21 20;
   --white: 237 235 229;
 
-  --m-page: 21 21 20;
-  --m-panel: 26 25 24;
-  --m-card: 31 30 28;
+  --m-page: 23 20 17;
+  --m-panel: 29 26 22;
+  --m-card: 35 31 26;
   --m-line: 237 235 229;
   --m-line-a: 0.08;
   --shade: 0 0 0;
@@ -80,8 +81,9 @@ html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
   --hl: #4A3778;
   --hl-ink: #F4F0FF;
   --pen: #F2735F;
-  --paper-wash: #252422;
-  --rail-on: #2A2927;
+  --paper-wash: #2A2620;
+  --rail-on: #302B24;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(200 140 60 / .16), transparent 62%);
   --rule-2: #3A3936;
 
   --m-shadow: 0 1px 2px rgb(var(--shade) / .2), 0 1px 3px rgb(var(--shade) / .11);
