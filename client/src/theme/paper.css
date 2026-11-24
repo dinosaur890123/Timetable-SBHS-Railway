@@ -187,7 +187,7 @@ html[data-ui="modern"][data-look="paper"] .subject-wash[data-tone] {
 
 /* The current nav item is pressed paper, not a lifted white pill. */
 html[data-ui="modern"][data-look="paper"] aside nav span.absolute.inset-0 {
-  background: var(--rail-on);
+  background: color-mix(in srgb, rgb(var(--zinc-900)) 7%, rgb(var(--m-page)));
   border-color: transparent;
   box-shadow: none;
 }
@@ -205,7 +205,7 @@ html[data-ui="modern"][data-look="paper"] a:focus-visible {
 html[data-ui="modern"][data-look="paper"].dark button:focus-visible,
 html[data-ui="modern"][data-look="paper"].dark a:focus-visible { outline-color: rgb(var(--zinc-100)); }
 html[data-ui="modern"][data-look="paper"] :is(input, textarea, select):not([data-bare]):focus-visible {
-  box-shadow: 0 0 0 3px var(--rail-on);
+  box-shadow: 0 0 0 3px color-mix(in srgb, rgb(var(--zinc-900)) 8%, rgb(var(--m-card)));
   border-color: rgb(var(--zinc-900));
 }
 html[data-ui="modern"][data-look="paper"].dark :is(input, textarea, select):not([data-bare]):focus-visible {
@@ -247,9 +247,17 @@ html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-c
  * (teal to Sage, blue to Harbour, orange to Manila). Ink and the accent never change with the paper.
  */
 
-html[data-ui="modern"][data-look="paper"] .m-ambient {
+/* The sidebar stays on the flat tinted desk; the soft light lives only in the main window. */
+html[data-ui="modern"][data-look="paper"] .m-ambient { background-image: none; }
+html[data-ui="modern"][data-look="paper"] main.bg-m-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
   background-image: var(--paper-light, none);
-  background-attachment: fixed;
+  opacity: .6;
+  pointer-events: none;
 }
 
 /* sage */
