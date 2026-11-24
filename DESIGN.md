@@ -380,18 +380,17 @@ Classic was removed in full. For reference, here is what went and what stayed:
 
 An optional mix of Synchron's Modern shell with NoteFlow v2's language (`client/src/theme/paper.css`). It applies only
 when `<html data-look="paper">`: Paper is the default on `staging.synchron.work`; Settings can switch between Paper
-and the original Synchron look, with the choice remembered in `localStorage`. `?look=paper` / `?look=synchron` also
-sets the choice anywhere else.
+and the original Synchron look. The choice is remembered in the browser and synced to the signed-in user's
+preferences. `?look=paper` / `?look=synchron` also sets the choice anywhere else.
 
 - **Surfaces:** the desk (`--m-page`), a sheet (`--m-panel`) and cards (`--m-card`) on warm paper; neutrals are
   NoteFlow's inks via the `zinc` scale, so existing `text-zinc-*` classes follow. Dark is warm graphite.
 - **Type:** Instrument Sans everywhere; `font-mono` maps to the sans with tabular numerals; uppercase mono eyebrows
   become sentence-case labels. The Home greeting is the one serif moment, with one highlighter swipe on the name.
-- **Colour:** the accent is ink; colour belongs to the highlighter and pens. The colour themes become a short list of
-  papers (Paper, Harbour, Sage, Twilight, Blossom, Manila, Cumulus): each tints the desk and sheet, sets its own
-  highlighter pen and adds one soft light on the ground only (fixed, low contrast, never on a sheet or control).
-  Teal, blue and orange land on Sage, Harbour and Manila. The
-  primary button is an ink key (2px edge, 2px travel). Selection is the highlighter.
+- **Colour:** Settings offers the neutral Paper surface plus all nine accent colours. Selected accents carry through
+  to navigation icons, timetable bars, change highlights, controls, and the logo dot. Related accents can share the
+  same paper surface tint; the soft light stays on the ground only (fixed, low contrast, never on a sheet or control).
+  The primary button keeps its 2px ink-key edge and travel. Text selection uses the paper highlighter.
 - **Depth:** paper on paper. Ambient light, header dots, tile spotlight and the live card's gradient are off. Radii
   are NoteFlow's (10 / 14 / 18, squircle where supported).
 - **Motion:** press is 1px with no overshoot. The swipe draws once. Everything else is unchanged.

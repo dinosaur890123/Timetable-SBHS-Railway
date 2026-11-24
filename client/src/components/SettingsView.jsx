@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
 import { useSky } from './modern/AmbientLight';
@@ -18,17 +18,11 @@ const ACCENTS = [
     { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' }
 ];
 
-// The Paper look (client/src/theme/paper.css) keeps a short list of papers, each a tinted desk with its own pen.
-const PAPERS = [
-    { id: 'zinc', name: 'Paper', ground: '#F3F1EC', pen: '#D6C2FF' },
-    { id: 'navy', name: 'Harbour', ground: '#F0EFEC', pen: '#A8D8FF' },
-    { id: 'mint', name: 'Sage', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'violet', name: 'Twilight', ground: '#F1EAF6', pen: '#D6C2FF' },
-    { id: 'rose', name: 'Blossom', ground: '#F6ECF0', pen: '#FFB8DC' },
-    { id: 'amber', name: 'Manila', ground: '#F3EDE0', pen: '#FFE94A' },
-    { id: 'sky', name: 'Cumulus', ground: '#EAF0F8', pen: '#FFC685' }
+// Paper keeps its neutral surface option and exposes all nine existing accent hues.
+const PAPER_THEMES = [
+    { id: 'zinc', name: 'Paper', swatch: 'bg-violet-700 dark:bg-violet-300' },
+    ...ACCENTS
 ];
-const PAPER_FOR = { teal: 'mint', blue: 'navy', orange: 'amber' };
 
 const Section = ({ label, children }) => (
     <section>
@@ -107,15 +101,12 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
-    ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
+    ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
-    const [uiLook, setUiLook] = useState(() => (
-        typeof document !== 'undefined' && document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron'
-    ));
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
     const isPaperLook = uiLook === 'paper';
-    const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
+    const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
     const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
@@ -126,26 +117,6 @@ const SettingsView = ({
             return !getCanvasLink(period.title, period.year);
         });
     }, [canvasClasses, getCanvasLink, canvasLinksStatus]);
-
-    const handleUiLookChange = (look) => {
-        const root = document.documentElement;
-        if (look === 'paper') {
-            root.dataset.look = 'paper';
-            if (!document.getElementById('paper-fonts')) {
-                const link = document.createElement('link');
-                link.id = 'paper-fonts';
-                link.rel = 'stylesheet';
-                link.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap';
-                document.head.appendChild(link);
-            }
-        } else {
-            root.removeAttribute('data-look');
-        }
-        try {
-            localStorage.setItem('look', look);
-        } catch {}
-        setUiLook(look);
-    };
 
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -192,7 +163,7 @@ const SettingsView = ({
                     <Segmented
                         id="interface"
                         value={uiLook}
-                        onChange={handleUiLookChange}
+                        onChange={setUiLook}
                         options={[{ value: 'paper', label: 'Paper' }, { value: 'synchron', label: 'Synchron' }]}
                     />
                 </Row>
@@ -204,35 +175,9 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                {isPaperLook && (
-                    <Row title="Paper" description={PAPERS.find(p => p.id === (PAPER_FOR[colorTheme] || colorTheme))?.name || 'Paper'} stack>
-                        <div className="flex flex-wrap gap-2.5">
-                            {PAPERS.map(p => {
-                                const on = (PAPER_FOR[colorTheme] || colorTheme) === p.id;
-                                return (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => setColorTheme(p.id)}
-                                        aria-label={p.name}
-                                        aria-pressed={on}
-                                        title={p.name}
-                                        className={`w-8 h-8 rounded-full grid place-items-center transition ${on
-                                            ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
-                                            : 'hover:scale-110'}`}
-                                    >
-                                        <span
-                                            className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
-                                            style={{ background: `linear-gradient(135deg, ${p.ground} 52%, ${p.pen} 52%)` }}
-                                        />
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </Row>
-                )}
-                <Row title="Accent colour" description={accentName} stack className={isPaperLook ? 'hidden' : ''}>
+                <Row title={isPaperLook ? 'Highlight colour' : 'Accent colour'} description={accentName} stack>
                     <div className="flex flex-wrap gap-2.5">
-                        {ACCENTS.map(a => (
+                        {(isPaperLook ? PAPER_THEMES : ACCENTS).map(a => (
                             <button
                                 key={a.id}
                                 onClick={() => setColorTheme(a.id)}
@@ -243,18 +188,10 @@ const SettingsView = ({
                                     ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
                                     : 'hover:scale-110'}`}
                             >
-                                <span className={`w-6 h-6 rounded-full ${a.swatch}`} />
+                                <span className={`w-6 h-6 rounded-full ${a.swatch} ${isPaperLook ? 'border border-zinc-900/10 dark:border-white/10' : ''}`} />
                             </button>
                         ))}
                     </div>
-                </Row>
-                <Row title="Favicon" description="Choose the icon shown in browser tabs." className="hidden md:flex">
-                    <Segmented
-                        id="favicon"
-                        value={faviconType}
-                        onChange={setFaviconType}
-                        options={[{ value: 'default', label: 'Default' }, { value: 'atom', label: 'Atom' }]}
-                    />
                 </Row>
                 <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`} className={isPaperLook ? 'hidden' : ''}>
                     <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />

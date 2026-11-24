@@ -94,7 +94,7 @@ export const BrandMark = ({ className = '' }) => (
 );
 
 export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) => {
-    const groups = buildNavGroups(user?.role === 'Admin', hiddenPages);
+    const groups = buildNavGroups(user?.role === 'Admin', hiddenPages).filter(group => group.items.length > 0);
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
 
@@ -113,12 +113,9 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                 <StagingBadge className="hidden md:inline-flex" />
             </button>
 
-            <nav className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
-                {groups.map(group => (
-                    <div key={group.label}>
-                        <div className="px-2.5 mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                            {group.label}
-                        </div>
+            <nav className="flex-1 overflow-y-auto -mx-1 px-1">
+                {groups.map((group, index) => (
+                    <div key={group.label} className={index > 0 ? 'mt-3 border-t border-zinc-900/[0.07] pt-3 dark:border-white/[0.07]' : ''}>
                         <ul className="space-y-0.5">
                             {group.items.map(({ id, icon: Icon, href, label }) => {
                                 if (href) {
@@ -173,7 +170,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                     {initialsOf(user)}
                 </span>
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                    <span className="block whitespace-normal break-words text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                         {user?.givenName} {user?.surname}
                     </span>
                     <span className="block truncate font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">

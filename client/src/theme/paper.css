@@ -90,13 +90,13 @@ html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
   --m-shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 3px 8px rgb(0 0 0 / .3);
 }
 
-/* The accent is ink: colour belongs to the pens, so a chosen colour theme is ignored in this look. */
-html[data-ui="modern"][data-look="paper"]:not(.x) {
-  --color-accent: 60 3% 9%;
-  --color-accent-contrast: 40 29% 97%;
+/* The neutral Paper option uses violet; selected colour themes keep their own Synchron accent. */
+html[data-ui="modern"][data-look="paper"]:not([class*="theme-"]):not(.x) {
+  --color-accent: 271 65% 43%;
+  --color-accent-contrast: 0 0% 100%;
 }
-html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
-  --color-accent: 45 18% 91%;
+html[data-ui="modern"][data-look="paper"].dark:not([class*="theme-"]):not(.x):not(.y) {
+  --color-accent: 271 75% 72%;
   --color-accent-contrast: 60 3% 10%;
 }
 
@@ -191,19 +191,15 @@ html[data-ui="modern"][data-look="paper"] aside nav span.absolute.inset-0 {
   border-color: transparent;
   box-shadow: none;
 }
-html[data-ui="modern"][data-look="paper"] aside nav li .text-accent { color: rgb(var(--zinc-900)); }
-html[data-ui="modern"][data-look="paper"].dark aside nav li .text-accent { color: rgb(var(--zinc-100)); }
 
 /* ---- Controls ------------------------------------------------------------------------------------ */
 
-/* Focus: ink ring, as in NoteFlow. */
+/* Focus: use the selected accent for keyboard and field focus. */
 html[data-ui="modern"][data-look="paper"] button:focus-visible,
 html[data-ui="modern"][data-look="paper"] a:focus-visible {
-  outline: 2px solid rgb(var(--zinc-900));
+  outline: 2px solid hsl(var(--color-accent));
   outline-offset: 2px;
 }
-html[data-ui="modern"][data-look="paper"].dark button:focus-visible,
-html[data-ui="modern"][data-look="paper"].dark a:focus-visible { outline-color: rgb(var(--zinc-100)); }
 html[data-ui="modern"][data-look="paper"] :is(input, textarea, select):not([data-bare]):focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, rgb(var(--zinc-900)) 8%, rgb(var(--m-card)));
   border-color: rgb(var(--zinc-900));
@@ -241,10 +237,9 @@ html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-c
   html[data-ui="modern"][data-look="paper"] .look-swipe::before { animation: none; }
 }
 
-/* ---- Papers: the colour themes, curated -------------------------------------------------------
- * Each theme is a tinted desk and sheet, its own highlighter pen, and one soft light on the ground.
- * Kept: Paper (no theme), Harbour, Sage, Twilight, Blossom, Manila, Cumulus. Retired themes land on the nearest
- * (teal to Sage, blue to Harbour, orange to Manila). Ink and the accent never change with the paper.
+/* ---- Paper surface tints -----------------------------------------------------------------------
+ * Accent colours come from the selected theme; related themes can share the same desk and sheet tint.
+ * Paper (no theme) uses violet, while teal/mint, blue/navy, and orange/amber share surface treatments.
  */
 
 /* The sidebar stays on the flat tinted desk; the soft light lives only in the main window. */
@@ -274,7 +269,7 @@ html[data-ui="modern"][data-look="paper"].dark:is(.theme-mint,.theme-teal):not(.
 
 /* harbour */
 html[data-ui="modern"][data-look="paper"]:is(.theme-navy,.theme-blue):not(.x) {
-  --m-page: 240 239 236; --m-panel: 246 248 251; --m-card: 255 255 255;
+  --m-page: 237 241 246; --m-panel: 248 247 244; --m-card: 255 255 255;
   --hl: #A8D8FF; --hl-ink: #161615;
   --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(150 190 235 / .42), transparent 62%);
 }

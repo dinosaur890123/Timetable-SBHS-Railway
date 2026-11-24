@@ -67,6 +67,22 @@ const authErrorMessage = (err) => {
 };
 
 const isStagingAccessDenied = (error) => error?.status === 403 && error?.message === STAGING_ACCESS_RESTRICTED_MESSAGE;
+const applyUiLook = (look) => {
+    const root = document.documentElement;
+    if (look !== 'paper') {
+        root.removeAttribute('data-look');
+        return;
+    }
+
+    root.dataset.look = 'paper';
+    if (!document.getElementById('paper-fonts')) {
+        const link = document.createElement('link');
+        link.id = 'paper-fonts';
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap';
+        document.head.appendChild(link);
+    }
+};
 const clearStagingAuthSession = () => {
     ['sbhs_access_token', 'sbhs_refresh_token', 'sbhs_token_expiry', 'sbhs_token_scope', 'cached_user']
         .forEach(key => localStorage.removeItem(key));
@@ -132,6 +148,12 @@ import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
 
 function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    const [uiLook, setUiLook] = useState(() => {
+        const storedLook = localStorage.getItem('look');
+        return storedLook === 'paper' || storedLook === 'synchron'
+            ? storedLook
+            : document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron';
+    });
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
     const [initialClipboardSessions] = useState(() => peekClipboardSessions(cachedStudentId()) || []);
@@ -652,6 +674,7 @@ function App() {
                 ambientLight,
                 showClipboardEvents,
                 canvasLinksEnabled,
+                uiLook,
                 faviconType,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
@@ -713,6 +736,12 @@ function App() {
     }, [theme]);
 
     useEffect(() => {
+        applyUiLook(uiLook);
+        localStorage.setItem('look', uiLook);
+        savePreferences();
+    }, [uiLook]);
+
+    useEffect(() => {
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
 
@@ -771,11 +800,6 @@ function App() {
         if (atom) appIcon.setAttribute('media', 'not all');
         else appIcon.removeAttribute('media');
     }, [faviconType]);
-
-    const handleFaviconTypeChange = (value) => {
-        if (value === faviconType) return;
-        setFaviconType(value);
-    };
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -956,6 +980,10 @@ function App() {
                             if (prefs.canvasLinksEnabled !== undefined) {
                                 setCanvasLinksEnabled(prefs.canvasLinksEnabled);
                                 localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
+                            }
+                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron') {
+                                setUiLook(prefs.uiLook);
+                                localStorage.setItem('look', prefs.uiLook);
                             }
                             if (prefs.faviconType !== undefined) {
                                 setFaviconType(prefs.faviconType);
@@ -1582,8 +1610,8 @@ function App() {
                                     setShowClipboardEvents={setShowClipboardEvents}
                                     canvasLinksEnabled={canvasLinksEnabled}
                                     setCanvasLinksEnabled={setCanvasLinksEnabled}
-                                    faviconType={faviconType}
-                                    setFaviconType={handleFaviconTypeChange}
+                                    uiLook={uiLook}
+                                    setUiLook={setUiLook}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />
