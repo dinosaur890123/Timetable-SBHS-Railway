@@ -3,7 +3,7 @@
  * (ink on warm paper, Instrument Sans/Serif, one highlighter swipe, depth from height, no glows).
  *
  * Active only when <html data-look="paper"> (default at staging.synchron.work; Settings and `?look=paper` /
- * `?look=synchron` select and remember the look in localStorage). With the attribute absent nothing in this file
+ * `?look=ambient` select and remember the look in localStorage). With the attribute absent nothing in this file
  * applies, so the original Synchron look is restored.
  *
  * Structure: Synchron keeps its layout, shell, command palette and the m-* surface tokens; this file only

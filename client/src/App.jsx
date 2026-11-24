@@ -5,6 +5,7 @@ import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands,
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
 import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
+import AppBackground from './components/AppBackground';
 
 const pageLoaders = {
     timetable: () => import('./components/Timetable'),
@@ -150,9 +151,9 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [uiLook, setUiLook] = useState(() => {
         const storedLook = localStorage.getItem('look');
-        return storedLook === 'paper' || storedLook === 'synchron'
+        return storedLook === 'paper' || storedLook === 'ambient'
             ? storedLook
-            : document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron';
+            : document.documentElement.dataset.look === 'paper' ? 'paper' : 'ambient';
     });
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
@@ -196,6 +197,16 @@ function App() {
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const [canvasLinksEnabled, setCanvasLinksEnabled] = useState(() => localStorage.getItem('canvas_links_enabled') !== 'false');
+    const [customBg, setCustomBg] = useState(() => {
+        try {
+            const raw = localStorage.getItem('custom_bg');
+            const val = raw ? JSON.parse(raw) : null;
+            if (val) document.documentElement.dataset.hasBg = 'true';
+            return val;
+        } catch {
+            return null;
+        }
+    });
     const [faviconType, setFaviconType] = useState(() => localStorage.getItem('favicon_type') || 'default');
     const [buildNotes, setBuildNotes] = useState(() => {
         try {
@@ -761,6 +772,16 @@ function App() {
     }, [canvasLinksEnabled]);
 
     useEffect(() => {
+        if (customBg) {
+            localStorage.setItem('custom_bg', JSON.stringify(customBg));
+            document.documentElement.dataset.hasBg = 'true';
+        } else {
+            localStorage.removeItem('custom_bg');
+            delete document.documentElement.dataset.hasBg;
+        }
+    }, [customBg]);
+
+    useEffect(() => {
         localStorage.setItem('favicon_type', faviconType);
         savePreferences();
     }, [faviconType]);
@@ -981,7 +1002,7 @@ function App() {
                                 setCanvasLinksEnabled(prefs.canvasLinksEnabled);
                                 localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
                             }
-                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron') {
+                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'ambient') {
                                 setUiLook(prefs.uiLook);
                                 localStorage.setItem('look', prefs.uiLook);
                             }
@@ -1340,7 +1361,8 @@ function App() {
         <CanvasLinksProvider completeTimetable={completeTimetable} timetableData={timetable} linksEnabled={canvasLinksEnabled}>
         <NotificationsContext.Provider value={notificationsValue}>
             <div className="relative isolate flex h-[100dvh] overflow-hidden bg-m-page m-ambient text-zinc-900 dark:text-zinc-100">
-            {ambientLight && <AmbientLight variant="page" festive={festiveAmbient} />}
+            <AppBackground bg={customBg} />
+            {ambientLight && !customBg && <AmbientLight variant="page" festive={festiveAmbient} />}
             <ModernSidebar currentView={currentView} setView={setCurrentView} user={user} hiddenPages={hiddenPages} />
 
             <main className="relative isolate flex-1 min-w-0 flex flex-col overflow-hidden bg-m-panel md:my-2 md:mr-2 md:rounded-2xl md:border border-m-line md:shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
@@ -1367,7 +1389,7 @@ function App() {
                         setCurrentView('admin');
                     }}
                 />
-                {ambientLight && <AmbientLight variant="panel" festive={festiveAmbient} />}
+                {ambientLight && !customBg && <AmbientLight variant="panel" festive={festiveAmbient} />}
                 <div aria-hidden className="pointer-events-none absolute -z-10 inset-x-0 top-14 h-72 m-dots" />
 
                 <div className="relative flex-1 min-h-0 flex flex-col overflow-x-hidden overflow-y-auto">
@@ -1609,6 +1631,8 @@ function App() {
                                     setCanvasLinksEnabled={setCanvasLinksEnabled}
                                     uiLook={uiLook}
                                     setUiLook={setUiLook}
+                                    customBg={customBg}
+                                    setCustomBg={setCustomBg}
                                     onSignOut={logout}
                                     setView={setCurrentView}
                                 />
