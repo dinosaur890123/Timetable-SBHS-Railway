@@ -5,7 +5,7 @@ import { MotionConfig, motion } from 'framer-motion';
 import { format, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, indexSubjects, isBreakBell, isBreakStylePeriod, isSportOrScripturePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
-import { Hl, useNoteFlowFonts } from './study/noteflow';
+import { useNoteFlowFonts } from './study/noteflow';
 import { SessionLine, SessionSheet, dayKeyOf, endOf, startOf } from './clipboard/sessions';
 import { termsPage, closureLabel } from '../services/pageData';
 import { fetchDateInfo } from '../services/api';
@@ -450,7 +450,7 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
                                                 {days.map((day, dayIndex) => (
                                                     <th key={day} className="px-0.5 py-2 sm:px-4 sm:py-3 text-center sm:text-left text-[10px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.06em] sm:tracking-[0.1em]">
                                                         {currentCycleDayNumber === week.dayNums[dayIndex]
-                                                            ? <span className="nf-hl-context"><Hl>{day.slice(0, 3)}</Hl></span>
+                                                            ? <span className="text-accent rounded px-1">{day.slice(0, 3)}</span>
                                                             : day.slice(0, 3)}
                                                     </th>
                                                 ))}

@@ -20,15 +20,15 @@ const ACCENTS = [
 // Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
 const PAPER_THEMES = [
     { id: 'zinc', name: 'Paper Violet', ground: '#F3F1EC', pen: '#D6C2FF' },
-    { id: 'navy', name: 'Paper Navy', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'mint', name: 'Paper Mint', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'violet', name: 'Paper Violet', ground: '#F1EAF6', pen: '#D6C2FF' },
-    { id: 'rose', name: 'Paper Rose', ground: '#F6ECF0', pen: '#FFB8DC' },
-    { id: 'amber', name: 'Paper Amber', ground: '#F3EDE0', pen: '#FFE94A' },
-    { id: 'sky', name: 'Paper Sky', ground: '#EAF0F8', pen: '#FFC685' },
-    { id: 'teal', name: 'Paper Teal', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'blue', name: 'Paper Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'orange', name: 'Paper Orange', ground: '#F3EDE0', pen: '#FFE94A' }
+    { id: 'navy', name: 'Harbour Navy', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'mint', name: 'Sage Mint', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'violet', name: 'Twilight Violet', ground: '#F1EAF6', pen: '#D6C2FF' },
+    { id: 'rose', name: 'Blossom Rose', ground: '#F6ECF0', pen: '#FFB8DC' },
+    { id: 'amber', name: 'Manila Amber', ground: '#F3EDE0', pen: '#FFE94A' },
+    { id: 'sky', name: 'Cumulus Sky', ground: '#EAF0F8', pen: '#FFC685' },
+    { id: 'teal', name: 'Teal Green', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'blue', name: 'Royal Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'orange', name: 'Bright Orange', ground: '#F3EDE0', pen: '#FFE94A' }
 ];
 
 const Section = ({ label, children }) => (
@@ -113,7 +113,7 @@ const SettingsView = ({
         .filter(Boolean).join(' · ');
     const isPaperLook = uiLook === 'paper';
     const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
-    const paperAccentOnly = isPaperLook ? accentName.replace('Paper ', '') : null;
+    const paperAccentOnly = isPaperLook ? accentName.split(' ').pop() : null;
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     const canvasLinksMissing = useMemo(() => {
