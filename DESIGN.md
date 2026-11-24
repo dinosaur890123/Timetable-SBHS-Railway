@@ -386,7 +386,10 @@ else (remembered in `localStorage`). Production is unchanged until this is promo
   NoteFlow's inks via the `zinc` scale, so existing `text-zinc-*` classes follow. Dark is warm graphite.
 - **Type:** Instrument Sans everywhere; `font-mono` maps to the sans with tabular numerals; uppercase mono eyebrows
   become sentence-case labels. The Home greeting is the one serif moment, with one highlighter swipe on the name.
-- **Colour:** the accent is ink (colour themes are ignored here); colour belongs to the highlighter and pens. The
+- **Colour:** the accent is ink; colour belongs to the highlighter and pens. The colour themes become a short list of
+  papers (Paper, Harbour, Sage, Twilight, Blossom, Manila, Cumulus): each tints the desk and sheet, sets its own
+  highlighter pen and adds one soft light on the ground only (fixed, low contrast, never on a sheet or control).
+  Teal, blue and orange land on Sage, Harbour and Manila. The
   primary button is an ink key (2px edge, 2px travel). Selection is the highlighter.
 - **Depth:** paper on paper. Ambient light, header dots, tile spotlight and the live card's gradient are off. Radii
   are NoteFlow's (10 / 14 / 18, squircle where supported).

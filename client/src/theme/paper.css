@@ -169,8 +169,7 @@ html[data-ui="modern"][data-look="paper"] .rounded-2xl { border-radius: 18px; }
 
 html[data-ui="modern"][data-look="paper"] .ambient,
 html[data-ui="modern"][data-look="paper"] .m-dots { display: none; }
-/* colorThemes.css also paints accent glows behind the whole app and the header. */
-html[data-ui="modern"][data-look="paper"][class*="theme-"] .m-ambient,
+/* colorThemes.css also paints accent glows behind the header; the app ground gets the paper's soft light below. */
 html[data-ui="modern"][data-look="paper"][class*="theme-"] .m-dots { background-image: none; }
 
 html[data-ui="modern"][data-look="paper"] .relative-tile-wrapper::before,
@@ -238,4 +237,87 @@ html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-c
 
 @media (prefers-reduced-motion: reduce) {
   html[data-ui="modern"][data-look="paper"] .look-swipe::before { animation: none; }
+}
+
+/* ---- Papers: the colour themes, curated -------------------------------------------------------
+ * Each theme is a tinted desk and sheet, its own highlighter pen, and one soft light on the ground.
+ * Kept: Paper (no theme), Harbour, Sage, Twilight, Blossom, Manila, Cumulus. Retired themes land on the nearest
+ * (teal to Sage, blue to Harbour, orange to Manila). Ink and the accent never change with the paper.
+ */
+
+html[data-ui="modern"][data-look="paper"] .m-ambient {
+  background-image: var(--paper-light, none);
+  background-attachment: fixed;
+}
+
+/* sage */
+html[data-ui="modern"][data-look="paper"]:is(.theme-mint,.theme-teal):not(.x) {
+  --m-page: 237 242 234; --m-panel: 246 248 244; --m-card: 255 255 255;
+  --hl: #B4EFA0; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(176 222 160 / .42), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-mint,.theme-teal):not(.x):not(.y) {
+  --m-page: 19 23 20; --m-panel: 24 29 25; --m-card: 29 35 30;
+  --hl: #2D5229; --hl-ink: #EEFBEA;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(70 130 85 / .20), transparent 62%);
+}
+
+/* harbour */
+html[data-ui="modern"][data-look="paper"]:is(.theme-navy,.theme-blue):not(.x) {
+  --m-page: 237 241 246; --m-panel: 246 248 251; --m-card: 255 255 255;
+  --hl: #A8D8FF; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(150 190 235 / .42), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-navy,.theme-blue):not(.x):not(.y) {
+  --m-page: 18 22 27; --m-panel: 23 28 34; --m-card: 28 33 40;
+  --hl: #1E4466; --hl-ink: #EAF5FF;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(60 100 160 / .22), transparent 62%);
+}
+
+/* manila */
+html[data-ui="modern"][data-look="paper"]:is(.theme-amber,.theme-orange):not(.x) {
+  --m-page: 243 237 224; --m-panel: 250 246 237; --m-card: 255 253 248;
+  --hl: #FFE94A; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(255 205 130 / .38), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-amber,.theme-orange):not(.x):not(.y) {
+  --m-page: 23 20 16; --m-panel: 28 25 20; --m-card: 34 30 24;
+  --hl: #5C5216; --hl-ink: #FBF6DC;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(190 130 50 / .18), transparent 62%);
+}
+
+/* blossom */
+html[data-ui="modern"][data-look="paper"]:is(.theme-rose):not(.x) {
+  --m-page: 246 236 240; --m-panel: 251 244 246; --m-card: 255 251 252;
+  --hl: #FFB8DC; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(255 170 205 / .40), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-rose):not(.x):not(.y) {
+  --m-page: 24 16 20; --m-panel: 30 21 25; --m-card: 36 26 31;
+  --hl: #66294D; --hl-ink: #FFF0F7;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(170 70 120 / .22), transparent 62%);
+}
+
+/* twilight */
+html[data-ui="modern"][data-look="paper"]:is(.theme-violet):not(.x) {
+  --m-page: 241 234 246; --m-panel: 248 243 251; --m-card: 255 252 255;
+  --hl: #D6C2FF; --hl-ink: #161615;
+  --paper-light: linear-gradient(180deg, rgb(200 175 235 / .45), rgb(240 175 205 / .24) 38%, rgb(255 205 170 / .16) 62%, transparent 85%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-violet):not(.x):not(.y) {
+  --m-page: 20 15 30; --m-panel: 26 20 38; --m-card: 32 25 45;
+  --hl: #4A3778; --hl-ink: #F4F0FF;
+  --paper-light: linear-gradient(180deg, rgb(100 70 170 / .26), rgb(150 70 120 / .14) 40%, transparent 80%);
+}
+
+/* cumulus */
+html[data-ui="modern"][data-look="paper"]:is(.theme-sky):not(.x) {
+  --m-page: 234 240 248; --m-panel: 245 248 252; --m-card: 255 255 255;
+  --hl: #FFC685; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(160 195 240 / .45), transparent 62%), radial-gradient(900px circle at 100% 100%, rgb(255 236 205 / .40), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-sky):not(.x):not(.y) {
+  --m-page: 13 19 32; --m-panel: 18 26 39; --m-card: 24 32 46;
+  --hl: #683F1A; --hl-ink: #FFF3E6;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(60 100 170 / .24), transparent 62%), radial-gradient(900px circle at 100% 100%, rgb(150 100 50 / .12), transparent 62%);
 }

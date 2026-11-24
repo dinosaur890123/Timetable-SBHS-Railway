@@ -18,6 +18,19 @@ const ACCENTS = [
     { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' }
 ];
 
+// The Paper look (client/src/theme/paper.css) keeps a short list of papers, each a tinted desk with its own pen.
+const IS_PAPER_LOOK = typeof document !== 'undefined' && document.documentElement.dataset.look === 'paper';
+const PAPERS = [
+    { id: 'zinc', name: 'Paper', ground: '#F3F1EC', pen: '#D6C2FF' },
+    { id: 'navy', name: 'Harbour', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'mint', name: 'Sage', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'violet', name: 'Twilight', ground: '#F1EAF6', pen: '#D6C2FF' },
+    { id: 'rose', name: 'Blossom', ground: '#F6ECF0', pen: '#FFB8DC' },
+    { id: 'amber', name: 'Manila', ground: '#F3EDE0', pen: '#FFE94A' },
+    { id: 'sky', name: 'Cumulus', ground: '#EAF0F8', pen: '#FFC685' }
+];
+const PAPER_FOR = { teal: 'mint', blue: 'navy', orange: 'amber' };
+
 const Section = ({ label, children }) => (
     <section>
         <h2 className="px-1 mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">{label}</h2>
@@ -160,7 +173,33 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                <Row title="Accent colour" description={accentName} stack>
+                {IS_PAPER_LOOK && (
+                    <Row title="Paper" description={PAPERS.find(p => p.id === (PAPER_FOR[colorTheme] || colorTheme))?.name || 'Paper'} stack>
+                        <div className="flex flex-wrap gap-2.5">
+                            {PAPERS.map(p => {
+                                const on = (PAPER_FOR[colorTheme] || colorTheme) === p.id;
+                                return (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => setColorTheme(p.id)}
+                                        aria-label={p.name}
+                                        aria-pressed={on}
+                                        title={p.name}
+                                        className={`w-8 h-8 rounded-full grid place-items-center transition ${on
+                                            ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
+                                            : 'hover:scale-110'}`}
+                                    >
+                                        <span
+                                            className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
+                                            style={{ background: `linear-gradient(135deg, ${p.ground} 52%, ${p.pen} 52%)` }}
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </Row>
+                )}
+                <Row title="Accent colour" description={accentName} stack className={IS_PAPER_LOOK ? 'hidden' : ''}>
                     <div className="flex flex-wrap gap-2.5">
                         {ACCENTS.map(a => (
                             <button
@@ -186,7 +225,7 @@ const SettingsView = ({
                         options={[{ value: 'default', label: 'Default' }, { value: 'atom', label: 'Atom' }]}
                     />
                 </Row>
-                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`}>
+                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`} className={IS_PAPER_LOOK ? 'hidden' : ''}>
                     <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />
                 </Row>
             </Section>
