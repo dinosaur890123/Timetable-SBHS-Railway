@@ -1603,9 +1603,6 @@ function App() {
                                     setTheme={setTheme}
                                     colorTheme={colorTheme}
                                     setColorTheme={setColorTheme}
-                                    ambientLight={ambientLight}
-                                    setAmbientLight={setAmbientLight}
-                                    festiveAmbient={festiveAmbient}
                                     showClipboardEvents={showClipboardEvents}
                                     setShowClipboardEvents={setShowClipboardEvents}
                                     canvasLinksEnabled={canvasLinksEnabled}

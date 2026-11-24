@@ -258,7 +258,7 @@ html[data-ui="modern"][data-look="paper"] main.bg-m-panel::before {
   z-index: -1;
   border-radius: inherit;
   background-image: var(--paper-light, none);
-  opacity: .6;
+  opacity: .3;
   pointer-events: none;
 }
 

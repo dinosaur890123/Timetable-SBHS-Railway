@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
-import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
@@ -51,7 +50,7 @@ const Row = ({ title, description, children, stack = false, className = '' }) =>
     </div>
 );
 
-const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
+const LinkRow = ({ icon: Icon, title, onClick, dot = false }) => (
     <button onClick={onClick} className="group w-full px-4 py-3.5 sm:px-5 flex items-center gap-3 text-left hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025] transition-colors first:rounded-t-2xl last:rounded-b-2xl">
         <Icon size={16} strokeWidth={1.8} className="shrink-0 text-zinc-400" />
         <div className="min-w-0 flex-1">
@@ -59,7 +58,6 @@ const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
                 {title}
                 {dot && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" aria-label="Not set up" />}
             </div>
-            {description && <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">{description}</p>}
         </div>
         <ChevronRight size={16} className="shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5" />
     </button>
@@ -109,13 +107,12 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
-    ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
+    showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
     const isPaperLook = uiLook === 'paper';
     const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
-    const sky = useSky(festiveAmbient);
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     const canvasLinksMissing = useMemo(() => {
@@ -167,14 +164,6 @@ const SettingsView = ({
             )}
 
             <Section label="Appearance">
-                <Row title="Interface" description="Paper is the new staging look. Synchron keeps the original appearance.">
-                    <Segmented
-                        id="interface"
-                        value={uiLook}
-                        onChange={setUiLook}
-                        options={[{ value: 'paper', label: 'Paper' }, { value: 'synchron', label: 'Synchron' }]}
-                    />
-                </Row>
                 <Row title="Mode">
                     <Segmented
                         id="mode"
@@ -183,7 +172,15 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                <Row title={isPaperLook ? 'Paper' : 'Accent colour'} description={accentName} stack>
+                <Row title="Interface">
+                    <Segmented
+                        id="interface"
+                        value={uiLook}
+                        onChange={setUiLook}
+                        options={[{ value: 'paper', label: 'Paper' }, { value: 'synchron', label: 'Synchron' }]}
+                    />
+                </Row>
+                <Row title={isPaperLook ? 'Paper' : 'Accent colour'} stack>
                     <div className="flex flex-wrap gap-2.5">
                         {(isPaperLook ? PAPER_THEMES : ACCENTS).map(a => (
                             <button
@@ -193,7 +190,7 @@ const SettingsView = ({
                                 aria-pressed={colorTheme === a.id}
                                 title={a.name}
                                 className={`w-8 h-8 rounded-full grid place-items-center transition ${colorTheme === a.id
-                                    ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
+                                    ? 'outline outline-2 outline-offset-2 outline-zinc-900 dark:outline-white'
                                     : 'hover:scale-110'}`}
                             >
                                 {isPaperLook ? (
@@ -208,23 +205,19 @@ const SettingsView = ({
                         ))}
                     </div>
                 </Row>
-                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`} className={isPaperLook ? 'hidden' : ''}>
-                    <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />
-                </Row>
             </Section>
 
             <Section label="Integrations">
-                <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
+                <Row title="Clipboard on timetable">
                     <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard on timetable" />
                 </Row>
                 <LinkRow
                     icon={BookOpen}
                     title="Canvas links"
-                    description="Open a class's Canvas page straight from your timetable."
                     dot={canvasLinksMissing}
                     onClick={() => setView('canvas-links')}
                 />
-                <Row title="Tap to open Canvas" description="Tapping a class opens its Canvas page. Your saved links are kept either way.">
+                <Row title="Tap to open Canvas">
                     <Switch checked={canvasLinksEnabled} onChange={setCanvasLinksEnabled} label="Tap to open Canvas" />
                 </Row>
             </Section>
@@ -233,13 +226,11 @@ const SettingsView = ({
                 <LinkRow
                     icon={FileCode}
                     title="Build notes"
-                    description="See the latest updates and fixes."
                     onClick={() => setView('build-notes')}
                 />
                 <LinkRow
                     icon={Shield}
-                    title="Privacy & data"
-                    description="What Synchron stores and how to delete your data."
+                    title="Privacy & data deletion"
                     onClick={() => setView('privacy')}
                 />
             </Section>
@@ -248,7 +239,6 @@ const SettingsView = ({
                 <LinkRow
                     icon={MessageSquare}
                     title="Send feedback"
-                    description="Report a problem or suggest an improvement."
                     onClick={() => setView('feedback')}
                 />
             </Section>
