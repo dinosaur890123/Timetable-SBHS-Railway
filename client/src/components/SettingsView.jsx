@@ -109,21 +109,6 @@ const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
     showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
-    const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
-        .filter(Boolean).join(' · ');
-    const isPaperLook = uiLook === 'paper';
-    const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
-    const paperAccentOnly = isPaperLook ? accentName.split(' ').pop() : null;
-    const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
-    const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
-    const canvasLinksMissing = useMemo(() => {
-        if (canvasLinksStatus === 'loading') return false;
-        return Array.from(canvasClasses.keys()).some(key => {
-            const period = canvasClasses.get(key);
-            return !getCanvasLink(period.title, period.year);
-        });
-    }, [canvasClasses, getCanvasLink, canvasLinksStatus]);
-
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
             <div className="flex items-center gap-4">
@@ -133,7 +118,6 @@ const SettingsView = ({
                 <div className="min-w-0 flex-1">
                     <div className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white truncate">{user?.givenName} {user?.surname}</div>
                     <div className="text-[13px] text-zinc-500 dark:text-zinc-400 truncate">{user?.email}</div>
-                    {meta && <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500 truncate">{meta}</div>}
                 </div>
                 <button
                     onClick={onSignOut}

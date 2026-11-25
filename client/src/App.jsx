@@ -150,9 +150,11 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [uiLook, setUiLook] = useState(() => {
         const storedLook = localStorage.getItem('look');
-        return storedLook === 'paper' || storedLook === 'synchron'
+        const look = storedLook === 'paper' || storedLook === 'synchron'
             ? storedLook
-            : document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron';
+            : 'paper';
+        applyUiLook(look);
+        return look;
     });
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
@@ -166,6 +168,10 @@ function App() {
     };
     const [defaultDate, setDefaultDate] = useState(initialDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
+    const disableTransitions = () => {
+        document.documentElement.classList.add('disable-transitions');
+        setTimeout(() => document.documentElement.classList.remove('disable-transitions'), 50);
+    };
 
     useEffect(() => {
         if (window.location.pathname === '/admin') {
@@ -736,12 +742,14 @@ function App() {
     }, [theme]);
 
     useEffect(() => {
+        disableTransitions();
         applyUiLook(uiLook);
         localStorage.setItem('look', uiLook);
         savePreferences();
     }, [uiLook]);
 
     useEffect(() => {
+        disableTransitions();
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
 
@@ -802,6 +810,7 @@ function App() {
     }, [faviconType]);
 
     useEffect(() => {
+        disableTransitions();
         const root = window.document.documentElement;
         root.classList.remove(
             'theme-zinc',
@@ -982,6 +991,7 @@ function App() {
                                 localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
                             }
                             if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron') {
+                                applyUiLook(prefs.uiLook);
                                 setUiLook(prefs.uiLook);
                                 localStorage.setItem('look', prefs.uiLook);
                             }
@@ -1328,7 +1338,6 @@ function App() {
                     <LandingPage
                         authError={authError}
                         clearAuthError={() => setAuthError(null)}
-                        festiveAmbient={festiveAmbient}
                     />
                 </Suspense>
             </div>
