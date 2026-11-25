@@ -7,15 +7,15 @@ import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
-    { id: 'navy', name: 'Navy', swatch: 'bg-blue-950' },
-    { id: 'mint', name: 'Mint', swatch: 'bg-emerald-600' },
-    { id: 'teal', name: 'Teal', swatch: 'bg-teal-600' },
-    { id: 'sky', name: 'Sky', swatch: 'bg-sky-500' },
-    { id: 'blue', name: 'Blue', swatch: 'bg-blue-600' },
-    { id: 'violet', name: 'Violet', swatch: 'bg-violet-500' },
-    { id: 'rose', name: 'Rose', swatch: 'bg-rose-500' },
-    { id: 'orange', name: 'Orange', swatch: 'bg-orange-500' },
-    { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' }
+    { id: 'navy', name: 'Navy', hsl: '222 70% 32%' },
+    { id: 'mint', name: 'Mint', hsl: '150 84% 37%' },
+    { id: 'teal', name: 'Teal', hsl: '174 84% 41%' },
+    { id: 'sky', name: 'Sky', hsl: '199 89% 48%' },
+    { id: 'blue', name: 'Blue', hsl: '217 91% 60%' },
+    { id: 'violet', name: 'Violet', hsl: '271 91% 65%' },
+    { id: 'rose', name: 'Rose', hsl: '349 86% 60%' },
+    { id: 'orange', name: 'Orange', hsl: '24 95% 53%' },
+    { id: 'amber', name: 'Amber', hsl: '38 92% 50%' }
 ];
 
 const Section = ({ label, children }) => (
@@ -173,7 +173,7 @@ const SettingsView = ({
                                     ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
                                     : 'hover:scale-110'}`}
                             >
-                                <span className={`w-6 h-6 rounded-full ${a.swatch}`} />
+                                <span className="w-6 h-6 rounded-full" style={{ backgroundColor: `hsl(${a.hsl})` }} />
                             </button>
                         ))}
                     </div>
