@@ -462,6 +462,51 @@ const clipboardStaffList = (staff) => (Array.isArray(staff) ? staff : staff ? [s
     .map(clipboardStaffName)
     .filter(Boolean);
 
+const clipboardFieldKey = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const clipboardFieldValue = (value) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+        const text = String(value).trim();
+        return text || '';
+    }
+    if (!value || typeof value !== 'object') return '';
+    for (const key of ['value', 'fieldValue', 'customFieldValue', 'data', 'text']) {
+        if (value[key] !== undefined && value[key] !== null) {
+            const text = clipboardFieldValue(value[key]);
+            if (text) return text;
+        }
+    }
+    return '';
+};
+
+const clipboardArrivalTime = (customFieldsData) => {
+    const isArrivalTime = (value) => clipboardFieldKey(value) === 'arrivaltime';
+    const fieldName = (field) => typeof field === 'string'
+        ? field
+        : field?.name || field?.label || field?.title || field?.fieldName;
+
+    if (Array.isArray(customFieldsData)) {
+        const field = customFieldsData.find(item => [
+            fieldName(item), fieldName(item?.field), fieldName(item?.customField), fieldName(item?.definition)
+        ].some(isArrivalTime));
+        return field ? clipboardFieldValue(field) : '';
+    }
+    if (!customFieldsData || typeof customFieldsData !== 'object') return '';
+
+    for (const [key, value] of Object.entries(customFieldsData)) {
+        if (isArrivalTime(key)) return clipboardFieldValue(value);
+        if (value && typeof value === 'object') {
+            const nestedName = fieldName(value) || fieldName(value.field) || fieldName(value.customField) || fieldName(value.definition);
+            if (isArrivalTime(nestedName)) return clipboardFieldValue(value);
+        }
+    }
+    return '';
+};
+
+export const fetchStudentClipboardAttendance = (studentId) => 
+    fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`)
+    .then(data => {
+        const parseAttendance = (items) => {
+            return items.map(item => ({
 const clipboardArrivalTime = (customFieldsData) => {
     if (!customFieldsData || typeof customFieldsData !== 'object') return '';
     const value = customFieldsData.fixtures_arrivalTime
@@ -540,6 +585,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
             time: formatTimeRange(item.startDateTime, item.endDateTime),
             start: item.startDateTime || null,
             end: item.endDateTime || null,
+            arrivalTime: clipboardArrivalTime(item.customFieldsData),
             location: item.location ? {
                 name: item.location.name || '',
                 address: item.location.address || '',
