@@ -462,12 +462,44 @@ const clipboardStaffList = (staff) => (Array.isArray(staff) ? staff : staff ? [s
     .map(clipboardStaffName)
     .filter(Boolean);
 
+const clipboardFieldKey = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const clipboardFieldValue = (value) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+        const text = String(value).trim();
+        return text || '';
+    }
+    if (!value || typeof value !== 'object') return '';
+    for (const key of ['value', 'fieldValue', 'customFieldValue', 'data', 'text']) {
+        if (value[key] !== undefined && value[key] !== null) {
+            const text = clipboardFieldValue(value[key]);
+            if (text) return text;
+        }
+    }
+    return '';
+};
+
 const clipboardArrivalTime = (customFieldsData) => {
+    const isArrivalTime = (value) => clipboardFieldKey(value) === 'arrivaltime';
+    const fieldName = (field) => typeof field === 'string'
+        ? field
+        : field?.name || field?.label || field?.title || field?.fieldName;
+
+    if (Array.isArray(customFieldsData)) {
+        const field = customFieldsData.find(item => [
+            fieldName(item), fieldName(item?.field), fieldName(item?.customField), fieldName(item?.definition)
+        ].some(isArrivalTime));
+        return field ? clipboardFieldValue(field) : '';
+    }
     if (!customFieldsData || typeof customFieldsData !== 'object') return '';
-    const value = customFieldsData.fixtures_arrivalTime
-        || customFieldsData.sessions_staffArrivalTime
-        || '';
-    return typeof value === 'string' ? value.trim() : String(value || '').trim();
+
+    for (const [key, value] of Object.entries(customFieldsData)) {
+        if (isArrivalTime(key)) return clipboardFieldValue(value);
+        if (value && typeof value === 'object') {
+            const nestedName = fieldName(value) || fieldName(value.field) || fieldName(value.customField) || fieldName(value.definition);
+            if (isArrivalTime(nestedName)) return clipboardFieldValue(value);
+        }
+    }
+    return '';
 };
 
 export const fetchStudentClipboardAttendance = async (studentId) => {
