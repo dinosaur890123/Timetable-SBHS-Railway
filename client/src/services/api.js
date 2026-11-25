@@ -462,26 +462,39 @@ const clipboardStaffList = (staff) => (Array.isArray(staff) ? staff : staff ? [s
     .map(clipboardStaffName)
     .filter(Boolean);
 
-export const fetchStudentClipboardAttendance = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`)
-    .then(data => {
-        const parseAttendance = (items) => {
-            return items.map(item => ({
+const clipboardArrivalTime = (customFieldsData) => {
+    if (!customFieldsData || typeof customFieldsData !== 'object') return '';
+    const value = customFieldsData.fixtures_arrivalTime
+        || customFieldsData.sessions_staffArrivalTime
+        || '';
+    return typeof value === 'string' ? value.trim() : String(value || '').trim();
+};
+
+export const fetchStudentClipboardAttendance = async (studentId) => {
+    const [attendanceData, sessionsData] = await Promise.all([
+        fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`),
+        fetchStudentClipboardSessions(studentId).catch(() => [])
+    ]);
+    const sessionsById = new Map(sessionsData.map(session => [String(session.id), session]));
+    const parseAttendance = (items) => {
+        return items.map(item => {
+            const sessionId = item.session?.id ?? item.sessionId ?? item.session;
+            const session = sessionId != null ? sessionsById.get(String(sessionId)) : null;
+            const assignedStaff = session?.assignedStaff || [];
+            return {
                 id: item.id || Math.random(),
-                activity: item.session?.activity?.name || item.session?.title || 'Activity',
-                date: formatDay(item.session?.startDateTime),
-                recordedBy: item.roll?.markedByUser || item.updatedByUser || '',
+                activity: item.session?.activity?.name || item.session?.title || session?.activity || 'Activity',
+                date: formatDay(item.session?.startDateTime || session?.start),
+                assignedStaff,
+                arrivalTime: session?.arrivalTime || '',
                 status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
-            }));
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseAttendance(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseAttendance(data);
-        }
-        return [];
-    });
+            };
+        });
+    };
+    if (attendanceData && Array.isArray(attendanceData.member)) return parseAttendance(attendanceData.member);
+    if (Array.isArray(attendanceData)) return parseAttendance(attendanceData);
+    return [];
+};
 
 export const fetchStudentPreExplainedAbsences = (studentId) => 
     fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences?_itemsPerPage=100`)
@@ -535,6 +548,8 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
             team: item.team?.name || item.teams?.[0]?.team?.name || item.teams?.[0]?.name || '',
             teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
             staff: clipboardStaffList(item.staff),
+            assignedStaff: clipboardStaffList(item.assignedStaff),
+            arrivalTime: clipboardArrivalTime(item.customFieldsData),
             round: item.roundName || '',
             notes: item.studentParentNotes || item.notes || '',
             cancelled: !!item.cancelled,

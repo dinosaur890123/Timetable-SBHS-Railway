@@ -111,7 +111,12 @@ const ClipboardView = ({ user }) => {
                                     <div className="nf-cb-rows__main">
                                         <b>{att.activity}</b>
                                         <div className="nf-meta">
-                                            {[att.date, att.recordedBy && `Marked by ${att.recordedBy}`].filter(Boolean).join(' Â· ')}
+                                            {[att.date, att.assignedStaff?.length > 0 && `Marked by ${att.assignedStaff.join(', ')}`].filter(Boolean).join(' · ')}
+                                            {att.arrivalTime && (
+                                                <div className="nf-meta">
+                                                    Arrival {att.arrivalTime}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <span className={`nf-cb-status ${att.status === 'Present' ? 'nf-cb-status--ok' : ''}`}>
