@@ -45,18 +45,24 @@ export const Tick = ({ size = 18 }) => (
     </svg>
 );
 
-export const Hl = ({ children, delay = 0, still, display = false }) => (
-    <span className={`nf-hl${display ? ' nf-hl--display' : ''}`}>
-        <motion.span
-            aria-hidden="true"
-            className="nf-hl__swipe"
-            initial={still ? false : { clipPath: 'inset(0 100% 0 0)' }}
-            animate={{ clipPath: 'inset(0 0% 0 0)' }}
-            transition={{ delay: delay + 0.12, duration: 0.34, ease: EASE }}
-        />
-        {children}
-    </span>
-);
+let hlPlayed = false;
+
+export const Hl = ({ children, delay = 0, still, display = false }) => {
+    const play = !hlPlayed;
+    useEffect(() => { hlPlayed = true; }, []);
+    return (
+        <span className={`nf-hl${display ? ' nf-hl--display' : ''}`}>
+            <motion.span
+                aria-hidden="true"
+                className="nf-hl__swipe"
+                initial={still || !play ? false : { clipPath: 'inset(0 100% 0 0)' }}
+                animate={{ clipPath: 'inset(0 0% 0 0)' }}
+                transition={{ delay: delay + 0.12, duration: 0.34, ease: EASE }}
+            />
+            {children}
+        </span>
+    );
+};
 
 const RING = 'M178 13C118 2 38 14 17 57C3 91 40 127 122 130.5C196 133.5 250 110 251 70C252 32 214 10 160 7C130 5.4 104 8 85 13';
 
