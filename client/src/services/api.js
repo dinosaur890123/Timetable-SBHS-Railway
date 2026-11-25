@@ -272,7 +272,16 @@ const DAY_TTL = 5 * 60 * 1000;
 const DAY_CACHE_LIMIT = 120;
 const dayCache = new Map();
 const dayInFlight = new Map();
-const dayKey = (date) => format(date || new Date(), 'yyyy-MM-dd');
+const sydneyDateKey = (date) => {
+    const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+};
+const dayKey = (date) => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : sydneyDateKey(date || new Date());
 
 export const peekDayTimetable = (date) => dayCache.get(dayKey(date))?.data ?? null;
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import { format, addDays, parseISO, getDay } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
@@ -11,6 +11,27 @@ const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
     const [h, m] = timeStr.split(':').map(Number);
     return h * 60 + m;
+};
+
+const sydneyDateKey = (date) => {
+    const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+};
+
+const sydneyClock = (date) => {
+    const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: 'Australia/Sydney', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).formatToParts(date);
+    return Object.fromEntries(parts.map(({ type, value }) => [type, Number(value)]));
+};
+
+const addDaysToKey = (dateKey, amount) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + amount));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 };
 
 const getGreeting = (hour) => {
@@ -385,11 +406,11 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     useEffect(() => { if (animateGreeting) markNoteFlowHighlightAnimationPlayed(); }, [animateGreeting]);
     const [now, setNow] = useState(new Date());
     const [scanIn, setScanIn] = useState(() => {
-        const date = format(new Date(), 'yyyy-MM-dd');
+        const date = sydneyDateKey(new Date());
         return readScanStatusCache(user?.studentId, date) || { date: null, state: 'loading' };
     });
     const [nextDayScanIn, setNextDayScanIn] = useState({ date: null, state: 'loading' });
-    const [todayTimetable, setTodayTimetable] = useState(() => peekDayTimetable(new Date()));
+    const [todayTimetable, setTodayTimetable] = useState(() => peekDayTimetable(sydneyDateKey(new Date())));
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
@@ -398,12 +419,12 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     const day = railTimetable || timetableData;
     const slots = buildSlots(day);
-    const todayKey = format(now, 'yyyy-MM-dd');
+    const todayKey = sydneyDateKey(now);
     useEffect(() => {
         if (!user?.studentId) return;
         let active = true;
-        setTodayTimetable(peekDayTimetable(now) || null);
-        fetchDayTimetable(now)
+        setTodayTimetable(peekDayTimetable(todayKey) || null);
+        fetchDayTimetable(todayKey)
             .then(data => { if (active) setTodayTimetable(data); })
             .catch(() => {});
         return () => { active = false; };
@@ -414,9 +435,11 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
     const hasTodaySchedule = todaySlots.length > 0;
     const schoolStartMin = todaySlots[0]?.startMin ?? 9 * 60;
     const schoolEndMin = todaySlots.at(-1)?.endMin ?? 15 * 60 + 30;
-    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const clock = sydneyClock(now);
+    const nowMin = clock.hour * 60 + clock.minute + clock.second / 60;
     const afterSchool = hasTodaySchedule && nowMin >= schoolEndMin;
-    const isSchoolDay = getDay(now) !== 0 && getDay(now) !== 6 && hasTodaySchedule;
+    const weekday = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+    const isSchoolDay = weekday !== 0 && weekday !== 6 && hasTodaySchedule;
     useEffect(() => {
         if (!user?.studentId || !isSchoolDay || !hasTodaySchedule) {
             setScanIn({ date: todayKey, state: 'unknown' });
@@ -432,8 +455,8 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         let timer;
         const scheduleInitialCheck = () => {
             clearTimeout(timer);
-            const current = new Date();
-            const currentMin = current.getHours() * 60 + current.getMinutes();
+            const current = sydneyClock(new Date());
+            const currentMin = current.hour * 60 + current.minute;
             if (currentMin < 6 * 60) {
                 timer = setTimeout(poll, (6 * 60 - currentMin) * 60000);
             } else {
@@ -441,8 +464,8 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             }
         };
         const poll = async () => {
-            const current = new Date();
-            const currentMin = current.getHours() * 60 + current.getMinutes();
+            const current = sydneyClock(new Date());
+            const currentMin = current.hour * 60 + current.minute;
             if (!active || scanned || document.visibilityState === 'hidden' || currentMin >= schoolEndMin) return;
             try {
                 const record = await fetchStudentAttendanceScanIn(user.studentId, todayKey);
@@ -487,14 +510,13 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
 
     useEffect(() => {
         if (!user?.studentId || !afterSchool) return;
-        const nextDate = addDays(now, 1);
-        const nextDateKey = format(nextDate, 'yyyy-MM-dd');
+        const nextDateKey = addDaysToKey(todayKey, 1);
         const cached = readScanStatusCache(user.studentId, nextDateKey);
         setNextDayScanIn(cached || { date: nextDateKey, state: 'loading' });
         let active = true;
         (async () => {
             try {
-                const timetable = await fetchDayTimetable(nextDate);
+                const timetable = await fetchDayTimetable(nextDateKey);
                 if (timetable?.date !== nextDateKey || buildSlots(timetable).length === 0) {
                     if (active) setNextDayScanIn({ date: nextDateKey, state: 'unknown' });
                     return;
@@ -542,7 +564,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
         })();
 
     const rail = showRail && <NowCard slots={slots} nowMin={nowMin} isLive={isLive} clipboardSessions={clipboardSessions} dayKey={dayKey} />;
-    const nextDayKey = format(addDays(now, 1), 'yyyy-MM-dd');
+    const nextDayKey = addDaysToKey(todayKey, 1);
     const shownScanIn = afterSchool ? nextDayScanIn : scanIn;
     const shownScanDate = afterSchool ? nextDayKey : todayKey;
     const showScanPill = !afterSchool && isSchoolDay
@@ -576,7 +598,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${scanDotTone}`} />
                                 <span>{afterSchool
                                     ? `${format(addDays(now, 1), 'EEE d MMM')} · ${shownScanIn.state === 'scanned' ? `Scanned on at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet'}`
-                                    : shownScanIn.state === 'scanned' ? `Scanned on today at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned yet today'}</span>
+                                    : shownScanIn.state === 'scanned' ? `Scanned on today at ${shownScanIn.time || 'time unavailable'}` : 'Not scanned in yet today'}</span>
                             </p>
                         )}
                     </div>
