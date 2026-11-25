@@ -203,7 +203,6 @@ function App() {
     const [ambientLight, setAmbientLight] = useState(() => localStorage.getItem('ambient_light') !== 'off');
     const [showClipboardEvents, setShowClipboardEvents] = useState(() => localStorage.getItem('show_clipboard_events') !== 'false');
     const [canvasLinksEnabled, setCanvasLinksEnabled] = useState(() => localStorage.getItem('canvas_links_enabled') !== 'false');
-    const [faviconType, setFaviconType] = useState(() => localStorage.getItem('favicon_type') || 'default');
     const [buildNotes, setBuildNotes] = useState(() => {
         try {
             const cached = localStorage.getItem('cached_build_notes');
@@ -682,7 +681,6 @@ function App() {
                 showClipboardEvents,
                 canvasLinksEnabled,
                 uiLook,
-                faviconType,
                 dashboardLayoutMobile: JSON.parse(localStorage.getItem('dashboard_layout_mobile') || 'null'),
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
@@ -768,47 +766,6 @@ function App() {
         localStorage.setItem('canvas_links_enabled', canvasLinksEnabled ? 'true' : 'false');
         savePreferences();
     }, [canvasLinksEnabled]);
-
-    useEffect(() => {
-        localStorage.setItem('favicon_type', faviconType);
-        savePreferences();
-    }, [faviconType]);
-
-    useEffect(() => {
-        const appIcon = document.getElementById('app-favicon');
-        if (!appIcon) return;
-        const atom = faviconType === 'atom';
-
-        const ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'favicon', 'icon-', 'manifest.json'];
-        const mapIconHref = (href) => {
-            if (!href || href.charAt(0) !== '/') return href;
-            let path = href.slice(1);
-            const isAtom = path.startsWith('atom-');
-            if (isAtom) path = path.slice(5);
-            const known = ICON_PREFIXES.some(p => path === p || path.startsWith(p));
-            if (!known || isAtom === atom) return href;
-            return (atom ? '/atom-' : '/') + path;
-        };
-
-        document.querySelectorAll('link[href^="/"], meta[name="msapplication-TileImage"]').forEach(el => {
-            const attr = el.tagName === 'META' ? 'content' : 'href';
-            const v = el.getAttribute(attr);
-            const nv = mapIconHref(v);
-            if (nv !== v) el.setAttribute(attr, nv);
-        });
-
-        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"], link[rel="apple-touch-icon"][href^="http"]').forEach(l => {
-            if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
-            if (atom) {
-                if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
-                else l.removeAttribute('media');
-            } else {
-                l.setAttribute('media', 'not all');
-            }
-        });
-        if (atom) appIcon.setAttribute('media', 'not all');
-        else appIcon.removeAttribute('media');
-    }, [faviconType]);
 
     useEffect(() => {
         disableTransitions();
@@ -995,11 +952,6 @@ function App() {
                         applyUiLook(look);
                         setUiLook(look);
                         localStorage.setItem('look', look);
-                        if (prefs.faviconType !== undefined) {
-                            setFaviconType(prefs.faviconType);
-                            localStorage.setItem('favicon_type', prefs.faviconType);
-                        }
-
                         if (prefs.dashboardLayoutMobile) {
                             localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
                         }
