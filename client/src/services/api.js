@@ -479,6 +479,12 @@ const clipboardFieldValue = (value) => {
 };
 
 const clipboardArrivalTime = (customFieldsData) => {
+    if (customFieldsData && !Array.isArray(customFieldsData) && typeof customFieldsData === 'object') {
+        const directValue = customFieldsData.fixtures_arrivalTime ?? customFieldsData.sessions_staffArrivalTime;
+        if (directValue !== undefined && directValue !== null) {
+            return clipboardFieldValue(directValue);
+        }
+    }
     const isArrivalTime = (value) => clipboardFieldKey(value) === 'arrivaltime';
     const fieldName = (field) => typeof field === 'string'
         ? field

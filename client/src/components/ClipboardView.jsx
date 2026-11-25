@@ -58,7 +58,7 @@ const ClipboardView = ({ user }) => {
             : session.team || ''
     }));
     const selectedSession = openSession
-        ? sessionsForStudent.find(session => String(session.id) === String(openSession.id)) || openSession
+        ? { ...openSession, ...(sessionsForStudent.find(session => String(session.id) === String(openSession.id)) || {}) }
         : null;
     if (loading) {
         return <ClipboardSkeleton />;
