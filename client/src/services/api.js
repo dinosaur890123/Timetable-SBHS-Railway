@@ -478,6 +478,24 @@ const clipboardFieldValue = (value) => {
     return '';
 };
 
+const formatArrivalTime = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const digits = /^\d{3,4}$/.test(text) ? text.padStart(4, '0') : null;
+    const match = digits
+        ? [null, digits.slice(0, 2), digits.slice(2), null]
+        : text.match(/^(\d{1,2})[:.](\d{2})(?::\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+    if (!match) return text;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3]?.toLowerCase().replace(/\./g, '');
+    if (hours > 23 || minutes > 59) return text;
+    if (meridiem === 'pm' && hours < 12) hours += 12;
+    if (meridiem === 'am' && hours === 12) hours = 0;
+    const period = hours >= 12 ? 'pm' : 'am';
+    return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
 const clipboardArrivalTime = (customFieldsData) => {
     if (customFieldsData && !Array.isArray(customFieldsData) && typeof customFieldsData === 'object') {
         const directValue = customFieldsData.fixtures_arrivalTime ?? customFieldsData.sessions_staffArrivalTime;
@@ -570,7 +588,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
 
     const parseSessions = (items) => {
         return items.map(item => {
-            const arrivalTime = clipboardArrivalTime(item.customFieldsData);
+            const arrivalTime = formatArrivalTime(clipboardArrivalTime(item.customFieldsData));
             return {
                 id: item.id || Math.random(),
                 activity: item.activity?.name || item.title || 'Session',
