@@ -151,7 +151,7 @@ function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [uiLook, setUiLook] = useState(() => {
         const storedLook = localStorage.getItem('look');
-        const look = storedLook === 'paper' || storedLook === 'synchron'
+        const look = storedLook === 'paper' || storedLook === 'synchron' || storedLook === 'ambient'
             ? storedLook
             : 'paper';
         applyUiLook(look);
@@ -993,10 +993,14 @@ function App() {
                                 setCanvasLinksEnabled(prefs.canvasLinksEnabled);
                                 localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
                             }
-                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron') {
+                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron' || prefs.uiLook === 'ambient') {
                                 applyUiLook(prefs.uiLook);
                                 setUiLook(prefs.uiLook);
                                 localStorage.setItem('look', prefs.uiLook);
+                            } else {
+                                applyUiLook('paper');
+                                setUiLook('paper');
+                                localStorage.setItem('look', 'paper');
                             }
                             if (prefs.faviconType !== undefined) {
                                 setFaviconType(prefs.faviconType);
@@ -1019,6 +1023,10 @@ function App() {
                             if (prefs.transitWidgetStop) {
                                 localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
                             }
+                        } else {
+                            applyUiLook('paper');
+                            setUiLook('paper');
+                            localStorage.setItem('look', 'paper');
                         }
                         syncPreferencesToServer.current = true;
                     }).catch(e => {
