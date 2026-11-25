@@ -911,6 +911,7 @@ function App() {
 
             try {
                 await validateServerSession();
+                fetchNextSchoolDay().catch(() => {});
                 const [noticesData, userData, systemData] = await Promise.all([
                     fetchDailyNews(),
                     fetchUserInfo(),
@@ -1064,9 +1065,11 @@ function App() {
         const provisionalDay = startDay || new Date();
         (async () => {
             try {
+                const sessionsPromise = showClipboardEvents && user.studentId
+                    ? loadClipboardSessions()
+                    : Promise.resolve(initialClipboardSessions);
                 const { date } = await fetchNextSchoolDay();
-                const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
-                const openDay = weekendClipboardDay(date, sessions);
+                const openDay = weekendClipboardDay(date, initialClipboardSessions);
                 setDefaultDate(openDay);
                 setViewDate(current => (
                     !userSelectedViewDate.current && isSameDay(current, provisionalDay)
@@ -1074,6 +1077,16 @@ function App() {
                         : current
                 ));
                 setSchoolDayResolved(true);
+
+                const sessions = await sessionsPromise;
+                const updatedOpenDay = weekendClipboardDay(date, sessions);
+                if (isSameDay(updatedOpenDay, openDay)) return;
+                setDefaultDate(updatedOpenDay);
+                setViewDate(current => (
+                    !userSelectedViewDate.current && isSameDay(current, openDay)
+                        ? updatedOpenDay
+                        : current
+                ));
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
                 setSchoolDayResolved(true);
