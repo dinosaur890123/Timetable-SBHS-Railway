@@ -496,7 +496,7 @@ const formatArrivalTime = (value) => {
     return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${period}`;
 };
 
-const clipboardArrivalTime = (customFieldsData) => {
+const arrivalTimeFromFields = (customFieldsData) => {
     if (customFieldsData && !Array.isArray(customFieldsData) && typeof customFieldsData === 'object') {
         const directValue = customFieldsData.fixtures_arrivalTime ?? customFieldsData.sessions_staffArrivalTime;
         if (directValue !== undefined && directValue !== null) {
@@ -518,19 +518,55 @@ const clipboardArrivalTime = (customFieldsData) => {
 
     for (const [key, value] of Object.entries(customFieldsData)) {
         if (isArrivalTime(key)) return clipboardFieldValue(value);
-        if (value && typeof value === 'object') {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
             const nestedName = fieldName(value) || fieldName(value.field) || fieldName(value.customField) || fieldName(value.definition);
             if (isArrivalTime(nestedName)) return clipboardFieldValue(value);
+            for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                if (isArrivalTime(nestedKey)) return clipboardFieldValue(nestedValue);
+            }
         }
     }
     return '';
 };
 
+const clipboardItemArrivalTime = (item) => {
+    if (!item || typeof item !== 'object') return '';
+    for (const container of [
+        item.customFieldsData,
+        item.customFields,
+        item.fields,
+        item.fixture?.customFieldsData,
+        item.session?.customFieldsData
+    ]) {
+        const value = arrivalTimeFromFields(container);
+        if (value) return value;
+    }
+    for (const key of ['arrivalTime', 'arrival_time', 'staffArrivalTime', 'arriveAt']) {
+        const value = clipboardFieldValue(item[key]);
+        if (value) return value;
+    }
+    return '';
+};
+
 export const fetchStudentClipboardAttendance = async (studentId) => {
-    const [attendanceData, sessionsData] = await Promise.all([
-        fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`),
-        fetchStudentClipboardSessions(studentId).catch(() => [])
-    ]);
+    const attendanceData = await fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`);
+    const attendanceItems = attendanceData && Array.isArray(attendanceData.member)
+        ? attendanceData.member
+        : Array.isArray(attendanceData) ? attendanceData : [];
+    const sessionDates = attendanceItems
+        .map(item => item.session?.startDateTime || item.startDateTime)
+        .filter(Boolean)
+        .sort();
+    const padDay = (date, days) => {
+        const d = new Date(date);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().slice(0, 10);
+    };
+    const sessionOptions = sessionDates.length ? {
+        startDate: padDay(sessionDates[0], -1),
+        endDate: padDay(sessionDates[sessionDates.length - 1], 1)
+    } : {};
+    const sessionsData = await fetchStudentClipboardSessions(studentId, sessionOptions).catch(() => []);
     const sessionsById = new Map(sessionsData.map(session => [String(session.id), session]));
     const parseAttendance = (items) => {
         return items.map(item => {
@@ -544,7 +580,7 @@ export const fetchStudentClipboardAttendance = async (studentId) => {
                 activity: item.session?.activity?.name || item.session?.title || session?.activity || 'Activity',
                 date: formatDay(item.session?.startDateTime || session?.start),
                 markedBy,
-                arrivalTime: session?.arrivalTime || '',
+                arrivalTime: session?.arrivalTime || formatArrivalTime(clipboardItemArrivalTime(item)),
                 status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
             };
         });
@@ -588,7 +624,7 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
 
     const parseSessions = (items) => {
         return items.map(item => {
-            const arrivalTime = formatArrivalTime(clipboardArrivalTime(item.customFieldsData));
+            const arrivalTime = formatArrivalTime(clipboardItemArrivalTime(item));
             return {
                 id: item.id || Math.random(),
                 activity: item.activity?.name || item.title || 'Session',
