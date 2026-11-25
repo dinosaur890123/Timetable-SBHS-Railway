@@ -134,6 +134,7 @@ import {
     isScopeOutdated,
     fetchNextSchoolDay,
     peekNextSchoolDay,
+    refreshAccessToken,
     onCachedDataChange,
     fetchCalendarEvents
 } from './services/api';
@@ -158,6 +159,7 @@ function App() {
     });
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
+    const [schoolDayResolved, setSchoolDayResolved] = useState(() => !!startDay);
     const [initialClipboardSessions] = useState(() => peekClipboardSessions(cachedStudentId()) || []);
     const [initialDay] = useState(() => weekendClipboardDay(startDay || new Date(), initialClipboardSessions));
     const [viewDate, setViewDate] = useState(initialDay);
@@ -1071,10 +1073,33 @@ function App() {
                         ? openDay
                         : current
                 ));
+                setSchoolDayResolved(true);
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
+                setSchoolDayResolved(true);
             }
         })();
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const refreshWhenNeeded = () => {
+            const expiry = Number(localStorage.getItem('sbhs_token_expiry'));
+            if (!Number.isFinite(expiry) || expiry <= Date.now() + 15 * 60 * 1000) {
+                refreshAccessToken({ forced: true }).catch(err => {
+                    console.warn('Could not refresh the session in the background', err);
+                });
+            }
+        };
+
+        refreshWhenNeeded();
+        const timer = setInterval(refreshWhenNeeded, 5 * 60 * 1000);
+        document.addEventListener('visibilitychange', refreshWhenNeeded);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener('visibilitychange', refreshWhenNeeded);
+        };
     }, [user]);
 
     useEffect(() => {
@@ -1206,7 +1231,9 @@ function App() {
     }, [user?.studentId, showClipboardEvents, clipboardSessions, viewDate]);
 
     const viewKey = format(viewDate, 'yyyy-MM-dd');
-    const dayTimetable = peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null);
+    const dayTimetable = schoolDayResolved
+        ? (peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null))
+        : null;
 
     const nextDay = () => setViewDateFromUser(d => addDays(d, 1));
     const prevDay = () => setViewDateFromUser(d => addDays(d, -1));
