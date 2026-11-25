@@ -123,9 +123,6 @@ const SheetBody = ({ session, onClose, still }) => {
                 {session.assignedStaff?.length > 0 && (
                     <Row label="Staff">{session.assignedStaff.map(member => member.name).join(', ')}</Row>
                 )}
-                {session.arrivalTime && (
-                    <Row label="Arrival time">{session.arrivalTime}</Row>
-                )}
                 {session.notes && <Row label="Notes"><span className="nf-pop__notes">{session.notes}</span></Row>}
             </dl>
 
