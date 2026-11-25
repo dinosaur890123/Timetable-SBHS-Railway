@@ -480,12 +480,14 @@ export const fetchStudentClipboardAttendance = async (studentId) => {
         return items.map(item => {
             const sessionId = item.session?.id ?? item.sessionId ?? item.session;
             const session = sessionId != null ? sessionsById.get(String(sessionId)) : null;
-            const assignedStaff = session?.assignedStaff || [];
+            const markedBy = session?.assignedStaff?.find(staff =>
+                String(staff.apiRef || '').endsWith('/users/792390')
+            )?.name || '';
             return {
                 id: item.id || Math.random(),
                 activity: item.session?.activity?.name || item.session?.title || session?.activity || 'Activity',
                 date: formatDay(item.session?.startDateTime || session?.start),
-                assignedStaff,
+                markedBy,
                 arrivalTime: session?.arrivalTime || '',
                 status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
             };
@@ -545,10 +547,20 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
                 longitude: item.location.longitude ?? null
             } : null,
             opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
-            team: item.team?.name || item.teams?.[0]?.team?.name || item.teams?.[0]?.name || '',
+            teamIds: [
+                ...(Array.isArray(item.teams) ? item.teams : []),
+                ...(item.team ? [item.team] : [])
+            ].map(team => team?.team?.id || team?.id).filter(id => id != null).map(String),
+            rawTeams: [
+                ...(Array.isArray(item.teams) ? item.teams : []),
+                ...(item.team ? [item.team] : [])
+            ].map(team => ({ id: team?.team?.id || team?.id, name: team?.team?.name || team?.name || '' })),
             teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
-            staff: clipboardStaffList(item.staff),
-            assignedStaff: clipboardStaffList(item.assignedStaff),
+            assignedStaff: (Array.isArray(item.assignedStaff) ? item.assignedStaff : item.assignedStaff ? [item.assignedStaff] : [])
+                .map(member => ({
+                    name: clipboardStaffName(member),
+                    apiRef: member?.['@id'] || ''
+                })).filter(member => member.name),
             arrivalTime: clipboardArrivalTime(item.customFieldsData),
             round: item.roundName || '',
             notes: item.studentParentNotes || item.notes || '',
