@@ -143,6 +143,9 @@ html[data-ui="modern"][data-look="paper"] .look-swipe::before {
   mask: var(--hl-mask) 0 0 / 100% 100% no-repeat;
   mix-blend-mode: multiply;
   transform: rotate(-1.6deg) skewX(-12deg);
+  clip-path: polygon(0 -10%, 114% -10%, 100% 110%, 0 110%);
+}
+html[data-ui="modern"][data-look="paper"] .look-swipe--animate::before {
   animation: look-swipe-draw 620ms cubic-bezier(.5, 0, .2, 1) 120ms backwards;
 }
 html[data-ui="modern"][data-look="paper"].dark .look-swipe::before { mix-blend-mode: normal; }

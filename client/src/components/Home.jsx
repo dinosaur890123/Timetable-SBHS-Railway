@@ -5,6 +5,7 @@ import { format, addDays, parseISO, getDay } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
+import { hasNoteFlowHighlightAnimationPlayed, markNoteFlowHighlightAnimationPlayed } from './study/noteflow';
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -380,6 +381,8 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
 };
 
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {
+    const [animateGreeting] = useState(() => !hasNoteFlowHighlightAnimationPlayed());
+    useEffect(() => { if (animateGreeting) markNoteFlowHighlightAnimationPlayed(); }, [animateGreeting]);
     const [now, setNow] = useState(new Date());
     const [scanIn, setScanIn] = useState(() => {
         const date = format(new Date(), 'yyyy-MM-dd');
@@ -566,7 +569,7 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
                 <div className="md:flex md:items-center md:justify-between md:gap-4">
                     <div className="min-w-0">
                         <h1 className="look-greeting text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
-                            {getGreeting(now.getHours())}, <span className="look-swipe text-accent">{user?.givenName || 'there'}</span>
+                            {getGreeting(now.getHours())}, <span className={`look-swipe text-accent${animateGreeting ? ' look-swipe--animate' : ''}`}>{user?.givenName || 'there'}</span>
                         </h1>
                         {showScanPill && (
                             <p className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanPillTone}`}>

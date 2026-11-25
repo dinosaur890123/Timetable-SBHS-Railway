@@ -45,11 +45,14 @@ export const Tick = ({ size = 18 }) => (
     </svg>
 );
 
-let hlPlayed = false;
+let highlightAnimationPlayed = false;
+
+export const hasNoteFlowHighlightAnimationPlayed = () => highlightAnimationPlayed;
+export const markNoteFlowHighlightAnimationPlayed = () => { highlightAnimationPlayed = true; };
 
 export const Hl = ({ children, delay = 0, still, display = false }) => {
-    const play = !hlPlayed;
-    useEffect(() => { hlPlayed = true; }, []);
+    const play = !still && !hasNoteFlowHighlightAnimationPlayed();
+    useEffect(() => { if (play) markNoteFlowHighlightAnimationPlayed(); }, [play]);
     return (
         <span className={`nf-hl${display ? ' nf-hl--display' : ''}`}>
             <motion.span
