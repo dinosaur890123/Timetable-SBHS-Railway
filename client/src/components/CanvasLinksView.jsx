@@ -391,7 +391,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
       {errors['clear-all'] && <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{errors['clear-all']}</p>}
 
       <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-        © Synchron {new Date().getFullYear()} · BETA
+        © Synchron {new Date().getFullYear()}
       </p>
 
       {toast && (

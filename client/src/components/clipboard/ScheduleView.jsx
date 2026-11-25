@@ -1,13 +1,9 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { format, isToday } from 'date-fns';
-import { Hl, useNoteFlowFonts } from '../study/noteflow';
-import { useReducedMotion } from 'framer-motion';
 import { startOf, clockTime, sessionInk, sessionName, endOf } from './sessions';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ScheduleView = ({ sessions, onOpen }) => {
-    useNoteFlowFonts();
-    const still = useReducedMotion();
     const [hoveredSession, setHoveredSession] = useState(null);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
@@ -64,7 +60,7 @@ const ScheduleView = ({ sessions, onOpen }) => {
                     <div className="nf-schedule-dayhead">
                         <span className="nf-schedule-dayname">{format(date, 'EEEE')}</span>
                         <span className={`nf-schedule-date tnum ${isToday(date) ? 'is-today' : ''}`}>
-                            {isToday(date) ? <Hl still={still}>{format(date, 'MMMM d, yyyy')}</Hl> : format(date, 'MMMM d, yyyy')}
+                            {isToday(date) ? <span className="nf-cal__today">{format(date, 'MMMM d, yyyy')}</span> : format(date, 'MMMM d, yyyy')}
                         </span>
                     </div>
                     <div className="nf-schedule-events">

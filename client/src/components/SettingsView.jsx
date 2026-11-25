@@ -109,6 +109,18 @@ const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
     showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
+    const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
+    const isPaperLook = uiLook === 'paper';
+    const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
+    const paperAccentOnly = isPaperLook ? accentName.split(' ').pop() : null;
+    const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
+    const canvasLinksMissing = useMemo(() => {
+        if (canvasLinksStatus === 'loading') return false;
+        return Array.from(canvasClasses.keys()).some(key => {
+            const period = canvasClasses.get(key);
+            return !getCanvasLink(period.title, period.year);
+        });
+    }, [canvasClasses, getCanvasLink, canvasLinksStatus]);
     return (
         <div className="mx-auto max-w-2xl space-y-8 pb-8">
             <div className="flex items-center gap-4">
@@ -231,7 +243,7 @@ const SettingsView = ({
             </Section>
 
             <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-600">
-                © Synchron {new Date().getFullYear()} · BETA
+                © Synchron {new Date().getFullYear()}
             </p>
         </div>
     );

@@ -293,7 +293,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
         </Section>
 
         <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
-            © Synchron {new Date().getFullYear()} · BETA
+            © Synchron {new Date().getFullYear()}
         </p>
     </div>
     );
