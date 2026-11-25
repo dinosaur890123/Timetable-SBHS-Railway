@@ -101,6 +101,7 @@ html[data-ui="modern"].dark.theme-blue {
   --m-page: 7 10 16;
   --m-panel: 11 16 22;
   --m-card: 17 22 30;
+
 }
 
 html.theme-violet {
@@ -136,6 +137,7 @@ html[data-ui="modern"].dark.theme-violet {
   --m-page: 11 9 15;
   --m-panel: 17 14 21;
   --m-card: 23 20 28;
+
 }
 
 html.theme-rose {
@@ -171,6 +173,7 @@ html[data-ui="modern"].dark.theme-rose {
   --m-page: 16 8 8;
   --m-panel: 22 13 13;
   --m-card: 29 18 19;
+
 }
 
 html.theme-teal {
@@ -206,6 +209,7 @@ html[data-ui="modern"].dark.theme-teal {
   --m-page: 5 12 11;
   --m-panel: 8 17 16;
   --m-card: 13 24 22;
+
 }
 
 html.theme-orange {
@@ -241,6 +245,7 @@ html[data-ui="modern"].dark.theme-orange {
   --m-page: 15 9 6;
   --m-panel: 20 14 10;
   --m-card: 27 19 16;
+  --color-accent-contrast-text: 0 0% 0%;
 }
 
 html.theme-sky {
@@ -276,6 +281,7 @@ html[data-ui="modern"].dark.theme-sky {
   --m-page: 5 11 15;
   --m-panel: 9 16 22;
   --m-card: 14 23 29;
+
 }
 
 html.theme-navy {
@@ -311,10 +317,12 @@ html[data-ui="modern"].dark.theme-navy {
   --m-page: 8 12 19;
   --m-panel: 12 17 26;
   --m-card: 18 25 37;
+
 }
 html.dark.theme-navy {
   --color-accent: 222 55% 48%;
   --color-accent-contrast: 0 0% 100%;
+
 }
 
 html[class*="theme-"] .m-ambient {

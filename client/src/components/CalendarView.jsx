@@ -93,9 +93,7 @@ const MonthGrid = ({ month, events, selectedDate, onSelect, closureFor }) => {
           className={`relative ${CELL_HEIGHT} px-1 pt-1.5 pb-1 sm:px-1.5 sm:pt-2 flex flex-col text-left transition-colors ${
             isSelected
               ? 'bg-accent/10 dark:bg-accent/15'
-              : isTodayDate
-                ? 'bg-accent/5 dark:bg-accent/10'
-                : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
+              : 'bg-m-card hover:bg-zinc-900/[0.03] dark:hover:bg-white/[0.04]'
           }`}
         >
           <AnimatePresence>

@@ -565,8 +565,8 @@ const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode 
             <header className={showScanPill ? 'mb-1 md:mb-3' : 'mb-3 md:mb-8'}>
                 <div className="md:flex md:items-center md:justify-between md:gap-4">
                     <div className="min-w-0">
-                        <h1 className="text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
-                            {getGreeting(now.getHours())}, <span className="text-accent">{user?.givenName || 'there'}</span>
+                        <h1 className="look-greeting text-[28px] md:text-[34px] font-semibold tracking-tight leading-tight text-zinc-900 dark:text-white">
+                            {getGreeting(now.getHours())}, <span className="look-swipe text-accent">{user?.givenName || 'there'}</span>
                         </h1>
                         {showScanPill && (
                             <p className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${scanPillTone}`}>

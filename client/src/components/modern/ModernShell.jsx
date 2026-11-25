@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Home, CalendarDays, Newspaper, Award, Clipboard, Settings,
+    Home, CalendarDays, Newspaper, Award, Clipboard, Settings, Mail,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
@@ -41,7 +41,8 @@ const CanvasIcon = ({ size = 16, className = '' }) => (
 
 const QUICK_LINKS = [
     { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
-    { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' }
+    { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' },
+    { id: 'link-gmail', label: 'Gmail', icon: Mail, href: 'https://mail.google.com/a/student.sbhs.nsw.edu.au' }
 ];
 
 const buildNavGroups = (isAdmin, hiddenPages = []) => {
@@ -94,7 +95,7 @@ export const BrandMark = ({ className = '' }) => (
 );
 
 export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) => {
-    const groups = buildNavGroups(user?.role === 'Admin', hiddenPages);
+    const groups = buildNavGroups(user?.role === 'Admin', hiddenPages).filter(group => group.items.length > 0);
     const plan = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null]
         .filter(Boolean).join(' · ') || 'Student';
 
@@ -113,12 +114,9 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                 <StagingBadge className="hidden md:inline-flex" />
             </button>
 
-            <nav className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5">
-                {groups.map(group => (
-                    <div key={group.label}>
-                        <div className="px-2.5 mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                            {group.label}
-                        </div>
+            <nav className="flex-1 overflow-y-auto -mx-1 px-1">
+                {groups.map((group, index) => (
+                    <div key={group.label} className={index > 0 ? 'mt-3 border-t border-zinc-900/[0.07] pt-3 dark:border-white/[0.07]' : ''}>
                         <ul className="space-y-0.5">
                             {group.items.map(({ id, icon: Icon, href, label }) => {
                                 if (href) {
@@ -173,7 +171,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                     {initialsOf(user)}
                 </span>
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                    <span className="block whitespace-normal break-words text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                         {user?.givenName} {user?.surname}
                     </span>
                     <span className="block truncate font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
@@ -493,19 +491,18 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
 
 export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hiddenPages = [] }) => {
     const quickActions = [
-        { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
         { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
-        { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
+        { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') },
+        { id: 'quick-gmail', label: 'Gmail', icon: Mail, run: () => window.open('https://mail.google.com/a/student.sbhs.nsw.edu.au', '_blank', 'noopener') }
     ].filter(action => {
-        if (action.id === 'quick-awards') return !hiddenPages.includes('awards') && hiddenPages.includes('notes');
         if (action.id === 'quick-calendar') return !hiddenPages.includes('calendar');
         return true;
     });
 
     const navCommands = buildNavGroups(user?.role === 'Admin', hiddenPages)
         .flatMap(g => g.items)
-        .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas')
+        .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas' && item.id !== 'link-gmail')
         .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({
             id: `nav-${item.id}`,

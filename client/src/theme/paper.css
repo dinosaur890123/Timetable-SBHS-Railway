@@ -1,0 +1,335 @@
+/*
+ * "Paper" look: Synchron's Modern shell drawn in NoteFlow's v2 language
+ * (ink on warm paper, Instrument Sans/Serif, one highlighter swipe, depth from height, no glows).
+ *
+ * Active only when <html data-look="paper"> (default at staging.synchron.work; Settings and `?look=paper` /
+ * `?look=ambient` select and remember the look in localStorage). With the attribute absent nothing in this file
+ * applies, so the original Synchron look is restored.
+ *
+ * Structure: Synchron keeps its layout, shell, command palette and the m-* surface tokens; this file only
+ * retunes tokens and the handful of rules that carry the old look (mono eyebrows, glows, press overshoot).
+ * Neutral tokens use a :not() boost so they also win over the generated colour-theme tints.
+ */
+
+html[data-ui="modern"][data-look="paper"]:not(.x) {
+  /* NoteFlow ink/paper, expressed through Synchron's zinc scale so every text-zinc-* follows. */
+  --zinc-50: 250 245 237;
+  --zinc-100: 246 240 230;
+  --zinc-200: 238 231 219;
+  --zinc-300: 226 218 203;
+  --zinc-400: 146 138 124;   /* decoration and placeholders */
+  --zinc-500: 108 100 88;    /* ink-3: meta */
+  --zinc-600: 90 84 74;      /* ink-2: secondary */
+  --zinc-700: 63 61 57;
+  --zinc-800: 39 38 36;
+  --zinc-900: 24 21 18;      /* ink */
+  --zinc-950: 14 14 13;
+  --white: 255 254 251;
+
+  /* The desk, the main sheet, the cards on it. */
+  --m-page: 245 238 226;
+  --m-panel: 251 246 237;
+  --m-card: 255 252 246;
+  --m-line: 22 22 21;
+  --m-line-a: 0.085;
+  --shade: 40 28 12;
+  --shade-k: 1;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(255 205 135 / .34), transparent 62%);
+  --key-edge: 0 0 0;
+
+  --hl: #D6C2FF;
+  --hl-ink: #161615;
+  --pen: #D23A2C;
+  --paper-wash: #F7F0E4;
+  --rail-on: #EDE4D4;
+  --rule-2: #DEDAD1;
+
+  --m-shadow: 0 1px 2px rgb(var(--shade) / .07), 0 1px 3px rgb(var(--shade) / .04);
+  --m-shadow-lg: 0 18px 40px -14px rgb(var(--shade) / .22), 0 3px 8px rgb(var(--shade) / .06);
+
+  --font-sans: "Instrument Sans", "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Sans", "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Instrument Sans", "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --serif: "Instrument Serif", Georgia, serif;
+  --hl-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cpath d='M6 7.5C40 4.6 82 6.8 121 5.2C151 4 176 5.8 196 4.4L199 11.5L196.8 19L199.6 27.5L195 35.6C160 37.2 121 34.6 81 36.6C51 38 25 35.8 3.2 37.6L0.6 27.4L3 17.6L1 9.2Z' fill-opacity='.84'/%3E%3Cpath d='M6 7.5C40 4.6 82 6.8 121 5.2C151 4 176 5.8 196 4.4L198 15.6C150 16.8 100 14.8 50 16.6C30 17.2 15 16.4 2 16.9L1 9.2Z' fill-opacity='.3'/%3E%3Cpath d='M1.5 26.2C40 25 90 27.4 140 25.6C165 24.8 185 26 198.6 25.4L195 35.6C160 37.2 121 34.6 81 36.6C51 38 25 35.8 3.2 37.6Z' fill-opacity='.32'/%3E%3Cpath d='M6 7.5L13 7.1L11.6 37.3L3.2 37.6L0.6 27.4L3 17.6L1 9.2Z' fill-opacity='.4'/%3E%3Cpath d='M189 4.7L196 4.4L199 11.5L196.8 19L199.6 27.5L195 35.6L188 35.8Z' fill-opacity='.3'/%3E%3C/svg%3E");
+}
+
+html[data-ui="modern"][data-look="paper"].dark:not(.x):not(.y) {
+  --zinc-50: 245 243 238;
+  --zinc-100: 237 235 229;
+  --zinc-200: 224 221 214;
+  --zinc-300: 205 201 193;
+  --zinc-400: 186 178 165;   /* ink-2 */
+  --zinc-500: 148 140 126;   /* ink-3 */
+  --zinc-600: 100 97 91;
+  --zinc-700: 58 57 54;
+  --zinc-800: 44 43 41;
+  --zinc-900: 37 36 34;
+  --zinc-950: 31 30 28;
+  --black: 21 21 20;
+  --white: 237 235 229;
+
+  --m-page: 23 20 17;
+  --m-panel: 29 26 22;
+  --m-card: 35 31 26;
+  --m-line: 237 235 229;
+  --m-line-a: 0.08;
+  --shade: 0 0 0;
+  --shade-k: 2.8;
+  --key-edge: 142 138 130;
+
+  --hl: #4A3778;
+  --hl-ink: #F4F0FF;
+  --pen: #F2735F;
+  --paper-wash: #2A2620;
+  --rail-on: #302B24;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(200 140 60 / .16), transparent 62%);
+  --rule-2: #3A3936;
+
+  --m-shadow: 0 1px 2px rgb(var(--shade) / .2), 0 1px 3px rgb(var(--shade) / .11);
+  --m-shadow-lg: 0 24px 48px -16px rgb(0 0 0 / .7), 0 3px 8px rgb(0 0 0 / .3);
+}
+
+/* The neutral Paper option uses violet; selected colour themes keep their own Synchron accent. */
+html[data-ui="modern"][data-look="paper"]:not([class*="theme-"]):not(.x) {
+  --color-accent: 271 65% 43%;
+  --color-accent-contrast: 0 0% 100%;
+}
+html[data-ui="modern"][data-look="paper"].dark:not([class*="theme-"]):not(.x):not(.y) {
+  --color-accent: 271 75% 72%;
+  --color-accent-contrast: 60 3% 10%;
+}
+
+/* ---- Type ---------------------------------------------------------------------------------------- */
+
+html[data-ui="modern"][data-look="paper"] body {
+  letter-spacing: 0;
+  font-feature-settings: normal;
+}
+html[data-ui="modern"][data-look="paper"] .font-mono { font-variant-numeric: tabular-nums; }
+
+/* No uppercase, letter-spaced or mono eyebrows: sentence case in ink-3. */
+html[data-ui="modern"][data-look="paper"] .font-mono.uppercase:not([class*="text-[9px]"]) {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+  font-weight: 450;
+}
+html[data-ui="modern"][data-look="paper"] :is(.text-3xl, .text-4xl, .text-5xl) { letter-spacing: -0.03em; }
+html[data-ui="modern"][data-look="paper"] :is(.text-xl, .text-2xl) { letter-spacing: -0.026em; }
+
+/* The one serif moment on Home: the greeting, with the screen's one highlighter swipe on the name. */
+html[data-ui="modern"][data-look="paper"] h1.look-greeting {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(36px, 4.4vw, 54px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+html[data-ui="modern"][data-look="paper"] .look-swipe {
+  position: relative;
+  isolation: isolate;
+  color: var(--hl-ink);
+  font-style: italic;
+  white-space: nowrap;
+}
+html[data-ui="modern"][data-look="paper"] .look-swipe::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -0.16em; right: -0.2em; top: 0.4em; bottom: 0.02em;
+  background: var(--hl);
+  -webkit-mask: var(--hl-mask) 0 0 / 100% 100% no-repeat;
+  mask: var(--hl-mask) 0 0 / 100% 100% no-repeat;
+  mix-blend-mode: multiply;
+  transform: rotate(-1.6deg) skewX(-12deg);
+  animation: look-swipe-draw 620ms cubic-bezier(.5, 0, .2, 1) 120ms backwards;
+}
+html[data-ui="modern"][data-look="paper"].dark .look-swipe::before { mix-blend-mode: normal; }
+@keyframes look-swipe-draw {
+  from { clip-path: polygon(0 -10%, 0% -10%, -14% 110%, 0 110%); }
+  to   { clip-path: polygon(0 -10%, 114% -10%, 100% 110%, 0 110%); }
+}
+
+/* Selection is the highlighter. */
+html[data-ui="modern"][data-look="paper"] ::selection {
+  background: var(--hl);
+  color: var(--hl-ink);
+}
+
+/* ---- Geometry: NoteFlow's radii, continuous corners where supported ------------------------------ */
+
+html[data-ui="modern"][data-look="paper"] .rounded-lg { border-radius: 10px; }
+html[data-ui="modern"][data-look="paper"] .rounded-xl { border-radius: 14px; }
+html[data-ui="modern"][data-look="paper"] .rounded-2xl { border-radius: 18px; }
+@supports (corner-shape: squircle) {
+  html[data-ui="modern"][data-look="paper"] .rounded-xl { corner-shape: squircle; border-radius: 22px; }
+  html[data-ui="modern"][data-look="paper"] .rounded-2xl { corner-shape: squircle; border-radius: 29px; }
+}
+
+/* ---- Depth is paper on paper: no glows, no ambient light, no gradients ---------------------------- */
+
+html[data-ui="modern"][data-look="paper"] .ambient,
+html[data-ui="modern"][data-look="paper"] .m-dots { display: none; }
+/* colorThemes.css also paints accent glows behind the header; the app ground gets the paper's soft light below. */
+html[data-ui="modern"][data-look="paper"][class*="theme-"] .m-dots { background-image: none; }
+
+html[data-ui="modern"][data-look="paper"] .relative-tile-wrapper::before,
+html[data-ui="modern"][data-look="paper"] .relative-tile-wrapper::after { display: none; }
+html[data-ui="modern"][data-look="paper"] .relative-tile-wrapper:hover > :first-child {
+  box-shadow: 0 0 0 1px rgb(var(--m-line) / var(--m-line-a)), var(--m-shadow-lg);
+}
+
+html[data-ui="modern"][data-look="paper"] .subject-wash[data-tone] {
+  background-image: none;
+  border-color: rgb(var(--m-line) / var(--m-line-a));
+}
+
+/* The current nav item is pressed paper, not a lifted white pill. */
+html[data-ui="modern"][data-look="paper"] aside nav span.absolute.inset-0 {
+  background: color-mix(in srgb, rgb(var(--zinc-900)) 7%, rgb(var(--m-page)));
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ---- Controls ------------------------------------------------------------------------------------ */
+
+/* Focus: use the selected accent for keyboard and field focus. */
+html[data-ui="modern"][data-look="paper"] button:focus-visible,
+html[data-ui="modern"][data-look="paper"] a:focus-visible {
+  outline: 2px solid hsl(var(--color-accent));
+  outline-offset: 2px;
+}
+html[data-ui="modern"][data-look="paper"] :is(input, textarea, select):not([data-bare]):focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, rgb(var(--zinc-900)) 8%, rgb(var(--m-card)));
+  border-color: rgb(var(--zinc-900));
+}
+html[data-ui="modern"][data-look="paper"].dark :is(input, textarea, select):not([data-bare]):focus-visible {
+  border-color: rgb(var(--zinc-100));
+}
+
+/* Press: 1px of travel and no overshoot (weight, not bounce). */
+html[data-ui="modern"][data-look="paper"] :is(button, [role="button"], a[href], summary, .press):not(:disabled):not([data-no-press]) {
+  --press-scale: 1;
+  transition-duration: 110ms;
+  transition-timing-function: cubic-bezier(.2, .7, .2, 1);
+}
+html[data-ui="modern"][data-look="paper"] :is(button, [role="button"], a[href], summary, .press):not(:disabled):not([data-no-press]):active {
+  scale: 1;
+  translate: 0 1px;
+}
+
+/* Primary buttons keep the Paper type treatment without a raised key edge. */
+html[data-ui="modern"][data-look="paper"] button.bg-accent:not([data-bare]) {
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+/* Segmented-control tracks and hovers read on the desk and on a sheet alike. */
+html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-color: rgb(var(--zinc-900) / 0.055); }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="modern"][data-look="paper"] .look-swipe::before { animation: none; }
+}
+
+/* Paper uses borders and surface tints for depth, not drop or inset shadows. */
+html[data-ui="modern"][data-look="paper"] *,
+html[data-ui="modern"][data-look="paper"] *::before,
+html[data-ui="modern"][data-look="paper"] *::after {
+  box-shadow: none !important;
+}
+
+html[data-ui="modern"][data-look="paper"] :is(input, textarea, select):not([data-bare]):focus-visible {
+  outline: 2px solid hsl(var(--color-accent));
+  outline-offset: 2px;
+}
+
+/* ---- Paper surface tints -----------------------------------------------------------------------
+ * Accent colours come from the selected theme; related themes can share the same desk and sheet tint.
+ * Paper (no theme) uses violet, while teal/mint, blue/navy, and orange/amber share surface treatments.
+ */
+
+/* The sidebar stays on the flat tinted desk; the soft light lives only in the main window. */
+html[data-ui="modern"][data-look="paper"] .m-ambient { background-image: none; }
+html[data-ui="modern"][data-look="paper"] main.bg-m-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--paper-light, none);
+  opacity: .3;
+  pointer-events: none;
+}
+
+/* sage */
+html[data-ui="modern"][data-look="paper"]:is(.theme-mint,.theme-teal):not(.x) {
+  --m-page: 237 242 234; --m-panel: 246 248 244; --m-card: 255 255 255;
+  --hl: #B4EFA0; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(176 222 160 / .42), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-mint,.theme-teal):not(.x):not(.y) {
+  --m-page: 19 23 20; --m-panel: 24 29 25; --m-card: 29 35 30;
+  --hl: #2D5229; --hl-ink: #EEFBEA;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(70 130 85 / .20), transparent 62%);
+}
+
+/* harbour */
+html[data-ui="modern"][data-look="paper"]:is(.theme-navy,.theme-blue):not(.x) {
+  --m-page: 237 241 246; --m-panel: 248 247 244; --m-card: 255 255 255;
+  --hl: #A8D8FF; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(150 190 235 / .42), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-navy,.theme-blue):not(.x):not(.y) {
+  --m-page: 18 22 27; --m-panel: 23 28 34; --m-card: 28 33 40;
+  --hl: #1E4466; --hl-ink: #EAF5FF;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(60 100 160 / .22), transparent 62%);
+}
+
+/* manila */
+html[data-ui="modern"][data-look="paper"]:is(.theme-amber,.theme-orange):not(.x) {
+  --m-page: 243 237 224; --m-panel: 250 246 237; --m-card: 255 253 248;
+  --hl: #FFE94A; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(255 205 130 / .38), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-amber,.theme-orange):not(.x):not(.y) {
+  --m-page: 23 20 16; --m-panel: 28 25 20; --m-card: 34 30 24;
+  --hl: #5C5216; --hl-ink: #FBF6DC;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(190 130 50 / .18), transparent 62%);
+}
+
+/* blossom */
+html[data-ui="modern"][data-look="paper"]:is(.theme-rose):not(.x) {
+  --m-page: 246 236 240; --m-panel: 251 244 246; --m-card: 255 251 252;
+  --hl: #FFB8DC; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(255 170 205 / .40), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-rose):not(.x):not(.y) {
+  --m-page: 24 16 20; --m-panel: 30 21 25; --m-card: 36 26 31;
+  --hl: #66294D; --hl-ink: #FFF0F7;
+  --paper-light: radial-gradient(1000px circle at 100% 0%, rgb(170 70 120 / .22), transparent 62%);
+}
+
+/* twilight */
+html[data-ui="modern"][data-look="paper"]:is(.theme-violet):not(.x) {
+  --m-page: 241 234 246; --m-panel: 248 243 251; --m-card: 255 252 255;
+  --hl: #D6C2FF; --hl-ink: #161615;
+  --paper-light: linear-gradient(180deg, rgb(200 175 235 / .45), rgb(240 175 205 / .24) 38%, rgb(255 205 170 / .16) 62%, transparent 85%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-violet):not(.x):not(.y) {
+  --m-page: 20 15 30; --m-panel: 26 20 38; --m-card: 32 25 45;
+  --hl: #4A3778; --hl-ink: #F4F0FF;
+  --paper-light: linear-gradient(180deg, rgb(100 70 170 / .26), rgb(150 70 120 / .14) 40%, transparent 80%);
+}
+
+/* cumulus */
+html[data-ui="modern"][data-look="paper"]:is(.theme-sky):not(.x) {
+  --m-page: 234 240 248; --m-panel: 245 248 252; --m-card: 255 255 255;
+  --hl: #FFC685; --hl-ink: #161615;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(160 195 240 / .45), transparent 62%), radial-gradient(900px circle at 100% 100%, rgb(255 236 205 / .40), transparent 62%);
+}
+html[data-ui="modern"][data-look="paper"].dark:is(.theme-sky):not(.x):not(.y) {
+  --m-page: 13 19 32; --m-panel: 18 26 39; --m-card: 24 32 46;
+  --hl: #683F1A; --hl-ink: #FFF3E6;
+  --paper-light: radial-gradient(1000px circle at 0% 0%, rgb(60 100 170 / .24), transparent 62%), radial-gradient(900px circle at 100% 100%, rgb(150 100 50 / .12), transparent 62%);
+}

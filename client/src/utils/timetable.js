@@ -29,7 +29,10 @@ export const isBreakBell = (bellId, periodInfo = null) => {
         .filter(Boolean)
         .map(title => String(title).toLowerCase());
     if (titles.some(title => title.includes('lunch') || title.includes('recess') || title.includes('roll call'))) return true;
-    if (id === '0' && titles.includes('period 0')) return true;
+    if (id === '0') {
+        const periodTitle = String(periodInfo?.title || '').trim().toLowerCase();
+        if (!periodTitle || periodTitle === 'period 0' || periodTitle === 'free period') return true;
+    }
     return false;
 };
 

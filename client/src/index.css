@@ -28,51 +28,93 @@
 html:not(.dark):not([class*="theme-"]) {
   --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-blue-accent: 217 91% 60%;
+}
+html.dark:not([class*="theme-"]) {
+  --color-accent: 35 95% 55%;
+  --color-accent-contrast: 0 0% 100%;
+  --theme-blue-accent: 35 95% 55%;
 }
 
 .theme-mint {
   --color-accent: 150 84% 37%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-mint-accent: 150 84% 37%;
+}
+.dark.theme-mint {
+  --theme-mint-accent: 150 84% 37%;
 }
 
 .theme-amber {
   --color-accent: 38 92% 50%;
-  --color-accent-contrast: 0 0% 0%;
+  --color-accent-contrast: 0 0% 100%;
+  --theme-amber-accent: 38 92% 50%;
+}
+.dark.theme-amber {
+  --theme-amber-accent: 38 92% 50%;
 }
 
 .theme-blue {
   --color-accent: 217 91% 60%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-blue-accent: 217 91% 60%;
+}
+.dark.theme-blue {
+  --theme-blue-accent: 217 91% 60%;
 }
 
 .theme-navy {
   --color-accent: 222 70% 32%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-navy-accent: 222 70% 32%;
+}
+.dark.theme-navy {
+  --theme-navy-accent: 222 55% 48%;
 }
 
 .theme-violet {
   --color-accent: 271 91% 65%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-violet-accent: 271 91% 65%;
+}
+.dark.theme-violet {
+  --theme-violet-accent: 271 91% 65%;
 }
 
 .theme-rose {
   --color-accent: 349 86% 60%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-rose-accent: 349 86% 60%;
+}
+.dark.theme-rose {
+  --theme-rose-accent: 349 86% 60%;
 }
 
 .theme-teal {
   --color-accent: 174 84% 41%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-teal-accent: 174 84% 41%;
+}
+.dark.theme-teal {
+  --theme-teal-accent: 174 84% 41%;
 }
 
 .theme-orange {
   --color-accent: 24 95% 53%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-orange-accent: 24 95% 53%;
+}
+.dark.theme-orange {
+  --theme-orange-accent: 24 95% 53%;
 }
 
 .theme-sky {
   --color-accent: 199 89% 48%;
   --color-accent-contrast: 0 0% 100%;
+  --theme-sky-accent: 199 89% 48%;
+}
+.dark.theme-sky {
+  --theme-sky-accent: 199 89% 48%;
 }
 
 @layer base {

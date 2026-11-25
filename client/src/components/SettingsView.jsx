@@ -1,21 +1,34 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
-import { useSky } from './modern/AmbientLight';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
-    { id: 'navy', name: 'Navy', swatch: 'bg-blue-950' },
-    { id: 'mint', name: 'Mint', swatch: 'bg-emerald-600' },
-    { id: 'teal', name: 'Teal', swatch: 'bg-teal-600' },
-    { id: 'sky', name: 'Sky', swatch: 'bg-sky-500' },
-    { id: 'blue', name: 'Blue', swatch: 'bg-blue-600' },
-    { id: 'violet', name: 'Violet', swatch: 'bg-violet-500' },
-    { id: 'rose', name: 'Rose', swatch: 'bg-rose-500' },
-    { id: 'orange', name: 'Orange', swatch: 'bg-orange-500' },
-    { id: 'amber', name: 'Amber', swatch: 'bg-amber-500' }
+    { id: 'navy', name: 'Navy Blue', swatch: '#233B79' },
+    { id: 'mint', name: 'Mint Green', swatch: '#3F8A59' },
+    { id: 'teal', name: 'Teal Green', swatch: '#138A83' },
+    { id: 'sky', name: 'Sky Blue', swatch: '#3695C8' },
+    { id: 'blue', name: 'Royal Blue', swatch: '#3049A8' },
+    { id: 'violet', name: 'Violet Purple', swatch: '#8052C7' },
+    { id: 'rose', name: 'Rose Pink', swatch: '#D84E83' },
+    { id: 'orange', name: 'Bright Orange', swatch: '#E87924' },
+    { id: 'amber', name: 'Golden Amber', swatch: '#C28A16' }
+];
+
+// Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
+const PAPER_THEMES = [
+    { id: 'zinc', name: 'Paper Violet', ground: '#F3F1EC', pen: '#D6C2FF' },
+    { id: 'navy', name: 'Harbour Navy', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'mint', name: 'Sage Mint', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'violet', name: 'Twilight Violet', ground: '#F1EAF6', pen: '#D6C2FF' },
+    { id: 'rose', name: 'Blossom Rose', ground: '#F6ECF0', pen: '#FFB8DC' },
+    { id: 'amber', name: 'Manila Amber', ground: '#F3EDE0', pen: '#FFE94A' },
+    { id: 'sky', name: 'Cumulus Sky', ground: '#EAF0F8', pen: '#FFC685' },
+    { id: 'teal', name: 'Teal Green', ground: '#EDF2EA', pen: '#B4EFA0' },
+    { id: 'blue', name: 'Royal Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
+    { id: 'orange', name: 'Bright Orange', ground: '#F3EDE0', pen: '#FFE94A' }
 ];
 
 const Section = ({ label, children }) => (
@@ -37,7 +50,7 @@ const Row = ({ title, description, children, stack = false, className = '' }) =>
     </div>
 );
 
-const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
+const LinkRow = ({ icon: Icon, title, onClick, dot = false }) => (
     <button onClick={onClick} className="group w-full px-4 py-3.5 sm:px-5 flex items-center gap-3 text-left hover:bg-zinc-900/[0.025] dark:hover:bg-white/[0.025] transition-colors first:rounded-t-2xl last:rounded-b-2xl">
         <Icon size={16} strokeWidth={1.8} className="shrink-0 text-zinc-400" />
         <div className="min-w-0 flex-1">
@@ -45,7 +58,6 @@ const LinkRow = ({ icon: Icon, title, description, onClick, dot = false }) => (
                 {title}
                 {dot && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" aria-label="Not set up" />}
             </div>
-            {description && <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">{description}</p>}
         </div>
         <ChevronRight size={16} className="shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5" />
     </button>
@@ -95,12 +107,13 @@ const initialsOf = (user) => `${user?.givenName?.[0] || ''}${user?.surname?.[0] 
 
 const SettingsView = ({
     user, theme, setTheme, colorTheme, setColorTheme,
-    ambientLight, setAmbientLight, festiveAmbient = false, showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, faviconType, setFaviconType, onSignOut, setView
+    showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
     const meta = [user?.yearGroup ? `Year ${user.yearGroup}` : null, user?.role === 'Admin' ? 'Admin' : null, user?.studentId]
         .filter(Boolean).join(' · ');
-    const accentName = ACCENTS.find(a => a.id === colorTheme)?.name || 'Default';
-    const sky = useSky(festiveAmbient);
+    const isPaperLook = uiLook === 'paper';
+    const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
+    const paperAccentOnly = isPaperLook ? accentName.split(' ').pop() : null;
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
     const { classes: canvasClasses, getLink: getCanvasLink, status: canvasLinksStatus, community, links } = useCanvasLinks();
     const canvasLinksMissing = useMemo(() => {
@@ -160,9 +173,19 @@ const SettingsView = ({
                         options={[{ value: 'light', label: 'Light', icon: Sun }, { value: 'dark', label: 'Dark', icon: Moon }]}
                     />
                 </Row>
-                <Row title="Accent colour" description={accentName} stack>
+                <Row title="Interface">
+                    <Segmented
+                        id="interface"
+                        value={uiLook}
+                        onChange={setUiLook}
+                        options={[{ value: 'paper', label: 'Paper' }, { value: 'ambient', label: 'Ambient' }]}
+                    />
+                </Row>
+                <Row title={isPaperLook ? (
+                    <span>Paper <span className="font-normal text-zinc-500 dark:text-zinc-400">{paperAccentOnly}</span></span>
+                ) : 'Accent colour'} stack>
                     <div className="flex flex-wrap gap-2.5">
-                        {ACCENTS.map(a => (
+                        {(isPaperLook ? PAPER_THEMES : ACCENTS).map(a => (
                             <button
                                 key={a.id}
                                 onClick={() => setColorTheme(a.id)}
@@ -170,39 +193,34 @@ const SettingsView = ({
                                 aria-pressed={colorTheme === a.id}
                                 title={a.name}
                                 className={`w-8 h-8 rounded-full grid place-items-center transition ${colorTheme === a.id
-                                    ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-white ring-offset-white dark:ring-offset-zinc-900'
+                                    ? 'outline outline-2 outline-offset-2 outline-zinc-900 dark:outline-white'
                                     : 'hover:scale-110'}`}
                             >
-                                <span className={`w-6 h-6 rounded-full ${a.swatch}`} />
+                                {isPaperLook ? (
+                                    <span
+                                        className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
+                                        style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
+                                    />
+                                ) : (
+                                    <span className="w-6 h-6 rounded-full border border-zinc-900/15 dark:border-white/20" style={{ backgroundColor: a.swatch }} />
+                                )}
                             </button>
                         ))}
                     </div>
                 </Row>
-                <Row title="Favicon" description="Choose the icon shown in browser tabs." className="hidden md:flex">
-                    <Segmented
-                        id="favicon"
-                        value={faviconType}
-                        onChange={setFaviconType}
-                        options={[{ value: 'default', label: 'Default' }, { value: 'atom', label: 'Atom' }]}
-                    />
-                </Row>
-                <Row title="Ambient light" description={`A glow that follows the time of day. Right now it's ${sky.name}.`}>
-                    <Switch checked={ambientLight} onChange={setAmbientLight} label="Ambient light" />
-                </Row>
             </Section>
 
             <Section label="Integrations">
-                <Row title="Clipboard on timetable" description="A single line in your day for each sport or training session.">
+                <Row title="Clipboard on timetable">
                     <Switch checked={showClipboardEvents} onChange={setShowClipboardEvents} label="Clipboard on timetable" />
                 </Row>
                 <LinkRow
                     icon={BookOpen}
                     title="Canvas links"
-                    description="Open a class's Canvas page straight from your timetable."
                     dot={canvasLinksMissing}
                     onClick={() => setView('canvas-links')}
                 />
-                <Row title="Tap to open Canvas" description="Tapping a class opens its Canvas page. Your saved links are kept either way.">
+                <Row title="Tap to open Canvas">
                     <Switch checked={canvasLinksEnabled} onChange={setCanvasLinksEnabled} label="Tap to open Canvas" />
                 </Row>
             </Section>
@@ -211,13 +229,11 @@ const SettingsView = ({
                 <LinkRow
                     icon={FileCode}
                     title="Build notes"
-                    description="See the latest updates and fixes."
                     onClick={() => setView('build-notes')}
                 />
                 <LinkRow
                     icon={Shield}
-                    title="Privacy & data"
-                    description="What Synchron stores and how to delete your data."
+                    title="Privacy & data deletion"
                     onClick={() => setView('privacy')}
                 />
             </Section>
@@ -226,7 +242,6 @@ const SettingsView = ({
                 <LinkRow
                     icon={MessageSquare}
                     title="Send feedback"
-                    description="Report a problem or suggest an improvement."
                     onClick={() => setView('feedback')}
                 />
             </Section>

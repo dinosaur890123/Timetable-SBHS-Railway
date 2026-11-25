@@ -1,8 +1,8 @@
 # Synchron Design Language
 
-Synchron has **one** interface: Modern. The Classic (brutalist, square-edged) interface has been removed. There is
-no interface picker, so don't add per-interface branches or `html:not([data-ui="modern"])` selectors. See
-[Classic removal](#classic-removal) for what changed.
+Synchron has one shell: Modern. The Classic (brutalist, square-edged) interface has been removed. The staging Paper
+look is an optional appearance experiment within that shell; the original Synchron look remains available in
+Settings. See [Classic removal](#classic-removal) for what changed.
 
 Modern is calm, soft and quick. It should feel like a well-made desktop tool, not a poster: neutral surfaces in
 layers, one accent colour used sparingly, small exact type, and motion that confirms what happened without
@@ -373,3 +373,24 @@ Classic was removed in full. For reference, here is what went and what stayed:
   created; existing databases still have them and can drop them whenever convenient.
 - **Still to do over time:** replace class names that `modern.css` retunes (`font-black`, bare `border` boxes that
   rely on auto-radius) with the explicit Modern classes above, so components describe what they look like.
+
+---
+
+## Paper look (experiment)
+
+An optional mix of Synchron's Modern shell with NoteFlow v2's language (`client/src/theme/paper.css`). It applies only
+when `<html data-look="paper">`: Paper is the default on `staging.synchron.work`; Settings can switch between Paper
+and the original Synchron look. The choice is remembered in the browser and synced to the signed-in user's
+preferences. `?look=paper` / `?look=synchron` also sets the choice anywhere else.
+
+- **Surfaces:** the desk (`--m-page`), a sheet (`--m-panel`) and cards (`--m-card`) on warm paper; neutrals are
+  NoteFlow's inks via the `zinc` scale, so existing `text-zinc-*` classes follow. Dark is warm graphite.
+- **Type:** Instrument Sans everywhere; `font-mono` maps to the sans with tabular numerals; uppercase mono eyebrows
+  become sentence-case labels. The Home greeting is the one serif moment, with one highlighter swipe on the name.
+- **Colour:** Settings offers the neutral Paper surface plus all nine accent colours. Selected accents carry through
+  to navigation icons, timetable bars, change highlights, controls, and the logo dot. Related accents can share the
+  same paper surface tint; the soft light stays on the ground only (fixed, low contrast, never on a sheet or control).
+  The primary button keeps its 2px ink-key edge and travel. Text selection uses the paper highlighter.
+- **Depth:** paper on paper. Ambient light, header dots, tile spotlight and the live card's gradient are off. Radii
+  are NoteFlow's (10 / 14 / 18, squircle where supported).
+- **Motion:** press is 1px with no overshoot. The swipe draws once. Everything else is unchanged.
