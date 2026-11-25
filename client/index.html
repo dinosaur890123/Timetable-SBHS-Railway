@@ -81,40 +81,6 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16-dark.png" media="(prefers-color-scheme: dark)">
     <link id="app-favicon" rel="icon" type="image/png" sizes="512x512" href="/synchron-ring-warm-icon.png">
     <script>
-      try {
-        var atom = localStorage.getItem('favicon_type') === 'atom';
-        var ICON_PREFIXES = ['apple-icon-', 'apple-touch-icon.png', 'android-icon-', 'maskable-icon-', 'ms-icon-', 'favicon', 'icon-', 'manifest.json'];
-        function mapIconHref(href) {
-          if (!href || href.charAt(0) !== '/') return href;
-          var path = href.slice(1), isAtom = path.indexOf('atom-') === 0;
-          if (isAtom) path = path.slice(5);
-          var known = ICON_PREFIXES.some(function (p) { return path === p || path.indexOf(p) === 0; });
-          if (!known || isAtom === atom) return href;
-          return (atom ? '/atom-' : '/') + path;
-        }
-        var appIcon = document.getElementById('app-favicon');
-        document.querySelectorAll('link[rel="icon"]:not(#app-favicon), link[rel="shortcut icon"], link[rel="apple-touch-icon"][href^="http"]').forEach(function (l) {
-          if (l.dataset.favMedia === undefined) l.dataset.favMedia = l.getAttribute('media') || '';
-          if (atom) {
-            if (l.dataset.favMedia) l.setAttribute('media', l.dataset.favMedia);
-            else l.removeAttribute('media');
-          } else {
-            l.setAttribute('media', 'not all');
-          }
-        });
-        if (appIcon) {
-          if (atom) appIcon.setAttribute('media', 'not all');
-          else appIcon.removeAttribute('media');
-        }
-        document.querySelectorAll('link[href^="/"], meta[name="msapplication-TileImage"]').forEach(function (el) {
-          var attr = el.tagName === 'META' ? 'content' : 'href';
-          var v = el.getAttribute(attr);
-          var nv = mapIconHref(v);
-          if (nv !== v) el.setAttribute(attr, nv);
-        });
-      } catch (e) {}
-    </script>
-    <script>
       window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault();
         window.__deferredPWAInstallPrompt = e;
