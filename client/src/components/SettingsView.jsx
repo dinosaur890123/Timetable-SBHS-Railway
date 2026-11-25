@@ -19,16 +19,16 @@ const ACCENTS = [
 
 // Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
 const PAPER_THEMES = [
-    { id: 'zinc', name: 'Paper Violet', ground: '#F3F1EC', pen: '#D6C2FF' },
-    { id: 'navy', name: 'Harbour Navy', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'mint', name: 'Sage Mint', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'violet', name: 'Twilight Violet', ground: '#F1EAF6', pen: '#D6C2FF' },
-    { id: 'rose', name: 'Blossom Rose', ground: '#F6ECF0', pen: '#FFB8DC' },
-    { id: 'amber', name: 'Manila Amber', ground: '#F3EDE0', pen: '#FFE94A' },
-    { id: 'sky', name: 'Cumulus Sky', ground: '#EAF0F8', pen: '#FFC685' },
-    { id: 'teal', name: 'Teal Green', ground: '#EDF2EA', pen: '#B4EFA0' },
-    { id: 'blue', name: 'Royal Blue', ground: '#EDF1F6', pen: '#A8D8FF' },
-    { id: 'orange', name: 'Bright Orange', ground: '#F3EDE0', pen: '#FFE94A' }
+    { id: 'zinc', name: 'Paper Violet', swatch: '#D6C2FF' },
+    { id: 'navy', name: 'Harbour Navy', swatch: '#233B79' },
+    { id: 'mint', name: 'Sage Mint', swatch: '#3F8A59' },
+    { id: 'violet', name: 'Twilight Violet', swatch: '#8052C7' },
+    { id: 'rose', name: 'Blossom Rose', swatch: '#D84E83' },
+    { id: 'amber', name: 'Manila Amber', swatch: '#C28A16' },
+    { id: 'sky', name: 'Cumulus Sky', swatch: '#3695C8' },
+    { id: 'teal', name: 'Teal Green', swatch: '#138A83' },
+    { id: 'blue', name: 'Royal Blue', swatch: '#3049A8' },
+    { id: 'orange', name: 'Bright Orange', swatch: '#E87924' }
 ];
 
 const Section = ({ label, children }) => (
@@ -193,10 +193,7 @@ const SettingsView = ({
                                     : 'hover:scale-110'}`}
                             >
                                 {isPaperLook ? (
-                                    <span
-                                        className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10"
-                                        style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
-                                    />
+                                    <span className="w-6 h-6 rounded-full border border-zinc-900/10 dark:border-white/10" style={{ backgroundColor: a.swatch }} />
                                 ) : (
                                     <span className="w-6 h-6 rounded-full border border-zinc-900/15 dark:border-white/20" style={{ backgroundColor: a.swatch }} />
                                 )}
