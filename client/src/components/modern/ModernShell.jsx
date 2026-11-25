@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Home, CalendarDays, Newspaper, Award, Clipboard, Settings,
+    Home, CalendarDays, Newspaper, Award, Clipboard, Settings, Mail,
     MessageSquare, ShieldCheck, Search, Sun, Moon, Menu, ArrowRight, LogOut,
     CornerDownLeft, WifiOff, Database, BookOpen, Globe, ArrowUpRight, FileCode
 } from 'lucide-react';
@@ -41,7 +41,8 @@ const CanvasIcon = ({ size = 16, className = '' }) => (
 
 const QUICK_LINKS = [
     { id: 'link-portal', label: 'Student Portal', icon: Globe, href: 'https://student.sbhs.net.au' },
-    { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' }
+    { id: 'link-canvas', label: 'Canvas', icon: CanvasIcon, href: 'https://canvas.sbhs.net.au' },
+    { id: 'link-gmail', label: 'Gmail', icon: Mail, href: 'https://mail.google.com/a/student.sbhs.nsw.edu.au' }
 ];
 
 const buildNavGroups = (isAdmin, hiddenPages = []) => {
@@ -490,19 +491,18 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
 
 export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hiddenPages = [] }) => {
     const quickActions = [
-        { id: 'quick-awards', label: 'Awards', icon: Award, run: () => setView('awards') },
         { id: 'quick-calendar', label: 'Calendar', icon: CalendarDays, run: () => setView('calendar') },
         { id: 'quick-portal', label: 'Student Portal', icon: Globe, run: () => window.open('https://student.sbhs.net.au', '_blank', 'noopener') },
-        { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') }
+        { id: 'quick-canvas', label: 'Canvas', icon: CanvasIcon, run: () => window.open('https://canvas.sbhs.net.au', '_blank', 'noopener') },
+        { id: 'quick-gmail', label: 'Gmail', icon: Mail, run: () => window.open('https://mail.google.com/a/student.sbhs.nsw.edu.au', '_blank', 'noopener') }
     ].filter(action => {
-        if (action.id === 'quick-awards') return !hiddenPages.includes('awards') && hiddenPages.includes('notes');
         if (action.id === 'quick-calendar') return !hiddenPages.includes('calendar');
         return true;
     });
 
     const navCommands = buildNavGroups(user?.role === 'Admin', hiddenPages)
         .flatMap(g => g.items)
-        .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas')
+        .filter(item => item.id !== 'link-portal' && item.id !== 'link-canvas' && item.id !== 'link-gmail')
         .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({
             id: `nav-${item.id}`,
