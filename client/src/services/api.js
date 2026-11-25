@@ -498,7 +498,7 @@ const formatArrivalTime = (value) => {
 
 const arrivalTimeFromFields = (customFieldsData) => {
     if (customFieldsData && !Array.isArray(customFieldsData) && typeof customFieldsData === 'object') {
-        const directValue = customFieldsData.fixtures_arrivalTime ?? customFieldsData.sessions_staffArrivalTime;
+        const directValue = customFieldsData.fixtures_arrivalTime;
         if (directValue !== undefined && directValue !== null) {
             return clipboardFieldValue(directValue);
         }
@@ -541,7 +541,7 @@ const clipboardItemArrivalTime = (item) => {
         const value = arrivalTimeFromFields(container);
         if (value) return value;
     }
-    for (const key of ['arrivalTime', 'arrival_time', 'staffArrivalTime', 'arriveAt']) {
+    for (const key of ['arrivalTime', 'arrival_time', 'arriveAt']) {
         const value = clipboardFieldValue(item[key]);
         if (value) return value;
     }
