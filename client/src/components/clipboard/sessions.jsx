@@ -78,9 +78,9 @@ const SheetBody = ({ session, onClose, still }) => {
 
             <dl className="nf-pop__rows">
                 <Row label="When"><span className="tnum">{when}</span></Row>
-                {session.arrivalTime && (
-                    <Row label="Arrival time"><span className="tnum">{session.arrivalTime}</span></Row>
-                )}
+                <Row label="Arrive at">
+                    {session.arrivalTime || <span style={{ color: 'var(--ink-3)' }}>Not provided</span>}
+                </Row>
                 <Row label="Where">
                     {location?.name || location?.address ? (
                         <>

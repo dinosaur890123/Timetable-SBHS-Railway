@@ -57,6 +57,9 @@ const ClipboardView = ({ user }) => {
             ? (session.rawTeams || []).find(team => String(team.id) === String(session.teamIds.find(id => userTeamIds.has(String(id)))))?.name || ''
             : session.team || ''
     }));
+    const selectedSession = openSession
+        ? { ...openSession, ...(sessionsForStudent.find(session => String(session.id) === String(openSession.id)) || {}) }
+        : null;
     if (loading) {
         return <ClipboardSkeleton />;
     }
@@ -168,7 +171,7 @@ const ClipboardView = ({ user }) => {
                 )}
             </div>
 
-            <SessionSheet session={openSession} onClose={() => setOpenSession(null)} />
+            <SessionSheet session={selectedSession} onClose={() => setOpenSession(null)} />
         </div>
     );
 };
