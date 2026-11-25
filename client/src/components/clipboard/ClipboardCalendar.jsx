@@ -132,7 +132,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                         aria-label={`${format(day, 'EEEE d MMMM')}${daySessions.length ? `, ${daySessions.length} on Clipboard` : ''}`}
                                     >
                                         <span className="nf-cal__num tnum">
-                                            {isToday(day) ? <span className="nf-cal__today">{format(day, 'd')}</span> : format(day, 'd')}
+                                            {isToday(day) ? <span className="theme-highlight">{format(day, 'd')}</span> : format(day, 'd')}
                                         </span>
                                         {daySessions.length > 0 && (
                                             <span className="nf-cal__chips">

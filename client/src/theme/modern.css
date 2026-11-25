@@ -170,6 +170,17 @@ html[data-ui="modern"] .relative-tile-wrapper:hover::after {
 @keyframes ambient-drift-b { to { transform: translate3d(-12%, 10%, 0) scale(1.06); } }
 @keyframes ambient-drift-c { to { transform: translate3d(6%, 14%, 0) scale(1.14); } }
 
+html[data-ui="modern"]:not([data-look="paper"]) .theme-highlight {
+  background: hsl(var(--color-accent) / 0.85);
+  color: var(--color-accent-contrast);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+html.dark[data-ui="modern"]:not([data-look="paper"]) .theme-highlight {
+  background: hsl(var(--color-accent) / 0.7);
+}
+
 html[data-ui="modern"] :is(button, [role="button"], a[href], summary, .press):not(:disabled):not([data-no-press]) {
   --press-scale: .96;
   transition-property: scale, transform, translate, color, background-color, border-color, opacity, box-shadow, fill, stroke, text-decoration-color;

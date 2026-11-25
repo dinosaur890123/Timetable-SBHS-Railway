@@ -60,7 +60,7 @@ const ScheduleView = ({ sessions, onOpen }) => {
                     <div className="nf-schedule-dayhead">
                         <span className="nf-schedule-dayname">{format(date, 'EEEE')}</span>
                         <span className={`nf-schedule-date tnum ${isToday(date) ? 'is-today' : ''}`}>
-                            {isToday(date) ? <span className="nf-cal__today">{format(date, 'MMMM d, yyyy')}</span> : format(date, 'MMMM d, yyyy')}
+                            {isToday(date) ? <span className="theme-highlight">{format(date, 'MMMM d, yyyy')}</span> : format(date, 'MMMM d, yyyy')}
                         </span>
                     </div>
                     <div className="nf-schedule-events">
