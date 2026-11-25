@@ -67,6 +67,8 @@ const authErrorMessage = (err) => {
 };
 
 const isStagingAccessDenied = (error) => error?.status === 403 && error?.message === STAGING_ACCESS_RESTRICTED_MESSAGE;
+const VALID_UI_LOOKS = ['paper', 'synchron', 'ambient'];
+const normalizeUiLook = (look) => VALID_UI_LOOKS.includes(look) ? look : 'paper';
 const applyUiLook = (look) => {
     const root = document.documentElement;
     if (look !== 'paper') {
@@ -150,10 +152,7 @@ import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
 function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [uiLook, setUiLook] = useState(() => {
-        const storedLook = localStorage.getItem('look');
-        const look = storedLook === 'paper' || storedLook === 'synchron' || storedLook === 'ambient'
-            ? storedLook
-            : 'paper';
+        const look = normalizeUiLook(localStorage.getItem('look'));
         applyUiLook(look);
         return look;
     });
@@ -970,63 +969,52 @@ function App() {
                     }).catch(e => console.log("Init sync failed silently", e));
 
                     fetchUserPreferences(userData.studentId).then(prefData => {
-                        if (prefData && prefData.preferences) {
-                            const prefs = prefData.preferences;
+                        const prefs = (prefData && prefData.preferences) || {};
 
-                            if (prefs.theme) {
-                                setTheme(prefs.theme);
-                                localStorage.setItem('theme', prefs.theme);
-                            }
-                            if (prefs.colorTheme) {
-                                setColorTheme(prefs.colorTheme);
-                                localStorage.setItem('color_theme', prefs.colorTheme);
-                            }
-                            if (prefs.ambientLight !== undefined) {
-                                setAmbientLight(prefs.ambientLight);
-                                localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
-                            }
-                            if (prefs.showClipboardEvents !== undefined) {
-                                setShowClipboardEvents(prefs.showClipboardEvents);
-                                localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
-                            }
-                            if (prefs.canvasLinksEnabled !== undefined) {
-                                setCanvasLinksEnabled(prefs.canvasLinksEnabled);
-                                localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
-                            }
-                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron' || prefs.uiLook === 'ambient') {
-                                applyUiLook(prefs.uiLook);
-                                setUiLook(prefs.uiLook);
-                                localStorage.setItem('look', prefs.uiLook);
-                            } else {
-                                applyUiLook('paper');
-                                setUiLook('paper');
-                                localStorage.setItem('look', 'paper');
-                            }
-                            if (prefs.faviconType !== undefined) {
-                                setFaviconType(prefs.faviconType);
-                                localStorage.setItem('favicon_type', prefs.faviconType);
-                            }
+                        if (prefs.theme) {
+                            setTheme(prefs.theme);
+                            localStorage.setItem('theme', prefs.theme);
+                        }
+                        if (prefs.colorTheme) {
+                            setColorTheme(prefs.colorTheme);
+                            localStorage.setItem('color_theme', prefs.colorTheme);
+                        }
+                        if (prefs.ambientLight !== undefined) {
+                            setAmbientLight(prefs.ambientLight);
+                            localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
+                        }
+                        if (prefs.showClipboardEvents !== undefined) {
+                            setShowClipboardEvents(prefs.showClipboardEvents);
+                            localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                        }
+                        if (prefs.canvasLinksEnabled !== undefined) {
+                            setCanvasLinksEnabled(prefs.canvasLinksEnabled);
+                            localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
+                        }
+                        const look = normalizeUiLook(prefs.uiLook);
+                        applyUiLook(look);
+                        setUiLook(look);
+                        localStorage.setItem('look', look);
+                        if (prefs.faviconType !== undefined) {
+                            setFaviconType(prefs.faviconType);
+                            localStorage.setItem('favicon_type', prefs.faviconType);
+                        }
 
-                            if (prefs.dashboardLayoutMobile) {
-                                localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
-                            }
-                            if (prefs.dashboardLayoutDesktop) {
-                                localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
-                            }
+                        if (prefs.dashboardLayoutMobile) {
+                            localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
+                        }
+                        if (prefs.dashboardLayoutDesktop) {
+                            localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
+                        }
 
-                            if (prefs.clockWidgetFormat) {
-                                localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
-                            }
-                            if (prefs.scratchpadContent !== undefined) {
-                                localStorage.setItem('scratchpad_content', prefs.scratchpadContent);
-                            }
-                            if (prefs.transitWidgetStop) {
-                                localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
-                            }
-                        } else {
-                            applyUiLook('paper');
-                            setUiLook('paper');
-                            localStorage.setItem('look', 'paper');
+                        if (prefs.clockWidgetFormat) {
+                            localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
+                        }
+                        if (prefs.scratchpadContent !== undefined) {
+                            localStorage.setItem('scratchpad_content', prefs.scratchpadContent);
+                        }
+                        if (prefs.transitWidgetStop) {
+                            localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
                         }
                         syncPreferencesToServer.current = true;
                     }).catch(e => {
