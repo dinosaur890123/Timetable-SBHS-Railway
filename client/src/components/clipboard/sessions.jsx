@@ -113,6 +113,14 @@ const SheetBody = ({ session, onClose, still }) => {
                 )}
                 {session.staff?.length > 0 && (
                     <Row label="Staff">{session.staff.join(', ')}</Row>
+                {session.team && (
+                    <Row label="Team">
+                        {session.team}
+                        {session.teamMembers?.length > 0 && <small>{session.teamMembers.join(', ')}</small>}
+                    </Row>
+                )}
+                {session.assignedStaff?.length > 0 && (
+                    <Row label="Staff">{session.assignedStaff.map(member => member.name).join(', ')}</Row>
                 )}
                 {session.notes && <Row label="Notes"><span className="nf-pop__notes">{session.notes}</span></Row>}
             </dl>

@@ -272,7 +272,16 @@ const DAY_TTL = 5 * 60 * 1000;
 const DAY_CACHE_LIMIT = 120;
 const dayCache = new Map();
 const dayInFlight = new Map();
-const dayKey = (date) => format(date || new Date(), 'yyyy-MM-dd');
+const sydneyDateKey = (date) => {
+    const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+};
+const dayKey = (date) => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : sydneyDateKey(date || new Date());
 
 export const peekDayTimetable = (date) => dayCache.get(dayKey(date))?.data ?? null;
 
@@ -498,21 +507,41 @@ export const fetchStudentClipboardAttendance = (studentId) =>
     .then(data => {
         const parseAttendance = (items) => {
             return items.map(item => ({
+const clipboardArrivalTime = (customFieldsData) => {
+    if (!customFieldsData || typeof customFieldsData !== 'object') return '';
+    const value = customFieldsData.fixtures_arrivalTime
+        || customFieldsData.sessions_staffArrivalTime
+        || '';
+    return typeof value === 'string' ? value.trim() : String(value || '').trim();
+};
+
+export const fetchStudentClipboardAttendance = async (studentId) => {
+    const [attendanceData, sessionsData] = await Promise.all([
+        fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`),
+        fetchStudentClipboardSessions(studentId).catch(() => [])
+    ]);
+    const sessionsById = new Map(sessionsData.map(session => [String(session.id), session]));
+    const parseAttendance = (items) => {
+        return items.map(item => {
+            const sessionId = item.session?.id ?? item.sessionId ?? item.session;
+            const session = sessionId != null ? sessionsById.get(String(sessionId)) : null;
+            const markedBy = session?.assignedStaff?.find(staff =>
+                String(staff.apiRef || '').endsWith('/users/792390')
+            )?.name || '';
+            return {
                 id: item.id || Math.random(),
-                activity: item.session?.activity?.name || item.session?.title || 'Activity',
-                date: formatDay(item.session?.startDateTime),
-                recordedBy: item.roll?.markedByUser || item.updatedByUser || '',
+                activity: item.session?.activity?.name || item.session?.title || session?.activity || 'Activity',
+                date: formatDay(item.session?.startDateTime || session?.start),
+                markedBy,
+                arrivalTime: session?.arrivalTime || '',
                 status: item.absent ? (item.explained ? 'Explained' : 'Absent') : 'Present'
-            }));
-        };
-        if (data && data.member && Array.isArray(data.member)) {
-            return parseAttendance(data.member);
-        }
-        if (Array.isArray(data)) {
-            return parseAttendance(data);
-        }
-        return [];
-    });
+            };
+        });
+    };
+    if (attendanceData && Array.isArray(attendanceData.member)) return parseAttendance(attendanceData.member);
+    if (Array.isArray(attendanceData)) return parseAttendance(attendanceData);
+    return [];
+};
 
 export const fetchStudentPreExplainedAbsences = (studentId) => 
     fetchFromBackend(`/students/${studentId}/clipboard/pre-explained-absences?_itemsPerPage=100`)
@@ -564,9 +593,21 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
                 longitude: item.location.longitude ?? null
             } : null,
             opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
-            team: item.team?.name || item.teams?.[0]?.team?.name || item.teams?.[0]?.name || '',
+            teamIds: [
+                ...(Array.isArray(item.teams) ? item.teams : []),
+                ...(item.team ? [item.team] : [])
+            ].map(team => team?.team?.id || team?.id).filter(id => id != null).map(String),
+            rawTeams: [
+                ...(Array.isArray(item.teams) ? item.teams : []),
+                ...(item.team ? [item.team] : [])
+            ].map(team => ({ id: team?.team?.id || team?.id, name: team?.team?.name || team?.name || '' })),
             teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
-            staff: clipboardStaffList(item.staff),
+            assignedStaff: (Array.isArray(item.assignedStaff) ? item.assignedStaff : item.assignedStaff ? [item.assignedStaff] : [])
+                .map(member => ({
+                    name: clipboardStaffName(member),
+                    apiRef: member?.['@id'] || ''
+                })).filter(member => member.name),
+            arrivalTime: clipboardArrivalTime(item.customFieldsData),
             round: item.roundName || '',
             notes: item.studentParentNotes || item.notes || '',
             cancelled: !!item.cancelled,

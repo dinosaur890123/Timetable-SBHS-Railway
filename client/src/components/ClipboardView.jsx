@@ -50,6 +50,13 @@ const ClipboardView = ({ user }) => {
     const page = user?.studentId ? clipboardPage(user.studentId) : null;
     const { data, loading, error } = useCachedLoad(page?.key ?? null, page?.load);
     const { attendance = [], preExplained = [], sessions = [], teams = [] } = data || {};
+    const userTeamIds = new Set(teams.map(team => String(team.teamId)).filter(Boolean));
+    const sessionsForStudent = sessions.map(session => ({
+        ...session,
+        team: session.teamIds?.find(id => userTeamIds.has(String(id)))
+            ? (session.rawTeams || []).find(team => String(team.id) === String(session.teamIds.find(id => userTeamIds.has(String(id)))))?.name || ''
+            : session.team || ''
+    }));
     if (loading) {
         return <ClipboardSkeleton />;
     }
@@ -85,7 +92,7 @@ const ClipboardView = ({ user }) => {
 
             <div className="nf-cb-body">
                 {activeTab === 'calendar' && (
-                    <ClipboardCalendar sessions={sessions} onOpen={setOpenSession} />
+                    <ClipboardCalendar sessions={sessionsForStudent} onOpen={setOpenSession} />
                 )}
 
                 {activeTab === 'teams' && (
@@ -111,7 +118,12 @@ const ClipboardView = ({ user }) => {
                                     <div className="nf-cb-rows__main">
                                         <b>{att.activity}</b>
                                         <div className="nf-meta">
-                                            {[att.date, att.recordedBy && `Marked by ${att.recordedBy}`].filter(Boolean).join(' Â· ')}
+                                            {[att.date, att.markedBy && `Marked by ${att.markedBy}`].filter(Boolean).join(' · ')}
+                                            {att.arrivalTime && (
+                                                <div className="nf-meta">
+                                                    Arrival {att.arrivalTime}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <span className={`nf-cb-status ${att.status === 'Present' ? 'nf-cb-status--ok' : ''}`}>
