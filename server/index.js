@@ -1502,7 +1502,12 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             const joinedStr = u.joined;
             const joined = joinedStr ? new Date(joinedStr) : null;
             if (joined) {
-                const dateStr = joined.toISOString().split('T')[0];
+                const dateStr = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Australia/Sydney',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).format(joined);
                 growthByDate[dateStr] = (growthByDate[dateStr] || 0) + 1;
             }
 
@@ -1530,13 +1535,20 @@ app.get('/api/stats', requireAuth, async (req, res) => {
             }
         });
 
+        const sydneyDateKey = (date) => new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Australia/Sydney',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(date);
+        const sydneyToday = sydneyDateKey(new Date());
+        const [sydneyYear, sydneyMonth, sydneyDay] = sydneyToday.split('-').map(Number);
         const growthData = [];
         for (let i = 13; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
+            const d = new Date(Date.UTC(sydneyYear, sydneyMonth - 1, sydneyDay - i));
+            const dateStr = sydneyDateKey(d);
             growthData.push({
-                date: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                date: dateStr,
                 count: growthByDate[dateStr] || 0
             });
         }

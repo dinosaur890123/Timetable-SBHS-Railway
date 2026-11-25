@@ -27,6 +27,13 @@ const computeYearRows = (dist = {}) => {
 
 const yearLabel = (yr) => yr === 'Staff' ? 'Staff' : yr === 'Unknown' ? 'Unknown' : `Year ${yr}`;
 
+const formatAnalyticsDate = (dateKey, options = { month: 'short', day: 'numeric' }) => {
+    const [year, month, day] = String(dateKey).split('-').map(Number);
+    if (!year || !month || !day) return dateKey;
+    return new Intl.DateTimeFormat('en-AU', { ...options, timeZone: 'Australia/Sydney' })
+        .format(new Date(Date.UTC(year, month - 1, day)));
+};
+
 const YearDistribution = ({ dist }) => (
     <div className="space-y-3">
         {computeYearRows(dist).map(({ label, count, pct }) => (
@@ -721,7 +728,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
         link.href = URL.createObjectURL(blob);
         const rangeTag = analyticsFrom || analyticsTo
             ? `_${analyticsFrom || 'start'}_to_${analyticsTo || 'end'}`
-            : `_${new Date().toISOString().split('T')[0]}`;
+            : `_${new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())}`;
         link.download = `analytics_summary${rangeTag}.csv`;
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
@@ -1114,7 +1121,7 @@ const AdminPanel = ({ user, setView, hiddenPages: propHiddenPages, setHiddenPage
                                                     className="text-[10px] text-zinc-400 mt-1 font-mono whitespace-nowrap"
                                                     style={{ transform: 'rotate(-45deg)', transformOrigin: 'top right', display: 'block', marginTop: '4px' }}
                                                 >
-                                                    {item.date}
+                                                    {formatAnalyticsDate(item.date)}
                                                 </span>
                                             </div>
                                         );

@@ -59,12 +59,10 @@ const CycleCell = ({ classInfo, onSelect }) => {
     );
 };
 
-const DaySkeleton = () => (
-    <ol className="-mx-3 space-y-1.5" aria-busy="true" aria-label="Loading timetable">
-        {Array.from({ length: 6 }, (_, i) => (
-            <li key={i} className="ml-[4.75rem] h-10 sm:h-12 rounded-xl border border-zinc-900/[0.06] bg-zinc-900/[0.025] dark:border-white/[0.06] dark:bg-white/[0.035] animate-pulse-subtle" />
-        ))}
-    </ol>
+const DayLoader = () => (
+    <div className="flex min-h-48 items-center justify-center" role="status" aria-label="Loading timetable">
+        <span className="h-7 w-7 rounded-full border-[3px] border-accent/25 border-t-accent animate-spin" />
+    </div>
 );
 
 const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode = 'daily', showNow = true, clipboardSessions = [], date, calendarEvents = [] }) => {
@@ -93,8 +91,8 @@ const Timetable = ({ timetableData, completeTimetable, railTimetable, viewMode =
         }
     })();
 
-    if (viewMode === 'cycle' && !resolvedCompleteTimetable) return <DaySkeleton />;
-    if (viewMode === 'daily' && !timetableData) return <DaySkeleton />;
+    if (viewMode === 'cycle' && !resolvedCompleteTimetable) return <DayLoader />;
+    if (viewMode === 'daily' && !timetableData) return <DayLoader />;
 
     const viewedKey = date ? format(date, 'yyyy-MM-dd') : (timetableData?.date || todayKey);
     const viewedDate = date || new Date(`${viewedKey}T00:00`);

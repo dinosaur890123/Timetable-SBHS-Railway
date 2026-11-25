@@ -242,7 +242,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
                     ? 'To permanently delete your account and associated server-side data, sign in to Synchron and open Settings → Privacy.'
                     : isAdmin
                         ? 'Admin account deletion requests appear in the admin panel for review. Regular student accounts are deleted immediately after confirmation.'
-                        : 'Your account and associated server-side data are deleted immediately after confirmation. You will be signed out; SBHS data stored on this device is cleared separately when you sign out.'}
+                        : 'Your account and associated server-side data are deleted immediately after confirmation. You will be signed out; SBHS data stored on this device is cleared separately when you sign out. You can remake your account at any time by signing in again.'}
             </Item>
         </Section>
 
@@ -293,7 +293,7 @@ const PrivacyView = ({ onBack, publicOnly = false, isAdmin = false }) => {
         </Section>
 
         <p className="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
-            © Synchron {new Date().getFullYear()} · BETA
+            © Synchron {new Date().getFullYear()}
         </p>
     </div>
     );

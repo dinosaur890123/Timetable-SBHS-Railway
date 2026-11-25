@@ -117,6 +117,14 @@ html.dark:not([class*="theme-"]) {
   --theme-sky-accent: 199 89% 48%;
 }
 
+.disable-transitions,
+.disable-transitions *,
+.disable-transitions *::before,
+.disable-transitions *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
 @layer base {
   body {
     @apply bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50 antialiased;
@@ -245,5 +253,6 @@ html:not([class*="theme-"]).dark .change-highlight {
 
   .period-card-room-teacher {
     display: inline !important;
+    text-align: right !important;
   }
 }

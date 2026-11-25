@@ -3,7 +3,6 @@ import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { ArrowRight, AlertOctagon, X } from 'lucide-react';
 import { performLogin, getOauthConfig } from '../services/api';
 import { BrandMark, StagingBadge } from './modern/ModernShell';
-import AmbientLight from './modern/AmbientLight';
 
 const FEATURES = [
   { title: 'Timetable', description: 'Daily periods, bell countdown, room moves, and substitute teachers.' },
@@ -120,12 +119,9 @@ const AuthErrorDialog = ({ authError, onDismiss }) => {
   );
 };
 
-const LandingPage = ({ authError, clearAuthError, festiveAmbient = false }) => {
+const LandingPage = ({ authError, clearAuthError }) => {
   const [, setLogoClicks] = useState(0);
   const [useOriginalMark, setUseOriginalMark] = useState(false);
-  const [ambientOn] = useState(() => {
-    try { return localStorage.getItem('ambient_light') !== 'off'; } catch { return true; }
-  });
 
   const handleLogoClick = () => {
     setLogoClicks(prev => {
@@ -144,8 +140,6 @@ const LandingPage = ({ authError, clearAuthError, festiveAmbient = false }) => {
           <AnimatePresence>
             {authError && <AuthErrorDialog authError={authError} onDismiss={clearAuthError} />}
           </AnimatePresence>
-
-          {ambientOn && <AmbientLight variant="panel" festive={festiveAmbient} />}
 
           <header className="relative z-30 border-b border-m-line bg-m-panel/75 backdrop-blur-xl">
             <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-5 sm:px-8">

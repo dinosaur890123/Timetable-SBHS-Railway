@@ -67,6 +67,8 @@ const authErrorMessage = (err) => {
 };
 
 const isStagingAccessDenied = (error) => error?.status === 403 && error?.message === STAGING_ACCESS_RESTRICTED_MESSAGE;
+const VALID_UI_LOOKS = ['paper', 'synchron', 'ambient'];
+const normalizeUiLook = (look) => VALID_UI_LOOKS.includes(look) ? look : 'paper';
 const applyUiLook = (look) => {
     const root = document.documentElement;
     if (look !== 'paper') {
@@ -134,6 +136,7 @@ import {
     isScopeOutdated,
     fetchNextSchoolDay,
     peekNextSchoolDay,
+    refreshAccessToken,
     onCachedDataChange,
     fetchCalendarEvents
 } from './services/api';
@@ -149,13 +152,13 @@ import { fetchFeedbackStatusNotifications } from './services/feedbackApi';
 function App() {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [uiLook, setUiLook] = useState(() => {
-        const storedLook = localStorage.getItem('look');
-        return storedLook === 'paper' || storedLook === 'synchron'
-            ? storedLook
-            : document.documentElement.dataset.look === 'paper' ? 'paper' : 'synchron';
+        const look = normalizeUiLook(localStorage.getItem('look'));
+        applyUiLook(look);
+        return look;
     });
     const [currentView, setCurrentView] = useState('home');
     const [startDay] = useState(() => peekNextSchoolDay());
+    const [schoolDayResolved, setSchoolDayResolved] = useState(() => !!startDay);
     const [initialClipboardSessions] = useState(() => peekClipboardSessions(cachedStudentId()) || []);
     const [initialDay] = useState(() => weekendClipboardDay(startDay || new Date(), initialClipboardSessions));
     const [viewDate, setViewDate] = useState(initialDay);
@@ -166,6 +169,10 @@ function App() {
     };
     const [defaultDate, setDefaultDate] = useState(initialDay);
     const [timetableViewMode, setTimetableViewMode] = useState('daily');
+    const disableTransitions = () => {
+        document.documentElement.classList.add('disable-transitions');
+        setTimeout(() => document.documentElement.classList.remove('disable-transitions'), 50);
+    };
 
     useEffect(() => {
         if (window.location.pathname === '/admin') {
@@ -736,12 +743,14 @@ function App() {
     }, [theme]);
 
     useEffect(() => {
+        disableTransitions();
         applyUiLook(uiLook);
         localStorage.setItem('look', uiLook);
         savePreferences();
     }, [uiLook]);
 
     useEffect(() => {
+        disableTransitions();
         document.documentElement.classList.toggle('dark', !isSignedIn || theme === 'dark');
     }, [theme, isSignedIn]);
 
@@ -802,6 +811,7 @@ function App() {
     }, [faviconType]);
 
     useEffect(() => {
+        disableTransitions();
         const root = window.document.documentElement;
         root.classList.remove(
             'theme-zinc',
@@ -900,6 +910,7 @@ function App() {
 
             try {
                 await validateServerSession();
+                fetchNextSchoolDay().catch(() => {});
                 const [noticesData, userData, systemData] = await Promise.all([
                     fetchDailyNews(),
                     fetchUserInfo(),
@@ -958,54 +969,52 @@ function App() {
                     }).catch(e => console.log("Init sync failed silently", e));
 
                     fetchUserPreferences(userData.studentId).then(prefData => {
-                        if (prefData && prefData.preferences) {
-                            const prefs = prefData.preferences;
+                        const prefs = (prefData && prefData.preferences) || {};
 
-                            if (prefs.theme) {
-                                setTheme(prefs.theme);
-                                localStorage.setItem('theme', prefs.theme);
-                            }
-                            if (prefs.colorTheme) {
-                                setColorTheme(prefs.colorTheme);
-                                localStorage.setItem('color_theme', prefs.colorTheme);
-                            }
-                            if (prefs.ambientLight !== undefined) {
-                                setAmbientLight(prefs.ambientLight);
-                                localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
-                            }
-                            if (prefs.showClipboardEvents !== undefined) {
-                                setShowClipboardEvents(prefs.showClipboardEvents);
-                                localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
-                            }
-                            if (prefs.canvasLinksEnabled !== undefined) {
-                                setCanvasLinksEnabled(prefs.canvasLinksEnabled);
-                                localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
-                            }
-                            if (prefs.uiLook === 'paper' || prefs.uiLook === 'synchron') {
-                                setUiLook(prefs.uiLook);
-                                localStorage.setItem('look', prefs.uiLook);
-                            }
-                            if (prefs.faviconType !== undefined) {
-                                setFaviconType(prefs.faviconType);
-                                localStorage.setItem('favicon_type', prefs.faviconType);
-                            }
+                        if (prefs.theme) {
+                            setTheme(prefs.theme);
+                            localStorage.setItem('theme', prefs.theme);
+                        }
+                        if (prefs.colorTheme) {
+                            setColorTheme(prefs.colorTheme);
+                            localStorage.setItem('color_theme', prefs.colorTheme);
+                        }
+                        if (prefs.ambientLight !== undefined) {
+                            setAmbientLight(prefs.ambientLight);
+                            localStorage.setItem('ambient_light', prefs.ambientLight ? 'on' : 'off');
+                        }
+                        if (prefs.showClipboardEvents !== undefined) {
+                            setShowClipboardEvents(prefs.showClipboardEvents);
+                            localStorage.setItem('show_clipboard_events', prefs.showClipboardEvents ? 'true' : 'false');
+                        }
+                        if (prefs.canvasLinksEnabled !== undefined) {
+                            setCanvasLinksEnabled(prefs.canvasLinksEnabled);
+                            localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
+                        }
+                        const look = normalizeUiLook(prefs.uiLook);
+                        applyUiLook(look);
+                        setUiLook(look);
+                        localStorage.setItem('look', look);
+                        if (prefs.faviconType !== undefined) {
+                            setFaviconType(prefs.faviconType);
+                            localStorage.setItem('favicon_type', prefs.faviconType);
+                        }
 
-                            if (prefs.dashboardLayoutMobile) {
-                                localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
-                            }
-                            if (prefs.dashboardLayoutDesktop) {
-                                localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
-                            }
+                        if (prefs.dashboardLayoutMobile) {
+                            localStorage.setItem('dashboard_layout_mobile', JSON.stringify(prefs.dashboardLayoutMobile));
+                        }
+                        if (prefs.dashboardLayoutDesktop) {
+                            localStorage.setItem('dashboard_layout_desktop', JSON.stringify(prefs.dashboardLayoutDesktop));
+                        }
 
-                            if (prefs.clockWidgetFormat) {
-                                localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
-                            }
-                            if (prefs.scratchpadContent !== undefined) {
-                                localStorage.setItem('scratchpad_content', prefs.scratchpadContent);
-                            }
-                            if (prefs.transitWidgetStop) {
-                                localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
-                            }
+                        if (prefs.clockWidgetFormat) {
+                            localStorage.setItem('clock_widget_format', prefs.clockWidgetFormat);
+                        }
+                        if (prefs.scratchpadContent !== undefined) {
+                            localStorage.setItem('scratchpad_content', prefs.scratchpadContent);
+                        }
+                        if (prefs.transitWidgetStop) {
+                            localStorage.setItem('transit_widget_stop', prefs.transitWidgetStop);
                         }
                         syncPreferencesToServer.current = true;
                     }).catch(e => {
@@ -1052,19 +1061,54 @@ function App() {
         const provisionalDay = startDay || new Date();
         (async () => {
             try {
+                const sessionsPromise = showClipboardEvents && user.studentId
+                    ? loadClipboardSessions()
+                    : Promise.resolve(initialClipboardSessions);
                 const { date } = await fetchNextSchoolDay();
-                const sessions = showClipboardEvents && user.studentId ? await loadClipboardSessions() : [];
-                const openDay = weekendClipboardDay(date, sessions);
+                const openDay = weekendClipboardDay(date, initialClipboardSessions);
                 setDefaultDate(openDay);
                 setViewDate(current => (
                     !userSelectedViewDate.current && isSameDay(current, provisionalDay)
                         ? openDay
                         : current
                 ));
+                setSchoolDayResolved(true);
+
+                const sessions = await sessionsPromise;
+                const updatedOpenDay = weekendClipboardDay(date, sessions);
+                if (isSameDay(updatedOpenDay, openDay)) return;
+                setDefaultDate(updatedOpenDay);
+                setViewDate(current => (
+                    !userSelectedViewDate.current && isSameDay(current, openDay)
+                        ? updatedOpenDay
+                        : current
+                ));
             } catch (err) {
                 console.warn('Could not work out the next school day', err);
+                setSchoolDayResolved(true);
             }
         })();
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const refreshWhenNeeded = () => {
+            const expiry = Number(localStorage.getItem('sbhs_token_expiry'));
+            if (!Number.isFinite(expiry) || expiry <= Date.now() + 15 * 60 * 1000) {
+                refreshAccessToken({ forced: true }).catch(err => {
+                    console.warn('Could not refresh the session in the background', err);
+                });
+            }
+        };
+
+        refreshWhenNeeded();
+        const timer = setInterval(refreshWhenNeeded, 5 * 60 * 1000);
+        document.addEventListener('visibilitychange', refreshWhenNeeded);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener('visibilitychange', refreshWhenNeeded);
+        };
     }, [user]);
 
     useEffect(() => {
@@ -1196,7 +1240,9 @@ function App() {
     }, [user?.studentId, showClipboardEvents, clipboardSessions, viewDate]);
 
     const viewKey = format(viewDate, 'yyyy-MM-dd');
-    const dayTimetable = peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null);
+    const dayTimetable = schoolDayResolved
+        ? (peekDayTimetable(viewDate) || (timetableKey === viewKey ? timetable : null))
+        : null;
 
     const nextDay = () => setViewDateFromUser(d => addDays(d, 1));
     const prevDay = () => setViewDateFromUser(d => addDays(d, -1));
@@ -1328,7 +1374,6 @@ function App() {
                     <LandingPage
                         authError={authError}
                         clearAuthError={() => setAuthError(null)}
-                        festiveAmbient={festiveAmbient}
                     />
                 </Suspense>
             </div>
