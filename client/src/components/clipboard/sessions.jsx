@@ -113,6 +113,7 @@ const SheetBody = ({ session, onClose, still }) => {
                 )}
                 {session.staff?.length > 0 && (
                     <Row label="Staff">{session.staff.join(', ')}</Row>
+                )}
                 {session.team && (
                     <Row label="Team">
                         {session.team}

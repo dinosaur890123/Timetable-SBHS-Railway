@@ -502,19 +502,6 @@ const clipboardArrivalTime = (customFieldsData) => {
     return '';
 };
 
-export const fetchStudentClipboardAttendance = (studentId) => 
-    fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`)
-    .then(data => {
-        const parseAttendance = (items) => {
-            return items.map(item => ({
-const clipboardArrivalTime = (customFieldsData) => {
-    if (!customFieldsData || typeof customFieldsData !== 'object') return '';
-    const value = customFieldsData.fixtures_arrivalTime
-        || customFieldsData.sessions_staffArrivalTime
-        || '';
-    return typeof value === 'string' ? value.trim() : String(value || '').trim();
-};
-
 export const fetchStudentClipboardAttendance = async (studentId) => {
     const [attendanceData, sessionsData] = await Promise.all([
         fetchFromBackend(`/students/${studentId}/clipboard/attendance?_itemsPerPage=300`),
@@ -576,47 +563,49 @@ export const fetchStudentClipboardSessions = async (studentId, options = {}) => 
     if (options.context) params.set('context', String(options.context));
 
     const parseSessions = (items) => {
-        return items.map(item => ({
-            id: item.id || Math.random(),
-            activity: item.activity?.name || item.title || 'Session',
-            title: item.title && item.title !== item.activity?.name ? item.title : '',
-            colour: clipboardColour(item.activity?.hexColour),
-            date: formatDay(item.startDateTime),
-            time: formatTimeRange(item.startDateTime, item.endDateTime),
-            start: item.startDateTime || null,
-            end: item.endDateTime || null,
-            arrivalTime: clipboardArrivalTime(item.customFieldsData),
-            location: item.location ? {
-                name: item.location.name || '',
-                address: item.location.address || '',
-                latitude: item.location.latitude ?? null,
-                longitude: item.location.longitude ?? null
-            } : null,
-            opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
-            teamIds: [
-                ...(Array.isArray(item.teams) ? item.teams : []),
-                ...(item.team ? [item.team] : [])
-            ].map(team => team?.team?.id || team?.id).filter(id => id != null).map(String),
-            rawTeams: [
-                ...(Array.isArray(item.teams) ? item.teams : []),
-                ...(item.team ? [item.team] : [])
-            ].map(team => ({ id: team?.team?.id || team?.id, name: team?.team?.name || team?.name || '' })),
-            teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
-            assignedStaff: (Array.isArray(item.assignedStaff) ? item.assignedStaff : item.assignedStaff ? [item.assignedStaff] : [])
-                .map(member => ({
-                    name: clipboardStaffName(member),
-                    apiRef: member?.['@id'] || ''
-                })).filter(member => member.name),
-            arrivalTime: clipboardArrivalTime(item.customFieldsData),
-            round: item.roundName || '',
-            notes: item.studentParentNotes || item.notes || '',
-            cancelled: !!item.cancelled,
-            result: item.scored ? {
-                outcome: item.result || '',
-                us: item.organisationScore ?? null,
-                them: item.opponentScore ?? null
-            } : null
-        })).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+        return items.map(item => {
+            const arrivalTime = clipboardArrivalTime(item.customFieldsData);
+            return {
+                id: item.id || Math.random(),
+                activity: item.activity?.name || item.title || 'Session',
+                title: item.title && item.title !== item.activity?.name ? item.title : '',
+                colour: clipboardColour(item.activity?.hexColour),
+                date: formatDay(item.startDateTime),
+                time: formatTimeRange(item.startDateTime, item.endDateTime),
+                start: item.startDateTime || null,
+                end: item.endDateTime || null,
+                location: item.location ? {
+                    name: item.location.name || '',
+                    address: item.location.address || '',
+                    latitude: item.location.latitude ?? null,
+                    longitude: item.location.longitude ?? null
+                } : null,
+                opponent: item.opponent?.name || (typeof item.opponent === 'string' ? item.opponent : ''),
+                teamIds: [
+                    ...(Array.isArray(item.teams) ? item.teams : []),
+                    ...(item.team ? [item.team] : [])
+                ].map(team => team?.team?.id || team?.id).filter(id => id != null).map(String),
+                rawTeams: [
+                    ...(Array.isArray(item.teams) ? item.teams : []),
+                    ...(item.team ? [item.team] : [])
+                ].map(team => ({ id: team?.team?.id || team?.id, name: team?.team?.name || team?.name || '' })),
+                teamMembers: Array.isArray(item.team?.members) ? item.team.members.map(member => member.student?.name || member.name || member.studentName).filter(Boolean) : [],
+                assignedStaff: (Array.isArray(item.assignedStaff) ? item.assignedStaff : item.assignedStaff ? [item.assignedStaff] : [])
+                    .map(member => ({
+                        name: clipboardStaffName(member),
+                        apiRef: member?.['@id'] || ''
+                    })).filter(member => member.name),
+                arrivalTime,
+                round: item.roundName || '',
+                notes: item.studentParentNotes || item.notes || '',
+                cancelled: !!item.cancelled,
+                result: item.scored ? {
+                    outcome: item.result || '',
+                    us: item.organisationScore ?? null,
+                    them: item.opponentScore ?? null
+                } : null
+            };
+        }).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
     };
 
     const extractItems = (data) => {
