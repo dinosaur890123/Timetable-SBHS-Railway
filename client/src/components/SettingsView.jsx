@@ -6,15 +6,15 @@ import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
 
 const ACCENTS = [
-    { id: 'navy', name: 'Navy Blue' },
-    { id: 'mint', name: 'Mint Green' },
-    { id: 'teal', name: 'Teal Green' },
-    { id: 'sky', name: 'Sky Blue' },
-    { id: 'blue', name: 'Royal Blue' },
-    { id: 'violet', name: 'Violet Purple' },
-    { id: 'rose', name: 'Rose Pink' },
-    { id: 'orange', name: 'Bright Orange' },
-    { id: 'amber', name: 'Golden Amber' }
+    { id: 'navy', name: 'Navy Blue', swatch: '#233B79' },
+    { id: 'mint', name: 'Mint Green', swatch: '#3F8A59' },
+    { id: 'teal', name: 'Teal Green', swatch: '#138A83' },
+    { id: 'sky', name: 'Sky Blue', swatch: '#3695C8' },
+    { id: 'blue', name: 'Royal Blue', swatch: '#3049A8' },
+    { id: 'violet', name: 'Violet Purple', swatch: '#8052C7' },
+    { id: 'rose', name: 'Rose Pink', swatch: '#D84E83' },
+    { id: 'orange', name: 'Bright Orange', swatch: '#E87924' },
+    { id: 'amber', name: 'Golden Amber', swatch: '#C28A16' }
 ];
 
 // Keep Paper's named surface/highlighter swatches and add the three accent variants previously folded into them.
@@ -202,7 +202,7 @@ const SettingsView = ({
                                         style={{ background: `linear-gradient(135deg, ${a.ground} 52%, ${a.pen} 52%)` }}
                                     />
                                 ) : (
-                                    <span className="w-6 h-6 rounded-full" style={{ backgroundColor: `hsl(var(--theme-${a.id}-accent))` }} />
+                                    <span className="w-6 h-6 rounded-full border border-zinc-900/15 dark:border-white/20" style={{ backgroundColor: a.swatch }} />
                                 )}
                             </button>
                         ))}
