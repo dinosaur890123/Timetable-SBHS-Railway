@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     addDays, addMonths, endOfMonth, endOfWeek, format, isSameMonth, isToday, isWeekend,
     startOfMonth, startOfWeek
 } from 'date-fns';
+import { Hl } from '../study/noteflow';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { clockTime, dayKeyOf, endOf, sessionInk, sessionName, startOf } from './sessions';
 import { formatTime12Hour } from '../../utils/timetable';
@@ -14,6 +16,7 @@ const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_MIN_WIDTH = 768;
 
 const ClipboardCalendar = ({ sessions, onOpen }) => {
+    const still = useReducedMotion();
     const sectionRef = useRef(null);
     const isWideViewport = useMediaQuery('(min-width: 768px)');
     const [sheetWide, setSheetWide] = useState(true);
@@ -132,7 +135,7 @@ const ClipboardCalendar = ({ sessions, onOpen }) => {
                                         aria-label={`${format(day, 'EEEE d MMMM')}${daySessions.length ? `, ${daySessions.length} on Clipboard` : ''}`}
                                     >
                                         <span className="nf-cal__num tnum">
-                                            {isToday(day) ? <span className="theme-highlight">{format(day, 'd')}</span> : format(day, 'd')}
+                                            {isToday(day) ? <Hl still={still}>{format(day, 'd')}</Hl> : format(day, 'd')}
                                         </span>
                                         {daySessions.length > 0 && (
                                             <span className="nf-cal__chips">

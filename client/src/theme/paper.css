@@ -126,16 +126,14 @@ html[data-ui="modern"][data-look="paper"] h1.look-greeting {
   line-height: 1.04;
   letter-spacing: -0.02em;
 }
-html[data-ui="modern"][data-look="paper"] .look-swipe,
-html[data-ui="modern"][data-look="paper"] .theme-highlight {
+html[data-ui="modern"][data-look="paper"] .look-swipe {
   position: relative;
   isolation: isolate;
   color: var(--hl-ink);
   font-style: italic;
   white-space: nowrap;
 }
-html[data-ui="modern"][data-look="paper"] .look-swipe::before,
-html[data-ui="modern"][data-look="paper"] .theme-highlight::before {
+html[data-ui="modern"][data-look="paper"] .look-swipe::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -147,8 +145,7 @@ html[data-ui="modern"][data-look="paper"] .theme-highlight::before {
   transform: rotate(-1.6deg) skewX(-12deg);
   animation: look-swipe-draw 620ms cubic-bezier(.5, 0, .2, 1) 120ms backwards;
 }
-html[data-ui="modern"][data-look="paper"].dark .look-swipe::before,
-html[data-ui="modern"][data-look="paper"].dark .theme-highlight::before { mix-blend-mode: normal; }
+html[data-ui="modern"][data-look="paper"].dark .look-swipe::before { mix-blend-mode: normal; }
 @keyframes look-swipe-draw {
   from { clip-path: polygon(0 -10%, 0% -10%, -14% 110%, 0 110%); }
   to   { clip-path: polygon(0 -10%, 114% -10%, 100% 110%, 0 110%); }
@@ -232,8 +229,7 @@ html[data-ui="modern"][data-look="paper"] button.bg-accent:not([data-bare]) {
 html[data-ui="modern"][data-look="paper"] .bg-zinc-900\/\[0\.05\] { background-color: rgb(var(--zinc-900) / 0.055); }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-ui="modern"][data-look="paper"] .look-swipe::before,
-  html[data-ui="modern"][data-look="paper"] .theme-highlight::before { animation: none; }
+  html[data-ui="modern"][data-look="paper"] .look-swipe::before { animation: none; }
 }
 
 /* Paper uses borders and surface tints for depth, not drop or inset shadows. */

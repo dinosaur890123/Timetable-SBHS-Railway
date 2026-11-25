@@ -12,8 +12,6 @@
   --rule-2: #DEDAD1;
   --rule-ink: #161615;
   --violet: #4F2A7F;
-  --hl: #D6C2FF;
-  --hl-ink: #161615;
   --pen: #D23A2C;
   --ok: #2F7D57;
   --bio-bg: #E3EDDC; --bio-fg: #305A2D;
@@ -49,8 +47,6 @@
   --rule-2: #3A3936;
   --rule-ink: #EDEBE5;
   --violet: #C2A8F5;
-  --hl: #4A3778;
-  --hl-ink: #F4F0FF;
   --pen: #F2735F;
   --ok: #5BB98C;
   --bio-bg: #232F22; --bio-fg: #A6CD9A;
@@ -89,18 +85,19 @@ html[data-ui] .nf :is(a, button):focus-visible { outline: 2px solid var(--ink); 
 
 .nf-word { display: inline-block; }
 
-.nf-hl { position: relative; isolation: isolate; color: var(--hl-ink); white-space: nowrap; }
+.nf-hl { position: relative; isolation: isolate; color: var(--hl-ink, #161615); white-space: nowrap; }
 .nf-hl__swipe {
   position: absolute; z-index: -1; display: block;
   left: -.22em; right: -.24em; top: -.04em; bottom: -.14em;
-  background: var(--hl);
+  background: var(--hl, #D6C2FF);
   -webkit-mask: var(--hl-mask) 0 0 / 100% 100% no-repeat;
   mask: var(--hl-mask) 0 0 / 100% 100% no-repeat;
   mix-blend-mode: multiply;
   transform: rotate(-1.2deg) skewX(-10deg);
 }
 .nf-hl--display .nf-hl__swipe { left: -.16em; right: -.2em; top: .4em; bottom: .02em; transform: rotate(-1.6deg) skewX(-12deg); }
-.dark .nf-hl__swipe { mix-blend-mode: normal; }
+.dark .nf-hl { color: var(--hl-ink, #F4F0FF); }
+.dark .nf-hl__swipe { background: var(--hl, #4A3778); mix-blend-mode: normal; }
 
 .nf-ring { position: absolute; left: -22px; right: -26px; top: -10px; bottom: -14px; width: calc(100% + 48px); height: calc(100% + 24px); overflow: visible; transform: rotate(-3deg); pointer-events: none; }
 .nf-ring path { fill: none; stroke: var(--pen); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
