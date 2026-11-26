@@ -69,7 +69,7 @@ const buildNavGroups = (isAdmin, hiddenPages = []) => {
                 { id: 'profile', icon: Settings },
                 { id: 'feedback', icon: MessageSquare },
                 ...(isAdmin ? [{ id: 'admin', icon: ShieldCheck }] : [])
-            ].filter(item => !hiddenPages.includes(item.id))
+            ].filter(item => item.id === 'admin' || !hiddenPages.includes(item.id))
         }
     ];
 };
