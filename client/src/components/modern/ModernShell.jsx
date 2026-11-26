@@ -343,12 +343,12 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
     }, []);
 
     const filtered = useMemo(() => {
-        const searchQuery = query.trim().toLowerCase();
-        const pool = isMobile && !searchQuery
-            ? commands.filter(c => c.group === 'Actions' || c.group === 'Account')
+        const searchQuery = isMobile ? '' : query.trim().toLowerCase();
+        const pool = isMobile
+            ? commands.filter(c => c.group === 'Admin' || c.group === 'Actions' || c.group === 'Account')
             : commands;
         if (!searchQuery) return pool;
-        return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
+        return pool.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
     }, [commands, query, isMobile]);
 
     const items = filtered;
@@ -425,17 +425,27 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
                         className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-m-line bg-m-card m-shadow-lg"
                     >
                         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-m-line">
-                            <Search size={16} className="text-zinc-400 shrink-0" />
-                            <input
-                                ref={inputRef}
-                                data-bare
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Jump to a page or run a command…"
-                                className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:outline-none"
-                            />
-                            <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
+                            {isMobile ? (
+                                <span className="flex-1 text-sm font-medium text-zinc-700 dark:text-zinc-200">Commands</span>
+                            ) : (
+                                <>
+                                    <Search size={16} className="text-zinc-400 shrink-0" />
+                                    <input
+                                        ref={inputRef}
+                                        data-bare
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Jump to a page or run a command…"
+                                        className="flex-1 bg-transparent border-0 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus-visible:outline-none"
+                                    />
+                                </>
+                            )}
+                            {isMobile ? (
+                                <button type="button" onClick={onClose} className="text-xs text-zinc-500">Close</button>
+                            ) : (
+                                <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Esc</kbd>
+                            )}
                         </div>
                         {quickActions.length > 0 && !query && (
                             <div className="flex gap-2 px-4 py-3 border-b border-m-line">
@@ -511,7 +521,7 @@ export const buildCommands = ({ user, setView, theme, toggleTheme, onSignOut, hi
         .sort((a, b) => Boolean(a.href) - Boolean(b.href))
         .map(item => ({
             id: `nav-${item.id}`,
-            group: item.href ? 'Links' : 'Go to',
+            group: item.id === 'admin' ? 'Admin' : item.href ? 'Links' : 'Go to',
             label: item.label || VIEW_LABELS[item.id],
             icon: item.icon,
             run: item.href ? () => window.open(item.href, '_blank', 'noopener') : () => setView(item.id)
