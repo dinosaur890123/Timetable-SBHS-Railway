@@ -344,9 +344,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
 
     const filtered = useMemo(() => {
         const searchQuery = query.trim().toLowerCase();
-        const pool = isMobile && !searchQuery
-            ? commands.filter(c => c.group === 'Actions' || c.group === 'Account')
-            : commands;
+        const pool = commands;
         if (!searchQuery) return pool;
         return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
     }, [commands, query, isMobile]);
