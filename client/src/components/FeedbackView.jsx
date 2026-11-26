@@ -12,7 +12,7 @@ const categoryOptions = [
   {
     value: 'suggestion',
     label: 'Suggestion',
-    description: 'An improvement, feature idea, or workflow request.',
+    description: 'An improvement, feature idea, or other request.',
     icon: Lightbulb
   }
 ];
@@ -203,9 +203,6 @@ const FeedbackView = ({ onBack }) => {
             <MessageSquare size={20} strokeWidth={1.6} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Feedback</h1>
-        <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Report a bug, a rough edge, or a feature idea. The more detail you include — what happened, what you expected, and the steps to reproduce — the faster it can be understood and fixed.
-        </p>
       </div>
 
       {error && (

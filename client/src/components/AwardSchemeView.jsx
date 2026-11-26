@@ -18,8 +18,33 @@ const isRolloverCategory = (name) => /rollover\s+points/i.test(String(name || ''
 const houseColourForTheme = (colour, isDark) => {
     if (!colour) return null;
     const value = String(colour).trim().toLowerCase();
+
+    // Check for white color names and hex codes
     if (['white', '#fff', '#ffffff'].includes(value)) return isDark ? '#ffffff' : '#111827';
+
+    // Check for black color names and hex codes
     if (['black', '#000', '#000000'].includes(value)) return isDark ? '#ffffff' : '#111827';
+
+    // Check for light/white-like hex codes by converting to RGB and checking brightness
+    if (value.startsWith('#')) {
+        const hex = value.replace('#', '');
+        if (hex.length === 6) {
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            // Calculate brightness (weighted sum of RGB)
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            // If brightness is very high (> 250), treat as white
+            if (brightness > 250) return isDark ? '#ffffff' : '#111827';
+        } else if (hex.length === 3) {
+            const r = parseInt(hex[0] + hex[0], 16);
+            const g = parseInt(hex[1] + hex[1], 16);
+            const b = parseInt(hex[2] + hex[2], 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            if (brightness > 250) return isDark ? '#ffffff' : '#111827';
+        }
+    }
+
     return colour;
 };
 

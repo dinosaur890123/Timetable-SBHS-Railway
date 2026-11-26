@@ -227,14 +227,6 @@ export const ModernTopbar = ({
             </div>
 
             <div className="flex items-center gap-1.5">
-                <button
-                    onClick={onOpenPaletteFocus || onOpenPalette}
-                    className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
-                >
-                    <Search size={14} />
-                    <span className="flex-1 text-left">Search</span>
-                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
-                </button>
                 {!isOffline && reauthRequired ? (
                     <button
                         type="button"
@@ -337,14 +329,26 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
 export const CommandPalette = ({ open, onClose, commands, quickActions = [], focusOnOpen = false, onFocusHandled }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
     const inputRef = useRef(null);
     const listRef = useRef(null);
 
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 639px), (pointer: coarse)');
+        const update = () => setIsMobile(mq.matches);
+        update();
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
+
     const filtered = useMemo(() => {
         const searchQuery = query.trim().toLowerCase();
-        if (!searchQuery) return commands;
+        const pool = isMobile && !searchQuery
+            ? commands.filter(c => c.group === 'Actions' || c.group === 'Account')
+            : commands;
+        if (!searchQuery) return pool;
         return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
-    }, [commands, query]);
+    }, [commands, query, isMobile]);
 
     const items = filtered;
 
@@ -441,10 +445,10 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
                                             onClose();
                                             action.run();
                                         }}
-                                        className="group flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                                        className="group flex-1 min-h-[72px] flex flex-col items-center justify-center gap-1.5 px-1 py-2 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
                                     >
                                         <action.icon size={20} className="text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
-                                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-center leading-tight">
+                                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-center leading-snug">
                                             {action.label}
                                         </span>
                                     </button>

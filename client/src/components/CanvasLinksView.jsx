@@ -168,21 +168,7 @@ const CanvasLinksView = ({ onBack, timetableData, completeTimetable }) => {
             <LinkIcon size={20} strokeWidth={1.6} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Canvas links</h1>
-        <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Link each class to its Canvas course, and its name opens Canvas from anywhere in the app.
-        </p>
       </div>
-
-      <Section icon={Info} title="How it works">
-        <div className="space-y-2 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-          <p>
-            Open the course in Canvas or Wellio and paste its address, e.g. <code className="font-mono text-[12px] break-all">https://{canvasHost}/courses/12345</code> or <code className="font-mono text-[12px] break-all">https://app.wellioeducation.com/schools/12345</code>, or just the course number.
-          </p>
-          <p>
-            Canvas and Wellio course links are shared anonymously with others in the same class, and used for everyone once a classmate confirms them. Other links stay private to you.
-          </p>
-        </div>
-      </Section>
 
       {status === 'offline' && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-[13px] text-amber-800 dark:text-amber-300">
