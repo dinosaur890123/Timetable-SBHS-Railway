@@ -149,7 +149,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                                                 <motion.span
                                                     layoutId="m-nav-active"
                                                     transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                                    className="absolute inset-0 rounded-lg bg-white dark:bg-white/[0.06] border border-zinc-900/[0.07] dark:border-white/[0.06] shadow-[0_1px_2px_rgb(0_0_0/0.05)]"
+                                                    className="absolute inset-0 rounded-lg bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-[0_1px_2px_rgb(0_0_0/0.05)]"
                                                 />
                                             )}
                                             <Icon size={16} strokeWidth={active ? 2.1 : 1.8} className={`relative shrink-0 ${active ? 'text-accent' : ''}`} />
@@ -407,7 +407,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
         <AnimatePresence>
             {open && (
                 <motion.div
-                    className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
+                    className={`fixed inset-0 z-[60] flex justify-center px-4 ${isMobile ? 'items-center' : 'items-start pt-[12vh]'}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

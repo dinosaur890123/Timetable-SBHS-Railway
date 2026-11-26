@@ -192,7 +192,7 @@ const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
             {pill && (
                 <span
                     aria-hidden="true"
-                    className="absolute rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="absolute rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{ left: pill.left, width: pill.width, top: pill.top, height: pill.height }}
                 />
             )}

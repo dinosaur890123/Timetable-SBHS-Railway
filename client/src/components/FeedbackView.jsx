@@ -86,8 +86,8 @@ const FeedbackView = ({ onBack }) => {
     return (
       <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><ArrowLeft size={14} /> Back to Settings</button>
-        {tabs}
         <div className="space-y-1"><h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">My feedback</h1></div>
+        {tabs}
         {feedbackError && <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-[13px] text-red-700 dark:text-red-300">{feedbackError}</div>}
         {feedbackLoading ? <p className="text-sm text-zinc-500">Loading your feedback...</p> : myFeedback.length ? (
           <div className="space-y-4">{myFeedback.map(entry => {
@@ -143,7 +143,6 @@ const FeedbackView = ({ onBack }) => {
         >
           <ArrowLeft size={14} /> Back to Settings
         </button>
-        {tabs}
 
         <div className="space-y-1">
             <div className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400 mb-2">
@@ -154,6 +153,7 @@ const FeedbackView = ({ onBack }) => {
                 Your report has been received. Use the ticket number below if you need to follow up.
             </p>
         </div>
+        {tabs}
 
         <Section icon={Mail} title="Ticket details">
             <div>
@@ -196,7 +196,6 @@ const FeedbackView = ({ onBack }) => {
       >
         <ArrowLeft size={14} /> Back to Settings
       </button>
-      {tabs}
 
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-accent mb-2">
@@ -204,6 +203,7 @@ const FeedbackView = ({ onBack }) => {
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Feedback</h1>
       </div>
+      {tabs}
 
       {error && (
         <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-[13px] text-red-700 dark:text-red-300">

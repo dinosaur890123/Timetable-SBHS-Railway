@@ -80,7 +80,7 @@ const Segmented = ({ id, options, value, onChange }) => (
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute inset-0 rounded-md bg-white dark:bg-zinc-800 shadow-sm"
+                            className="absolute inset-0 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm"
                         />
                     )}
                     {opt.icon && <opt.icon size={14} className="relative" />}
