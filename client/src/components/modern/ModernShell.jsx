@@ -140,6 +140,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                                     <li key={id}>
                                         <button
                                             onClick={() => setView(id)}
+                                            aria-current={active ? 'page' : undefined}
                                             className={`group relative w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13.5px] transition-colors ${active
                                                 ? 'text-zinc-900 dark:text-white'
                                                 : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04]'
@@ -149,7 +150,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                                                 <motion.span
                                                     layoutId="m-nav-active"
                                                     transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                                    className="absolute inset-0 rounded-lg bg-white dark:bg-white/[0.06] border border-zinc-900/[0.07] dark:border-white/[0.06] shadow-[0_1px_2px_rgb(0_0_0/0.05)]"
+                                                    className="absolute inset-0 rounded-lg bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-[0_1px_2px_rgb(0_0_0/0.05)]"
                                                 />
                                             )}
                                             <Icon size={16} strokeWidth={active ? 2.1 : 1.8} className={`relative shrink-0 ${active ? 'text-accent' : ''}`} />
@@ -227,14 +228,6 @@ export const ModernTopbar = ({
             </div>
 
             <div className="flex items-center gap-1.5">
-                <button
-                    onClick={onOpenPaletteFocus || onOpenPalette}
-                    className="hidden sm:flex items-center gap-2 h-8 w-64 pl-2.5 pr-1.5 rounded-lg border border-m-line bg-m-card text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors text-[13px]"
-                >
-                    <Search size={14} />
-                    <span className="flex-1 text-left">Search</span>
-                    <kbd className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-m-line text-zinc-400">Ctrl K</kbd>
-                </button>
                 {!isOffline && reauthRequired ? (
                     <button
                         type="button"
@@ -337,14 +330,26 @@ export const ModernDock = ({ currentView, setView, onOpenPalette, hiddenPages = 
 export const CommandPalette = ({ open, onClose, commands, quickActions = [], focusOnOpen = false, onFocusHandled }) => {
     const [query, setQuery] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
     const inputRef = useRef(null);
     const listRef = useRef(null);
 
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 639px), (pointer: coarse)');
+        const update = () => setIsMobile(mq.matches);
+        update();
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
+
     const filtered = useMemo(() => {
         const searchQuery = query.trim().toLowerCase();
-        if (!searchQuery) return commands;
+        const pool = isMobile && !searchQuery
+            ? commands.filter(c => c.group === 'Actions' || c.group === 'Account')
+            : commands;
+        if (!searchQuery) return pool;
         return commands.filter(c => `${c.label} ${c.group} ${c.keywords || ''}`.toLowerCase().includes(searchQuery));
-    }, [commands, query]);
+    }, [commands, query, isMobile]);
 
     const items = filtered;
 
@@ -403,7 +408,7 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
         <AnimatePresence>
             {open && (
                 <motion.div
-                    className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
+                    className={`fixed inset-0 z-[60] flex justify-center px-4 ${isMobile ? 'items-center' : 'items-start pt-[12vh]'}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -441,10 +446,10 @@ export const CommandPalette = ({ open, onClose, commands, quickActions = [], foc
                                             onClose();
                                             action.run();
                                         }}
-                                        className="group flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+                                        className="group flex-1 min-h-[72px] flex flex-col items-center justify-center gap-1.5 px-1 py-2 rounded-xl border border-m-line bg-m-card hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04] transition-colors"
                                     >
                                         <action.icon size={20} className="text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
-                                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-center leading-tight">
+                                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-center leading-snug">
                                             {action.label}
                                         </span>
                                     </button>

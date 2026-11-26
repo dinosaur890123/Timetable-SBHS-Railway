@@ -18,8 +18,33 @@ const isRolloverCategory = (name) => /rollover\s+points/i.test(String(name || ''
 const houseColourForTheme = (colour, isDark) => {
     if (!colour) return null;
     const value = String(colour).trim().toLowerCase();
+
+    // Check for white color names and hex codes
     if (['white', '#fff', '#ffffff'].includes(value)) return isDark ? '#ffffff' : '#111827';
+
+    // Check for black color names and hex codes
     if (['black', '#000', '#000000'].includes(value)) return isDark ? '#ffffff' : '#111827';
+
+    // Check for light/white-like hex codes by converting to RGB and checking brightness
+    if (value.startsWith('#')) {
+        const hex = value.replace('#', '');
+        if (hex.length === 6) {
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            // Calculate brightness (weighted sum of RGB)
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            // If brightness is high (> 230), treat as white (catches off-white colors like #EFEEF5)
+            if (brightness > 230) return isDark ? '#ffffff' : '#111827';
+        } else if (hex.length === 3) {
+            const r = parseInt(hex[0] + hex[0], 16);
+            const g = parseInt(hex[1] + hex[1], 16);
+            const b = parseInt(hex[2] + hex[2], 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            if (brightness > 230) return isDark ? '#ffffff' : '#111827';
+        }
+    }
+
     return colour;
 };
 
@@ -80,11 +105,11 @@ const Segmented = ({ value, onChange }) => {
     }, [value]);
 
     return (
-        <div role="tablist" aria-label="Awards" className="relative inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
+        <div role="tablist" aria-label="Awards" className="paper-toggle-track relative inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
             {pill.ready && (
                 <span
                     aria-hidden="true"
-                    className="absolute top-0.5 bottom-0.5 rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="paper-toggle-active absolute top-0.5 bottom-0.5 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{
                         left: `${pill.left}px`,
                         width: `${pill.width}px`
@@ -284,7 +309,7 @@ const YearTabs = ({ yearFilters, activeYear, onSelectYear }) => {
             {pill.ready && (
                 <span
                     aria-hidden="true"
-                    className="absolute top-0 bottom-1 rounded-md bg-white dark:bg-zinc-800 shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="paper-toggle-active absolute top-0 bottom-1 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{
                         left: `${pill.left}px`,
                         width: `${pill.width}px`
