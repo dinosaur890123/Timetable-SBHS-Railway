@@ -188,11 +188,11 @@ const ViewModeToggle = ({ viewMode, onViewModeChange }) => {
     }, [viewMode]);
 
     return (
-        <div className="relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-0 md:shrink-0 w-fit md:w-auto">
+        <div className="paper-toggle-track relative flex items-center p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06] mt-4 md:mt-0 md:shrink-0 w-fit md:w-auto">
             {pill && (
                 <span
                     aria-hidden="true"
-                    className="absolute rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="paper-toggle-active absolute rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{ left: pill.left, width: pill.width, top: pill.top, height: pill.height }}
                 />
             )}

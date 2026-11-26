@@ -105,11 +105,11 @@ const Segmented = ({ value, onChange }) => {
     }, [value]);
 
     return (
-        <div role="tablist" aria-label="Awards" className="relative inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
+        <div role="tablist" aria-label="Awards" className="paper-toggle-track relative inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
             {pill.ready && (
                 <span
                     aria-hidden="true"
-                    className="absolute top-0.5 bottom-0.5 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="paper-toggle-active absolute top-0.5 bottom-0.5 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{
                         left: `${pill.left}px`,
                         width: `${pill.width}px`
@@ -309,7 +309,7 @@ const YearTabs = ({ yearFilters, activeYear, onSelectYear }) => {
             {pill.ready && (
                 <span
                     aria-hidden="true"
-                    className="absolute top-0 bottom-1 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
+                    className="paper-toggle-active absolute top-0 bottom-1 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm transition-all duration-200 ease-out pointer-events-none"
                     style={{
                         left: `${pill.left}px`,
                         width: `${pill.width}px`

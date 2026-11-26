@@ -195,6 +195,21 @@ html[data-ui="modern"][data-look="paper"] aside nav span.absolute.inset-0 {
   box-shadow: none;
 }
 
+/* Keep the selected page visible on dark paper without turning it into a bright pill. */
+html[data-ui="modern"][data-look="paper"].dark aside nav button[aria-current="page"] > span.absolute.inset-0 {
+  background: rgb(var(--zinc-100) / 0.055);
+  border-color: transparent;
+}
+
+/* Use the same quiet paper-on-paper contrast for segmented controls in dark mode. */
+html[data-ui="modern"][data-look="paper"].dark .paper-toggle-track {
+  background-color: rgb(var(--white) / 0.02);
+}
+html[data-ui="modern"][data-look="paper"].dark .paper-toggle-active {
+  background: rgb(var(--white) / 0.055);
+  border-color: rgb(var(--white) / 0.08);
+}
+
 /* ---- Controls ------------------------------------------------------------------------------------ */
 
 /* Focus: use the selected accent for keyboard and field focus. */

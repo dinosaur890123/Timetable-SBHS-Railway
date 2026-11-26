@@ -64,7 +64,7 @@ const LinkRow = ({ icon: Icon, title, onClick, dot = false }) => (
 );
 
 const Segmented = ({ id, options, value, onChange }) => (
-    <div role="radiogroup" className="inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
+    <div role="radiogroup" className="paper-toggle-track inline-flex p-0.5 rounded-lg bg-zinc-900/[0.05] dark:bg-white/[0.06]">
         {options.map(opt => {
             const active = opt.value === value;
             return (
@@ -80,7 +80,7 @@ const Segmented = ({ id, options, value, onChange }) => (
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute inset-0 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm"
+                            className="paper-toggle-active absolute inset-0 rounded-md bg-white dark:bg-white/[0.12] border border-zinc-900/[0.07] dark:border-white/[0.12] shadow-sm"
                         />
                     )}
                     {opt.icon && <opt.icon size={14} className="relative" />}

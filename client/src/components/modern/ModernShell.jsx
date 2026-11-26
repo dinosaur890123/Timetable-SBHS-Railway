@@ -140,6 +140,7 @@ export const ModernSidebar = ({ currentView, setView, user, hiddenPages = [] }) 
                                     <li key={id}>
                                         <button
                                             onClick={() => setView(id)}
+                                            aria-current={active ? 'page' : undefined}
                                             className={`group relative w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13.5px] transition-colors ${active
                                                 ? 'text-zinc-900 dark:text-white'
                                                 : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.04]'
