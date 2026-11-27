@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Palette, RotateCcw } from 'lucide-react';
 import {
     SUBJECT_COLOUR_PRESETS,
     applySubjectColourPreset,
@@ -153,22 +153,20 @@ const SubjectColoursView = ({ onBack, onColoursChange }) => {
         : '#3b82f6';
 
     return (
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-            <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    aria-label="Back to settings"
-                    className="p-2 -ml-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-900/5 dark:hover:bg-white/5 transition"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div>
-                    <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Subject colours</h1>
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-                        Customise subject colours or apply a preset. Saved to your account.
-                    </p>
+        <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <button
+                type="button"
+                onClick={onBack}
+                className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            >
+                <ArrowLeft size={14} /> Back to Settings
+            </button>
+
+            <div className="space-y-1">
+                <div className="flex items-center gap-2 text-accent mb-2">
+                    <Palette size={20} strokeWidth={1.6} />
                 </div>
+                <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Subject colours</h1>
             </div>
 
             <section className="rounded-xl border border-zinc-900/[0.08] dark:border-white/[0.08] bg-white/70 dark:bg-zinc-900/40 p-4 space-y-3">

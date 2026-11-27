@@ -1591,7 +1591,7 @@ function App() {
                             )}
 
                             {currentView === 'subject-colours' && (
-                                <SubjectColoursView onBack={() => setCurrentView('profile')} onColoursChange={() => syncPreferences()} />
+                                <SubjectColoursView onBack={() => setCurrentView('profile')} onColoursChange={() => savePreferences()} />
                             )}
 
                             {currentView === 'build-notes' && (

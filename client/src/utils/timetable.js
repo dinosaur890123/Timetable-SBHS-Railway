@@ -233,8 +233,8 @@ const toPastelHex = (hex) => {
         else if (max === g) h = ((b - r) / d + 2) / 6;
         else h = ((r - g) / d + 4) / 6;
     }
-    const ps = Math.min(s, 0.62);
-    const pl = 0.80;
+    const ps = Math.min(s, 0.72);
+    const pl = 0.68;
     const hue2rgb = (p, q, t) => {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
