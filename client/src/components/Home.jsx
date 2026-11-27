@@ -392,10 +392,10 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
             title={pipOpen ? 'Close floating timer' : 'Pop out floating timer'}
             aria-label={pipOpen ? 'Close floating timer' : 'Pop out floating timer'}
             aria-pressed={pipOpen}
-            className={`p-1 rounded-md transition-colors ${
+            className={`hidden sm:inline-flex items-center justify-center p-1 rounded-md transition-colors ${
                 pipOpen
                     ? 'text-accent bg-accent/10'
-                    : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-900/5 dark:hover:bg-white/10'
+                    : 'text-zinc-400/80 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-900/5 dark:hover:bg-white/10'
             }`}
         >
             <PictureInPicture2 className="w-3.5 h-3.5" />
@@ -433,12 +433,7 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
                 bell: { time: endOfDayTime },
                 period: { title: 'End of day', fullTitle: 'End of day' }
             };
-            const schoolLeft = (
-                <span className="flex items-center gap-1.5 text-[12px] text-zinc-400 tabular-nums">
-                    <span>{formatDuration(dayEnd - nowMin)} left today</span>
-                    {pipButton}
-                </span>
-            );
+            const schoolLeft = <span className="text-[12px] text-zinc-400 tabular-nums">{formatDuration(dayEnd - nowMin)} left today</span>;
 
             if (!current || (!isClass(current) && !current.isExtracurricular)) {
                 const end = current ? current.endMin : (next?.startMin ?? dayEnd);
@@ -455,7 +450,12 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
                 };
                 cardContent = (
                     <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
-                        <RailLabel aside={schoolLeft}>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
+                        <RailLabel aside={
+                            <span className="flex items-center gap-1.5">
+                                {schoolLeft}
+                                {pipButton}
+                            </span>
+                        }>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
                         <Countdown mins={end - nowMin} caption={caption} />
                         <Progress value={progress} />
                         <ThenLine slot={next} prefix="Next" />

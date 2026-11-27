@@ -8,12 +8,14 @@ export const isDocumentPipSupported = () =>
     typeof window !== 'undefined' && 'documentPictureInPicture' in window;
 
 export const openPipWindow = async ({ onClose } = {}) => {
+    const width = 260;
+    const height = 124;
     let pipWin = null;
     if (isDocumentPipSupported()) {
         try {
             pipWin = await window.documentPictureInPicture.requestWindow({
-                width: 320,
-                height: 172,
+                width,
+                height,
             });
         } catch {
             pipWin = null;
@@ -21,10 +23,12 @@ export const openPipWindow = async ({ onClose } = {}) => {
     }
 
     if (!pipWin && typeof window !== 'undefined') {
+        const left = Math.max(0, (window.screen?.availWidth || 1280) - width - 20);
+        const top = Math.max(0, (window.screen?.availHeight || 720) - height - 20);
         pipWin = window.open(
             '',
             'sbhs-pip-timer',
-            'popup=yes,width=320,height=176,menubar=no,toolbar=no,location=no,status=no,resizable=yes'
+            `popup=yes,width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
         );
     }
 
@@ -56,7 +60,7 @@ const ensurePipShell = (doc) => {
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
-                padding: 14px 16px;
+                padding: 12px 14px;
                 background: var(--bg, #ffffff);
                 color: var(--fg, #18181b);
                 transition: background-color 150ms ease, color 150ms ease;
@@ -110,25 +114,25 @@ const ensurePipShell = (doc) => {
                 margin-top: 8px;
             }
             .countdown {
-                font-size: 30px;
+                font-size: 26px;
                 line-height: 1;
                 font-weight: 500;
                 letter-spacing: -0.02em;
                 font-variant-numeric: tabular-nums;
             }
             .caption {
-                font-size: 12.5px;
+                font-size: 12px;
                 color: var(--muted);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
             .progress-track {
-                height: 4px;
+                height: 3px;
                 border-radius: 9999px;
                 background: var(--track);
                 overflow: hidden;
-                margin-top: 12px;
+                margin-top: 10px;
             }
             .progress-fill {
                 height: 100%;
@@ -136,14 +140,7 @@ const ensurePipShell = (doc) => {
                 background: var(--accent, #3b82f6);
                 transition: width 1000ms linear;
             }
-            .next {
-                margin-top: 10px;
-                font-size: 12px;
-                color: var(--muted);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
+            .next { display: none; }
         </style>
     `;
     doc.body.innerHTML = `

@@ -155,6 +155,18 @@ const writeCustomColours = (next) => {
 
 export const getCustomSubjectColours = () => ({ ...readCustomColours() });
 
+export const setCustomSubjectColoursMap = (map) => {
+    const next = {};
+    if (map && typeof map === 'object') {
+        Object.entries(map).forEach(([k, v]) => {
+            const norm = normaliseColour(v);
+            if (norm) next[k] = norm;
+        });
+    }
+    writeCustomColours(next);
+    return next;
+};
+
 export const getKnownSubjectColours = () => ({ ...readColours() });
 
 export const setCustomSubjectColour = (key, colour) => {
@@ -203,13 +215,56 @@ export const SUBJECT_COLOUR_PRESETS = [
     },
 ];
 
+const toPastelHex = (hex) => {
+    const norm = normaliseColour(hex);
+    if (!norm) return '#93c5fd';
+    let raw = norm.slice(1);
+    if (raw.length === 3) raw = raw.split('').map(c => c + c).join('');
+    const r = parseInt(raw.slice(0, 2), 16) / 255;
+    const g = parseInt(raw.slice(2, 4), 16) / 255;
+    const b = parseInt(raw.slice(4, 6), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        else if (max === g) h = ((b - r) / d + 2) / 6;
+        else h = ((r - g) / d + 4) / 6;
+    }
+    const ps = Math.min(s, 0.62);
+    const pl = 0.80;
+    const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+    };
+    const q = pl < 0.5 ? pl * (1 + ps) : pl + ps - pl * ps;
+    const p = 2 * pl - q;
+    const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+    return `#${toHex(hue2rgb(p, q, h + 1 / 3))}${toHex(hue2rgb(p, q, h))}${toHex(hue2rgb(p, q, h - 1 / 3))}`;
+};
+
 export const applySubjectColourPreset = (presetId, subjectKeys = []) => {
     if (presetId === 'default') {
         return resetAllCustomSubjectColours();
     }
+    const apiColours = readColours();
+    const keys = subjectKeys.length > 0 ? [...subjectKeys] : Object.keys(apiColours);
+    if (presetId === 'pastel') {
+        const next = { ...readCustomColours() };
+        keys.forEach((key) => {
+            next[key] = toPastelHex(apiColours[key]);
+        });
+        writeCustomColours(next);
+        return next;
+    }
     const preset = SUBJECT_COLOUR_PRESETS.find(p => p.id === presetId);
     if (!preset || preset.colours.length === 0) return getCustomSubjectColours();
-    const keys = subjectKeys.length > 0 ? [...subjectKeys] : Object.keys(readColours());
     const next = { ...readCustomColours() };
     keys.sort().forEach((key, index) => {
         next[key] = preset.colours[index % preset.colours.length];

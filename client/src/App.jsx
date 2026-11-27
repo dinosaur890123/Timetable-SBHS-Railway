@@ -5,6 +5,7 @@ import { ModernSidebar, ModernTopbar, ModernDock, CommandPalette, buildCommands,
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import AmbientLight from './components/modern/AmbientLight';
 import CanvasLinkSuggestions from './components/CanvasLinkSuggestions';
+import { getCustomSubjectColours, setCustomSubjectColoursMap } from './utils/timetable';
 
 const pageLoaders = {
     timetable: () => import('./components/Timetable'),
@@ -16,6 +17,7 @@ const pageLoaders = {
     canvasLinks: () => import('./components/CanvasLinksView'),
     buildNotes: () => import('./components/BuildNotesView'),
     settings: () => import('./components/SettingsView'),
+    subjectColours: () => import('./components/SubjectColoursView'),
     privacy: () => import('./components/PrivacyView'),
     admin: () => import('./components/AdminPanel')
 };
@@ -45,6 +47,7 @@ const AwardSchemeView = lazyPage(pageLoaders.awards);
 const ClipboardView = lazyPage(pageLoaders.clipboard);
 const FeedbackView = lazyPage(pageLoaders.feedback);
 const CanvasLinksView = lazyPage(pageLoaders.canvasLinks);
+const SubjectColoursView = lazyPage(pageLoaders.subjectColours);
 const BuildNotesView = lazyPage(pageLoaders.buildNotes);
 const PrivacyView = lazyPage(pageLoaders.privacy);
 const SettingsView = lazyPage(pageLoaders.settings);
@@ -52,7 +55,7 @@ const SettingsView = lazyPage(pageLoaders.settings);
 const ARCHIVED_NOTICE_LIMIT = 100;
 const STAGING_ACCESS_RESTRICTED_MESSAGE = 'Access restricted to authorized staging testers.';
 
-const SUBPAGE_VIEWS = ['feedback', 'canvas-links', 'build-notes', 'privacy'];
+const SUBPAGE_VIEWS = ['feedback', 'canvas-links', 'subject-colours', 'build-notes', 'privacy'];
 
 const warmPages = (isAdmin) => Object.entries(pageLoaders).forEach(([name, load]) => {
     if (name !== 'admin' || isAdmin) load().catch(() => {});
@@ -685,7 +688,8 @@ function App() {
                 dashboardLayoutDesktop: JSON.parse(localStorage.getItem('dashboard_layout_desktop') || 'null'),
                 clockWidgetFormat: localStorage.getItem('clock_widget_format') || null,
                 scratchpadContent: localStorage.getItem('scratchpad_content') || '',
-                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null
+                transitWidgetStop: localStorage.getItem('transit_widget_stop') || null,
+                customSubjectColours: getCustomSubjectColours()
             };
 
             saveUserPreferences(user.studentId, preferences).catch(e => {
@@ -947,6 +951,9 @@ function App() {
                         if (prefs.canvasLinksEnabled !== undefined) {
                             setCanvasLinksEnabled(prefs.canvasLinksEnabled);
                             localStorage.setItem('canvas_links_enabled', prefs.canvasLinksEnabled ? 'true' : 'false');
+                        }
+                        if (prefs.customSubjectColours !== undefined) {
+                            setCustomSubjectColoursMap(prefs.customSubjectColours);
                         }
                         const look = normalizeUiLook(prefs.uiLook);
                         applyUiLook(look);
@@ -1581,6 +1588,10 @@ function App() {
 
                             {currentView === 'canvas-links' && (
                                 <CanvasLinksView onBack={() => setCurrentView('profile')} timetableData={timetable} completeTimetable={completeTimetable} />
+                            )}
+
+                            {currentView === 'subject-colours' && (
+                                <SubjectColoursView onBack={() => setCurrentView('profile')} onColoursChange={() => syncPreferences()} />
                             )}
 
                             {currentView === 'build-notes' && (
