@@ -97,6 +97,10 @@ export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, 
             enriched.oldTeacher = periodInfo.fullTeacher || periodInfo.teacher || '';
             enriched.fullTeacher = 'No teacher';
             enriched.isSubstituted = true;
+        } else if (type === 'noclass' || type === 'cancelled' || type === 'cancel') {
+            enriched.oldTeacher = periodInfo.fullTeacher || periodInfo.teacher || '';
+            enriched.fullTeacher = 'Class cancelled';
+            enriched.isCancelled = true;
         }
     }
 
@@ -111,7 +115,9 @@ export const applyPeriodVariations = (periodInfo, bellId, classVariations = {}, 
 };
 
 const COLOUR_STORE = 'subject_colours';
+const CUSTOM_COLOUR_STORE = 'custom_subject_colours';
 let colourCache = null;
+let customColourCache = null;
 
 const subjectKey = (year, shortTitle) => `${year ?? ''}${shortTitle ?? ''}`;
 
@@ -128,6 +134,88 @@ const readColours = () => {
         colourCache = {};
     }
     return colourCache;
+};
+
+const readCustomColours = () => {
+    if (customColourCache) return customColourCache;
+    try {
+        customColourCache = JSON.parse(localStorage.getItem(CUSTOM_COLOUR_STORE)) || {};
+    } catch {
+        customColourCache = {};
+    }
+    return customColourCache;
+};
+
+const writeCustomColours = (next) => {
+    customColourCache = next;
+    try {
+        localStorage.setItem(CUSTOM_COLOUR_STORE, JSON.stringify(next));
+    } catch {}
+};
+
+export const getCustomSubjectColours = () => ({ ...readCustomColours() });
+
+export const getKnownSubjectColours = () => ({ ...readColours() });
+
+export const setCustomSubjectColour = (key, colour) => {
+    if (!key) return getCustomSubjectColours();
+    const next = { ...readCustomColours() };
+    const normalised = normaliseColour(colour);
+    if (normalised) {
+        next[key] = normalised;
+    } else {
+        delete next[key];
+    }
+    writeCustomColours(next);
+    return next;
+};
+
+export const resetAllCustomSubjectColours = () => {
+    writeCustomColours({});
+    return {};
+};
+
+export const SUBJECT_COLOUR_PRESETS = [
+    {
+        id: 'default',
+        name: 'School Default',
+        colours: [],
+    },
+    {
+        id: 'pastel',
+        name: 'Soft Pastel',
+        colours: ['#93c5fd', '#a5b4fc', '#c4b5fd', '#f9a8d4', '#fda4af', '#fdba74', '#fde047', '#86efac', '#5eead4', '#67e8f9'],
+    },
+    {
+        id: 'vivid',
+        name: 'Vivid',
+        colours: ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4'],
+    },
+    {
+        id: 'nordic',
+        name: 'Nordic',
+        colours: ['#5e81ac', '#81a1c1', '#88c0d0', '#8fbcbb', '#a3be8c', '#ebcb8b', '#d08770', '#bf616a', '#b48ead', '#4c566a'],
+    },
+    {
+        id: 'earth',
+        name: 'Warm Earth',
+        colours: ['#b45309', '#c2410c', '#a16207', '#4d7c0f', '#0f766e', '#0369a1', '#6d28d9', '#be185d', '#9f1239', '#78716c'],
+    },
+];
+
+export const applySubjectColourPreset = (presetId, subjectKeys = []) => {
+    if (presetId === 'default') {
+        return resetAllCustomSubjectColours();
+    }
+    const preset = SUBJECT_COLOUR_PRESETS.find(p => p.id === presetId);
+    if (!preset || preset.colours.length === 0) return getCustomSubjectColours();
+    const keys = subjectKeys.length > 0 ? [...subjectKeys] : Object.keys(readColours());
+    const next = { ...readCustomColours() };
+    keys.sort().forEach((key, index) => {
+        next[key] = preset.colours[index % preset.colours.length];
+    });
+    writeCustomColours(next);
+    return next;
 };
 
 export const rememberSubjectColours = (timetableData) => {
@@ -192,6 +280,6 @@ export const describeClass = (periodInfo, daySubjects, subjectIndex) => {
             ? withYear(subject.title, classYear, ' ')
             : withYear(periodInfo.title, classYear, ''),
         shortName: withYear(periodInfo.title, classYear, ''),
-        colour: normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
+        colour: readCustomColours()[key] || normaliseColour(daySubjects?.[key]?.colour) || readColours()[key] || null
     };
 };

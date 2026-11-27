@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, PictureInPicture2 } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
 import { applyPeriodVariations, describeClass, isBreakBell, isBreakStylePeriod, resolveRoutineBells, subjectInk, formatTime12Hour } from '../utils/timetable';
+import { openPipWindow, renderPipTimer } from '../utils/pipTimer';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { fetchDayTimetable, fetchStudentAttendanceScanIn, peekDayTimetable } from '../services/api';
 import { hasNoteFlowHighlightAnimationPlayed, markNoteFlowHighlightAnimationPlayed } from './study/noteflow';
@@ -328,15 +329,23 @@ const Progress = ({ value, colour }) => (
 );
 
 const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
+    const pipWinRef = useRef(null);
+    const [pipOpen, setPipOpen] = useState(false);
+
+    useEffect(() => {
+        return () => {
+            if (pipWinRef.current && !pipWinRef.current.closed) {
+                pipWinRef.current.close();
+            }
+        };
+    }, []);
+
     const clipboardSlots = buildClipboardSlots(clipboardSessions, dayKey);
     const allSlots = [...slots, ...clipboardSlots].sort((a, b) => a.startMin - b.startMin);
 
-    if (allSlots.length === 0) return null;
-
-    const dayStart = allSlots[0].startMin;
-    const dayEnd = allSlots[allSlots.length - 1].endMin;
-
-    if (!isLive || nowMin >= dayEnd) return null;
+    const dayStart = allSlots[0]?.startMin ?? 0;
+    const dayEnd = allSlots[allSlots.length - 1]?.endMin ?? 0;
+    const active = allSlots.length > 0 && isLive && nowMin < dayEnd;
 
     const slotTitle = (p) => {
         const raw = p?.fullTitle || p?.title || '';
@@ -348,57 +357,150 @@ const NowCard = ({ slots, nowMin, isLive, clipboardSessions, dayKey }) => {
         return isClass(slot) ? 'until transition' : `until ${slotTitle(slot.period)}`;
     };
 
-    if (nowMin < dayStart) {
-        const first = allSlots[0];
-        return (
-            <RailCard phase="before-school">
-                <RailLabel>Before school</RailLabel>
-                <Countdown
-                    mins={first.startMin - nowMin}
-                    caption={first.isBreak
-                        ? `until ${slotTitle(first.period)}`
-                        : first.isExtracurricular ? 'until first session' : 'until first class'}
-                />
-                <ThenLine slot={first} prefix="First" />
-            </RailCard>
-        );
-    }
-
-    const current = allSlots.find(s => nowMin >= s.startMin && nowMin < s.endMin);
-    const lastSlot = allSlots[allSlots.length - 1];
-    const endOfDayTime = lastSlot.bell.endTime || `${String(Math.floor(dayEnd / 60)).padStart(2, '0')}:${String(dayEnd % 60).padStart(2, '0')}`;
-    const next = allSlots.find(s => s.startMin >= (current ? current.endMin : nowMin)) || {
-        isEndOfDay: true,
-        startMin: dayEnd,
-        endMin: dayEnd,
-        bell: { time: endOfDayTime },
-        period: { title: 'End of day', fullTitle: 'End of day' }
+    const formatNextLine = (slot, prefix = 'Next') => {
+        if (!slot) return '';
+        if (slot.isEndOfDay) return `${prefix}: End of day (${formatTime12Hour(slot.bell.time)})`;
+        const name = slot.isBreak ? slotTitle(slot.period) : (slot.period.fullTitle || slot.period.title);
+        const room = slot.period.room ? ` · ${slot.period.room}` : '';
+        return `${prefix}: ${name}${room} (${formatTime12Hour(slot.bell.time)})`;
     };
-    const schoolLeft = <span className="text-[12px] text-zinc-400 tabular-nums">{formatDuration(dayEnd - nowMin)} left today</span>;
 
-    if (!current || (!isClass(current) && !current.isExtracurricular)) {
-        const end = current ? current.endMin : (next?.startMin ?? dayEnd);
-        const start = current ? current.startMin : nowMin;
-        return (
-            <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
-                <RailLabel aside={schoolLeft}>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
-                <Countdown mins={end - nowMin} caption={countdownCaption(next)} />
-                <Progress value={((nowMin - start) / Math.max(1, end - start)) * 100} />
-                <ThenLine slot={next} prefix="Next" />
-            </RailCard>
-        );
+    let pipData = null;
+    let cardContent = null;
+
+    const pipButton = (
+        <button
+            type="button"
+            onClick={async () => {
+                if (pipOpen && pipWinRef.current && !pipWinRef.current.closed) {
+                    pipWinRef.current.close();
+                    pipWinRef.current = null;
+                    setPipOpen(false);
+                    return;
+                }
+                const win = await openPipWindow({
+                    onClose: () => {
+                        pipWinRef.current = null;
+                        setPipOpen(false);
+                    },
+                });
+                if (win) {
+                    pipWinRef.current = win;
+                    setPipOpen(true);
+                }
+            }}
+            title={pipOpen ? 'Close floating timer' : 'Pop out floating timer'}
+            aria-label={pipOpen ? 'Close floating timer' : 'Pop out floating timer'}
+            aria-pressed={pipOpen}
+            className={`p-1 rounded-md transition-colors ${
+                pipOpen
+                    ? 'text-accent bg-accent/10'
+                    : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-900/5 dark:hover:bg-white/10'
+            }`}
+        >
+            <PictureInPicture2 className="w-3.5 h-3.5" />
+        </button>
+    );
+
+    if (active) {
+        if (nowMin < dayStart) {
+            const first = allSlots[0];
+            const caption = first.isBreak
+                ? `until ${slotTitle(first.period)}`
+                : first.isExtracurricular ? 'until first session' : 'until first class';
+            pipData = {
+                title: 'Before school',
+                countdown: formatCountdown(first.startMin - nowMin),
+                caption,
+                nextLine: formatNextLine(first, 'First'),
+                isDark: document.documentElement.classList.contains('dark'),
+            };
+            cardContent = (
+                <RailCard phase="before-school">
+                    <RailLabel aside={pipButton}>Before school</RailLabel>
+                    <Countdown mins={first.startMin - nowMin} caption={caption} />
+                    <ThenLine slot={first} prefix="First" />
+                </RailCard>
+            );
+        } else {
+            const current = allSlots.find(s => nowMin >= s.startMin && nowMin < s.endMin);
+            const lastSlot = allSlots[allSlots.length - 1];
+            const endOfDayTime = lastSlot.bell.endTime || `${String(Math.floor(dayEnd / 60)).padStart(2, '0')}:${String(dayEnd % 60).padStart(2, '0')}`;
+            const next = allSlots.find(s => s.startMin >= (current ? current.endMin : nowMin)) || {
+                isEndOfDay: true,
+                startMin: dayEnd,
+                endMin: dayEnd,
+                bell: { time: endOfDayTime },
+                period: { title: 'End of day', fullTitle: 'End of day' }
+            };
+            const schoolLeft = (
+                <span className="flex items-center gap-1.5 text-[12px] text-zinc-400 tabular-nums">
+                    <span>{formatDuration(dayEnd - nowMin)} left today</span>
+                    {pipButton}
+                </span>
+            );
+
+            if (!current || (!isClass(current) && !current.isExtracurricular)) {
+                const end = current ? current.endMin : (next?.startMin ?? dayEnd);
+                const start = current ? current.startMin : nowMin;
+                const progress = ((nowMin - start) / Math.max(1, end - start)) * 100;
+                const caption = countdownCaption(next);
+                pipData = {
+                    title: current ? slotTitle(current.period) : 'Between classes',
+                    countdown: formatCountdown(end - nowMin),
+                    caption,
+                    progress,
+                    nextLine: formatNextLine(next, 'Next'),
+                    isDark: document.documentElement.classList.contains('dark'),
+                };
+                cardContent = (
+                    <RailCard phase={current ? `break-${current.bellId}` : 'between'}>
+                        <RailLabel aside={schoolLeft}>{current ? slotTitle(current.period) : 'Between classes'}</RailLabel>
+                        <Countdown mins={end - nowMin} caption={caption} />
+                        <Progress value={progress} />
+                        <ThenLine slot={next} prefix="Next" />
+                    </RailCard>
+                );
+            } else {
+                const isExtracurricular = current.isExtracurricular;
+                const progress = ((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100;
+                const caption = countdownCaption(next);
+                pipData = {
+                    title: current.period.fullTitle || current.period.title,
+                    countdown: formatCountdown(current.endMin - nowMin),
+                    caption,
+                    progress,
+                    colour: current.period.colour,
+                    nextLine: formatNextLine(next, 'Next'),
+                    isDark: document.documentElement.classList.contains('dark'),
+                };
+                cardContent = (
+                    <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
+                        <div className="flex items-start justify-between gap-2">
+                            <ClassTitle period={current.period} className="min-w-0 whitespace-normal break-words text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white" />
+                            {pipButton}
+                        </div>
+                        <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption={caption} /></div>
+                        <Progress value={progress} colour={current.period.colour} />
+                        <ThenLine slot={next} prefix="Next" />
+                    </RailCard>
+                );
+            }
+        }
     }
 
-    const isExtracurricular = current.isExtracurricular;
+    useEffect(() => {
+        if (!pipOpen || !pipWinRef.current || pipWinRef.current.closed) return;
+        if (pipData) {
+            renderPipTimer(pipWinRef.current, pipData);
+        } else {
+            pipWinRef.current.close();
+            pipWinRef.current = null;
+            setPipOpen(false);
+        }
+    }, [pipOpen, nowMin, dayKey, active]);
 
-    return (
-        <RailCard phase={isExtracurricular ? `extracurricular-${current.bellId}` : `class-${current.bellId}`} colour={current.period.colour}>
-            <ClassTitle period={current.period} className="min-w-0 whitespace-normal break-words text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-white" />
-            <div className="mt-2"><Countdown mins={current.endMin - nowMin} caption={countdownCaption(next)} /></div>
-            <Progress value={((nowMin - current.startMin) / (current.endMin - current.startMin)) * 100} colour={current.period.colour} />
-            <ThenLine slot={next} prefix="Next" />
-        </RailCard>
-    );
+    return cardContent;
 };
 
 const Home = ({ user, timetableData, railTimetable, viewDate, isCycle, viewMode = 'daily', onViewModeChange, clipboardSessions = [], currentWeek, dayNav, children }) => {

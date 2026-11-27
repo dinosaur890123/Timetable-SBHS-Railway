@@ -1,9 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download } from 'lucide-react';
+import { ChevronRight, LogOut, Sun, Moon, BookOpen, MessageSquare, FileCode, Share2, PlusCircle, Shield, Download, RotateCcw } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useCanvasLinks } from '../context/CanvasLinksContext';
 import { classKey } from '../utils/canvasLinks';
+import {
+    SUBJECT_COLOUR_PRESETS,
+    applySubjectColourPreset,
+    getCustomSubjectColours,
+    getKnownSubjectColours,
+    setCustomSubjectColour,
+} from '../utils/timetable';
 
 const ACCENTS = [
     { id: 'navy', name: 'Navy Blue', swatch: '#233B79' },
@@ -110,6 +117,9 @@ const SettingsView = ({
     showClipboardEvents, setShowClipboardEvents, canvasLinksEnabled, setCanvasLinksEnabled, uiLook, setUiLook, onSignOut, setView
 }) => {
     const { isInstalled, hasPrompt, isIOS, promptToInstall } = usePWAInstall();
+    const [customColours, setCustomColours] = useState(() => getCustomSubjectColours());
+    const knownColours = useMemo(() => getKnownSubjectColours(), []);
+    const subjectKeys = useMemo(() => Object.keys(knownColours).sort(), [knownColours]);
     const isPaperLook = uiLook === 'paper';
     const accentName = (isPaperLook ? PAPER_THEMES : ACCENTS).find(a => a.id === colorTheme)?.name || (isPaperLook ? 'Paper' : 'Default');
     const paperAccentOnly = isPaperLook ? accentName.split(' ').pop() : null;
@@ -204,6 +214,74 @@ const SettingsView = ({
                         ))}
                     </div>
                 </Row>
+            </Section>
+
+            <Section label="Subject colours">
+                <Row title="Theme presets" stack>
+                    <div className="flex flex-wrap gap-2">
+                        {SUBJECT_COLOUR_PRESETS.map(preset => (
+                            <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => setCustomColours(applySubjectColourPreset(preset.id, subjectKeys))}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium border border-zinc-900/10 dark:border-white/10 hover:bg-zinc-900/[0.04] dark:hover:bg-white/[0.05] text-zinc-800 dark:text-zinc-200 transition"
+                            >
+                                <span>{preset.name}</span>
+                                {preset.colours.length > 0 && (
+                                    <span className="flex items-center -space-x-1">
+                                        {preset.colours.slice(0, 4).map((c, idx) => (
+                                            <span
+                                                key={idx}
+                                                className="w-3 h-3 rounded-full border border-white dark:border-zinc-900"
+                                                style={{ backgroundColor: c }}
+                                            />
+                                        ))}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </Row>
+                {subjectKeys.length > 0 && (
+                    <Row title="Customise subjects" stack>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {subjectKeys.map(key => {
+                                const activeColour = customColours[key] || knownColours[key] || '#3b82f6';
+                                const isCustom = Boolean(customColours[key]);
+                                return (
+                                    <div
+                                        key={key}
+                                        className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-zinc-900/[0.07] dark:border-white/[0.08] bg-zinc-900/[0.02] dark:bg-white/[0.02]"
+                                    >
+                                        <span className="text-[13px] font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                            {key}
+                                        </span>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {isCustom && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCustomColours(setCustomSubjectColour(key, null))}
+                                                    title={`Reset ${key} to default`}
+                                                    aria-label={`Reset ${key} to default`}
+                                                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                            <input
+                                                type="color"
+                                                value={activeColour}
+                                                onChange={(e) => setCustomColours(setCustomSubjectColour(key, e.target.value))}
+                                                aria-label={`Colour for ${key}`}
+                                                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent p-0"
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Row>
+                )}
             </Section>
 
             <Section label="Integrations">
