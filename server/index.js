@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
+const multer = require('multer');
 
 const compression = require('compression');
 
@@ -918,7 +919,7 @@ const escapeHtml = (str) => String(str ?? '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentName, senderEmail, category, severity, details }) => {
+const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentName, senderEmail, category, severity, details, attachment }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
 
@@ -984,6 +985,13 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentN
         payload.reply_to = senderEmail;
     }
 
+    if (attachment) {
+        payload.attachments = [{
+            filename: attachment.originalname,
+            content: attachment.buffer.toString('base64')
+        }];
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -999,7 +1007,16 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentN
     }
 };
 
-app.post('/api/feedback', requireStudentAuth, async (req, res) => {
+const feedbackUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: (_req, file, cb) => {
+        const allowed = /^image\/(jpeg|png|gif|webp)|video\/(mp4|webm|quicktime)$/;
+        cb(null, allowed.test(file.mimetype));
+    }
+});
+
+app.post('/api/feedback', requireStudentAuth, feedbackUpload.single('attachment'), async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
         const category = String(req.body?.category || '').toLowerCase().trim();
@@ -1060,7 +1077,8 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
             senderEmail: req.user?.email || null,
             category,
             severity,
-            details
+            details,
+            attachment: req.file || null
         }).catch((err) => {
             console.error('Feedback email notification error:', err.message);
         });

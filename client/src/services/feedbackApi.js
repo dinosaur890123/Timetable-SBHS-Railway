@@ -10,13 +10,18 @@ const getHeaders = async () => {
     };
 };
 
-export const submitFeedback = async ({ category, severity, details }) => {
+export const submitFeedback = async ({ category, severity, details, attachment }) => {
     try {
-        const response = await fetch(`${API_URL}/feedback`, {
-            method: 'POST',
-            headers: await getHeaders(),
-            body: JSON.stringify({ category, severity, details })
-        });
+        const token = await getValidAccessToken();
+        const headers = { 'Authorization': token ? `Bearer ${token}` : '' };
+
+        const body = new FormData();
+        body.append('category', category);
+        body.append('severity', String(severity));
+        body.append('details', details);
+        if (attachment) body.append('attachment', attachment);
+
+        const response = await fetch(`${API_URL}/feedback`, { method: 'POST', headers, body });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

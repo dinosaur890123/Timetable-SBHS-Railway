@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Bug, Lightbulb, Mail, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Bug, Lightbulb, Mail, Send, MessageSquare, CheckCircle2, Paperclip, X } from 'lucide-react';
 import { fetchMyFeedback, submitFeedback } from '../services/feedbackApi';
 
 const categoryOptions = [
@@ -77,6 +77,8 @@ const FeedbackView = ({ onBack }) => {
   const [category, setCategory] = useState(initialDraft?.category ?? 'error');
   const [severity, setSeverity] = useState(initialDraft?.severity ?? 3);
   const [details, setDetails] = useState(initialDraft?.details ?? '');
+  const [attachment, setAttachment] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -91,6 +93,7 @@ const FeedbackView = ({ onBack }) => {
   }, [category, severity, details]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [detailsError, setDetailsError] = useState(null);
   const [submittedTicket, setSubmittedTicket] = useState(null);
   const [activeTab, setActiveTab] = useState('submit');
   const [myFeedback, setMyFeedback] = useState([]);
@@ -142,9 +145,11 @@ const FeedbackView = ({ onBack }) => {
     const trimmedDetails = details.trim();
 
     if (trimmedDetails.length < 20) {
-      setError('Please describe the issue in more detail. Include what happened, what you expected, and any steps to reproduce.');
+      setDetailsError('Please describe the issue in more detail — include what happened, what you expected, and steps to reproduce.');
       return;
     }
+
+    setDetailsError(null);
 
     setIsSubmitting(true);
     setError(null);
@@ -153,11 +158,14 @@ const FeedbackView = ({ onBack }) => {
       const response = await submitFeedback({
         category,
         severity,
-        details: trimmedDetails
+        details: trimmedDetails,
+        attachment: attachment instanceof File ? attachment : null
       });
 
       setSubmittedTicket(response.ticket || response.feedback?.ticketNumber || null);
       setDetails('');
+      setAttachment(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       setError(err.message || 'Failed to submit feedback. Please try again.');
     } finally {
@@ -190,12 +198,6 @@ const FeedbackView = ({ onBack }) => {
             <div>
                 <FieldLabel>Ticket number</FieldLabel>
                 <p className="font-mono text-[15px] font-semibold text-zinc-900 dark:text-white">{submittedTicket}</p>
-            </div>
-            <div>
-                <FieldLabel>Attaching media?</FieldLabel>
-                <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                    Email <span className="font-semibold text-zinc-800 dark:text-zinc-200">synchron.work@gmail.com</span> and include your ticket number in the subject line.
-                </p>
             </div>
         </Section>
 
@@ -297,18 +299,61 @@ const FeedbackView = ({ onBack }) => {
                 <FieldLabel>Feedback details</FieldLabel>
                 <textarea
                     value={details}
-                    onChange={(e) => setDetails(e.target.value)}
+                    onChange={(e) => { setDetails(e.target.value); if (detailsError) setDetailsError(null); }}
                     placeholder="Tell us exactly what happened, what you expected, and any steps to reproduce it…"
-                    className="w-full min-h-[160px] rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.03] px-4 py-3 text-[13px] text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent/60 resize-y"
+                    className={`w-full min-h-[160px] rounded-xl border ${detailsError ? 'border-red-400 dark:border-red-600' : 'border-zinc-200 dark:border-zinc-800'} bg-white dark:bg-white/[0.03] px-4 py-3 text-[13px] text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent/60 resize-y`}
                     required
                 />
+                {detailsError && (
+                    <p className="mt-2 text-[12px] text-red-600 dark:text-red-400 leading-snug">{detailsError}</p>
+                )}
             </div>
         </Section>
 
-        <Section icon={Mail} title="Media uploads">
-            <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                If you need to send screenshots or video, submit the form first, then email <span className="font-semibold text-zinc-800 dark:text-zinc-200">synchron.work@gmail.com</span> with your ticket number in the subject.
-            </p>
+        <Section icon={Paperclip} title="Attachment (optional)">
+            <div>
+                <FieldLabel>Screenshot or video — max 10 MB</FieldLabel>
+                {attachment ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.03] px-4 py-3">
+                        <Paperclip size={14} className="shrink-0 text-zinc-400" />
+                        <span className="text-[13px] text-zinc-700 dark:text-zinc-300 truncate flex-1">{attachment.name}</span>
+                        <span className="text-[11px] text-zinc-400 shrink-0">{(attachment.size / 1024).toFixed(0)} KB</span>
+                        <button
+                            type="button"
+                            onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                            className="shrink-0 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                            aria-label="Remove attachment"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                ) : attachment === 'toobig' ? (
+                    <div className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 px-4 py-3 text-[13px] text-zinc-500 space-y-1">
+                        <p>File too large to attach. Send it to <span className="font-semibold text-zinc-800 dark:text-zinc-200">synchron.work@gmail.com</span> with your ticket number once submitted.</p>
+                        <button type="button" onClick={() => setAttachment(null)} className="text-xs underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">Try a different file</button>
+                    </div>
+                ) : (
+                    <label className="flex items-center gap-2 cursor-pointer rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 px-4 py-3 text-[13px] text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                        <Paperclip size={14} className="shrink-0" />
+                        <span>Choose file…</span>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                            className="sr-only"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                if (file && file.size > 10 * 1024 * 1024) {
+                                    setAttachment('toobig');
+                                    e.target.value = '';
+                                    return;
+                                }
+                                setAttachment(file);
+                            }}
+                        />
+                    </label>
+                )}
+            </div>
         </Section>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
