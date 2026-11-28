@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Bug, Lightbulb, Mail, Send, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { fetchMyFeedback, submitFeedback } from '../services/feedbackApi';
 
@@ -54,10 +54,41 @@ const feedbackStatus = (status) => {
   return { label: 'Received', colour: 'bg-zinc-400' };
 };
 
+const FEEDBACK_DRAFT_KEY = 'synchron_feedback_draft';
+
+const loadFeedbackDraft = () => {
+  try {
+    const raw = localStorage.getItem(FEEDBACK_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      category: parsed.category === 'suggestion' ? 'suggestion' : 'error',
+      severity: typeof parsed.severity === 'number' && parsed.severity >= 1 && parsed.severity <= 5 ? parsed.severity : 3,
+      details: typeof parsed.details === 'string' ? parsed.details : ''
+    };
+  } catch {
+    return null;
+  }
+};
+
 const FeedbackView = ({ onBack }) => {
-  const [category, setCategory] = useState('error');
-  const [severity, setSeverity] = useState(3);
-  const [details, setDetails] = useState('');
+  const [initialDraft] = useState(() => loadFeedbackDraft());
+  const [category, setCategory] = useState(initialDraft?.category ?? 'error');
+  const [severity, setSeverity] = useState(initialDraft?.severity ?? 3);
+  const [details, setDetails] = useState(initialDraft?.details ?? '');
+
+  useEffect(() => {
+    try {
+      if (!details && category === 'error' && severity === 3) {
+        localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+      } else {
+        localStorage.setItem(FEEDBACK_DRAFT_KEY, JSON.stringify({ category, severity, details }));
+      }
+    } catch {
+      // Ignore storage quota or access errors
+    }
+  }, [category, severity, details]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [submittedTicket, setSubmittedTicket] = useState(null);

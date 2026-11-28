@@ -18,7 +18,8 @@ export const VIEW_LABELS = {
     feedback: 'Feedback',
     'canvas-links': 'Canvas Links',
     'build-notes': 'Build Notes',
-    admin: 'Admin'
+    admin: 'Admin',
+    'subject-colours': 'Subject Colours'
 };
 
 const monoMask = {
