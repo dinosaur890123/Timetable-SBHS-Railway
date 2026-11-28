@@ -911,6 +911,47 @@ app.put('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     }
 });
 
+const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEmail, category, severity, details }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+
+    const toEmail = process.env.FEEDBACK_TO_EMAIL || 'synchron.work@gmail.com';
+    const fromEmail = process.env.FEEDBACK_FROM_EMAIL || 'Synchron Feedback <onboarding@resend.dev>';
+
+    const payload = {
+        from: fromEmail,
+        to: [toEmail],
+        subject: `[Synchron Feedback] ${ticketNumber} (${category}, severity ${severity}/5)`,
+        text: [
+            `Ticket: ${ticketNumber}`,
+            `Category: ${category}`,
+            `Severity: ${severity}/5`,
+            `Student ID: ${studentId}`,
+            senderEmail ? `Sender Email: ${senderEmail}` : null,
+            '',
+            details
+        ].filter(line => line !== null).join('\n')
+    };
+
+    if (senderEmail) {
+        payload.reply_to = senderEmail;
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`Resend API error ${response.status}: ${body}`);
+    }
+};
+
 app.post('/api/feedback', requireStudentAuth, async (req, res) => {
     try {
         const studentId = String(req.user.studentId);
@@ -961,6 +1002,16 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
         }
 
         await addLog('FEEDBACK', studentId, `Submitted ${category} feedback (${ticketNumber})`);
+        sendFeedbackNotificationEmail({
+            ticketNumber,
+            studentId,
+            senderEmail: req.user?.email || null,
+            category,
+            severity,
+            details
+        }).catch((err) => {
+            console.error('Feedback email notification error:', err.message);
+        });
         res.status(201).json({ success: true, ticket: ticketNumber, feedback: savedFeedback });
     } catch (e) {
         console.error('Feedback submit error:', e);
