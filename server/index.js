@@ -1049,10 +1049,14 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
         }
 
         await addLog('FEEDBACK', studentId, `Submitted ${category} feedback (${ticketNumber})`);
+        const studentName = [req.user?.givenName, req.user?.surname].filter(Boolean).join(' ')
+            || req.user?.name
+            || req.user?.fullName
+            || null;
         sendFeedbackNotificationEmail({
             ticketNumber,
             studentId,
-            studentName: req.user?.name || req.user?.fullName || null,
+            studentName,
             senderEmail: req.user?.email || null,
             category,
             severity,
