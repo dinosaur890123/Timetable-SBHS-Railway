@@ -918,7 +918,7 @@ const escapeHtml = (str) => String(str ?? '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEmail, category, severity, details }) => {
+const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentName, senderEmail, category, severity, details }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
 
@@ -947,6 +947,11 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEm
                         <td style="padding: 6px 0; color: #71717a;">Student ID</td>
                         <td style="padding: 6px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">${escapeHtml(studentId)}</td>
                     </tr>
+                    ${studentName ? `
+                    <tr>
+                        <td style="padding: 6px 0; color: #71717a;">Student Name</td>
+                        <td style="padding: 6px 0; font-weight: 500;">${escapeHtml(studentName)}</td>
+                    </tr>` : ''}
                     ${senderEmail ? `
                     <tr>
                         <td style="padding: 6px 0; color: #71717a;">Sender Email</td>
@@ -968,6 +973,7 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEm
             `Category: ${categoryLabel}`,
             `Severity: ${severityText}`,
             `Student ID: ${studentId}`,
+            studentName ? `Student Name: ${studentName}` : null,
             senderEmail ? `Sender Email: ${senderEmail}` : null,
             '',
             details
@@ -1046,6 +1052,7 @@ app.post('/api/feedback', requireStudentAuth, async (req, res) => {
         sendFeedbackNotificationEmail({
             ticketNumber,
             studentId,
+            studentName: req.user?.name || req.user?.fullName || null,
             senderEmail: req.user?.email || null,
             category,
             severity,
