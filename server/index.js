@@ -911,6 +911,13 @@ app.put('/api/users/:id/preferences', requireStudentAuth, async (req, res) => {
     }
 });
 
+const escapeHtml = (str) => String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEmail, category, severity, details }) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
@@ -918,14 +925,48 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, senderEm
     const toEmail = process.env.FEEDBACK_TO_EMAIL || 'synchron.work@gmail.com';
     const fromEmail = process.env.FEEDBACK_FROM_EMAIL || 'Synchron Feedback <onboarding@resend.dev>';
 
+    const severityLabels = { 1: 'Low', 2: 'Minor', 3: 'Moderate', 4: 'High', 5: 'Critical' };
+    const severityText = `${severity}/5 (${severityLabels[severity] || 'Unknown'})`;
+    const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+
+    const html = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #18181b; line-height: 1.5;">
+            <div style="padding: 20px 24px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff;">
+                <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #71717a; margin-bottom: 4px;">
+                    Synchron Feedback
+                </div>
+                <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #09090b;">
+                    ${escapeHtml(ticketNumber)} &mdash; ${escapeHtml(categoryLabel)}
+                </h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+                    <tr>
+                        <td style="padding: 6px 0; color: #71717a; width: 120px;">Severity</td>
+                        <td style="padding: 6px 0; font-weight: 500;">${escapeHtml(severityText)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #71717a;">Student ID</td>
+                        <td style="padding: 6px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">${escapeHtml(studentId)}</td>
+                    </tr>
+                    ${senderEmail ? `
+                    <tr>
+                        <td style="padding: 6px 0; color: #71717a;">Sender Email</td>
+                        <td style="padding: 6px 0;"><a href="mailto:${escapeHtml(senderEmail)}" style="color: #2563eb; text-decoration: none;">${escapeHtml(senderEmail)}</a></td>
+                    </tr>` : ''}
+                </table>
+                <div style="padding: 14px 16px; border-radius: 8px; background: #f4f4f5; font-size: 14px; white-space: pre-wrap; color: #27272a;">${escapeHtml(details)}</div>
+            </div>
+        </div>
+    `.trim();
+
     const payload = {
         from: fromEmail,
         to: [toEmail],
-        subject: `[Synchron Feedback] ${ticketNumber} (${category}, severity ${severity}/5)`,
+        subject: `[Synchron Feedback] ${ticketNumber} (${categoryLabel}, ${severity}/5)`,
+        html,
         text: [
             `Ticket: ${ticketNumber}`,
-            `Category: ${category}`,
-            `Severity: ${severity}/5`,
+            `Category: ${categoryLabel}`,
+            `Severity: ${severityText}`,
             `Student ID: ${studentId}`,
             senderEmail ? `Sender Email: ${senderEmail}` : null,
             '',
