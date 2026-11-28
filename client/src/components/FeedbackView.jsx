@@ -145,7 +145,7 @@ const FeedbackView = ({ onBack }) => {
     const trimmedDetails = details.trim();
 
     if (trimmedDetails.length < 20) {
-      setDetailsError('Please describe the issue in more detail — include what happened, what you expected, and steps to reproduce.');
+      setDetailsError('Please describe the issue in more detail – include what happened, what you expected, and steps to reproduce.');
       return;
     }
 
@@ -312,7 +312,7 @@ const FeedbackView = ({ onBack }) => {
 
         <Section icon={Paperclip} title="Attachment (optional)">
             <div>
-                <FieldLabel>Screenshot or video — max 10 MB</FieldLabel>
+                <FieldLabel>Screenshot or video – max 10 MB</FieldLabel>
                 {attachment ? (
                     <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-white/[0.03] px-4 py-3">
                         <Paperclip size={14} className="shrink-0 text-zinc-400" />

@@ -937,7 +937,7 @@ const sendFeedbackNotificationEmail = async ({ ticketNumber, studentId, studentN
                     Synchron Feedback
                 </div>
                 <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #09090b;">
-                    ${escapeHtml(ticketNumber)} &mdash; ${escapeHtml(categoryLabel)}
+                    ${escapeHtml(ticketNumber)} &ndash; ${escapeHtml(categoryLabel)}
                 </h2>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
                     <tr>
